@@ -1,6 +1,6 @@
 const ICON_PATH = '/favicon.ico';
 
-function isNotificationSupported() {
+export function isNotificationSupported() {
   try {
     return typeof window !== 'undefined' && 'Notification' in window;
   } catch (e) {
