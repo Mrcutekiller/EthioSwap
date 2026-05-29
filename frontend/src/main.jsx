@@ -4,7 +4,7 @@ import { ConvexProvider, ConvexReactClient } from "convex/react";
 import './index.css'
 import App from './App.jsx'
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL || "https://tangible-nightingale-795.convex.cloud";
+const convexUrl = import.meta.env.VITE_CONVEX_URL || "https://grateful-tern-840.convex.cloud";
 const convex = new ConvexReactClient(convexUrl);
 
 createRoot(document.getElementById('root')).render(
