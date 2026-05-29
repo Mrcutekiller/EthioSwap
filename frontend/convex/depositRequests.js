@@ -14,7 +14,7 @@ export const create = mutation({
     const userObjId = ctx.db.normalizeId("users", args.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
-    if (args.amountUSD <= 0) throw new Error("Amount must be greater than zero");
+    if (args.amountUSD < 10) throw new Error("Minimum deposit amount is $10.00 USD");
 
     const id = await ctx.db.insert("depositRequests", {
       userId: args.userId,

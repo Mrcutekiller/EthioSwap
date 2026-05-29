@@ -402,6 +402,10 @@ export const withdrawETH = mutation({
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
 
+    if (args.amountETH < 10) {
+      throw new Error("Minimum withdrawal amount is $10.00 USD");
+    }
+
     if (user.ethBalance < args.amountETH) {
       throw new Error("Insufficient USD balance");
     }

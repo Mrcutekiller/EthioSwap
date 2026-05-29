@@ -31,6 +31,7 @@ const P2PListings = () => {
   };
 
   const [filterPayment, setFilterPayment] = useState('All');
+  const [filterAmountRange, setFilterAmountRange] = useState('All');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBuyModal, setShowBuyModal]    = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
@@ -152,7 +153,17 @@ const P2PListings = () => {
   const filtered = listings.filter(l => {
     const matchesType = p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy');
     const matchesPayment = filterPayment === 'All' || l.paymentMethods.includes(filterPayment);
-    return matchesType && matchesPayment;
+    
+    let matchesAmount = true;
+    if (filterAmountRange === 'under50') {
+      matchesAmount = l.amountETH < 50;
+    } else if (filterAmountRange === '50to200') {
+      matchesAmount = l.amountETH >= 50 && l.amountETH <= 200;
+    } else if (filterAmountRange === 'over200') {
+      matchesAmount = l.amountETH > 200;
+    }
+
+    return matchesType && matchesPayment && matchesAmount;
   });
 
   // ── Shared styles ─────────────────────────────────────────
@@ -239,6 +250,26 @@ const P2PListings = () => {
             boxShadow: filterPayment === p ? '0 2px 8px rgba(200,150,44,0.3)' : 'none',
           }}>
             {p === 'All' ? '🌐 All' : (ALL_PAYMENT_METHODS.find(m => m.id === p)?.icon + ' ' + (ALL_PAYMENT_METHODS.find(m => m.id === p)?.label || p))}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Preset Amount filter badges ─────────────────────── */}
+      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch', marginTop: '2px' }}>
+        {[
+          { id: 'All', label: '💰 All Amounts' },
+          { id: 'under50', label: '💵 Under $50' },
+          { id: '50to200', label: '💳 $50 - $200' },
+          { id: 'over200', label: '🪙 $200+' },
+        ].map(b => (
+          <button key={b.id} type="button" onClick={() => setFilterAmountRange(b.id)} style={{
+            flexShrink: 0, padding: '5px 11px', borderRadius: '99px', border: '1px solid var(--border)', cursor: 'pointer',
+            fontFamily: 'var(--font)', fontSize: '10.5px', fontWeight: 600, transition: 'all 0.15s ease',
+            background: filterAmountRange === b.id ? 'var(--teal-bg)' : 'transparent',
+            color: filterAmountRange === b.id ? 'var(--teal-light)' : 'var(--text-3)',
+            borderColor: filterAmountRange === b.id ? 'var(--teal-light)' : 'var(--border)',
+          }}>
+            {b.label}
           </button>
         ))}
       </div>

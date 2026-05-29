@@ -82,7 +82,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, setError, setSuccess, systemSettings } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, savePaymentAccounts, setError, setSuccess, systemSettings } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [copied, setCopied] = useState(false);
@@ -92,6 +92,17 @@ const WalletCard = () => {
   const [withdrawAmt, setWithdrawAmt]  = useState('');
   const [withdrawing, setWithdrawing]  = useState(false);
   const [txDetails,   setTxDetails]    = useState(null);
+  
+  // Dual withdrawal states
+  const [withdrawMethod, setWithdrawMethod] = useState('onchain');
+  const [selectedExchangeAccount, setSelectedExchangeAccount] = useState(null);
+  
+  // Connect Exchange Profile states
+  const [linkExchangeName, setLinkExchangeName] = useState('Binance Pay');
+  const [linkExchangeIdType, setLinkExchangeIdType] = useState('Email');
+  const [linkExchangeIdVal, setLinkExchangeIdVal] = useState('');
+  const [linkExchangeHolder, setLinkExchangeHolder] = useState('');
+  const [linkingExchange, setLinkingExchange] = useState(false);
 
   // Deposit method: 'A' = manual, 'B' = onchain
   const [depMethod,     setDepMethod]     = useState('A');
@@ -124,10 +135,25 @@ const WalletCard = () => {
     e.preventDefault(); setTxDetails(null);
     const amt = parseFloat(withdrawAmt);
     if (isNaN(amt) || amt <= 0) { setError('Enter a valid amount.'); return; }
+    if (amt < 10) { setError('Minimum withdrawal amount is $10.00 USD.'); return; }
     if (amt > available)         { setError(`Max: $${available.toFixed(2)}`); return; }
-    if (!destAddress.startsWith('0x') && !destAddress.startsWith('T')) { setError('Invalid address.'); return; }
+    
+    let dest = destAddress;
+    if (withdrawMethod === 'exchange') {
+      if (!selectedExchangeAccount) {
+        setError('Please select or connect a Binance Pay or Bybit Pay account first.');
+        return;
+      }
+      dest = `${selectedExchangeAccount.bankName} | ${selectedExchangeAccount.accountNumber} (${selectedExchangeAccount.holderName})`;
+    } else {
+      if (!destAddress.startsWith('0x') && !destAddress.startsWith('T')) {
+        setError('Invalid on-chain address.');
+        return;
+      }
+    }
+
     setWithdrawing(true);
-    const result = await withdrawETH(amt, destAddress);
+    const result = await withdrawETH(amt, dest);
     setWithdrawing(false);
     if (result?.success) { setTxDetails(result); setWithdrawAmt(''); setDestAddress(''); }
   };
@@ -136,6 +162,7 @@ const WalletCard = () => {
     e.preventDefault();
     const isBinanceOrBybit = depWalletType === 'binance' || depWalletType === 'bybit';
     if (!depAmount || parseFloat(depAmount) <= 0) { setError('Enter amount.'); return; }
+    if (parseFloat(depAmount) < 10) { setError('Minimum deposit amount is $10.00 USD.'); return; }
     
     if (isBinanceOrBybit) {
       if (!senderEmail.trim() || !senderUsername.trim()) {
@@ -202,6 +229,9 @@ const WalletCard = () => {
   }));
 
   const combinedHistory = [...depositsMapped, ...withdrawals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const linkedExchangeAccounts = (user?.paymentAccounts || [])
+    .filter(acc => acc.bankName === 'Binance Pay' || acc.bankName === 'Bybit Pay');
 
   const tabs = [
     { id: 'balance',  label: '💰', sub: 'Balance' },
@@ -620,17 +650,160 @@ const WalletCard = () => {
         <div className="card fade-in-2">
           <div className="section-title">Withdraw USD</div>
           <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
-            Send USD to your Binance or any external wallet.
+            Send USD to your Binance, Bybit, or external wallet. (Min: $10.00 USD)
           </p>
 
+          {/* Withdrawal Destination Type Selector */}
+          <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', marginBottom: '14px', gap: '2px' }}>
+            {[
+              { id: 'onchain', label: '⛓️ On-Chain USDT' },
+              { id: 'exchange', label: '🔗 Connect / Pay Exchange' }
+            ].map(m => (
+              <button key={m.id} type="button" onClick={() => setWithdrawMethod(m.id)} style={{
+                flex: 1, padding: '8px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s',
+                background: withdrawMethod === m.id ? 'var(--bg-base)' : 'transparent',
+                color: withdrawMethod === m.id ? 'var(--gold-light)' : 'var(--text-3)',
+                boxShadow: withdrawMethod === m.id ? 'inset 0 0 0 1px var(--border)' : 'none'
+              }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleWithdraw} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Destination Address</label>
-              <input className="input" type="text" placeholder="T… (TRC20) or 0x… (ERC20)" value={destAddress} onChange={e => setDestAddress(e.target.value)} required />
-            </div>
+            {withdrawMethod === 'onchain' ? (
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label">Destination Address</label>
+                <input className="input" type="text" placeholder="T… (TRC20) or 0x… (ERC20)" value={destAddress} onChange={e => setDestAddress(e.target.value)} required />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'fadeInUp 0.15s ease' }}>
+                <label className="input-label">Select Connected Account</label>
+                {linkedExchangeAccounts.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {linkedExchangeAccounts.map(acc => (
+                      <div key={acc.id} onClick={() => setSelectedExchangeAccount(acc)} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                        background: selectedExchangeAccount?.id === acc.id ? 'linear-gradient(135deg, rgba(200,150,44,0.08), transparent)' : 'var(--bg-elevated)',
+                        border: `1.5px solid ${selectedExchangeAccount?.id === acc.id ? 'var(--gold)' : 'var(--border)'}`,
+                        transition: 'all 0.15s ease'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '14px' }}>{acc.bankName === 'Binance Pay' ? '🔶' : '🟡'}</span>
+                            <span style={{ fontWeight: 700, fontSize: '12px' }}>{acc.bankName}</span>
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{acc.accountNumber}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-2)' }}>{acc.holderName}</div>
+                          {selectedExchangeAccount?.id === acc.id && <span style={{ color: 'var(--gold-light)', fontSize: '11px', fontWeight: 700 }}>✓ Selected</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--bg-base)', border: '1px dashed var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.4 }}>
+                    No connected exchange profiles yet. Please link your Binance or Bybit account below to withdraw.
+                  </div>
+                )}
+
+                {/* Inline form to link an exchange account */}
+                <div style={{ marginTop: '6px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                    🔗 Link New Binance / Bybit Account
+                  </div>
+                  
+                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Platform Selector */}
+                    <div>
+                      <div style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>Exchange Platform</div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {['Binance Pay', 'Bybit Pay'].map(p => (
+                          <button key={p} type="button" onClick={() => setLinkExchangeName(p)} style={{
+                            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '10px', fontWeight: 700, transition: 'all 0.15s',
+                            background: linkExchangeName === p ? 'var(--bg-base)' : 'transparent',
+                            color: linkExchangeName === p ? 'var(--gold-light)' : 'var(--text-3)',
+                            boxShadow: linkExchangeName === p ? 'inset 0 0 0 1px var(--border)' : 'none'
+                          }}>
+                            {p === 'Binance Pay' ? '🔶 Binance' : '🟡 Bybit'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Linking identifier selector */}
+                    <div>
+                      <div style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>Link Profile via</div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {['Email', 'Username'].map(t => (
+                          <button key={t} type="button" onClick={() => setLinkExchangeIdType(t)} style={{
+                            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '10px', fontWeight: 700, transition: 'all 0.15s',
+                            background: linkExchangeIdType === t ? 'var(--bg-base)' : 'transparent',
+                            color: linkExchangeIdType === t ? 'var(--gold-light)' : 'var(--text-3)',
+                            boxShadow: linkExchangeIdType === t ? 'inset 0 0 0 1px var(--border)' : 'none'
+                          }}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Link identifier input */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                        Exchange {linkExchangeIdType} ID
+                      </span>
+                      <input className="input" type={linkExchangeIdType === 'Email' ? 'email' : 'text'} placeholder={linkExchangeIdType === 'Email' ? 'yourname@gmail.com' : 'yourname123'} value={linkExchangeIdVal} onChange={e => setLinkExchangeIdVal(e.target.value)} style={{ padding: '8px 10px', fontSize: '11px', borderRadius: '8px' }} />
+                    </div>
+
+                    {/* Holder nickname */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                        Nickname / Holder Name
+                      </span>
+                      <input className="input" type="text" placeholder="e.g. Nickname" value={linkExchangeHolder} onChange={e => setLinkExchangeHolder(e.target.value)} style={{ padding: '8px 10px', fontSize: '11px', borderRadius: '8px' }} />
+                    </div>
+
+                    <button type="button" disabled={linkingExchange} onClick={async () => {
+                      if (!linkExchangeIdVal.trim() || !linkExchangeHolder.trim()) {
+                        setError('Please fill out exchange ID and nickname.');
+                        return;
+                      }
+                      setLinkingExchange(true);
+                      const newAcc = {
+                        id: 'acc_' + Math.random().toString(36).substring(2, 9),
+                        bankName: linkExchangeName,
+                        accountNumber: `${linkExchangeIdType}: ${linkExchangeIdVal.trim()}`,
+                        holderName: linkExchangeHolder.trim()
+                      };
+                      const currentAccounts = user?.paymentAccounts || [];
+                      try {
+                        await savePaymentAccounts({
+                          userId: user.id,
+                          accounts: [...currentAccounts, newAcc]
+                        });
+                        setSuccess('Exchange account linked successfully!');
+                        setSelectedExchangeAccount(newAcc);
+                        setLinkExchangeIdVal('');
+                        setLinkExchangeHolder('');
+                      } catch (err) {
+                        setError(err.message || 'Failed to link account.');
+                      } finally {
+                        setLinkingExchange(false);
+                      }
+                    }} className="btn btn-gold btn-full" style={{ padding: '10px', fontSize: '11px', fontWeight: 700, marginTop: '4px' }}>
+                      {linkingExchange ? 'Connecting…' : '🔗 Save & Link Exchange Account'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="input-group" style={{ marginBottom: 0 }}>
               <label className="input-label">Amount (USD)</label>
-              <input className="input" type="number" step="0.01" placeholder={`Max: $${available.toFixed(2)}`} value={withdrawAmt} onChange={e => setWithdrawAmt(e.target.value)} required />
+              <input className="input" type="number" step="0.01" min="10" placeholder={`Max: $${available.toFixed(2)}`} value={withdrawAmt} onChange={e => setWithdrawAmt(e.target.value)} required />
               {withdrawAmt && <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>≈ {Math.round(parseFloat(withdrawAmt) * rate).toLocaleString()} ETB</div>}
             </div>
 
@@ -647,11 +820,11 @@ const WalletCard = () => {
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-3)' }}>Network fee</span>
-                <span style={{ fontWeight: 500 }}>~$0.10 (TRC20) or $0.50 (ERC20)</span>
+                <span style={{ fontWeight: 500 }}>{withdrawMethod === 'onchain' ? '~$0.10 (TRC20) / $0.50 (ERC20)' : '✓ FREE'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-3)' }}>Confirmation time</span>
-                <span style={{ fontWeight: 500 }}>~15 seconds (Tron) / ~2 min (ETH)</span>
+                <span style={{ fontWeight: 500 }}>{withdrawMethod === 'onchain' ? '~15 seconds (Tron) / ~2 min (ETH)' : '~5–15 mins'}</span>
               </div>
             </div>
 
@@ -664,7 +837,9 @@ const WalletCard = () => {
             <div style={{ marginTop: '14px', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: '10px', padding: '14px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--status-success-text)', marginBottom: '6px' }}>✓ Withdrawal Broadcast!</div>
               <div style={{ fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-2)', wordBreak: 'break-all', marginBottom: '8px' }}>{txDetails.txHash}</div>
-              <a href={`https://tronscan.org/#/transaction/${txDetails.txHash}`} target="_blank" rel="noreferrer" style={{ color: 'var(--gold-light)', fontSize: '12px', fontWeight: 600 }}>View on TronScan ↗</a>
+              {txDetails.txHash.startsWith('0x') && (
+                <a href={`https://tronscan.org/#/transaction/${txDetails.txHash}`} target="_blank" rel="noreferrer" style={{ color: 'var(--gold-light)', fontSize: '12px', fontWeight: 600 }}>View on TronScan ↗</a>
+              )}
             </div>
           )}
         </div>
