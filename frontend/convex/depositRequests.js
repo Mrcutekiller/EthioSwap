@@ -124,7 +124,9 @@ export const approve = mutation({
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
 
-    const fee = req.amountUSD * 0.005;
+    const settings = await ctx.db.query("systemSettings").first();
+    const feePercent = settings?.flatFeePercent ?? 0.5;
+    const fee = req.amountUSD * (feePercent / 100);
     const netAmount = req.amountUSD - fee;
 
     await ctx.db.patch(user._id, {
@@ -163,7 +165,7 @@ export const approve = mutation({
     await ctx.db.insert("notifications", {
       userId: req.userId,
       type: "deposit_approved",
-      message: `✅ Your deposit of $${req.amountUSD.toFixed(2)} USD has been approved. Credited: $${netAmount.toFixed(2)} USD (after 0.5% fee of $${fee.toFixed(2)} USD)`,
+      message: `✅ Your deposit of $${req.amountUSD.toFixed(2)} USD has been approved. Credited: $${netAmount.toFixed(2)} USD (after ${feePercent}% fee of $${fee.toFixed(2)} USD)`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });

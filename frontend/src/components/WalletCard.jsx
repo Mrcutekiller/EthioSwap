@@ -128,6 +128,8 @@ const WalletCard = () => {
   );
 
   const rate      = systemSettings?.etbRatePerDollar ?? 190;
+  const depositFeePercent = systemSettings?.flatFeePercent ?? 0.5;
+  const depositFeeLabel = depositFeePercent > 0 ? `${depositFeePercent}% Fee` : 'No Fee';
   const available = wallet.ethAvailable ?? (wallet.ethBalance - (wallet.ethLocked || 0));
   const etbTotal  = wallet.ethBalance * rate;
 
@@ -400,7 +402,7 @@ const WalletCard = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="option-badge option-badge-manual">⏱ 5–30 min</span>
-                <span className="option-badge option-badge-free">✓ No fee</span>
+                <span className="option-badge option-badge-free">{depositFeePercent > 0 ? `${depositFeePercent}% fee` : '✓ No fee'}</span>
               </div>
             </div>
 
@@ -413,7 +415,7 @@ const WalletCard = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                  <span className="option-badge option-badge-fast">⚡ 1–5 min</span>
-                 <span className="option-badge option-badge-free">✓ FREE</span>
+                 <span className="option-badge option-badge-free">{depositFeePercent > 0 ? `${depositFeePercent}% fee` : '✓ FREE'}</span>
                  <span className="option-badge option-badge-soon">🔧 Setup needed</span>
               </div>
             </div>
@@ -440,7 +442,7 @@ const WalletCard = () => {
                 <div style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.98) 0%, rgba(200,150,44,0.05) 100%)', border: '1px solid rgba(200,150,44,0.25)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recipient Account</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600 }}>0.5% Deposit Fee</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600 }}>{depositFeeLabel}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(10,12,18,0.6)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -509,10 +511,10 @@ const WalletCard = () => {
                 <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-success-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>🛡️ Securing Your Funds</span>
-                    <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(16,185,129,0.15)', borderRadius: '99px' }}>0.5% FEE</span>
+                    <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(16,185,129,0.15)', borderRadius: '99px' }}>{depositFeeLabel}</span>
                   </div>
                   <p style={{ fontSize: '11px', color: 'var(--status-success-text)', lineHeight: 1.5, margin: 0 }}>
-                    Please fill out the form after transfer. Once approved, the funds minus a 0.5% fee will be credited to your available balance. Fees are routed directly to the admin account.
+                    Please fill out the form after transfer. Once approved, the funds minus a {depositFeePercent}% fee will be credited to your available balance. Fees are routed directly to the admin account.
                   </p>
                 </div>
 
@@ -521,7 +523,7 @@ const WalletCard = () => {
                   <input type="number" step="0.01" required className="input" placeholder="e.g. 100" value={depAmount} onChange={e => setDepAmount(e.target.value)} />
                   {depAmount && !isNaN(parseFloat(depAmount)) && (
                     <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
-                      ≈ {Math.round(parseFloat(depAmount) * rate).toLocaleString()} ETB · Credited (net): ${(parseFloat(depAmount) * 0.995).toFixed(2)} USD (0.5% fee: ${(parseFloat(depAmount) * 0.005).toFixed(2)} USD)
+                      ≈ {Math.round(parseFloat(depAmount) * rate).toLocaleString()} ETB · Credited (net): ${(parseFloat(depAmount) * (1 - depositFeePercent / 100)).toFixed(2)} USD ({depositFeePercent}% fee: ${(parseFloat(depAmount) * depositFeePercent / 100).toFixed(2)} USD)
                     </div>
                   )}
                 </div>
