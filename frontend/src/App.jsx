@@ -301,13 +301,7 @@ const AppShell = () => {
             </div>
           )}
 
-          {/* Quick Demo Swapper */}
-          <div className="desktop-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(200,150,44,0.05)', padding: '3px 6px', borderRadius: '10px', border: '1px solid rgba(200,150,44,0.15)' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-light)', alignSelf: 'center', marginRight: '4px' }}>DEMO:</span>
-            <button onClick={() => switchUser('buyer')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'buyer' ? 'var(--gold)' : 'transparent', color: user.username === 'buyer' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Buyer</button>
-            <button onClick={() => switchUser('seller')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'seller' ? 'var(--gold)' : 'transparent', color: user.username === 'seller' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Seller</button>
-            <button onClick={() => switchUser('admin')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'admin' || user.role === 'admin' ? 'var(--gold)' : 'transparent', color: user.username === 'admin' || user.role === 'admin' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Admin</button>
-          </div>
+
 
           {/* User profile capsule */}
           <div className="desktop-nav" style={{ gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
