@@ -61,6 +61,38 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Real-time synchronization of session from Convex database 'wallet' (user record)
+  useEffect(() => {
+    if (wallet && user) {
+      const needsUpdate =
+        wallet.kycStatus !== user.kycStatus ||
+        wallet.kycStep !== user.kycStep ||
+        wallet.role !== user.role ||
+        wallet.displayName !== user.displayName ||
+        wallet.ethBalance !== user.ethBalance ||
+        wallet.ethLocked !== user.ethLocked ||
+        JSON.stringify(wallet.paymentAccounts || []) !== JSON.stringify(user.paymentAccounts || []);
+
+      if (needsUpdate) {
+        setUser(prev => {
+          if (!prev) return prev;
+          const merged = {
+            ...prev,
+            role: wallet.role,
+            kycStatus: wallet.kycStatus,
+            kycStep: wallet.kycStep,
+            displayName: wallet.displayName,
+            ethBalance: wallet.ethBalance,
+            ethLocked: wallet.ethLocked,
+            paymentAccounts: wallet.paymentAccounts || [],
+          };
+          localStorage.setItem('ethioswap_user', JSON.stringify(merged));
+          return merged;
+        });
+      }
+    }
+  }, [wallet]);
+
   // Idle lock timer (5 minutes)
   const resetIdleTimer = useCallback(() => {
     clearTimeout(idleTimer.current);
@@ -215,13 +247,62 @@ export const AuthProvider = ({ children }) => {
     persistUser(merged);
   };
 
+  const switchUser = async (target) => {
+    setLoading(true); setError(null);
+    try {
+      let username = target;
+      let password = 'password';
+      if (target === 'admin') {
+        username = 'ethioswap@gmail.com';
+        password = 'Et20sw26#';
+      }
+      const data = await convexLogin({ username, password });
+      persistUser(data);
+      setSuccess(`Switched context to @${data.username}!`);
+      return data;
+    } catch (err) {
+      // If user doesn't exist, register them
+      try {
+        let username = target;
+        let password = 'password';
+        let phone = '+251911223344';
+        let email = `${target}@ethioswap.com`;
+        let fullName = `${target.toUpperCase()} Test`;
+        let age = 25;
+        if (target === 'admin') {
+          username = 'ethioswap@gmail.com';
+          password = 'Et20sw26#';
+          phone = '+251000000000';
+          email = 'ethioswap@gmail.com';
+          fullName = 'System Admin';
+        }
+        const data = await convexRegister({
+          username,
+          password,
+          phone,
+          email,
+          fullName,
+          age
+        });
+        persistUser(data);
+        setSuccess(`Created and switched to test @${data.username}!`);
+        return data;
+      } catch (regErr) {
+        setError(regErr.message);
+        return null;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, wallet, listings, trades, systemSettings,
       error, success, loading, isLocked,
       myDepositReqs, allDepositReqs,
       setError, setSuccess,
-      login, register, logout, unlock, updateUser,
+      login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
       ethUsdPrice: ETH_USD_PRICE,

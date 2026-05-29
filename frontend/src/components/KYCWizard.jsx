@@ -40,8 +40,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000;
-        const MAX_HEIGHT = 1000;
+        const MAX_WIDTH = 640;
+        const MAX_HEIGHT = 640;
         let width = img.width;
         let height = img.height;
 
@@ -62,8 +62,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Compress to JPEG with 0.7 quality to stay well below Convex's 1MB limit
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        // Compress to JPEG with 0.5 quality to stay well below Convex's 1MB limit (approx 40KB)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
         resolve(compressedDataUrl);
       };
       img.onerror = (err) => reject(new Error("Failed to load image for compression"));

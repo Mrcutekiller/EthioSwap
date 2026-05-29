@@ -2198,3 +2198,86 @@ p { line-height: 1.6; color: var(--text-2); }
 ::-webkit-scrollbar       { width: 3px; height: 3px; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
+
+/* ─── RESPONSIVE PC LAYOUT ──────────────────────────────────── */
+.desktop-nav {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  :root {
+    --content-max: 1200px;
+  }
+
+  .app-shell {
+    padding: 0 24px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .bottom-nav {
+    display: none !important;
+  }
+
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .desktop-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    transition: all 0.15s var(--ease);
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+    font-family: var(--font);
+  }
+
+  .desktop-nav-btn:hover {
+    color: var(--text-1);
+    background: var(--bg-elevated);
+  }
+
+  .desktop-nav-btn.active {
+    color: var(--gold-light);
+    background: var(--gold-bg);
+    border-color: rgba(200, 150, 44, 0.25);
+    box-shadow: var(--shadow-gold);
+  }
+
+  .top-bar {
+    padding: 0 var(--space-6);
+    height: 72px;
+    border-radius: 0 0 16px 16px;
+    border: 1px solid var(--border);
+    border-top: none;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .page-content {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    width: 100%;
+    padding: var(--space-8) var(--space-4) var(--space-10);
+  }
+
+  /* Grid expansions for beautiful desktop visual aesthetics */
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}

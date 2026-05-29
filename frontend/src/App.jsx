@@ -29,6 +29,7 @@ const Icons = {
   person:   'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   admin:    'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  logout:   'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
 };
 
 // ── Auth Form ──────────────────────────────────────────────────
@@ -271,21 +272,63 @@ const AppShell = () => {
 
       {/* ── TOP BAR ── */}
       <header className="top-bar">
-        <Logo size={28} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Logo size={28} />
+          <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>EthioSwap</span>
+        </div>
+
+        {/* Desktop Navigation Links */}
+        <div className="desktop-nav">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`desktop-nav-btn ${tab === item.id ? 'active' : ''}`}
+            >
+              <Icon d={item.icon} size={16} />
+              <span>{item.label}</span>
+              {item.badge > 0 && <span className="nav-badge" style={{ position: 'static', transform: 'none', marginLeft: '6px' }}>{item.badge}</span>}
+            </button>
+          ))}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Wallet balance */}
           {wallet && user.role !== 'admin' && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)', lineHeight: '1.1' }}>${wallet.ethAvailable?.toFixed(2)} USD</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{Math.round(wallet.ethAvailable * (systemSettings?.etbRatePerDollar ?? 190)).toLocaleString()} ETB</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)', lineHeight: '1.1' }}>${(wallet.ethAvailable ?? 0).toFixed(2)} USD</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>≈ {Math.round((wallet.ethAvailable ?? 0) * (systemSettings?.etbRatePerDollar ?? 190)).toLocaleString()} ETB</div>
             </div>
           )}
+
+          {/* Quick Demo Swapper */}
+          <div className="desktop-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(200,150,44,0.05)', padding: '3px 6px', borderRadius: '10px', border: '1px solid rgba(200,150,44,0.15)' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-light)', alignSelf: 'center', marginRight: '4px' }}>DEMO:</span>
+            <button onClick={() => switchUser('buyer')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'buyer' ? 'var(--gold)' : 'transparent', color: user.username === 'buyer' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Buyer</button>
+            <button onClick={() => switchUser('seller')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'seller' ? 'var(--gold)' : 'transparent', color: user.username === 'seller' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Seller</button>
+            <button onClick={() => switchUser('admin')} style={{ padding: '3px 6px', fontSize: '10px', borderRadius: '6px', background: user.username === 'admin' || user.role === 'admin' ? 'var(--gold)' : 'transparent', color: user.username === 'admin' || user.role === 'admin' ? '#0A0C12' : 'var(--text-2)', fontWeight: 700 }}>Admin</button>
+          </div>
+
+          {/* User profile capsule */}
+          <div className="desktop-nav" style={{ gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700 }}>@{user.username}</span>
+              <span style={{ fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{user.role}</span>
+            </div>
+            <span className={`badge ${user.kycStatus === 'approved' ? 'badge-success' : user.kycStatus === 'pending' ? 'badge-warning' : 'badge-neutral'}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+              {user.kycStatus === 'approved' ? '✓ Verified' : user.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
+            </span>
+          </div>
 
           {/* Notification bell */}
           <button onClick={() => setNotifOpen(!notifOpen)} style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', cursor: 'pointer' }}>
             <Icon d={Icons.bell} size={18} />
             {notifCount > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', borderRadius: '99px', minWidth: '16px', height: '16px', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid var(--bg-base)' }}>{notifCount}</span>}
+          </button>
+
+          {/* Quick Logout (Desktop only) */}
+          <button onClick={logout} className="desktop-nav" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-danger-text)', cursor: 'pointer' }} title="Logout">
+            <Icon d={Icons.logout} size={16} />
           </button>
         </div>
       </header>

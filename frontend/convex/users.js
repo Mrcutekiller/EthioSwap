@@ -241,7 +241,7 @@ export const updateKycInfo = mutation({
       }
     });
 
-    return { id: userObjId.toString(), ...user };
+    return { kycStep: "info_submitted", kycData: { name: args.name, phone: args.phone, age: args.age, address: args.address, idType: args.idType } };
   }
 });
 
@@ -263,7 +263,7 @@ export const updateKycDocs = mutation({
       kycStep: "id_uploaded",
     });
 
-    return { id: userObjId.toString(), ...user };
+    return { kycStep: "id_uploaded" };
   }
 });
 
@@ -305,7 +305,7 @@ export const updateKycSelfie = mutation({
       });
     }
 
-    return { id: userObjId.toString(), ...user };
+    return { kycStep: "pending", kycStatus: "pending" };
   }
 });
 
