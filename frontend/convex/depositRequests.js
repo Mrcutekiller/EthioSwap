@@ -1,0 +1,177 @@
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+// ── User creates a deposit request ──────────────────────────────
+export const create = mutation({
+  args: {
+    userId: v.string(),
+    amountUSD: v.number(),
+    walletType: v.string(),
+    senderReference: v.string(),
+    screenshotUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (!user) throw new Error("User not found");
+    if (args.amountUSD <= 0) throw new Error("Amount must be greater than zero");
+
+    const id = await ctx.db.insert("depositRequests", {
+      userId: args.userId,
+      username: user.username,
+      amountUSD: args.amountUSD,
+      walletType: args.walletType,
+      senderReference: args.senderReference,
+      screenshotUrl: args.screenshotUrl,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    });
+
+    // Notify admin
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (admin) {
+      await ctx.db.insert("notifications", {
+        userId: admin._id.toString(),
+        type: "deposit_request",
+        message: `💵 New deposit request from @${user.username}: $${args.amountUSD.toFixed(2)} USD via ${args.walletType}`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return id.toString();
+  },
+});
+
+// ── Admin: list all pending requests ────────────────────────────
+export const listPending = query({
+  handler: async (ctx) => {
+    const requests = await ctx.db
+      .query("depositRequests")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .order("desc")
+      .collect();
+    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+  },
+});
+
+// ── Admin: list all requests (all statuses) ─────────────────────
+export const listAll = query({
+  handler: async (ctx) => {
+    const requests = await ctx.db
+      .query("depositRequests")
+      .order("desc")
+      .collect();
+    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+  },
+});
+
+// ── User: list own requests ─────────────────────────────────────
+export const listByUser = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const requests = await ctx.db
+      .query("depositRequests")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+  },
+});
+
+// ── Admin: approve a deposit request ────────────────────────────
+export const approve = mutation({
+  args: {
+    requestId: v.string(),
+    adminId: v.string(),
+    adminNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const reqId = ctx.db.normalizeId("depositRequests", args.requestId);
+    const req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) throw new Error("Deposit request not found");
+    if (req.status !== "pending") throw new Error("Request already reviewed");
+
+    // Credit user wallet
+    const userObjId = ctx.db.normalizeId("users", req.userId);
+    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, {
+      ethBalance: user.ethBalance + req.amountUSD,
+    });
+
+    // Mark request approved
+    await ctx.db.patch(reqId, {
+      status: "approved",
+      adminNote: args.adminNote,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // Log transaction
+    await ctx.db.insert("transactions", {
+      userId: req.userId,
+      type: "deposit",
+      amountETH: req.amountUSD,
+      amountUSD: req.amountUSD,
+      note: `Manual deposit approved via ${req.walletType} — Ref: ${req.senderReference}`,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Notify user
+    await ctx.db.insert("notifications", {
+      userId: req.userId,
+      type: "deposit_approved",
+      message: `✅ Your deposit of $${req.amountUSD.toFixed(2)} USD has been approved and credited to your wallet!`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  },
+});
+
+// ── Admin: reject a deposit request ─────────────────────────────
+export const reject = mutation({
+  args: {
+    requestId: v.string(),
+    adminId: v.string(),
+    adminNote: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Verify admin
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const reqId = ctx.db.normalizeId("depositRequests", args.requestId);
+    const req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) throw new Error("Deposit request not found");
+    if (req.status !== "pending") throw new Error("Request already reviewed");
+
+    await ctx.db.patch(reqId, {
+      status: "rejected",
+      adminNote: args.adminNote,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // Notify user
+    await ctx.db.insert("notifications", {
+      userId: req.userId,
+      type: "deposit_rejected",
+      message: `❌ Your deposit request of $${req.amountUSD.toFixed(2)} USD was not approved. Reason: ${args.adminNote}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  },
+});
