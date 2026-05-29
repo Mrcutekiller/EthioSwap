@@ -41,6 +41,12 @@ export default defineSchema({
       accountNumber: v.string(),
       holderName: v.string(),
     }))),
+    isSuspended: v.optional(v.boolean()),
+    warnings: v.optional(v.array(v.object({
+      id: v.string(),
+      message: v.string(),
+      createdAt: v.string(),
+    }))),
   }).index("by_username", ["username"]),
 
   listings: defineTable({

@@ -173,7 +173,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
-  const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, systemSettings } = useAuth();
+  const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
   const [tab, setTabState] = useState(() => {
     if (user?.role === 'admin') return 'admin';
     return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
@@ -257,6 +257,107 @@ const AppShell = () => {
     return <AppLockScreen user={user} lockMethod={lockMethod} savedPin={savedPin} onUnlock={unlock} />;
   }
 
+  // Suspended → show gorgeous suspension lock screen
+  if (user?.isSuspended) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        width: '100%', 
+        background: '#0A0C12', 
+        backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(248,113,113,0.12) 0%, transparent 60%)', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '24px', 
+        position: 'relative',
+        fontFamily: 'var(--font)',
+        color: 'var(--text-1)'
+      }}>
+        {/* Background decorations */}
+        <div className="bg-orb bg-orb-1" style={{ background: 'radial-gradient(circle, rgba(248,113,113,0.15) 0%, transparent 70%)' }} />
+        
+        <div className="glass" style={{ 
+          borderRadius: '24px', 
+          border: '1px solid rgba(248,113,113,0.25)', 
+          width: '100%', 
+          maxWidth: '460px', 
+          padding: '40px 32px', 
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)', 
+          zIndex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            width: '64px', 
+            height: '64px', 
+            borderRadius: '20px', 
+            background: 'rgba(248,113,113,0.12)', 
+            border: '1px solid rgba(248,113,113,0.25)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            fontSize: '32px',
+            marginBottom: '24px',
+            boxShadow: '0 0 20px rgba(248,113,113,0.15)'
+          }}>
+            🛑
+          </div>
+
+          <h2 style={{ fontSize: '22px', fontWeight: 900, marginBottom: '12px', letterSpacing: '-0.02em', color: '#FFF' }}>
+            Account Suspended
+          </h2>
+          
+          <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.6', marginBottom: '24px' }}>
+            Your account (@{user.username}) has been restricted or temporarily suspended by the system administrator due to unwanted activities or violation of terms of service.
+          </p>
+
+          <div style={{ 
+            background: 'rgba(248,113,113,0.05)', 
+            border: '1px solid rgba(248,113,113,0.15)', 
+            borderRadius: '12px', 
+            padding: '14px', 
+            fontSize: '12px', 
+            color: 'var(--status-danger-text)', 
+            lineHeight: '1.5',
+            width: '100%',
+            marginBottom: '28px',
+            textAlign: 'left'
+          }}>
+            <strong>📌 Notice to appeal:</strong>
+            <br />
+            You may request an appeal or contact the administration using the live chat support widget located at the bottom-right corner of this screen.
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button 
+              onClick={logout} 
+              className="btn" 
+              style={{ 
+                flex: 1, 
+                padding: '12px', 
+                background: 'rgba(255,255,255,0.03)', 
+                border: '1px solid var(--border)', 
+                color: 'var(--text-2)', 
+                borderRadius: '12px', 
+                fontWeight: 700, 
+                cursor: 'pointer',
+                fontFamily: 'var(--font)'
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        {/* Keeping SupportWidget loaded so they can appeal! */}
+        <SupportWidget />
+      </div>
+    );
+  }
+
   // Bottom nav items
   const navItems = user.role === 'admin'
     ? [{ id: 'admin', label: 'Admin', icon: Icons.admin }]
@@ -329,6 +430,54 @@ const AppShell = () => {
           </button>
         </div>
       </header>
+
+      {/* Warnings Alert Banner */}
+      {user?.warnings && user.warnings.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px', background: 'var(--bg-base)', borderBottom: '1px solid var(--border)', zIndex: 10 }}>
+          {user.warnings.map(warn => (
+            <div 
+              key={warn.id} 
+              className="glass fade-in-1" 
+              style={{ 
+                border: '1px solid var(--status-warning-border)', 
+                background: 'rgba(251,191,36,0.07)', 
+                borderRadius: '14px', 
+                padding: '14px 18px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '240px' }}>
+                <span style={{ fontSize: '20px' }}>⚠️</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--status-warning-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Official Warning from Administration</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-1)', fontWeight: 600, lineHeight: 1.5 }}>{warn.message}</span>
+                  <span style={{ fontSize: '9px', color: 'var(--text-3)' }}>Received on {new Date(warn.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => acknowledgeWarning(warn.id)} 
+                className="btn-teal"
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: '10px', 
+                  fontSize: '12px', 
+                  fontWeight: 700, 
+                  cursor: 'pointer',
+                  border: 'none',
+                  fontFamily: 'var(--font)'
+                }}
+              >
+                ✓ Acknowledge & Dismiss
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Toast Alerts */}
       <div className="toast-wrap">

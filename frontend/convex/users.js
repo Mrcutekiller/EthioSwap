@@ -77,6 +77,8 @@ export const listAll = query({
       joinedAt: u.joinedAt,
       lastActive: u.lastActive,
       paymentAccounts: u.paymentAccounts,
+      isSuspended: u.isSuspended,
+      warnings: u.warnings,
     }));
   }
 });
@@ -357,7 +359,7 @@ export const kycAction = mutation({
       userId: args.userId,
       type: args.approve ? "kyc_approved" : "kyc_rejected",
       message: args.approve
-        ? "✓ Congratulations! Your identity verification has been approved. You can now buy and sell ETH."
+        ? "✓ Congratulations! Your identity verification has been approved. You can now buy and sell USD."
         : `⚠ KYC Rejected: ${args.reason}`,
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -491,6 +493,28 @@ export const savePaymentAccounts = mutation({
     await ctx.db.patch(userObjId, {
       paymentAccounts: args.accounts,
     });
+
+    const updatedUser = await ctx.db.get(userObjId);
+    return {
+      ...updatedUser,
+      id: updatedUser._id.toString(),
+      ethAvailable: updatedUser.ethBalance - (updatedUser.ethLocked || 0),
+    };
+  }
+});
+
+export const acknowledgeWarning = mutation({
+  args: { userId: v.string(), warningId: v.string() },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    const currentWarnings = user.warnings || [];
+    const updatedWarnings = currentWarnings.filter(w => w.id !== args.warningId);
+
+    await ctx.db.patch(userObjId, { warnings: updatedWarnings });
 
     const updatedUser = await ctx.db.get(userObjId);
     return {

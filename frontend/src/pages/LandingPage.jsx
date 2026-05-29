@@ -295,7 +295,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <span className="gold-text">Safe & Secure.</span>
             </h1>
             <p className="landing-hero-sub">
-              Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. Runs on Sepolia Testnet.
+              Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. No crypto knowledge required.
             </p>
             <div className="landing-hero-ctas">
               <button onClick={onGetStarted} className="btn btn-gold btn-lg">
@@ -333,7 +333,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div className="landing-ticker-item"><span className="ticker-dot"></span> DASHEN BANK</div>
           <div className="landing-ticker-item"><span className="ticker-dot"></span> AWASH BANK</div>
           <div className="landing-ticker-item"><span className="ticker-dot"></span> ADMIN DISPUTE ARBITRATION</div>
-          <div className="landing-ticker-item"><span className="ticker-dot"></span> SEPOLIA TESTNET NETWORK</div>
+          <div className="landing-ticker-item"><span className="ticker-dot"></span> USD & ETB TRADING</div>
           {/* Duplicate set for infinite scroll */}
           <div className="landing-ticker-item"><span className="ticker-dot"></span> CBE INTEGRATION</div>
           <div className="landing-ticker-item"><span className="ticker-dot"></span> TELEBIRR SUPPORTED</div>
@@ -342,7 +342,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div className="landing-ticker-item"><span className="ticker-dot"></span> DASHEN BANK</div>
           <div className="landing-ticker-item"><span className="ticker-dot"></span> AWASH BANK</div>
           <div className="landing-ticker-item"><span className="ticker-dot"></span> ADMIN DISPUTE ARBITRATION</div>
-          <div className="landing-ticker-item"><span className="ticker-dot"></span> SEPOLIA TESTNET NETWORK</div>
+          <div className="landing-ticker-item"><span className="ticker-dot"></span> USD & ETB TRADING</div>
         </div>
       </div>
 
@@ -769,7 +769,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div className="landing-footer-brand">
               <Logo size={36} showText={true} />
               <p>
-                Ethiopia's premium peer-to-peer Sepolia testnet escrow exchange. Trade stable USD ($) safely using local bank transfers and mobile wallets.
+                Ethiopia's premium peer-to-peer USD escrow exchange. Trade stable USD ($) safely using local bank transfers and mobile wallets.
               </p>
               <div className="landing-social-links">
                 <a href="https://t.me/ethioswap_p2p" target="_blank" rel="noreferrer" className="landing-social-link">

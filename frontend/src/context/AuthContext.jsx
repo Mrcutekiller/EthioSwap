@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
   const convexApproveDeposit       = useMutation(api.depositRequests.approve);
   const convexRejectDeposit        = useMutation(api.depositRequests.reject);
   const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
+  const convexAcknowledgeWarning   = useMutation(api.users.acknowledgeWarning);
 
   // ── Convex real-time queries ──────────────────────────
   const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
@@ -76,6 +77,8 @@ export const AuthProvider = ({ children }) => {
           wallet.displayName !== prev.displayName ||
           wallet.ethBalance !== prev.ethBalance ||
           wallet.ethLocked !== prev.ethLocked ||
+          wallet.isSuspended !== prev.isSuspended ||
+          JSON.stringify(wallet.warnings || []) !== JSON.stringify(prev.warnings || []) ||
           JSON.stringify(wallet.paymentAccounts || []) !== JSON.stringify(prev.paymentAccounts || []);
 
         if (needsUpdate) {
@@ -87,6 +90,8 @@ export const AuthProvider = ({ children }) => {
             displayName: wallet.displayName,
             ethBalance: wallet.ethBalance,
             ethLocked: wallet.ethLocked,
+            isSuspended: wallet.isSuspended,
+            warnings: wallet.warnings || [],
             paymentAccounts: wallet.paymentAccounts || [],
           };
           localStorage.setItem('ethioswap_user', JSON.stringify(merged));
@@ -239,15 +244,28 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); }
   };
 
-  const savePaymentAccounts = async (accounts) => {
+  const savePaymentAccounts = async (accountsOrObj) => {
     setLoading(true);
     try {
+      // Support both direct array and { userId, accounts } object (legacy)
+      const accounts = Array.isArray(accountsOrObj)
+        ? accountsOrObj
+        : (accountsOrObj?.accounts ?? accountsOrObj);
       const updated = await convexSavePaymentAccounts({ userId: user.id, accounts });
       updateUser(updated);
       setSuccess('Payment profiles saved!');
       return updated;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
+  };
+
+  const acknowledgeWarning = async (warningId) => {
+    try {
+      const updated = await convexAcknowledgeWarning({ userId: user.id, warningId });
+      updateUser(updated);
+      setSuccess('Warning acknowledged.');
+      return updated;
+    } catch (err) { setError(err.message); return null; }
   };
 
   const updateUser = (updatedUser) => {
@@ -313,6 +331,7 @@ export const AuthProvider = ({ children }) => {
       login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
+      acknowledgeWarning,
       ethUsdPrice: ETH_USD_PRICE,
     }}>
       {children}

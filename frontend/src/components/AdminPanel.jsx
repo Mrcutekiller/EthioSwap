@@ -173,6 +173,9 @@ const AdminPanel = ({ user }) => {
   const supportReply        = useMutation(api.support.replyTicket);
   const closeTicket         = useMutation(api.support.closeTicket);
   const convexWithdraw      = useMutation(api.users.withdrawETH);
+  const warnUserMutation      = useMutation(api.admin.warnUser);
+  const toggleSuspendMutation = useMutation(api.admin.toggleSuspendUser);
+  const removeUserMutation    = useMutation(api.admin.removeUser);
 
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
@@ -193,6 +196,11 @@ const AdminPanel = ({ user }) => {
   // ── Deposit state ────────────────────────────────────────────
   const [depositRejectNotes, setDepositRejectNotes] = useState({});
   const pendingDeposits = allDepositReqs.filter(r => r.status === 'pending');
+
+  // ── Admin Action states ──────────────────────────────────────
+  const [warnUserId, setWarnUserId] = useState(null);
+  const [warnMessage, setWarnMessage] = useState('');
+  const [warnLoading, setWarnLoading] = useState(false);
 
   // ── Support ──────────────────────────────────────────────────
   useEffect(() => {
@@ -219,6 +227,44 @@ const AdminPanel = ({ user }) => {
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
     { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
   ];
+
+  // ── Admin User Management Handlers ───────────────────────────
+  const handleWarnUser = async (e) => {
+    e.preventDefault();
+    if (!warnUserId || !warnMessage.trim()) return;
+    setWarnLoading(true);
+    try {
+      await warnUserMutation({ userId: warnUserId, message: warnMessage });
+      showAlert("⚠️ Warning sent successfully.");
+      setWarnUserId(null);
+      setWarnMessage('');
+    } catch (err) {
+      showAlert("Error sending warning: " + err.message, "error");
+    } finally {
+      setWarnLoading(false);
+    }
+  };
+
+  const handleToggleSuspend = async (userId, currentSuspended) => {
+    const actionText = currentSuspended ? "activate (unpush)" : "suspend (push)";
+    if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
+    try {
+      await toggleSuspendMutation({ userId, isSuspended: !currentSuspended });
+      showAlert(`User ${currentSuspended ? 'activated' : 'suspended'} successfully.`);
+    } catch (err) {
+      showAlert("Error updating user status: " + err.message, "error");
+    }
+  };
+
+  const handleRemoveUser = async (userId, username) => {
+    if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return;
+    try {
+      await removeUserMutation({ userId });
+      showAlert("User removed successfully.");
+    } catch (err) {
+      showAlert("Error removing user: " + err.message, "error");
+    }
+  };
 
   // ── Handlers ─────────────────────────────────────────────────
   const handleKYC = async (userId, approve) => {
@@ -868,20 +914,90 @@ const AdminPanel = ({ user }) => {
           {!allUsersList ? (
             <div className="skeleton" style={{ height: '200px' }} />
           ) : allUsersList.map(u => (
-            <div key={u._id} style={{ ...cs, display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
-                {(u.username || 'U').charAt(0).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{u.phone}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)' }}>${(u.ethBalance || 0).toFixed(2)}</div>
-                <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '2px', color: u.kycStatus === 'approved' ? 'var(--status-success-text)' : u.kycStatus === 'pending' ? 'var(--status-warning-text)' : 'var(--text-3)' }}>
-                  {u.kycStatus === 'approved' ? '✓ Verified' : u.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
+            <div key={u._id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
+                  {(u.username || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
+                    {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
+                    {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Suspended</span>}
+                    {u.warnings && u.warnings.length > 0 && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(251,191,36,0.1)', color: 'var(--status-warning-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-warning-border)' }}>⚠️ {u.warnings.length} Warn</span>}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{u.phone}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)' }}>${(u.ethBalance || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '2px', color: u.kycStatus === 'approved' ? 'var(--status-success-text)' : u.kycStatus === 'pending' ? 'var(--status-warning-text)' : 'var(--text-3)' }}>
+                    {u.kycStatus === 'approved' ? '✓ Verified' : u.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
+                  </div>
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              {u.role !== 'admin' && (
+                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => setWarnUserId(u._id.toString())} 
+                    style={{ 
+                      background: 'rgba(251,191,36,0.06)', 
+                      border: '1px solid var(--status-warning-border)', 
+                      color: 'var(--status-warning-text)', 
+                      borderRadius: '8px', 
+                      padding: '5px 12px', 
+                      fontSize: '11px', 
+                      fontWeight: 700, 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontFamily: 'var(--font)'
+                    }}
+                  >
+                    ⚠️ Warn
+                  </button>
+                  <button 
+                    onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)} 
+                    style={{ 
+                      background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
+                      border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
+                      color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
+                      borderRadius: '8px', 
+                      padding: '5px 12px', 
+                      fontSize: '11px', 
+                      fontWeight: 700, 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontFamily: 'var(--font)'
+                    }}
+                  >
+                    {u.isSuspended ? '✅ Unpush (Activate)' : '🚫 Push (Suspend)'}
+                  </button>
+                  <button 
+                    onClick={() => handleRemoveUser(u._id.toString(), u.username)} 
+                    style={{ 
+                      background: 'rgba(248,113,113,0.12)', 
+                      border: '1px solid rgba(248,113,113,0.3)', 
+                      color: 'var(--status-danger-text)', 
+                      borderRadius: '8px', 
+                      padding: '5px 10px', 
+                      fontSize: '11px', 
+                      fontWeight: 700, 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontFamily: 'var(--font)'
+                    }}
+                    title="Remove User Permanently"
+                  >
+                    🗑️ Remove
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -940,6 +1056,54 @@ const AdminPanel = ({ user }) => {
             {savingSettings ? '⏳ Saving…' : '💾 Save Settings'}
           </button>
         </form>
+      )}
+
+      {/* ══ WARN USER MODAL ══════════════════════════════════ */}
+      {warnUserId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-1)' }}>⚠️ Issue Official User Warning</h3>
+              <button onClick={() => { setWarnUserId(null); setWarnMessage(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '18px', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.5' }}>
+              This warning will be recorded on the user's profile and displayed prominently at the top of their dashboard in real-time.
+            </p>
+
+            <form onSubmit={handleWarnUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase' }}>Warning Message</label>
+                <textarea 
+                  value={warnMessage} 
+                  onChange={e => setWarnMessage(e.target.value)} 
+                  placeholder="Specify violation (e.g. offensive chat, failure to pay, suspicious behavior)..." 
+                  rows={4}
+                  required
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px 14px', 
+                    borderRadius: '12px', 
+                    background: 'var(--bg-elevated)', 
+                    border: '1px solid var(--border)', 
+                    color: 'var(--text-1)', 
+                    fontSize: '13px', 
+                    fontFamily: 'var(--font)', 
+                    outline: 'none',
+                    resize: 'none'
+                  }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button type="button" onClick={() => { setWarnUserId(null); setWarnMessage(''); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>Cancel</button>
+                <button type="submit" disabled={warnLoading} className="btn btn-gold" style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                  {warnLoading ? '⏳ Sending…' : '⚠️ Send Warning'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

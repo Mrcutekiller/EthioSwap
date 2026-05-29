@@ -198,3 +198,96 @@ export const getAdminEarnings = query({
     };
   }
 });
+
+export const warnUser = mutation({
+  args: { userId: v.string(), message: v.string() },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    const newWarning = {
+      id: Math.random().toString(36).substring(2, 9),
+      message: args.message,
+      createdAt: new Date().toISOString(),
+    };
+
+    const currentWarnings = user.warnings || [];
+    const updatedWarnings = [...currentWarnings, newWarning];
+
+    await ctx.db.patch(userObjId, { warnings: updatedWarnings });
+
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: "warning",
+      message: `⚠️ Admin Warning: ${args.message}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true, warning: newWarning };
+  }
+});
+
+export const toggleSuspendUser = mutation({
+  args: { userId: v.string(), isSuspended: v.boolean() },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    if (user.role === "admin") {
+      throw new Error("Cannot suspend an administrator account");
+    }
+
+    await ctx.db.patch(userObjId, { isSuspended: args.isSuspended });
+
+    if (args.isSuspended) {
+      const userListings = await ctx.db.query("listings")
+        .filter(q => q.eq(q.field("sellerId"), args.userId))
+        .collect();
+      for (const listing of userListings) {
+        await ctx.db.patch(listing._id, { status: "paused" });
+      }
+    }
+
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: "status_change",
+      message: args.isSuspended 
+        ? "🛑 Your account has been suspended by the administration due to violating our guidelines."
+        : "✅ Your account suspension has been lifted by the administration.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  }
+});
+
+export const removeUser = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    if (user.role === "admin") {
+      throw new Error("Cannot remove an administrator account");
+    }
+
+    const userListings = await ctx.db.query("listings")
+      .filter(q => q.eq(q.field("sellerId"), args.userId))
+      .collect();
+    for (const listing of userListings) {
+      await ctx.db.delete(listing._id);
+    }
+
+    await ctx.db.delete(userObjId);
+
+    return { success: true };
+  }
+});
