@@ -214,7 +214,7 @@ const AppShell = () => {
 
   const getInitials = (name) => (name || 'U').substring(0, 2).toUpperCase();
   const lockMethod = localStorage.getItem('ethioswap_lock_method') || 'pin';
-  const savedPin = localStorage.getItem('ethioswap_lock_pin') || '123456';
+  const savedPin = localStorage.getItem('ethioswap_lock_pin'); // No fallback to force setup if not set
 
   // Auto-detect login link from website
   React.useEffect(() => {

@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         setUser(parsed);
-        const lockMethod = localStorage.getItem('ethioswap_lock_method');
-        if (lockMethod) setIsLocked(true);
+        // Force lock screen to pop up immediately on launch/open
+        setIsLocked(true);
       } catch {}
     }
   }, []);
@@ -122,8 +122,7 @@ export const AuthProvider = ({ children }) => {
       const data = await convexLogin({ username, password });
       persistUser(data);
       setSuccess(`Welcome back, ${data.username}!`);
-      const lockMethod = localStorage.getItem('ethioswap_lock_method');
-      if (lockMethod) setIsLocked(true);
+      setIsLocked(true);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
@@ -142,6 +141,7 @@ export const AuthProvider = ({ children }) => {
       });
       persistUser(data);
       setSuccess('Account created! Complete KYC verification to start trading.');
+      setIsLocked(true);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }

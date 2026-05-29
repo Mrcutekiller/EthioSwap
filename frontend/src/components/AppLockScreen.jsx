@@ -7,7 +7,10 @@ import Logo from './Logo.jsx';
  * Supports: PIN (6-digit), Password text, and WebAuthn biometric (fingerprint/FaceID).
  */
 const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
-  const [mode, setMode] = useState(lockMethod || 'pin'); // 'pin' | 'password' | 'biometric'
+  const isSetupMode = !savedPin;
+  const [setupStep, setSetupStep] = useState('enter'); // 'enter' | 'confirm'
+  const [firstPin, setFirstPin] = useState('');
+  const [mode, setMode] = useState(isSetupMode ? 'pin' : (lockMethod || 'pin')); // Force 'pin' for setup mode
   const [pin, setPin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,6 +21,7 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
 
   // Check WebAuthn availability on mount
   useEffect(() => {
+    if (isSetupMode) return; // No biometric setup directly on lockscreen launch if no PIN exists
     const checkBiometric = async () => {
       if (window.PublicKeyCredential) {
         try {
@@ -54,12 +58,32 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
 
     if (newPin.length === 6) {
       setTimeout(() => {
-        if (newPin === (savedPin || '123456')) {
-          onUnlock();
+        if (isSetupMode) {
+          if (setupStep === 'enter') {
+            setFirstPin(newPin);
+            setPin('');
+            setSetupStep('confirm');
+          } else {
+            if (newPin === firstPin) {
+              localStorage.setItem('ethioswap_lock_pin', newPin);
+              localStorage.setItem('ethioswap_lock_method', 'pin');
+              onUnlock();
+            } else {
+              setError('PINs do not match. Start over.');
+              triggerShake();
+              setPin('');
+              setFirstPin('');
+              setSetupStep('enter');
+            }
+          }
         } else {
-          setError('Incorrect PIN. Try again.');
-          triggerShake();
-          setPin('');
+          if (newPin === savedPin) {
+            onUnlock();
+          } else {
+            setError('Incorrect PIN. Try again.');
+            triggerShake();
+            setPin('');
+          }
         }
       }, 150);
     }
@@ -129,8 +153,14 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
       <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--gold-bg)', border: '2px solid var(--border-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: 800, color: 'var(--gold-light)', marginBottom: '12px', boxShadow: 'var(--shadow-gold)' }}>
         {getInitials(user?.username)}
       </div>
-      <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-1)', marginBottom: '4px' }}>Welcome back, {user?.username}</p>
-      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '40px' }}>Verify to unlock your wallet</p>
+      <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-1)', marginBottom: '4px' }}>
+        {isSetupMode ? 'Secure your wallet' : `Welcome back, ${user?.username}`}
+      </p>
+      <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '40px', textAlign: 'center' }}>
+        {isSetupMode
+          ? (setupStep === 'enter' ? 'Set a secure 6-digit PIN code' : 'Re-enter your 6-digit PIN to confirm')
+          : 'Verify to unlock your wallet'}
+      </p>
 
       {/* PIN Mode */}
       {mode === 'pin' && (
@@ -161,16 +191,18 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
           </div>
 
           {/* Alternatives */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '24px' }}>
-            {biometricAvailable && (
-              <button onClick={handleBiometric} style={{ background: 'none', border: 'none', color: 'var(--gold-light)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                👆 Use Biometric
+          {!isSetupMode && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '24px' }}>
+              {biometricAvailable && (
+                <button onClick={handleBiometric} style={{ background: 'none', border: 'none', color: 'var(--gold-light)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  👆 Use Biometric
+                </button>
+              )}
+              <button onClick={() => { setMode('password'); setError(''); setPin(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Use Password
               </button>
-            )}
-            <button onClick={() => { setMode('password'); setError(''); setPin(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-              Use Password
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       )}
 
