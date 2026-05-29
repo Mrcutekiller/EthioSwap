@@ -265,6 +265,7 @@ export const initiateTrade = mutation({
       }],
       proofUrl: null,
       selectedPaymentAccount: chosenAccount || undefined,
+      createdAt: new Date().toISOString(),
     });
 
     // Update listing amount or status
