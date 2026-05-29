@@ -52,6 +52,7 @@ export default defineSchema({
     status: v.string(),
     createdAt: v.string(),
     customRateETB: v.optional(v.number()),
+    type: v.optional(v.string()),
     paymentAccounts: v.optional(v.array(v.object({
       id: v.string(),
       bankName: v.string(),

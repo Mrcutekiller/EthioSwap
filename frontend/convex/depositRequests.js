@@ -100,14 +100,28 @@ export const approve = mutation({
     if (!req) throw new Error("Deposit request not found");
     if (req.status !== "pending") throw new Error("Request already reviewed");
 
-    // Credit user wallet
+    // Credit user wallet (net) and admin (fee)
     const userObjId = ctx.db.normalizeId("users", req.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
 
+    const fee = req.amountUSD * 0.005;
+    const netAmount = req.amountUSD - fee;
+
     await ctx.db.patch(user._id, {
-      ethBalance: user.ethBalance + req.amountUSD,
+      ethBalance: user.ethBalance + netAmount,
     });
+
+    // Credit fee to admin
+    const systemAdmin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (systemAdmin) {
+      await ctx.db.patch(systemAdmin._id, {
+        ethBalance: systemAdmin.ethBalance + fee,
+      });
+    }
 
     // Mark request approved
     await ctx.db.patch(reqId, {
@@ -120,9 +134,9 @@ export const approve = mutation({
     await ctx.db.insert("transactions", {
       userId: req.userId,
       type: "deposit",
-      amountETH: req.amountUSD,
-      amountUSD: req.amountUSD,
-      note: `Manual deposit approved via ${req.walletType} — Ref: ${req.senderReference}`,
+      amountETH: netAmount,
+      amountUSD: netAmount,
+      note: `Manual deposit approved via ${req.walletType} — Fee: $${fee.toFixed(2)} USD, Ref: ${req.senderReference}`,
       createdAt: new Date().toISOString(),
     });
 
@@ -130,7 +144,7 @@ export const approve = mutation({
     await ctx.db.insert("notifications", {
       userId: req.userId,
       type: "deposit_approved",
-      message: `✅ Your deposit of $${req.amountUSD.toFixed(2)} USD has been approved and credited to your wallet!`,
+      message: `✅ Your deposit of $${req.amountUSD.toFixed(2)} USD has been approved. Credited: $${netAmount.toFixed(2)} USD (after 0.5% fee of $${fee.toFixed(2)} USD)`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });

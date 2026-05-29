@@ -162,11 +162,11 @@ export const AuthProvider = ({ children }) => {
     resetIdleTimer();
   };
 
-  const createListing = async (amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts) => {
+  const createListing = async (amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts, type) => {
     setLoading(true);
     try {
-      await convexCreateListing({ sellerId: user.id, amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts });
-      setSuccess('Listing published! USD locked in escrow.');
+      await convexCreateListing({ sellerId: user.id, amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts, type });
+      setSuccess('Listing published! Ad is now active.');
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };

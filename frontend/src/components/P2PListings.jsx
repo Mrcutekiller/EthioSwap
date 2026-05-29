@@ -21,6 +21,15 @@ const repColor = (rep) => rep >= 95 ? '#10B981' : rep >= 80 ? '#E8B84B' : '#EF44
 const P2PListings = () => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings } = useAuth();
 
+  const [p2pTab, setP2pTabState] = useState(() => {
+    return localStorage.getItem(`ethioswap_active_p2p_tab_${user?.id}`) || 'buy';
+  });
+
+  const setP2pTab = (val) => {
+    setP2pTabState(val);
+    localStorage.setItem(`ethioswap_active_p2p_tab_${user?.id}`, val);
+  };
+
   const [filterPayment, setFilterPayment] = useState('All');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBuyModal, setShowBuyModal]    = useState(false);
@@ -29,16 +38,31 @@ const P2PListings = () => {
   const [tradeError, setTradeError]           = useState('');
   const [chosenPaymentAccount, setChosenPaymentAccount] = useState(null);
 
-  // Sync selected listing's first payment account as default
+  // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
   React.useEffect(() => {
-    if (selectedListing && selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
-      setChosenPaymentAccount(selectedListing.paymentAccounts[0]);
+    if (selectedListing) {
+      if (selectedListing.type === 'buy') {
+        // Taker is seller, so default to taker's own first saved payment account
+        if (user.paymentAccounts && user.paymentAccounts.length > 0) {
+          setChosenPaymentAccount(user.paymentAccounts[0]);
+        } else {
+          setChosenPaymentAccount(null);
+        }
+      } else {
+        // Maker is seller, default to listing's payment account
+        if (selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
+          setChosenPaymentAccount(selectedListing.paymentAccounts[0]);
+        } else {
+          setChosenPaymentAccount(null);
+        }
+      }
     } else {
       setChosenPaymentAccount(null);
     }
-  }, [selectedListing]);
+  }, [selectedListing, user]);
 
   // Create form state
+  const [createType,      setCreateType]      = useState('sell'); // 'sell' | 'buy'
   const [amountETH,       setAmountETH]       = useState('');
   const [minLimit,        setMinLimit]         = useState('');
   const [maxLimit,        setMaxLimit]         = useState('');
@@ -59,17 +83,10 @@ const P2PListings = () => {
   // ── KYC gate ─────────────────────────────────────────────
   const kycApproved = user?.kycStatus === 'approved';
 
-  // ── Payment checkbox ─────────────────────────────────────
-  const togglePayment = (id) => {
-    setSelectedPayments(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
-  };
-
   // ── Create listing ────────────────────────────────────────
   const handleCreateListing = async (e) => {
     e.preventDefault();
-    if (linkedAccounts.length === 0) {
+    if (createType === 'sell' && linkedAccounts.length === 0) {
       alert('Please link at least one of your saved payment accounts.');
       return;
     }
@@ -77,9 +94,22 @@ const P2PListings = () => {
       alert('Please fill in all fields.');
       return;
     }
-    const selectedPayments = linkedAccounts.map(a => a.bankName);
+    const selectedPayments = createType === 'sell' 
+      ? linkedAccounts.map(a => a.bankName) 
+      : ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
+      
     const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : undefined;
-    await createListing(parseFloat(amountETH), parseFloat(minLimit), parseFloat(maxLimit), selectedPayments, effectiveRate, linkedAccounts);
+    
+    await createListing(
+      parseFloat(amountETH), 
+      parseFloat(minLimit), 
+      parseFloat(maxLimit), 
+      selectedPayments, 
+      effectiveRate, 
+      createType === 'sell' ? linkedAccounts : [], 
+      createType
+    );
+    
     setAmountETH(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
     setShowCreateModal(false);
@@ -101,18 +131,29 @@ const P2PListings = () => {
       setTradeError(`Total (${Math.round(totalETB).toLocaleString()} ETB) must be between ${selectedListing.minLimitETB.toLocaleString()} – ${selectedListing.maxLimitETB.toLocaleString()} ETB.`);
       return;
     }
-    if (!chosenPaymentAccount && selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
-      setTradeError('Please select a bank/wallet of the seller to pay to.');
-      return;
+    
+    if (selectedListing.type === 'buy') {
+      if (!chosenPaymentAccount) {
+        setTradeError('Please select one of your saved bank/wallet accounts to receive the ETB.');
+        return;
+      }
+    } else {
+      if (!chosenPaymentAccount && selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
+        setTradeError('Please select a bank/wallet of the seller to pay to.');
+        return;
+      }
     }
+    
     const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
     if (trade) { setSelectedListing(null); setTradeAmountETH(''); setShowBuyModal(false); }
   };
 
   // ── Filter listings ───────────────────────────────────────
-  const filtered = listings.filter(l =>
-    filterPayment === 'All' || l.paymentMethods.includes(filterPayment)
-  );
+  const filtered = listings.filter(l => {
+    const matchesType = p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy');
+    const matchesPayment = filterPayment === 'All' || l.paymentMethods.includes(filterPayment);
+    return matchesType && matchesPayment;
+  });
 
   // ── Shared styles ─────────────────────────────────────────
   const overlayStyle = {
@@ -145,8 +186,8 @@ const P2PListings = () => {
         </div>
 
         {kycApproved ? (
-          <button onClick={() => setShowCreateModal(true)} className="btn btn-gold" style={{ padding: '10px 16px', fontSize: '13px' }}>
-            + Sell USD
+          <button onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }} className="btn btn-gold" style={{ padding: '10px 16px', fontSize: '13px' }}>
+            + Post Ad
           </button>
         ) : (
           <div style={{
@@ -157,6 +198,34 @@ const P2PListings = () => {
             🛡️ Verify ID to trade
           </div>
         )}
+      </div>
+
+      {/* ── Segmented Tab Control ── */}
+      <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', gap: '4px' }}>
+        <button
+          onClick={() => setP2pTab('buy')}
+          style={{
+            flex: 1, padding: '10px 6px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font)', fontWeight: 700, fontSize: '12.5px',
+            background: p2pTab === 'buy' ? 'var(--gold)' : 'transparent',
+            color: p2pTab === 'buy' ? '#0A0C12' : 'var(--text-3)',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          🟢 Buy USD
+        </button>
+        <button
+          onClick={() => setP2pTab('sell')}
+          style={{
+            flex: 1, padding: '10px 6px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font)', fontWeight: 700, fontSize: '12.5px',
+            background: p2pTab === 'sell' ? 'var(--gold)' : 'transparent',
+            color: p2pTab === 'sell' ? '#0A0C12' : 'var(--text-3)',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          🟡 Sell USD
+        </button>
       </div>
 
       {/* ── Payment filter pills ─────────────────────────────── */}
@@ -199,7 +268,7 @@ const P2PListings = () => {
           <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
           <div style={{ fontWeight: 700, marginBottom: '4px' }}>No active offers</div>
           <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
-            {filterPayment !== 'All' ? `No listings accept ${filterPayment}. Try a different filter.` : 'Be the first to deposit and list a sell offer!'}
+            {filterPayment !== 'All' ? `No listings accept ${filterPayment}. Try a different filter.` : `Be the first to list a ${p2pTab === 'buy' ? 'sell' : 'buy'} offer!`}
           </p>
         </div>
       ) : (
@@ -207,6 +276,7 @@ const P2PListings = () => {
           {filtered.map(listing => {
             const effectiveRate = listing.customRateETB || rate;
             const isOwnListing = listing.sellerId === user.id;
+            const isBuyType = listing.type === 'buy';
             return (
               <div key={listing.id} style={{
                 background: 'var(--bg-surface)', border: '1px solid var(--border)',
@@ -240,7 +310,9 @@ const P2PListings = () => {
                       {listing.sellerReputation}% rep · {listing.sellerTotalTrades || 0} trades
                     </div>
                   </div>
-                  <span className="badge badge-success" style={{ fontSize: '10px' }}>SELL</span>
+                  <span className={`badge ${isBuyType ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '10px' }}>
+                    {isBuyType ? 'BUY' : 'SELL'}
+                  </span>
                 </div>
 
                 {/* Pricing */}
@@ -301,7 +373,7 @@ const P2PListings = () => {
                     disabled={!kycApproved}
                     style={{ fontSize: '14px', padding: '13px' }}
                   >
-                    {kycApproved ? 'Buy USD →' : '🛡️ KYC Required'}
+                    {kycApproved ? (isBuyType ? 'Sell USD →' : 'Buy USD →') : '🛡️ KYC Required'}
                   </button>
                 )}
               </div>
@@ -315,8 +387,10 @@ const P2PListings = () => {
         <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) setShowCreateModal(false); }}>
           <div style={sheetStyle}>
             <div style={handleStyle} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontWeight: 800, fontSize: '18px', margin: 0 }}>Sell USD</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>
+                {createType === 'buy' ? 'Post Buy USD Ad' : 'Post Sell USD Ad'}
+              </h3>
               <button onClick={() => setShowCreateModal(false)} style={{
                 width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '16px',
@@ -324,18 +398,58 @@ const P2PListings = () => {
               }}>✕</button>
             </div>
 
+            {/* Offer type selector */}
+            <div style={{ display: 'flex', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3px', gap: '2px', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setCreateType('sell')}
+                style={{
+                  flex: 1, padding: '8px 4px', borderRadius: '9px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 700, fontSize: '11px',
+                  background: createType === 'sell' ? 'linear-gradient(135deg,rgba(200,150,44,0.15),rgba(200,150,44,0.05))' : 'transparent',
+                  color: createType === 'sell' ? 'var(--gold-light)' : 'var(--text-3)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                📈 Sell USD Ad
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateType('buy')}
+                style={{
+                  flex: 1, padding: '8px 4px', borderRadius: '9px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 700, fontSize: '11px',
+                  background: createType === 'buy' ? 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.05))' : 'transparent',
+                  color: createType === 'buy' ? 'var(--teal-light)' : 'var(--text-3)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                📉 Buy USD Ad
+              </button>
+            </div>
+
             {/* How it works */}
             <div style={{
-              background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.2)',
+              background: createType === 'buy' ? 'rgba(0,212,170,0.07)' : 'var(--gold-bg)', 
+              border: `1px solid ${createType === 'buy' ? 'rgba(0,212,170,0.2)' : 'rgba(200,150,44,0.2)'}`,
               borderRadius: '10px', padding: '12px', marginBottom: '20px',
             }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px' }}>📖 How it works:</div>
-              <ol style={{ fontSize: '12px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <li>Enter USD amount & set min/max ETB limits</li>
-                <li>Your USD will be locked in escrow</li>
-                <li>Buyers will contact you and pay ETB</li>
-                <li>Release USD after confirming ETB received</li>
-              </ol>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: createType === 'buy' ? 'var(--teal-light)' : 'var(--gold-light)', marginBottom: '6px' }}>📖 How it works:</div>
+              {createType === 'buy' ? (
+                <ol style={{ fontSize: '12px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
+                  <li>Enter the USD amount you want to buy & set limits</li>
+                  <li>Your USD balance is <strong>NOT locked upfront</strong></li>
+                  <li>Sellers will select your ad and lock their USD in escrow</li>
+                  <li>Transfer ETB to their bank account and release USD</li>
+                </ol>
+              ) : (
+                <ol style={{ fontSize: '12px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
+                  <li>Enter USD amount & set min/max ETB limits</li>
+                  <li>Your USD will be locked in escrow</li>
+                  <li>Buyers will contact you and pay ETB</li>
+                  <li>Release USD after confirming ETB received</li>
+                </ol>
+              )}
             </div>
 
             <form onSubmit={handleCreateListing} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -413,50 +527,62 @@ const P2PListings = () => {
 
               {/* Personal payment accounts selector */}
               <div>
-                <label className="input-label" style={{ marginBottom: '6px', display: 'block' }}>Select My Payment Accounts to Receive Birr</label>
-                <p style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px' }}>
-                  Check which bank or wallet accounts you want to accept ETB transfers into for this listing:
-                </p>
-                
-                {(!user.paymentAccounts || user.paymentAccounts.length === 0) ? (
-                  <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
-                      You must add at least one bank account or mobile wallet in your Profile before listing USD.
+                {createType === 'buy' ? (
+                  <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>🛡️</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)' }}>No Payout Account Required Upfront</div>
+                    <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 0', lineHeight: 1.5 }}>
+                      Since you are the buyer, you do not need to link a bank account to receive ETB. Takers (sellers) will provide their own payout details when they sell USD to you.
                     </p>
-                    <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
-                      Go to Profile page & add account →
-                    </a>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {user.paymentAccounts.map(acc => {
-                      const sel = linkedAccounts.some(la => la.id === acc.id);
-                      const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
-                      return (
-                        <label key={acc.id} style={{
-                          display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
-                          background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
-                          border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                          borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
-                          transition: 'all 0.15s ease',
-                        }}>
-                          <input type="checkbox" checked={sel} onChange={() => toggleLinkedAccount(acc)} style={{ display: 'none' }} />
-                          <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
-                              {matched?.label || acc.bankName}
-                            </div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400 }}>
-                              Acc: {acc.accountNumber} · Holder: {acc.holderName}
-                            </div>
-                          </div>
-                          {sel && <span style={{ color: 'var(--gold-light)', fontSize: '16px' }}>✓</span>}
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <label className="input-label" style={{ marginBottom: '6px', display: 'block' }}>Select My Payment Accounts to Receive Birr</label>
+                    <p style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px' }}>
+                      Check which bank or wallet accounts you want to accept ETB transfers into for this listing:
+                    </p>
+                    
+                    {(!user.paymentAccounts || user.paymentAccounts.length === 0) ? (
+                      <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
+                        <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
+                          You must add at least one bank account or mobile wallet in your Profile before listing USD.
+                        </p>
+                        <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
+                          Go to Profile page & add account →
+                        </a>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {user.paymentAccounts.map(acc => {
+                          const sel = linkedAccounts.some(la => la.id === acc.id);
+                          const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                          return (
+                            <label key={acc.id} style={{
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                              background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
+                              border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
+                              borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
+                              transition: 'all 0.15s ease',
+                            }}>
+                              <input type="checkbox" checked={sel} onChange={() => toggleLinkedAccount(acc)} style={{ display: 'none' }} />
+                              <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
+                                  {matched?.label || acc.bankName}
+                                </div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400 }}>
+                                  Acc: {acc.accountNumber} · Holder: {acc.holderName}
+                                </div>
+                              </div>
+                              {sel && <span style={{ color: 'var(--gold-light)', fontSize: '16px' }}>✓</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -470,7 +596,7 @@ const P2PListings = () => {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" disabled={!user.paymentAccounts || user.paymentAccounts.length === 0} className="btn btn-gold" style={{ flex: 2 }}>Create Listing</button>
+                <button type="submit" disabled={createType === 'sell' && (!user.paymentAccounts || user.paymentAccounts.length === 0)} className="btn btn-gold" style={{ flex: 2 }}>Create Listing</button>
               </div>
             </form>
           </div>
@@ -483,7 +609,9 @@ const P2PListings = () => {
           <div style={sheetStyle}>
             <div style={handleStyle} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>Buy from @{selectedListing.sellerName}</h3>
+              <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>
+                {selectedListing.type === 'buy' ? `Sell USD to @${selectedListing.sellerName}` : `Buy from @${selectedListing.sellerName}`}
+              </h3>
               <button onClick={() => { setShowBuyModal(false); setSelectedListing(null); }} style={{
                 width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '16px',
@@ -491,7 +619,7 @@ const P2PListings = () => {
               }}>✕</button>
             </div>
 
-            {/* Seller info */}
+            {/* Partner info */}
             <div style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--border)',
               borderRadius: '10px', padding: '12px', marginBottom: '16px',
@@ -512,19 +640,33 @@ const P2PListings = () => {
             </div>
 
             {/* Steps */}
-            <div style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px' }}>📖 Steps:</div>
-              <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <li>Enter how much USD you want to buy</li>
-                <li>You'll see the exact ETB you need to send</li>
-                <li>Open trade → chat with seller privately</li>
-                <li>Send ETB → upload receipt → seller releases USD</li>
-              </ol>
-            </div>
+            {selectedListing.type === 'buy' ? (
+              <div style={{ background: 'rgba(0,212,170,0.07)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', marginBottom: '6px' }}>📖 Steps:</div>
+                <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
+                  <li>Enter how much USD you want to sell to this buyer</li>
+                  <li>You'll see the exact ETB they will transfer to you</li>
+                  <li>Select your bank account where they will send local Birr</li>
+                  <li>Open trade → your USD is locked in escrow → they pay you</li>
+                </ol>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px' }}>📖 Steps:</div>
+                <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
+                  <li>Enter how much USD you want to buy</li>
+                  <li>You'll see the exact ETB you need to send</li>
+                  <li>Open trade → chat with seller privately</li>
+                  <li>Send ETB → upload receipt → seller releases USD</li>
+                </ol>
+              </div>
+            )}
 
             <form onSubmit={handleOpenTrade} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Amount to Buy (USD)</label>
+                <label className="input-label">
+                  {selectedListing.type === 'buy' ? 'Amount to Sell (USD)' : 'Amount to Buy (USD)'}
+                </label>
                 <input
                   type="number" step="0.01" required
                   className="input"
@@ -542,7 +684,7 @@ const P2PListings = () => {
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
-                    <span>You Pay:</span>
+                    <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
                       {Math.round(parseFloat(tradeAmountETH) * (selectedListing.customRateETB || rate)).toLocaleString()} ETB
                     </span>
@@ -550,45 +692,100 @@ const P2PListings = () => {
                 </div>
               )}
 
-              {/* Seller's Payment Accounts Selector */}
-              {selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0 && (
+              {/* Dynamic Bank Accounts Selector */}
+              {selectedListing.type === 'buy' ? (
+                /* Taker is seller: Taker chooses ONE of THEIR OWN accounts to receive payment */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label className="input-label" style={{ marginBottom: '2px' }}>Send Payout To (Seller Bank/Wallet)</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {selectedListing.paymentAccounts.map(acc => {
-                      const sel = chosenPaymentAccount?.id === acc.id;
-                      const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
-                      return (
-                        <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
-                          display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
-                          background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
-                          border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                          borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
-                          transition: 'all 0.15s ease',
-                        }}>
-                          <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
-                              {matched?.label || acc.bankName}
-                            </div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
-                              Acc Holder: {acc.holderName}
-                            </div>
-                          </div>
-                          <span style={{
-                            width: '18px', height: '18px', borderRadius: '50%',
-                            border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: sel ? 'var(--gold)' : 'transparent',
-                            color: '#0A0C12', fontSize: '10px', fontWeight: 900
+                  <label className="input-label" style={{ marginBottom: '2px' }}>Receive Payout Into (My Bank/Wallet)</label>
+                  {(!user.paymentAccounts || user.paymentAccounts.length === 0) ? (
+                    <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
+                      <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
+                        You must add a bank account in your Profile first so this buyer can send you the ETB.
+                      </p>
+                      <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
+                        Go to Profile page & add account →
+                      </a>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {user.paymentAccounts.map(acc => {
+                        const sel = chosenPaymentAccount?.id === acc.id;
+                        const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                        return (
+                          <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                            background: sel ? 'rgba(0,212,170,0.08)' : 'var(--bg-elevated)',
+                            border: `1px solid ${sel ? 'var(--teal)' : 'var(--border)'}`,
+                            borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
+                            transition: 'all 0.15s ease',
                           }}>
-                            {sel && '✓'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ color: sel ? 'var(--teal-light)' : 'var(--text-1)' }}>
+                                {matched?.label || acc.bankName}
+                              </div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
+                                Acc: {acc.accountNumber} · Holder: {acc.holderName}
+                              </div>
+                            </div>
+                            <span style={{
+                              width: '18px', height: '18px', borderRadius: '50%',
+                              border: `2px solid ${sel ? 'var(--teal)' : 'var(--border-hover)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: sel ? 'var(--teal)' : 'transparent',
+                              color: '#0A0C12', fontSize: '10px', fontWeight: 900
+                            }}>
+                              {sel && '✓'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+              ) : (
+                /* Taker is buyer: Taker chooses one of the Maker's bank accounts to pay to */
+                selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label className="input-label" style={{ marginBottom: '2px' }}>Send Payout To (Seller Bank/Wallet)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedListing.paymentAccounts.map(acc => {
+                        const sel = chosenPaymentAccount?.id === acc.id;
+                        const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                        return (
+                          <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                            background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
+                            border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
+                            borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
+                            transition: 'all 0.15s ease',
+                          }}>
+                            <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
+                                {matched?.label || acc.bankName}
+                              </div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
+                                Acc Holder: {acc.holderName}
+                              </div>
+                            </div>
+                            <span style={{
+                              width: '18px', height: '18px', borderRadius: '50%',
+                              border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: sel ? 'var(--gold)' : 'transparent',
+                              color: '#0A0C12', fontSize: '10px', fontWeight: 900
+                            }}>
+                              {sel && '✓'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
               )}
 
               {tradeError && (

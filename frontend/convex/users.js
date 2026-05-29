@@ -80,7 +80,7 @@ export const register = mutation({
       .withIndex("by_username", (q) => q.eq("username", args.username.toLowerCase()))
       .unique();
     if (existing) {
-      throw new Error("Username already exists");
+      throw new Error("Username is already taken");
     }
 
     const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
@@ -406,8 +406,22 @@ export const withdrawETH = mutation({
       throw new Error("Insufficient USD balance");
     }
 
+    const fee = args.amountETH * 0.01;
+    const netAmount = args.amountETH - fee;
+
     const newBalance = user.ethBalance - args.amountETH;
     await ctx.db.patch(user._id, { ethBalance: newBalance });
+
+    // Credit fee to admin
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (admin) {
+      await ctx.db.patch(admin._id, {
+        ethBalance: admin.ethBalance + fee,
+      });
+    }
 
     const ethUsdPrice = 1;
     const amountUSD = args.amountETH * ethUsdPrice;
@@ -418,7 +432,7 @@ export const withdrawETH = mutation({
       type: "withdrawal",
       amountETH: args.amountETH,
       amountUSD,
-      note: `Withdrawal of $${args.amountETH.toFixed(2)} USD to ${args.destinationAddress.substring(0, 8)}...`,
+      note: `Withdrawal of $${args.amountETH.toFixed(2)} USD to ${args.destinationAddress.substring(0, 8)}... — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
       createdAt: new Date().toISOString(),
     });
 
@@ -426,7 +440,7 @@ export const withdrawETH = mutation({
     await ctx.db.insert("notifications", {
       userId: args.userId,
       type: "withdrawal",
-      message: `Successfully withdrew $${args.amountETH.toFixed(2)} USD to ${args.destinationAddress.substring(0, 8)}...`,
+      message: `Successfully withdrew $${args.amountETH.toFixed(2)} USD (Net sent: $${netAmount.toFixed(2)} USD, 1% fee: $${fee.toFixed(2)} USD) to ${args.destinationAddress.substring(0, 8)}...`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });

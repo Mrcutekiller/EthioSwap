@@ -210,14 +210,50 @@ export const initiateTrade = mutation({
     const settings = await ctx.db.query("systemSettings").first();
     const rate = settings?.etbRatePerDollar ?? 190.0;
 
-    // Use selected account or fallback to listing's first payment account
-    const chosenAccount = args.selectedPaymentAccount || 
-                          (listing.paymentAccounts && listing.paymentAccounts.length > 0 ? listing.paymentAccounts[0] : null);
+    const isBuyListing = listing.type === "buy";
+    
+    let tradeBuyerId = "";
+    let tradeSellerId = "";
+    let chosenAccount = null;
+
+    if (isBuyListing) {
+      // Maker (creator) wants to BUY USD. Taker wants to SELL USD.
+      tradeBuyerId = listing.sellerId; // Creator is buyer
+      tradeSellerId = args.buyerId;   // Taker is seller
+
+      // Taker (seller) must lock their balance!
+      const takerObjId = ctx.db.normalizeId("users", args.buyerId);
+      const taker = await ctx.db.get(takerObjId);
+      if (!taker) throw new Error("Taker not found");
+
+      const available = taker.ethBalance - (taker.ethLocked || 0);
+      if (available < args.amountETH) {
+        throw new Error("Insufficient available USD balance in your wallet to sell");
+      }
+
+      // Lock Taker's USD
+      await ctx.db.patch(takerObjId, {
+        ethBalance: taker.ethBalance - args.amountETH,
+        ethLocked: taker.ethLocked + args.amountETH,
+      });
+
+      // Taker (seller) provides their own account to receive ETB payout
+      chosenAccount = args.selectedPaymentAccount || null;
+    } else {
+      // Maker (creator) wants to SELL USD. Taker wants to BUY USD.
+      tradeBuyerId = args.buyerId;   // Taker is buyer
+      tradeSellerId = listing.sellerId; // Creator is seller
+
+      // Maker's USD was already locked when listing was created.
+      // Use selected account or fallback to listing's first payment account
+      chosenAccount = args.selectedPaymentAccount || 
+                      (listing.paymentAccounts && listing.paymentAccounts.length > 0 ? listing.paymentAccounts[0] : null);
+    }
 
     const tradeId = await ctx.db.insert("trades", {
       listingId: args.listingId,
-      buyerId: args.buyerId,
-      sellerId: listing.sellerId,
+      buyerId: tradeBuyerId,
+      sellerId: tradeSellerId,
       amountETH: args.amountETH,
       amountETB: Math.round(args.amountETH * rate),
       status: "payment_pending",

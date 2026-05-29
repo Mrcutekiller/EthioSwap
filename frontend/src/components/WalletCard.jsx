@@ -41,6 +41,46 @@ const StatusBadge = ({ status }) => {
   return <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '99px', background: m.bg, color: m.color }}>{m.label}</span>;
 };
 
+// Helper to compress and convert File/Blob to compressed base64 JPEG
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 640;
+      const MAX_HEIGHT = 640;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Compress to JPEG with 0.5 quality to stay well below Convex's 1MB limit (approx 40KB)
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+      resolve(compressedDataUrl);
+    };
+    img.onerror = (err) => reject(new Error("Failed to load image for compression"));
+  };
+  reader.onerror = (err) => reject(err);
+});
+
 const WalletCard = () => {
   const { user, wallet, withdrawETH, myDepositReqs, createDepositRequest, setError, setSuccess, systemSettings } = useAuth();
 
@@ -61,6 +101,8 @@ const WalletCard = () => {
   const [depSubmitting, setDepSubmitting] = useState(false);
   const [senderEmail,    setSenderEmail]    = useState('');
   const [senderUsername, setSenderUsername] = useState('');
+  const [screenshotBase64, setScreenshotBase64] = useState('');
+  const [screenshotPreview, setScreenshotPreview] = useState('');
 
   if (!wallet) return (
     <div className="card" style={{ height: '120px' }}>
@@ -104,13 +146,18 @@ const WalletCard = () => {
       if (!depReference.trim()) { setError('Enter TX reference.'); return; }
     }
 
+    if (!screenshotBase64) {
+      setError('Please upload a screenshot of your payment receipt as transaction proof.');
+      return;
+    }
+
     setDepSubmitting(true);
     
     const finalRef = isBinanceOrBybit 
       ? `Sender Email: ${senderEmail.trim()} | Username: ${senderUsername.trim()}`
       : depReference.trim();
 
-    await createDepositRequest(parseFloat(depAmount), depWalletType, finalRef, undefined);
+    await createDepositRequest(parseFloat(depAmount), depWalletType, finalRef, screenshotBase64);
     
     // Automatically open checkout/transfer pages in new tabs
     if (depWalletType === 'binance') {
@@ -119,11 +166,13 @@ const WalletCard = () => {
       window.open('https://www.bybit.com/en/assets/funding', '_blank');
     }
 
-    setSuccess('Deposit logged! Redirecting to pay platform in new tab.');
+    setSuccess('Deposit request submitted! Admin will verify and credit your wallet.');
     setDepAmount(''); 
     setDepReference('');
     setSenderEmail('');
     setSenderUsername('');
+    setScreenshotBase64('');
+    setScreenshotPreview('');
     setDepSubmitting(false);
   };
 
@@ -277,7 +326,7 @@ const WalletCard = () => {
                 <div className="section-title">From which wallet?</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {WALLET_OPTIONS.map(w => (
-                    <button key={w.id} onClick={() => setDepWalletType(w.id)} style={{ padding: '12px', borderRadius: '12px', border: `2px solid ${depWalletType === w.id ? w.color : 'var(--border)'}`, background: depWalletType === w.id ? `${w.color}15` : 'var(--bg-elevated)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <button key={w.id} type="button" onClick={() => setDepWalletType(w.id)} style={{ padding: '12px', borderRadius: '12px', border: `2px solid ${depWalletType === w.id ? w.color : 'var(--border)'}`, background: depWalletType === w.id ? `${w.color}15` : 'var(--bg-elevated)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                       <span style={{ fontSize: '22px' }}>{w.icon}</span>
                       <span style={{ fontSize: '11px', fontWeight: 700, color: depWalletType === w.id ? 'var(--text-1)' : 'var(--text-3)' }}>{w.label}</span>
                     </button>
@@ -285,30 +334,68 @@ const WalletCard = () => {
                 </div>
               </div>
 
-              {/* Steps */}
-              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '10px' }}>
-                  {selWallet.icon} Steps for {selWallet.label}:
-                </div>
-                <div className="timeline">
-                  {selWallet.steps.map((s, i) => (
-                    <div key={i} className="timeline-item">
-                      <div className="timeline-dot active" style={{ background: 'var(--gold-bg)', border: '1px solid var(--border-active)', color: 'var(--gold-light)' }}>{i + 1}</div>
-                      <div className="timeline-line" />
-                      <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '4px' }}>{s}</div>
+              {/* Interactive Admin Payment Card */}
+              {(depWalletType === 'binance' || depWalletType === 'bybit') && (
+                <div style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.98) 0%, rgba(200,150,44,0.05) 100%)', border: '1px solid rgba(200,150,44,0.25)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recipient Account</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600 }}>0.5% Deposit Fee</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(10,12,18,0.6)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px' }}>
+                      <span style={{ fontSize: '14px' }}>✉️</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>birukf37@gmail.com</span>
                     </div>
-                  ))}
+                    <button type="button" onClick={() => {
+                      navigator.clipboard.writeText('birukf37@gmail.com');
+                      setSuccess('Admin payment email copied!');
+                    }} style={{ flexShrink: 0, padding: '11px 14px', background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', borderRadius: '10px', color: 'var(--gold-light)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      📋 Copy
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <button type="button" onClick={() => {
+                      if (depWalletType === 'binance') {
+                        window.open('https://pay.binance.com', '_blank');
+                      } else {
+                        window.open('https://www.bybit.com/en/assets/funding', '_blank');
+                      }
+                    }} className="btn btn-teal btn-full" style={{ padding: '12px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      {depWalletType === 'binance' ? '🔶 Pay via Binance Pay App ↗' : '🟡 Pay via Bybit Funding ↗'}
+                    </button>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.4 }}>
+                      Send USDT (TRC20) or any supported asset, take a screenshot, and submit proof below.
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Address */}
-              <div className="card">
-                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '6px' }}>Your EthioSwap address:</div>
+              {/* Steps for other wallets */}
+              {(depWalletType !== 'binance' && depWalletType !== 'bybit') && (
+                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '10px' }}>
+                    {selWallet.icon} Steps for {selWallet.label}:
+                  </div>
+                  <div className="timeline">
+                    {selWallet.steps.map((s, i) => (
+                      <div key={i} className="timeline-item">
+                        <div className="timeline-dot active" style={{ background: 'var(--gold-bg)', border: '1px solid var(--border-active)', color: 'var(--gold-light)' }}>{i + 1}</div>
+                        <div className="timeline-line" />
+                        <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '4px' }}>{s}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Address card */}
+              <div className="card" style={{ padding: '14px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '6px' }}>Your EthioSwap Receiving Address:</div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <div style={{ flex: 1, fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-2)', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', wordBreak: 'break-all', lineHeight: 1.5 }}>
                     {wallet.ethAddress}
                   </div>
-                  <button onClick={handleCopy} style={{ flexShrink: 0, padding: '10px', background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', borderRadius: '8px', color: 'var(--gold-light)', fontSize: '16px', cursor: 'pointer' }}>
+                  <button type="button" onClick={handleCopy} style={{ flexShrink: 0, padding: '10px', background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', borderRadius: '8px', color: 'var(--gold-light)', fontSize: '16px', cursor: 'pointer' }}>
                     {copied ? '✓' : '📋'}
                   </button>
                 </div>
@@ -316,20 +403,26 @@ const WalletCard = () => {
 
               {/* Submit form */}
               <form onSubmit={handleSubmitDeposit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ background: 'rgba(147,197,253,0.07)', border: '1px solid rgba(147,197,253,0.2)', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-info-text)' }}>
-                    { (depWalletType === 'binance' || depWalletType === 'bybit') ? 'ℹ️ Payout internal transfer details' : 'ℹ️ After you send' }
+                
+                {/* Form Alert Info */}
+                <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-success-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🛡️ Securing Your Funds</span>
+                    <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(16,185,129,0.15)', borderRadius: '99px' }}>0.5% FEE</span>
                   </div>
-                  <p style={{ fontSize: '11px', color: 'var(--status-info-text)', lineHeight: 1.5, margin: '4px 0 0' }}>
-                    { (depWalletType === 'binance' || depWalletType === 'bybit')
-                      ? 'Please transfer the USD on Binance/Bybit internally or via pay to admin email: birukf37@gmail.com first, then fill in your sending account details below.'
-                      : 'Fill in how much you sent + your TX reference. Admin reviews and credits within 5–30 mins.' }
+                  <p style={{ fontSize: '11px', color: 'var(--status-success-text)', lineHeight: 1.5, margin: 0 }}>
+                    Please fill out the form after transfer. Once approved, the funds minus a 0.5% fee will be credited to your available balance. Fees are routed directly to the admin account.
                   </p>
                 </div>
 
                 <div className="input-group" style={{ marginBottom: 0 }}>
                   <label className="input-label">Amount Sent (USD)</label>
-                  <input type="number" step="0.01" required className="input" placeholder="e.g. 50" value={depAmount} onChange={e => setDepAmount(e.target.value)} />
+                  <input type="number" step="0.01" required className="input" placeholder="e.g. 100" value={depAmount} onChange={e => setDepAmount(e.target.value)} />
+                  {depAmount && !isNaN(parseFloat(depAmount)) && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
+                      ≈ {Math.round(parseFloat(depAmount) * rate).toLocaleString()} ETB · Credited (net): ${(parseFloat(depAmount) * 0.995).toFixed(2)} USD (0.5% fee: ${(parseFloat(depAmount) * 0.005).toFixed(2)} USD)
+                    </div>
+                  )}
                 </div>
 
                 { (depWalletType === 'binance' || depWalletType === 'bybit') ? (
@@ -350,7 +443,40 @@ const WalletCard = () => {
                   </div>
                 )}
 
-                <button type="submit" disabled={depSubmitting} className="btn btn-gold btn-full" style={{ padding: '14px' }}>
+                {/* Screenshot Uploader Component */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label className="input-label">Upload Payment Receipt / Screenshot</label>
+                  {screenshotPreview ? (
+                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <img src={screenshotPreview} alt="Screenshot preview" style={{ maxWidth: '100%', maxHeight: '160px', borderRadius: '8px', objectFit: 'contain' }} />
+                      <button type="button" onClick={() => {
+                        setScreenshotBase64('');
+                        setScreenshotPreview('');
+                      }} style={{ padding: '6px 12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--status-danger-text)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                        🗑️ Remove Photo
+                      </button>
+                    </div>
+                  ) : (
+                    <label style={{ background: 'var(--bg-elevated)', border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+                      <span style={{ fontSize: '28px' }}>📸</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-1)' }}>Choose screenshot or transaction proof</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-3)', textAlign: 'center' }}>Receipt will be compressed securely under 50KB</span>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        try {
+                          const base64 = await toBase64(file);
+                          setScreenshotBase64(base64);
+                          setScreenshotPreview(URL.createObjectURL(file));
+                        } catch (err) {
+                          setError('Failed to compress image. Please select another file.');
+                        }
+                      }} />
+                    </label>
+                  )}
+                </div>
+
+                <button type="submit" disabled={depSubmitting} className="btn btn-gold btn-full" style={{ padding: '14px', marginTop: '8px' }}>
                   {depSubmitting ? '⏳ Submitting…' : '📤 Submit Deposit Request'}
                 </button>
               </form>
@@ -452,6 +578,16 @@ const WalletCard = () => {
             </div>
 
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-3)' }}>Platform Withdrawal Fee</span>
+                <span style={{ fontWeight: 600, color: 'var(--status-danger-text)' }}>1.0% (routed to admin)</span>
+              </div>
+              {withdrawAmt && !isNaN(parseFloat(withdrawAmt)) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
+                  <span>You receive (net)</span>
+                  <span>${(parseFloat(withdrawAmt) * 0.99).toFixed(2)} USD</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-3)' }}>Network fee</span>
                 <span style={{ fontWeight: 500 }}>~$0.10 (TRC20) or $0.50 (ERC20)</span>

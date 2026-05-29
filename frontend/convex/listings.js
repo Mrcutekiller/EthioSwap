@@ -29,6 +29,7 @@ export const create = mutation({
     maxLimitETB: v.number(),
     paymentMethods: v.array(v.string()),
     customRateETB: v.optional(v.number()),
+    type: v.optional(v.string()),
     paymentAccounts: v.optional(v.array(v.object({
       id: v.string(),
       bankName: v.string(),
@@ -41,16 +42,21 @@ export const create = mutation({
     const seller = await ctx.db.get(sellerId);
     if (!seller) throw new Error("Seller not found");
     if (seller.kycStatus !== "approved") throw new Error("KYC verification required to create listings");
-    const available = seller.ethBalance - (seller.ethLocked || 0);
-    if (available < args.amountETH) {
-      throw new Error("Insufficient available USD balance");
-    }
+    
+    const isBuyListing = args.type === "buy";
 
-    // Lock USD
-    await ctx.db.patch(sellerId, {
-      ethBalance: seller.ethBalance - args.amountETH,
-      ethLocked: seller.ethLocked + args.amountETH,
-    });
+    if (!isBuyListing) {
+      const available = seller.ethBalance - (seller.ethLocked || 0);
+      if (available < args.amountETH) {
+        throw new Error("Insufficient available USD balance");
+      }
+
+      // Lock USD for seller
+      await ctx.db.patch(sellerId, {
+        ethBalance: seller.ethBalance - args.amountETH,
+        ethLocked: seller.ethLocked + args.amountETH,
+      });
+    }
 
     return await ctx.db.insert("listings", {
       sellerId: args.sellerId,
@@ -59,6 +65,7 @@ export const create = mutation({
       maxLimitETB: args.maxLimitETB,
       paymentMethods: args.paymentMethods,
       customRateETB: args.customRateETB,
+      type: args.type || "sell",
       paymentAccounts: args.paymentAccounts,
       status: "active",
       createdAt: new Date().toISOString(),

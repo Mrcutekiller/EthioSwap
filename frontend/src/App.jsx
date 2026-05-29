@@ -61,11 +61,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
         setLocalError('Please enter a valid email address.');
         return;
       }
-    } else {
-      if (username.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
-        setLocalError('Please enter a valid email address.');
-        return;
-      }
     }
 
     if (mode === 'login') {
@@ -122,7 +117,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="input-group" style={{ marginBottom: 0 }}>
-            <input className="input" type="text" placeholder={mode === 'login' ? "Username or Email" : "Desired Username"} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" style={{ width: '100%' }} />
+            <input className="input" type="text" placeholder={mode === 'login' ? "Username" : "Desired Username"} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" style={{ width: '100%' }} />
           </div>
           {mode === 'register' && (
             <div className="input-group" style={{ marginBottom: 0 }}>
@@ -178,8 +173,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
-  const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, apiBase, systemSettings } = useAuth();
-  const [tab, setTab] = useState('home');
+  const [tab, setTabState] = useState(() => {
+    if (user?.role === 'admin') return 'admin';
+    return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
+  });
+
+  const setTab = (newTab) => {
+    setTabState(newTab);
+    localStorage.setItem(`ethioswap_active_tab_${user?.id}`, newTab);
+  };
   const [authMode, setAuthMode] = useState(null); // default to null (show landing)
   const [notifOpen, setNotifOpen] = useState(false);
   const notifCount = useNotifCount(user?.id);

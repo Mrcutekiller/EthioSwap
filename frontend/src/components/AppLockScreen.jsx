@@ -139,7 +139,7 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
   const getInitials = (name) => (name || 'U').substring(0, 2).toUpperCase();
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', maxWidth: '480px', margin: '0 auto', padding: '60px 24px 40px', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '60px 24px 40px', overflow: 'hidden' }}>
 
       {/* Background glow */}
       <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(200,150,44,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
