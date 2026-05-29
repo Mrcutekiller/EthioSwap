@@ -18,7 +18,6 @@ import type * as support from "../support.js";
 import type * as trades from "../trades.js";
 import type * as users from "../users.js";
 import type * as wallet from "../wallet.js";
-import type * as withdrawRequests from "../withdrawRequests.js";
 
 import type {
   ApiFromModules,
@@ -37,7 +36,6 @@ declare const fullApi: ApiFromModules<{
   trades: typeof trades;
   users: typeof users;
   wallet: typeof wallet;
-  withdrawRequests: typeof withdrawRequests;
 }>;
 
 /**
