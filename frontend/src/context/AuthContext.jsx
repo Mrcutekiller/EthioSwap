@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         });
       }
     }
-  }, [wallet]);
+  }, [wallet, user]);
 
   // Idle lock timer (5 minutes)
   const resetIdleTimer = useCallback(() => {
