@@ -63,19 +63,20 @@ export const AuthProvider = ({ children }) => {
 
   // Real-time synchronization of session from Convex database 'wallet' (user record)
   useEffect(() => {
-    if (wallet && user) {
-      const needsUpdate =
-        wallet.kycStatus !== user.kycStatus ||
-        wallet.kycStep !== user.kycStep ||
-        wallet.role !== user.role ||
-        wallet.displayName !== user.displayName ||
-        wallet.ethBalance !== user.ethBalance ||
-        wallet.ethLocked !== user.ethLocked ||
-        JSON.stringify(wallet.paymentAccounts || []) !== JSON.stringify(user.paymentAccounts || []);
+    if (wallet) {
+      setUser(prev => {
+        if (!prev) return prev;
 
-      if (needsUpdate) {
-        setUser(prev => {
-          if (!prev) return prev;
+        const needsUpdate =
+          wallet.kycStatus !== prev.kycStatus ||
+          wallet.kycStep !== prev.kycStep ||
+          wallet.role !== prev.role ||
+          wallet.displayName !== prev.displayName ||
+          wallet.ethBalance !== prev.ethBalance ||
+          wallet.ethLocked !== prev.ethLocked ||
+          JSON.stringify(wallet.paymentAccounts || []) !== JSON.stringify(prev.paymentAccounts || []);
+
+        if (needsUpdate) {
           const merged = {
             ...prev,
             role: wallet.role,
@@ -88,10 +89,11 @@ export const AuthProvider = ({ children }) => {
           };
           localStorage.setItem('ethioswap_user', JSON.stringify(merged));
           return merged;
-        });
-      }
+        }
+        return prev;
+      });
     }
-  }, [wallet, user]);
+  }, [wallet]);
 
   // Idle lock timer (5 minutes)
   const resetIdleTimer = useCallback(() => {
