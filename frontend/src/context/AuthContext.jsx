@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }) => {
   const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
   const convexAcknowledgeWarning   = useMutation(api.users.acknowledgeWarning);
   const convexSendById             = useMutation(api.users.sendById);
-  const convexGetByNumericId       = useQuery(api.users.getByNumericId);
 
   // ── Convex real-time queries ──────────────────────────
   const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
