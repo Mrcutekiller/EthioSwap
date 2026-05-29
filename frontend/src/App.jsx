@@ -13,6 +13,7 @@ import AppLockScreen from './components/AppLockScreen.jsx';
 import { NotificationCenter, useNotifCount } from './components/NotificationCenter.jsx';
 import SupportWidget from './components/SupportWidget.jsx';
 import Logo from './components/Logo.jsx';
+import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
@@ -193,8 +194,8 @@ const AppShell = () => {
 
   // Request browser Notification Permission on login
   React.useEffect(() => {
-    if (user && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if (user && isNotificationSupported()) {
+      requestPermission();
     }
   }, [user]);
 
@@ -205,8 +206,8 @@ const AppShell = () => {
     // If a new unread notification arrives
     if (unread.length > prevNotifCount) {
       const latest = unread[0]; // sorted descending
-      if (latest && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification("EthioSwap Alert", {
+      if (latest) {
+        showBrowserNotification("EthioSwap Alert", {
           body: latest.message,
           icon: '/favicon.ico',
         });
