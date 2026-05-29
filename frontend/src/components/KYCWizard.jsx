@@ -40,8 +40,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 640;
-        const MAX_HEIGHT = 640;
+        const MAX_WIDTH = 480;
+        const MAX_HEIGHT = 480;
         let width = img.width;
         let height = img.height;
 
@@ -62,13 +62,13 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Compress to JPEG with 0.5 quality to stay well below Convex's 1MB limit (approx 40KB)
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        // Compress to JPEG with 0.4 quality to stay well below Convex's 1MB limit
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.4);
         resolve(compressedDataUrl);
       };
-      img.onerror = (err) => reject(new Error("Failed to load image for compression"));
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = () => reject(new Error("Failed to read file"));
   });
 
   // Cleanup camera on unmount
@@ -170,16 +170,30 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     setLoading(true); setError('');
     try {
       const frontBase64 = await toBase64(idFront);
-      const backBase64 = await toBase64(idBack);
       
       await updateDocs({
         userId: user.id,
         idFront: frontBase64,
-        idBack: backBase64
+        idBack: '',
       });
+
+      const backBase64 = await toBase64(idBack);
+      
+      await updateDocs({
+        userId: user.id,
+        idFront: '',
+        idBack: backBase64,
+      });
+
       setStep(5); // Go to selfie step
     } catch (err) {
-      setError(err.message || 'Upload failed. Try again.');
+      console.error('KYC upload error:', err);
+      const msg = err?.message || '';
+      if (msg.includes('too long') || msg.includes('too large') || msg.includes('1MB') || msg.includes('size')) {
+        setError('Images too large. Please use smaller/lower-quality images and try again.');
+      } else {
+        setError(msg || 'Upload failed. Try again.');
+      }
     } finally {
       setLoading(false);
     }

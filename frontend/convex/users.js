@@ -300,13 +300,14 @@ export const updateKycDocs = mutation({
     const user = await ctx.db.get(userObjId);
     if (!user) throw new Error("User not found");
 
-    await ctx.db.patch(userObjId, {
-      kycIdFront: args.idFront,
-      kycIdBack: args.idBack,
-      kycStep: "id_uploaded",
-    });
+    const patch = {};
+    if (args.idFront) patch.kycIdFront = args.idFront;
+    if (args.idBack) patch.kycIdBack = args.idBack;
+    if (patch.kycIdFront && patch.kycIdBack) patch.kycStep = "id_uploaded";
 
-    return { kycStep: "id_uploaded" };
+    await ctx.db.patch(userObjId, patch);
+
+    return { kycStep: user.kycStep || "id_uploaded" };
   }
 });
 
