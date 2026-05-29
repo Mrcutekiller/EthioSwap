@@ -29,13 +29,13 @@ export const AuthProvider = ({ children }) => {
   const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
 
   // ── Convex real-time queries ──────────────────────────
-  const trades         = useQuery(api.trades.listByUser, user ? { userId: user.id } : "skip") ?? [];
+  const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
   const listings       = useQuery(api.listings.listAll)                                        ?? [];
-  const wallet         = useQuery(api.users.getById,     user ? { id: user.id } : "skip");
+  const wallet         = useQuery(api.users.getById,     user?.id ? { id: user.id } : "skip");
   const settings       = useQuery(api.settings.get);
-  const myDepositReqs  = useQuery(api.depositRequests.listByUser, user ? { userId: user.id } : "skip") ?? [];
+  const myDepositReqs  = useQuery(api.depositRequests.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
   const allDepositReqs = useQuery(api.depositRequests.listAll, user?.role === 'admin' ? undefined : "skip") ?? [];
-  const myTransactions = useQuery(api.wallet.listTransactions, user ? { userId: user.id } : "skip") ?? [];
+  const myTransactions = useQuery(api.wallet.listTransactions, user?.id ? { userId: user.id } : "skip") ?? [];
 
   const systemSettings = settings ?? {
     etbRatePerDollar: 190.0,

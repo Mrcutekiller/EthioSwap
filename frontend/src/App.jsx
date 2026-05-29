@@ -368,10 +368,134 @@ const AppShell = () => {
   );
 };
 
+// ── Error Boundary for Audit & Failure Prevention ─────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught fatal runtime error:", error, errorInfo);
+  }
+
+  handleReset = () => {
+    localStorage.clear();
+    window.location.href = window.location.origin;
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          width: '100%',
+          background: '#0A0C12',
+          backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(200,150,44,0.08) 0%, transparent 60%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          fontFamily: 'var(--font, system-ui)',
+          color: '#F0F4FF',
+          textAlign: 'center',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            background: '#0F121E',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '24px',
+            padding: '36px 32px',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '8px' }}>⚠️</div>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: '#FFF' }}>App Freeze Audit Guard</h2>
+            <p style={{ fontSize: '13.5px', color: '#8899AA', lineHeight: '1.6', margin: '0 0 8px' }}>
+              EthioSwap intercepted a fatal runtime exception or session freeze. Your funds and database entries remain completely safe.
+            </p>
+            {this.state.error && (
+              <div style={{
+                background: 'rgba(248, 113, 113, 0.05)',
+                border: '1px solid rgba(248, 113, 113, 0.15)',
+                color: '#F87171',
+                padding: '12px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                wordBreak: 'break-all',
+                textAlign: 'left',
+                width: '100%',
+                maxHeight: '120px',
+                overflowY: 'auto',
+                boxSizing: 'border-box'
+              }}>
+                {this.state.error.toString()}
+              </div>
+            )}
+            <button
+              onClick={this.handleReset}
+              style={{
+                marginTop: '12px',
+                width: '100%',
+                padding: '14px',
+                cursor: 'pointer',
+                fontFamily: 'var(--font, system-ui)',
+                fontWeight: 700,
+                fontSize: '14px',
+                border: 'none',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #D4AF37, #F0C040)',
+                color: '#0A0C12',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 15px rgba(212, 175, 55, 0.2)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
+              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+            >
+              🔄 Reset App Cache & Recover
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#8899AA',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'var(--font, system-ui)',
+                textDecoration: 'underline'
+              }}
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
