@@ -62,7 +62,22 @@ export const getByUsername = query({
 
 export const listAll = query({
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    const list = await ctx.db.query("users").collect();
+    return list.map(u => ({
+      _id: u._id,
+      username: u.username,
+      role: u.role,
+      kycStatus: u.kycStatus,
+      kycStep: u.kycStep,
+      phone: u.phone,
+      email: u.email,
+      fullName: u.fullName,
+      ethBalance: u.ethBalance,
+      ethLocked: u.ethLocked,
+      joinedAt: u.joinedAt,
+      lastActive: u.lastActive,
+      paymentAccounts: u.paymentAccounts,
+    }));
   }
 });
 

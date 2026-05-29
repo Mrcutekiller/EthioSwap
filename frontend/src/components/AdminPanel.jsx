@@ -75,6 +75,66 @@ const WALLET_META = {
   other:    { label: 'Other',          icon: '💳', color: '#8B92A8' },
 };
 
+/* ── Lazy KYC Images Viewer ─────────────────────────────────── */
+const KycImages = ({ userId, getImageUrl }) => {
+  const images = useQuery(api.admin.getUserKycImages, { userId });
+
+  if (images === undefined) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+        {[1, 2, 3].map((_, i) => (
+          <div key={i}>
+            <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Loading…</div>
+            <div className="skeleton" style={{ height: '80px', border: '1px solid var(--border)' }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const items = [
+    { l: 'ID Front', src: images?.kycIdFront },
+    { l: 'ID Back',  src: images?.kycIdBack },
+    { l: 'Selfie',   src: images?.kycSelfie },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+      {items.map(img => (
+        <div key={img.l}>
+          <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>{img.l}</div>
+          {img.src ? (
+            <a href={getImageUrl(img.src)} target="_blank" rel="noreferrer">
+              <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            </a>
+          ) : (
+            <div style={{ height: '80px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ── Lazy Deposit Screenshot Viewer ─────────────────────────── */
+const DepositScreenshot = ({ requestId, getImageUrl }) => {
+  const screenshotUrl = useQuery(api.depositRequests.getDepositScreenshot, { requestId });
+
+  if (screenshotUrl === undefined) {
+    return (
+      <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid var(--border)' }} />
+    );
+  }
+
+  if (!screenshotUrl) return null;
+
+  return (
+    <a href={getImageUrl(screenshotUrl)} target="_blank" rel="noreferrer" style={{ width: '100%', display: 'block' }}>
+      <img src={getImageUrl(screenshotUrl)} alt="Proof" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-base)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+    </a>
+  );
+};
+
 /* ══════════════════════════════════════════════════════════════
    ADMIN PANEL
 ══════════════════════════════════════════════════════════════ */
@@ -615,24 +675,7 @@ const AdminPanel = ({ user }) => {
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-                {[
-                  { l: 'ID Front', src: u.kycIdFront },
-                  { l: 'ID Back',  src: u.kycIdBack },
-                  { l: 'Selfie',   src: u.kycSelfie },
-                ].map(img => (
-                  <div key={img.l}>
-                    <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>{img.l}</div>
-                    {img.src ? (
-                      <a href={getImageUrl(img.src)} target="_blank" rel="noreferrer">
-                        <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
-                      </a>
-                    ) : (
-                      <div style={{ height: '80px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <KycImages userId={u.id} getImageUrl={getImageUrl} />
 
               <input
                 type="text"
@@ -705,8 +748,8 @@ const AdminPanel = ({ user }) => {
                   )}
                 </div>
 
-                {req.screenshotUrl && (
-                  <img src={getImageUrl(req.screenshotUrl)} alt="Proof" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-base)' }} />
+                {req.hasScreenshot && (
+                  <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} />
                 )}
 
                 {isPending && (

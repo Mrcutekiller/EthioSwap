@@ -1,6 +1,206 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from './Logo.jsx';
 
+/* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
+const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
+  const [activeDots, setActiveDots] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPos, setCurrentPos] = useState(null);
+  const containerRef = React.useRef(null);
+
+  const dots = [
+    { id: 0, x: 40, y: 40 },
+    { id: 1, x: 140, y: 40 },
+    { id: 2, x: 240, y: 40 },
+    { id: 3, x: 40, y: 140 },
+    { id: 4, x: 140, y: 140 },
+    { id: 5, x: 240, y: 140 },
+    { id: 6, x: 40, y: 240 },
+    { id: 7, x: 140, y: 240 },
+    { id: 8, x: 240, y: 240 },
+  ];
+
+  const handleStart = (id) => {
+    setIsDrawing(true);
+    setActiveDots([id]);
+  };
+
+  const checkDotCollision = (clientX, clientY) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    setCurrentPos({ x, y });
+
+    for (const dot of dots) {
+      const dx = x - dot.x;
+      const dy = y - dot.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 24) {
+        if (!activeDots.includes(dot.id)) {
+          setActiveDots((prev) => [...prev, dot.id]);
+        }
+      }
+    }
+  };
+
+  const handleMove = (e) => {
+    if (!isDrawing) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    checkDotCollision(clientX, clientY);
+  };
+
+  const handleEnd = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    setCurrentPos(null);
+    if (activeDots.length >= 3) {
+      onPatternComplete(activeDots.join('-'));
+    } else if (activeDots.length > 0) {
+      setActiveDots([]);
+    }
+  };
+
+  React.useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setActiveDots([]), 850);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  React.useEffect(() => {
+    setActiveDots([]);
+  }, [step]);
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseMove={handleMove}
+      onTouchMove={handleMove}
+      onMouseUp={handleEnd}
+      onTouchEnd={handleEnd}
+      onMouseLeave={handleEnd}
+      style={{
+        position: 'relative',
+        width: '280px',
+        height: '280px',
+        background: 'rgba(255,255,255,0.015)',
+        border: '1px solid var(--border)',
+        borderRadius: '24px',
+        margin: '0 auto 20px',
+        touchAction: 'none',
+        userSelect: 'none',
+      }}
+    >
+      <svg
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      >
+        {activeDots.map((dotId, index) => {
+          if (index === 0) return null;
+          const prevDot = dots[activeDots[index - 1]];
+          const currDot = dots[dotId];
+          return (
+            <line
+              key={index}
+              x1={prevDot.x}
+              y1={prevDot.y}
+              x2={currDot.x}
+              y2={currDot.y}
+              stroke={error ? 'var(--status-danger-text)' : 'var(--gold)'}
+              strokeWidth="4"
+              strokeLinecap="round"
+              style={{ filter: error ? 'none' : 'drop-shadow(0 0 5px var(--gold))' }}
+            />
+          );
+        })}
+
+        {isDrawing && activeDots.length > 0 && currentPos && (
+          <line
+            x1={dots[activeDots[activeDots.length - 1]].x}
+            y1={dots[activeDots[activeDots.length - 1]].y}
+            x2={currentPos.x}
+            y2={currentPos.y}
+            stroke="rgba(200,150,44,0.45)"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+
+      {dots.map((dot) => {
+        const isActive = activeDots.includes(dot.id);
+        return (
+          <div
+            key={dot.id}
+            onMouseDown={() => handleStart(dot.id)}
+            onTouchStart={() => handleStart(dot.id)}
+            style={{
+              position: 'absolute',
+              left: `${dot.x - 22}px`,
+              top: `${dot.y - 22}px`,
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <div
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                border: `2px solid ${
+                  isActive
+                    ? error
+                      ? 'var(--status-danger-text)'
+                      : 'var(--gold)'
+                    : 'var(--border-hover)'
+                }`,
+                background: isActive
+                  ? error
+                    ? 'rgba(239,68,68,0.1)'
+                    : 'var(--gold-bg)'
+                  : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease',
+                transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                boxShadow: isActive && !error ? 'var(--shadow-gold)' : 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: isActive
+                    ? error
+                      ? 'var(--status-danger-text)'
+                      : 'var(--gold-light)'
+                    : 'rgba(255,255,255,0.2)',
+                  transition: 'all 0.15s ease',
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /**
  * AppLockScreen
  * Shows a lock screen when the user is away for 5+ minutes.
@@ -102,6 +302,17 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
     }
   };
 
+  const handlePatternCheck = (drawnPattern) => {
+    setError('');
+    const stored = localStorage.getItem('ethioswap_lock_pattern');
+    if (drawnPattern === stored) {
+      onUnlock();
+    } else {
+      setError('Incorrect pattern.');
+      triggerShake();
+    }
+  };
+
   // WebAuthn biometric
   const handleBiometric = async () => {
     setBiometricLoading(true);
@@ -198,7 +409,43 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
                   👆 Use Biometric
                 </button>
               )}
+              {localStorage.getItem('ethioswap_lock_pattern') && (
+                <button onClick={() => { setMode('pattern'); setError(''); setPin(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                  Use Pattern
+                </button>
+              )}
               <button onClick={() => { setMode('password'); setError(''); setPin(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Use Password
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pattern Mode */}
+      {mode === 'pattern' && (
+        <div style={{ width: '100%', maxWidth: '300px', textAlign: 'center', animation: shaking ? 'shake 0.4s ease' : 'none' }}>
+          <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`}</style>
+          
+          <PatternLock
+            onPatternComplete={handlePatternCheck}
+            error={!!error}
+            step="unlock"
+          />
+
+          {error && <p style={{ color: 'var(--status-danger-text)', fontSize: '13px', marginBottom: '16px' }}>⚠ {error}</p>}
+
+          {!isSetupMode && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '8px' }}>
+              {biometricAvailable && (
+                <button onClick={handleBiometric} style={{ background: 'none', border: 'none', color: 'var(--gold-light)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  👆 Use Biometric
+                </button>
+              )}
+              <button onClick={() => { setMode('pin'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Use PIN
+              </button>
+              <button onClick={() => { setMode('password'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
                 Use Password
               </button>
             </div>
@@ -217,9 +464,16 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
             {biometricLoading ? 'Verifying...' : 'Tap to verify with fingerprint or face'}
           </p>
           {error && <p style={{ color: 'var(--status-danger-text)', fontSize: '13px', marginBottom: '16px' }}>⚠ {error}</p>}
-          <button onClick={() => { setMode('pin'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-            Use PIN instead
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+            <button onClick={() => { setMode('pin'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+              Use PIN instead
+            </button>
+            {localStorage.getItem('ethioswap_lock_pattern') && (
+              <button onClick={() => { setMode('pattern'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Use Pattern
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -241,9 +495,16 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
             </div>
             {error && <p style={{ textAlign: 'center', color: 'var(--status-danger-text)', fontSize: '13px', marginBottom: '12px' }}>⚠ {error}</p>}
             <button type="submit" className="btn btn-gold btn-full" style={{ marginBottom: '12px' }}>Unlock</button>
-            <button type="button" onClick={() => { setMode('pin'); setError(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)', width: '100%', textAlign: 'center' }}>
-              Use PIN instead
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', width: '100%', marginTop: '8px' }}>
+              <button type="button" onClick={() => { setMode('pin'); setError(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Use PIN
+              </button>
+              {localStorage.getItem('ethioswap_lock_pattern') && (
+                <button type="button" onClick={() => { setMode('pattern'); setError(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                  Use Pattern
+                </button>
+              )}
+            </div>
           </form>
         </div>
       )}

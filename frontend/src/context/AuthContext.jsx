@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
   const wallet         = useQuery(api.users.getById,     user ? { id: user.id } : "skip");
   const settings       = useQuery(api.settings.get);
   const myDepositReqs  = useQuery(api.depositRequests.listByUser, user ? { userId: user.id } : "skip") ?? [];
-  const allDepositReqs = useQuery(api.depositRequests.listAll) ?? [];
+  const allDepositReqs = useQuery(api.depositRequests.listAll, user?.role === 'admin' ? undefined : "skip") ?? [];
   const myTransactions = useQuery(api.wallet.listTransactions, user ? { userId: user.id } : "skip") ?? [];
 
   const systemSettings = settings ?? {
@@ -56,8 +56,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         setUser(parsed);
-        // Force lock screen to pop up immediately on launch/open
-        setIsLocked(true);
+        // Force lock screen to pop up immediately on launch/open (only if lock is enabled)
+        const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
+        if (lockEnabled) setIsLocked(true);
       } catch {}
     }
   }, []);
@@ -100,7 +101,10 @@ export const AuthProvider = ({ children }) => {
   const resetIdleTimer = useCallback(() => {
     clearTimeout(idleTimer.current);
     if (!user) return;
-    idleTimer.current = setTimeout(() => setIsLocked(true), 5 * 60 * 1000);
+    const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
+    if (lockEnabled) {
+      idleTimer.current = setTimeout(() => setIsLocked(true), 5 * 60 * 1000);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -125,7 +129,8 @@ export const AuthProvider = ({ children }) => {
       const data = await convexLogin({ username, password });
       persistUser(data);
       setSuccess(`Welcome back, ${data.username}!`);
-      setIsLocked(true);
+      const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
+      if (lockEnabled) setIsLocked(true);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }

@@ -54,7 +54,10 @@ export const listPending = query({
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("desc")
       .collect();
-    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+    return requests.map((r) => {
+      const { screenshotUrl, ...rest } = r;
+      return { ...rest, id: r._id.toString(), hasScreenshot: !!screenshotUrl };
+    });
   },
 });
 
@@ -65,7 +68,10 @@ export const listAll = query({
       .query("depositRequests")
       .order("desc")
       .collect();
-    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+    return requests.map((r) => {
+      const { screenshotUrl, ...rest } = r;
+      return { ...rest, id: r._id.toString(), hasScreenshot: !!screenshotUrl };
+    });
   },
 });
 
@@ -78,8 +84,21 @@ export const listByUser = query({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
-    return requests.map((r) => ({ ...r, id: r._id.toString() }));
+    return requests.map((r) => {
+      const { screenshotUrl, ...rest } = r;
+      return { ...rest, id: r._id.toString(), hasScreenshot: !!screenshotUrl };
+    });
   },
+});
+
+// ── Fetch screenshot on demand ──────────────────────────────────
+export const getDepositScreenshot = query({
+  args: { requestId: v.string() },
+  handler: async (ctx, args) => {
+    const reqId = ctx.db.normalizeId("depositRequests", args.requestId);
+    const req = reqId ? await ctx.db.get(reqId) : null;
+    return req ? req.screenshotUrl : null;
+  }
 });
 
 // ── Admin: approve a deposit request ────────────────────────────

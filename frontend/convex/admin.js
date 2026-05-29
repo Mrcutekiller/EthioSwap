@@ -12,7 +12,7 @@ export const getRevenue = query({
       .query("trades")
       .filter((q) => q.eq(q.field("status"), "completed"))
       .collect();
-    const users = await ctx.db.query("users").collect();
+    const users = (await ctx.db.query("users").collect()).map(u => ({ joinedAt: u.joinedAt }));
 
     const now = new Date();
     const getStart = (p) => {
@@ -103,7 +103,33 @@ export const getKycQueue = query({
     const users = await ctx.db.query("users").collect();
     return users
       .filter(u => u.kycStatus === "pending" || u.kycStep === "pending")
-      .map(u => ({ ...u, id: u._id.toString() }));
+      .map(u => ({
+        id: u._id.toString(),
+        _id: u._id,
+        username: u.username,
+        phone: u.phone,
+        email: u.email,
+        fullName: u.fullName,
+        kycStatus: u.kycStatus,
+        kycStep: u.kycStep,
+        kycData: u.kycData,
+        joinedAt: u.joinedAt,
+      }));
+  }
+});
+
+export const getUserKycImages = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (!user) return null;
+    return {
+      kycIdFront: user.kycIdFront,
+      kycIdBack: user.kycIdBack,
+      kycSelfie: user.kycSelfie,
+      kycDocument: user.kycDocument,
+    };
   }
 });
 
