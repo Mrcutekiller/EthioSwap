@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "concurrently": "^8.2.2",
+    "convex": "^1.11.0",
     "cors": "^2.8.5",
     "ethers": "^6.13.1",
     "express": "^4.19.2",
