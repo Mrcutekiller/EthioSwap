@@ -82,7 +82,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, savePaymentAccounts, setError, setSuccess, systemSettings } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [copied, setCopied] = useState(false);
@@ -114,6 +114,12 @@ const WalletCard = () => {
   const [senderUsername, setSenderUsername] = useState('');
   const [screenshotBase64, setScreenshotBase64] = useState('');
   const [screenshotPreview, setScreenshotPreview] = useState('');
+
+  // Send by ID state
+  const [sendRecipientId, setSendRecipientId] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
 
   if (!wallet) return (
     <div className="card" style={{ height: '120px' }}>
@@ -236,6 +242,7 @@ const WalletCard = () => {
   const tabs = [
     { id: 'balance',  label: '💰', sub: 'Balance' },
     { id: 'deposit',  label: '⬇', sub: 'Deposit' },
+    { id: 'send',     label: '↗', sub: 'Send' },
     { id: 'withdraw', label: '⬆', sub: 'Withdraw' },
   ];
 
@@ -252,7 +259,14 @@ const WalletCard = () => {
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '150px', height: '150px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(200,150,44,0.15),transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,212,170,0.08),transparent 70%)', pointerEvents: 'none' }} />
 
-        <div style={{ fontSize: '10px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>EthioSwap Wallet</div>
+        <div style={{ fontSize: '10px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>EthioSwap Wallet</span>
+          {wallet.numericId && (
+            <span style={{ background: 'rgba(200,150,44,0.15)', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', letterSpacing: '0.03em' }}>
+              ID: #{wallet.numericId}
+            </span>
+          )}
+        </div>
         <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px' }}>
           <span className="gradient-text-gold">${wallet.ethBalance.toFixed(2)}</span>
           <span style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: 500, marginLeft: '6px' }}>USD</span>
@@ -642,6 +656,104 @@ const WalletCard = () => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══ SEND TAB ════════════════════════════════════════ */}
+      {activeSection === 'send' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="card fade-in-2">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>Send USD by ID</div>
+              {wallet.numericId && (
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                  Your ID: <span style={{ fontWeight: 800, color: 'var(--gold-light)', fontFamily: 'monospace' }}>#{wallet.numericId}</span>
+                  <button onClick={() => { navigator.clipboard.writeText(String(wallet.numericId)); setSuccess('Your ID copied!'); }} style={{ marginLeft: '6px', background: 'none', border: 'none', color: 'var(--gold-light)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, fontFamily: 'var(--font)' }}>📋</button>
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '14px' }}>
+              Send USD instantly to any EthioSwap user by their numeric ID. Like Binance Pay or Bybit internal transfer.
+            </p>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setSendResult(null);
+              const rid = parseInt(sendRecipientId);
+              const amt = parseFloat(sendAmount);
+              if (isNaN(rid) || rid <= 0) { setError('Enter a valid recipient ID.'); return; }
+              if (isNaN(amt) || amt <= 0) { setError('Enter a valid amount.'); return; }
+              if (amt > available) { setError(`Insufficient balance. Available: $${available.toFixed(2)}`); return; }
+
+              setSendLoading(true);
+              const result = await sendById(rid, amt);
+              setSendLoading(false);
+              if (result?.success) {
+                setSendResult(result);
+                setSendRecipientId('');
+                setSendAmount('');
+              }
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label">Recipient ID</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  className="input"
+                  placeholder="Enter user numeric ID (e.g. 1, 2, 3...)"
+                  value={sendRecipientId}
+                  onChange={e => setSendRecipientId(e.target.value)}
+                  style={{ fontFamily: 'monospace', fontSize: '14px', letterSpacing: '0.05em' }}
+                />
+              </div>
+
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label">Amount (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  className="input"
+                  placeholder={`Max: $${available.toFixed(2)}`}
+                  value={sendAmount}
+                  onChange={e => setSendAmount(e.target.value)}
+                />
+                {sendAmount && !isNaN(parseFloat(sendAmount)) && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
+                    ≈ {Math.round(parseFloat(sendAmount) * rate).toLocaleString()} ETB
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--teal-light)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <span>⚡ Instant Transfer</span>
+                  <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(0,212,170,0.15)', borderRadius: '99px' }}>0% FEE</span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0, lineHeight: 1.4 }}>
+                  Transfers between EthioSwap users are instant and free. The recipient's balance is credited immediately.
+                </p>
+              </div>
+
+              <button type="submit" disabled={sendLoading} className="btn btn-teal btn-full" style={{ padding: '14px', fontWeight: 800 }}>
+                {sendLoading ? '⏳ Sending…' : '↗ Send USD Now'}
+              </button>
+            </form>
+
+            {sendResult && (
+              <div style={{ marginTop: '14px', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--status-success-text)', marginBottom: '6px' }}>✓ Transfer Sent!</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>
+                  Sent to <strong>@{sendResult.recipient.username}</strong> (ID: #{sendResult.recipient.numericId})
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
+                  New balance: ${sendResult.newBalance.toFixed(2)} USD
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

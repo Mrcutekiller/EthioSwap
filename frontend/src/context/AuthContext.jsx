@@ -28,6 +28,8 @@ export const AuthProvider = ({ children }) => {
   const convexRejectDeposit        = useMutation(api.depositRequests.reject);
   const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
   const convexAcknowledgeWarning   = useMutation(api.users.acknowledgeWarning);
+  const convexSendById             = useMutation(api.users.sendById);
+  const convexGetByNumericId       = useQuery(api.users.getByNumericId);
 
   // ── Convex real-time queries ──────────────────────────
   const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
@@ -268,6 +270,23 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); return null; }
   };
 
+  const sendById = async (recipientNumericId, amount) => {
+    setLoading(true);
+    try {
+      const data = await convexSendById({
+        senderId: user.id,
+        recipientNumericId: parseInt(recipientNumericId),
+        amount: parseFloat(amount),
+      });
+      if (data?.success) {
+        updateUser({ ethBalance: data.newBalance });
+        setSuccess(`$${parseFloat(amount).toFixed(2)} USD sent to @${data.recipient.username} (ID: ${data.recipient.numericId})!`);
+      }
+      return data;
+    } catch (err) { setError(err.message); return null; }
+    finally { setLoading(false); }
+  };
+
   const updateUser = (updatedUser) => {
     const merged = { ...user, ...updatedUser };
     persistUser(merged);
@@ -331,7 +350,7 @@ export const AuthProvider = ({ children }) => {
       login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
-      acknowledgeWarning,
+      acknowledgeWarning, sendById,
       ethUsdPrice: ETH_USD_PRICE,
     }}>
       {children}

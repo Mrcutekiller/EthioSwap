@@ -41,13 +41,14 @@ export default defineSchema({
       accountNumber: v.string(),
       holderName: v.string(),
     }))),
+    numericId: v.number(),
     isSuspended: v.optional(v.boolean()),
     warnings: v.optional(v.array(v.object({
       id: v.string(),
       message: v.string(),
       createdAt: v.string(),
     }))),
-  }).index("by_username", ["username"]),
+  }).index("by_username", ["username"]).index("by_numericId", ["numericId"]),
 
   listings: defineTable({
     sellerId: v.string(),
@@ -151,4 +152,9 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index("by_status", ["status"]),
+
+  counters: defineTable({
+    name: v.string(),
+    value: v.number(),
+  }).index("by_name", ["name"]),
 });

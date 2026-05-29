@@ -79,6 +79,7 @@ export const listAll = query({
       paymentAccounts: u.paymentAccounts,
       isSuspended: u.isSuspended,
       warnings: u.warnings,
+      numericId: u.numericId,
     }));
   }
 });
@@ -101,6 +102,18 @@ export const register = mutation({
     }
 
     const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
+
+    // Auto-increment numericId from counters
+    const counterDoc = await ctx.db.query("counters")
+      .withIndex("by_name", (q) => q.eq("name", "userId"))
+      .unique();
+    let nextNumericId = 1;
+    if (counterDoc) {
+      nextNumericId = counterDoc.value + 1;
+      await ctx.db.patch(counterDoc._id, { value: nextNumericId });
+    } else {
+      await ctx.db.insert("counters", { name: "userId", value: 1 });
+    }
 
     const newUser = {
       username: args.username.toLowerCase(),
@@ -128,6 +141,7 @@ export const register = mutation({
       totalTrades: 0,
       joinedAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
+      numericId: nextNumericId,
     };
 
     const id = await ctx.db.insert("users", newUser);
@@ -169,6 +183,17 @@ export const login = mutation({
       if (!user) {
         // Auto-create the admin if it doesn't exist yet
         const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
+        // Get next numericId for admin
+        const counterDoc = await ctx.db.query("counters")
+          .withIndex("by_name", (q) => q.eq("name", "userId"))
+          .unique();
+        let adminNumericId = 1;
+        if (counterDoc) {
+          adminNumericId = counterDoc.value + 1;
+          await ctx.db.patch(counterDoc._id, { value: adminNumericId });
+        } else {
+          await ctx.db.insert("counters", { name: "userId", value: 1 });
+        }
         const id = await ctx.db.insert("users", {
           username: adminEmail,
           passwordHash: adminPassword,
@@ -192,6 +217,7 @@ export const login = mutation({
           totalTrades: 0,
           joinedAt: new Date().toISOString(),
           lastActive: new Date().toISOString(),
+          numericId: adminNumericId,
         });
         user = await ctx.db.get(id);
       } else if (user.role !== "admin") {
@@ -521,6 +547,109 @@ export const acknowledgeWarning = mutation({
       ...updatedUser,
       id: updatedUser._id.toString(),
       ethAvailable: updatedUser.ethBalance - (updatedUser.ethLocked || 0),
+    };
+  }
+});
+
+export const getByNumericId = query({
+  args: { numericId: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_numericId", (q) => q.eq("numericId", args.numericId))
+      .unique();
+    if (!user) return null;
+    return {
+      id: user._id.toString(),
+      numericId: user.numericId,
+      username: user.username,
+      displayName: user.displayName,
+      ethBalance: user.ethBalance,
+    };
+  }
+});
+
+export const sendById = mutation({
+  args: {
+    senderId: v.string(),
+    recipientNumericId: v.number(),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (args.amount <= 0) throw new Error("Amount must be greater than zero");
+
+    const senderObjId = ctx.db.normalizeId("users", args.senderId);
+    if (!senderObjId) throw new Error("Invalid sender ID");
+    const sender = await ctx.db.get(senderObjId);
+    if (!sender) throw new Error("Sender not found");
+
+    const recipient = await ctx.db
+      .query("users")
+      .withIndex("by_numericId", (q) => q.eq("numericId", args.recipientNumericId))
+      .unique();
+    if (!recipient) throw new Error("Recipient not found with that ID");
+    if (recipient._id.equals(senderObjId)) throw new Error("Cannot send to yourself");
+
+    const available = sender.ethBalance - (sender.ethLocked || 0);
+    if (available < args.amount) {
+      throw new Error(`Insufficient balance. Available: $${available.toFixed(2)} USD`);
+    }
+
+    // Deduct from sender
+    await ctx.db.patch(senderObjId, {
+      ethBalance: sender.ethBalance - args.amount,
+    });
+
+    // Credit to recipient
+    await ctx.db.patch(recipient._id, {
+      ethBalance: recipient.ethBalance + args.amount,
+    });
+
+    // Transaction record for sender
+    await ctx.db.insert("transactions", {
+      userId: args.senderId,
+      type: "send",
+      amountETH: args.amount,
+      amountUSD: args.amount,
+      note: `Sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId})`,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Transaction record for recipient
+    await ctx.db.insert("transactions", {
+      userId: recipient._id.toString(),
+      type: "receive",
+      amountETH: args.amount,
+      amountUSD: args.amount,
+      note: `Received $${args.amount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId})`,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Notify sender
+    await ctx.db.insert("notifications", {
+      userId: args.senderId,
+      type: "transfer_sent",
+      message: `You sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId}).`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Notify recipient
+    await ctx.db.insert("notifications", {
+      userId: recipient._id.toString(),
+      type: "transfer_received",
+      message: `You received $${args.amount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId}).`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return {
+      success: true,
+      newBalance: sender.ethBalance - args.amount,
+      recipient: {
+        username: recipient.username,
+        numericId: recipient.numericId,
+      },
     };
   }
 });
