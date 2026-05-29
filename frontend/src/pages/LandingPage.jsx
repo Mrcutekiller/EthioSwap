@@ -80,7 +80,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const faqItems = [
     {
       q: "How does the P2P Escrow contract protect me?",
-      a: "When a trade begins, the seller's Ethereum (ETH) is instantly locked in the smart contract escrow. This ensures that the seller cannot run away with the funds once you pay. The ETH is only released to the buyer after the buyer marks it as paid and the seller confirms the receipt of Birr in their bank account. If the seller refuses to release after getting paid, the buyer can open a dispute."
+      a: "When a trade begins, the seller's USD ($) is instantly locked in the smart contract escrow. This ensures that the seller cannot run away with the funds once you pay. The USD is only released to the buyer after the buyer marks it as paid and the seller confirms the receipt of Birr in their bank account. If the seller refuses to release after getting paid, the buyer can open a dispute."
     },
     {
       q: "What bank accounts and payment options are supported?",
@@ -96,7 +96,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     },
     {
       q: "What happens if there is a dispute during a trade?",
-      a: "If the payment is sent but the seller does not release the ETH, or if the buyer claims to have paid but didn't, either party can click 'Open Dispute' after the 30-minute timer expires. This locks the escrow and alerts our support team. An administrator will examine bank screenshots, transaction logs, and SMS receipts, and manually resolve the trade."
+      a: "If the payment is sent but the seller does not release the USD, or if the buyer claims to have paid but didn't, either party can click 'Open Dispute' after the 30-minute timer expires. This locks the escrow and alerts our support team. An administrator will examine bank screenshots, transaction logs, and SMS receipts, and manually resolve the trade."
     }
   ];
 
@@ -121,7 +121,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </p>
             <h4>2. Description of Service</h4>
             <p>
-              EthioSwap facilitates the local purchase and sale of testnet Ethereum (ETH) in exchange for Ethiopian Birr (ETB). We provide smart-contract based escrow locking and administrator-led dispute resolution. We do not provide custody of fiat currencies; all ETB transfers occur directly between the buyer's and seller's personal accounts.
+              EthioSwap facilitates the local purchase and sale of USD stable assets in exchange for Ethiopian Birr (ETB). We provide smart-contract based escrow locking and administrator-led dispute resolution. We do not provide custody of fiat currencies; all ETB transfers occur directly between the buyer's and seller's personal accounts.
             </p>
             <h4>3. Supported Payment Methods</h4>
             <p>
@@ -180,7 +180,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               EthioSwap operates a secure, mandatory escrow model. When a buyer initiates a buy order from a seller's listing:
             </p>
             <ul>
-              <li>The seller's ETH corresponding to the trade amount is instantly deducted from their balance and locked in the escrow contract.</li>
+              <li>The seller's USD ($) corresponding to the trade amount is instantly deducted from their balance and locked in the escrow contract.</li>
               <li>The seller cannot withdraw or move these funds while the trade is active.</li>
               <li>A payment window timer (typically 30 minutes) begins.</li>
             </ul>
@@ -190,14 +190,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </p>
             <h4>3. Seller Obligations</h4>
             <p>
-              The seller must check their bank balance or Telebirr wallet to confirm the exact fiat amount has arrived. The seller must never rely on buyer-provided screenshots alone. Upon receipt of funds, the seller is obligated to click <strong>"Release ETH"</strong> immediately.
+              The seller must check their bank balance or Telebirr wallet to confirm the exact fiat amount has arrived. The seller must never rely on buyer-provided screenshots alone. Upon receipt of funds, the seller is obligated to click <strong>"Release USD"</strong> immediately.
             </p>
             <h4>4. Dispute Arbitration</h4>
             <p>
-              If the payment window expires and the seller has not released the ETH, or if the buyer has not paid but refuses to cancel, either party can open an official dispute.
+              If the payment window expires and the seller has not released the USD, or if the buyer has not paid but refuses to cancel, either party can open an official dispute.
             </p>
             <p>
-              EthioSwap administrators will examine both parties' statements, chat transcripts, and verified bank statements. The admin has full authority to release the escrowed ETH to the buyer or refund it to the seller based on verified facts. The admin's decision is final.
+              EthioSwap administrators will examine both parties' statements, chat transcripts, and verified bank statements. The admin has full authority to release the escrowed USD to the buyer or refund it to the seller based on verified facts. The admin's decision is final.
             </p>
           </>
         );
@@ -291,11 +291,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <span>EthioSwap v2.4 Beta</span>
             </div>
             <h1 className="landing-hero-title">
-              Trade ETH.<br />
-              <span className="gold-text">Trust the System.</span>
+              Trade USD ($) & ETB.<br />
+              <span className="gold-text">Safe & Secure.</span>
             </h1>
             <p className="landing-hero-sub">
-              Buy and sell Ethereum for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. Runs on Sepolia Testnet.
+              Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. Runs on Sepolia Testnet.
             </p>
             <div className="landing-hero-ctas">
               <button onClick={onGetStarted} className="btn btn-gold btn-lg">
@@ -358,7 +358,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div className="landing-feature-card">
               <div className="landing-feature-icon">🔒</div>
               <h3>Smart Escrow Protection</h3>
-              <p>Before a buyer transfers ETB, the seller's ETH is automatically locked in the escrow smart contract. Funds are released only after payment is verified.</p>
+              <p>Before a buyer transfers ETB, the seller's USD ($) is automatically locked in the escrow smart contract. Funds are released only after payment is verified.</p>
             </div>
             <div className="landing-feature-card">
               <div className="landing-feature-icon">🛡️</div>
@@ -406,7 +406,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div className="landing-feature-card" style={{ borderLeft: '4px solid var(--teal)', paddingLeft: '20px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>💻</div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>Local Freelancers & Remote Workers</h3>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6 }}>Earning in foreign currencies or digital assets online? Swap your USD or Ethereum earnings to Ethiopian Birr (ETB) instantly. Receive funds directly into your Commercial Bank of Ethiopia (CBE) account or Telebirr wallet.</p>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6 }}>Earning in foreign currencies or digital assets online? Swap your USD or stable coin earnings to Ethiopian Birr (ETB) instantly. Receive funds directly into your Commercial Bank of Ethiopia (CBE) account or Telebirr wallet.</p>
             </div>
             <div className="landing-feature-card" style={{ borderLeft: '4px solid var(--indigo)', paddingLeft: '20px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>📈</div>
@@ -416,7 +416,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div className="landing-feature-card" style={{ borderLeft: '4px solid var(--text-1)', paddingLeft: '20px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px' }}>🛡️</div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>Regular Digital Asset Buyers</h3>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6 }}>Acquire Ethereum securely using local payment channels. Avoid the risk of getting scammed in Telegram groups. Our 100% verified users and mandatory smart contract escrow keep your capital secure throughout every trade.</p>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6 }}>Acquire stable coin assets securely using local payment channels. Avoid the risk of getting scammed in Telegram groups. Our 100% verified users and mandatory smart contract escrow keep your capital secure throughout every trade.</p>
             </div>
           </div>
         </div>
@@ -428,7 +428,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div className="landing-section-header">
             <span className="landing-section-eyebrow">P2P Process</span>
             <h2>Simple 4-Step Trade Lifecycle</h2>
-            <p>Trading ETH for ETB has never been more straightforward. Here is how a standard trade works on EthioSwap.</p>
+            <p>Trading USD for ETB has never been more straightforward. Here is how a standard trade works on EthioSwap.</p>
           </div>
           <div className="landing-steps-grid">
             <div className="landing-step-card">
@@ -438,8 +438,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </div>
             <div className="landing-step-card">
               <div className="landing-step-number">2</div>
-              <h3>ETH Locked in Escrow</h3>
-              <p>When a trade starts, the seller's ETH is automatically locked in escrow. The trade room starts an active payment timer.</p>
+              <h3>USD Locked in Escrow</h3>
+              <p>When a trade starts, the seller's USD is automatically locked in escrow. The trade room starts an active payment timer.</p>
             </div>
             <div className="landing-step-card">
               <div className="landing-step-number">3</div>
@@ -448,8 +448,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </div>
             <div className="landing-step-card">
               <div className="landing-step-number">4</div>
-              <h3>ETH Release</h3>
-              <p>The seller confirms receipt of the ETB in their banking app, clicks release, and the locked ETH transfers directly to the buyer.</p>
+              <h3>USD Release</h3>
+              <p>The seller confirms receipt of the ETB in their banking app, clicks release, and the locked USD transfers directly to the buyer.</p>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <span className="landing-section-eyebrow">Addis Ababa, Ethiopia</span>
               <h2>Pioneering Trust in Local Digital Assets</h2>
               <p>
-                EthioSwap was founded in Addis Ababa with a simple vision: to make Ethereum trading accessible, secure, and fully customized for the Ethiopian market. By leveraging modern web apps, PWA technology, and Convex Cloud backend architectures, we provide local traders with a safe alternative to risky Telegram group trading.
+                EthioSwap was founded in Addis Ababa with a simple vision: to make P2P USD trading accessible, secure, and fully customized for the Ethiopian market. By leveraging modern web apps, PWA technology, and Convex Cloud backend architectures, we provide local traders with a safe alternative to risky Telegram group trading.
               </p>
               <p>
                 We support direct bank transfers for major institutions across the country, including the Commercial Bank of Ethiopia (CBE), Telebirr mobile wallet, Dashen Bank, Awash Bank, and Wegagen Bank. Our automated escrow contract acts as a neutral third-party, ensuring both buyers and sellers fulfill their end of the trade.
@@ -769,7 +769,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div className="landing-footer-brand">
               <Logo size={36} showText={true} />
               <p>
-                Ethiopia's premium peer-to-peer Sepolia testnet escrow exchange. Trade Ethereum safely using local bank transfers and mobile wallets.
+                Ethiopia's premium peer-to-peer Sepolia testnet escrow exchange. Trade stable USD ($) safely using local bank transfers and mobile wallets.
               </p>
               <div className="landing-social-links">
                 <a href="https://t.me/ethioswap_p2p" target="_blank" rel="noreferrer" className="landing-social-link">
@@ -832,7 +832,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           
           <div className="landing-footer-bottom">
             <span>&copy; {new Date().getFullYear()} EthioSwap. All rights reserved. Addis Ababa, Ethiopia.</span>
-            <span>Powered by Convex Cloud & Sepolia Ethereum testnet.</span>
+            <span>Powered by Convex Cloud.</span>
           </div>
         </div>
       </footer>

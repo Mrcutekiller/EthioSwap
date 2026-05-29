@@ -173,6 +173,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
+  const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, systemSettings } = useAuth();
   const [tab, setTabState] = useState(() => {
     if (user?.role === 'admin') return 'admin';
     return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
@@ -346,7 +347,7 @@ const AppShell = () => {
         {tab === 'home'     && <P2PListings />}
         {tab === 'wallet'   && <WalletCard />}
         {tab === 'trades'   && <TradeRoom />}
-        {tab === 'profile'  && <ProfilePage user={user} wallet={wallet} apiBase={apiBase} onUserUpdate={updateUser} systemSettings={systemSettings} />}
+        {tab === 'profile'  && <ProfilePage user={user} wallet={wallet} onUserUpdate={updateUser} systemSettings={systemSettings} />}
         {tab === 'settings' && <SettingsPage user={user} onLogout={logout} />}
         {tab === 'admin'    && <AdminPanel user={user} />}
       </main>

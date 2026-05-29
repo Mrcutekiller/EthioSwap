@@ -1,7 +1,7 @@
 {
   "short_name": "EthioSwap",
-  "name": "EthioSwap - Trade ETH",
-  "description": "Secure peer-to-peer ETH trading platform for Ethiopia",
+  "name": "EthioSwap - Trade USD ($) & ETB",
+  "description": "Secure peer-to-peer USD ($) & ETB trading platform for Ethiopia",
   "icons": [
     {
       "src": "/logo192.png",
