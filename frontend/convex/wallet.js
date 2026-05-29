@@ -26,3 +26,15 @@ export const getBalance = query({
     };
   }
 });
+
+export const listTransactions = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const list = await ctx.db
+      .query("transactions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+    return list.map(t => ({ ...t, id: t._id.toString() }));
+  }
+});

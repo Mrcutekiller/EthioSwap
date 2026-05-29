@@ -82,7 +82,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, createDepositRequest, setError, setSuccess, systemSettings } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, setError, setSuccess, systemSettings } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [copied, setCopied] = useState(false);
@@ -179,6 +179,30 @@ const WalletCard = () => {
   const pendingCount = myDepositReqs.filter(r => r.status === 'pending').length;
   const selWallet = WALLET_OPTIONS.find(w => w.id === depWalletType) || WALLET_OPTIONS[0];
 
+  const withdrawals = (myTransactions || [])
+    .filter(t => t.type === 'withdrawal')
+    .map(t => ({
+      id: t.id || t._id?.toString() || Math.random().toString(),
+      amountUSD: t.amountUSD,
+      walletType: 'On-Chain Withdrawal',
+      createdAt: t.createdAt,
+      status: 'approved', // withdrawals are executed instantly
+      type: 'withdrawal',
+      note: t.note
+    }));
+
+  const depositsMapped = (myDepositReqs || []).map(r => ({
+    id: r.id || r._id?.toString() || Math.random().toString(),
+    amountUSD: r.amountUSD,
+    walletType: r.walletType,
+    createdAt: r.createdAt,
+    status: r.status,
+    type: 'deposit',
+    adminNote: r.adminNote
+  }));
+
+  const combinedHistory = [...depositsMapped, ...withdrawals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
   const tabs = [
     { id: 'balance',  label: '💰', sub: 'Balance' },
     { id: 'deposit',  label: '⬇', sub: 'Deposit' },
@@ -258,21 +282,54 @@ const WalletCard = () => {
             </div>
           </div>
 
-          {/* Deposit request history */}
-          {myDepositReqs.length > 0 && (
+          {/* Unified Deposit & Withdrawal History */}
+          {combinedHistory.length > 0 && (
             <div className="card fade-in-3">
-              <div className="section-title">Deposit Requests {pendingCount > 0 && <span style={{ color: 'var(--status-warning-text)' }}>({pendingCount} pending)</span>}</div>
+              <div className="section-title">📊 Deposit & Withdrawal History</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {myDepositReqs.slice(0, 5).map(r => (
-                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--bg-elevated)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '13px' }}>${r.amountUSD.toFixed(2)} USD</div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{r.walletType} · {new Date(r.createdAt).toLocaleDateString()}</div>
-                      {r.adminNote && r.status === 'rejected' && <div style={{ fontSize: '10px', color: 'var(--status-danger-text)', marginTop: '2px' }}>Reason: {r.adminNote}</div>}
+                {combinedHistory.slice(0, 10).map(item => {
+                  const isDeposit = item.type === 'deposit';
+                  const isPending = item.status === 'pending';
+                  const isRejected = item.status === 'rejected';
+                  
+                  return (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '8px', 
+                          background: isDeposit ? 'rgba(0, 212, 170, 0.12)' : 'rgba(99, 102, 241, 0.12)', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                        }}>
+                          {isDeposit ? '⬇️' : '↗️'}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-1)' }}>
+                              {isDeposit ? 'Deposit' : 'Withdrawal'}
+                            </span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                              · {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>
+                            {isDeposit ? `via ${item.walletType}` : 'to external address'}
+                          </div>
+                          {isRejected && item.adminNote && (
+                            <div style={{ fontSize: '9px', color: 'var(--status-danger-text)', marginTop: '2px' }}>
+                              Reason: {item.adminNote}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: isDeposit ? 'var(--teal-light)' : 'var(--gold-light)' }}>
+                          {isDeposit ? '+' : '-'}${item.amountUSD.toFixed(2)} USD
+                        </div>
+                        <StatusBadge status={item.status} />
+                      </div>
                     </div>
-                    <StatusBadge status={r.status} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

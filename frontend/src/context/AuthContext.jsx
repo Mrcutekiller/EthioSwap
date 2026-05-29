@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }) => {
   const settings       = useQuery(api.settings.get);
   const myDepositReqs  = useQuery(api.depositRequests.listByUser, user ? { userId: user.id } : "skip") ?? [];
   const allDepositReqs = useQuery(api.depositRequests.listAll) ?? [];
+  const myTransactions = useQuery(api.wallet.listTransactions, user ? { userId: user.id } : "skip") ?? [];
 
   const systemSettings = settings ?? {
     etbRatePerDollar: 190.0,
@@ -302,7 +303,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, wallet, listings, trades, systemSettings,
       error, success, loading, isLocked,
-      myDepositReqs, allDepositReqs,
+      myDepositReqs, allDepositReqs, myTransactions,
       setError, setSuccess,
       login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
