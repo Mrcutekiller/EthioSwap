@@ -414,9 +414,6 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
                   Use Pattern
                 </button>
               )}
-              <button onClick={() => { setMode('password'); setError(''); setPin(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                Use Password
-              </button>
             </div>
           )}
         </div>
@@ -444,9 +441,6 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
               )}
               <button onClick={() => { setMode('pin'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
                 Use PIN
-              </button>
-              <button onClick={() => { setMode('password'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                Use Password
               </button>
             </div>
           )}
@@ -477,37 +471,6 @@ const AppLockScreen = ({ user, lockMethod, savedPin, onUnlock }) => {
         </div>
       )}
 
-      {/* Password Mode */}
-      {mode === 'password' && (
-        <div style={{ width: '100%', maxWidth: '300px' }}>
-          <form onSubmit={handlePasswordCheck}>
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                ref={inputRef}
-                type="password"
-                className="input"
-                placeholder="Enter your password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError(''); }}
-                autoFocus
-                style={{ textAlign: 'center', fontSize: '18px', letterSpacing: '0.1em', animation: shaking ? 'shake 0.4s ease' : 'none' }}
-              />
-            </div>
-            {error && <p style={{ textAlign: 'center', color: 'var(--status-danger-text)', fontSize: '13px', marginBottom: '12px' }}>⚠ {error}</p>}
-            <button type="submit" className="btn btn-gold btn-full" style={{ marginBottom: '12px' }}>Unlock</button>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', width: '100%', marginTop: '8px' }}>
-              <button type="button" onClick={() => { setMode('pin'); setError(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                Use PIN
-              </button>
-              {localStorage.getItem('ethioswap_lock_pattern') && (
-                <button type="button" onClick={() => { setMode('pattern'); setError(''); setPassword(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                  Use Pattern
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 };

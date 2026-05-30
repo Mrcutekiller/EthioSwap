@@ -819,68 +819,98 @@ const AdminPanel = ({ user }) => {
               </div>
             </div>
           ))}
+
+          {/* 📜 KYC History Section */}
+          <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>
+              📜 Identity Verification History
+            </div>
+            
+            {(() => {
+              const kycHistory = (allUsersList || []).filter(u => u.kycStatus === 'approved' || u.kycStatus === 'rejected');
+              if (kycHistory.length === 0) {
+                return (
+                  <div style={{ ...cs, textAlign: 'center', padding: '24px 10px', color: 'var(--text-3)', fontSize: '13px' }}>
+                    No completed verifications in history
+                  </div>
+                );
+              }
+              return kycHistory.map(h => (
+                <div key={h._id} style={{ ...cs, display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', marginBottom: '8px' }}>
+                  <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: h.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: h.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
+                    {(h.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '13px' }}>@{h.username}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{h.fullName || h.phone}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <StatusBadge status={h.kycStatus} />
+                    {h.kycRejectionReason && (
+                      <div style={{ fontSize: '9px', color: 'var(--status-danger-text)', marginTop: '2px' }} title={h.kycRejectionReason}>
+                        Reason: {h.kycRejectionReason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
         </div>
       )}
 
       {/* ══ DEPOSITS ══════════════════════════════════════════ */}
       {activeTab === 'deposits' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Deposit Requests</div>
-            <span className="badge badge-warning">{pendingDeposits.length} pending</span>
-          </div>
-
-          {allDepositReqs.length === 0 ? (
-            <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>💵</div>
-              <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No deposit requests yet</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Pending Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+                📥 Pending Deposit Requests
+              </div>
+              <span className="badge badge-warning">{pendingDeposits.length} pending</span>
             </div>
-          ) : allDepositReqs.map(req => {
-            const meta = WALLET_META[req.walletType] || WALLET_META.other;
-            const isPending = req.status === 'pending';
-            return (
-              <div key={req.id} style={{
-                ...cs, display: 'flex', flexDirection: 'column', gap: '12px',
-                borderColor: isPending ? 'rgba(251,191,36,0.25)' : 'var(--border)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                      {meta.icon}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{meta.label}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                    <StatusBadge status={req.status} />
-                  </div>
-                </div>
 
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Reference:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{req.senderReference || '—'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                    <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  </div>
-                  {req.adminNote && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Note:</span>
-                      <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
+            {pendingDeposits.length === 0 ? (
+              <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
+                ✓ No pending deposit requests
+              </div>
+            ) : pendingDeposits.map(req => {
+              const meta = WALLET_META[req.walletType] || WALLET_META.other;
+              return (
+                <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px', borderColor: 'rgba(251,191,36,0.25)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                        {meta.icon}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{meta.label}</div>
+                      </div>
                     </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
+                      <StatusBadge status={req.status} />
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Reference:</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{req.senderReference || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
+                      <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    </div>
+                  </div>
+
+                  {req.hasScreenshot && (
+                    <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
                   )}
-                </div>
 
-                {req.hasScreenshot && (
-                  <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
-                )}
-
-                {isPending && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <button onClick={() => handleApproveDeposit(req.id)} className="btn btn-success btn-full" style={{ padding: '12px', fontWeight: 700 }}>
                       ✓ Approve & Credit ${req.amountUSD.toFixed(2)} USD
@@ -890,67 +920,118 @@ const AdminPanel = ({ user }) => {
                       <button onClick={() => handleRejectDeposit(req.id)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* History Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+              📜 Deposit History
+            </div>
+            {(() => {
+              const completedDeposits = allDepositReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
+              if (completedDeposits.length === 0) {
+                return (
+                  <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
+                    No completed deposits in history
+                  </div>
+                );
+              }
+              return completedDeposits.map(req => {
+                const meta = WALLET_META[req.walletType] || WALLET_META.other;
+                return (
+                  <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                          {meta.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{meta.label}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
+                        <StatusBadge status={req.status} />
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-3)' }}>Reference:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{req.senderReference || '—'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
+                        <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </div>
+                      {req.adminNote && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-3)' }}>Admin Note:</span>
+                          <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+
         </div>
       )}
 
       {/* ══ WITHDRAWALS QUEUE ══════════════════════════════════ */}
       {activeTab === 'withdrawals' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Withdrawal Requests</div>
-            <span className="badge badge-warning">{pendingWithdrawals.length} pending</span>
-          </div>
-
-          {allWithdrawalReqs.length === 0 ? (
-            <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>💸</div>
-              <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No withdrawal requests yet</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Pending Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+                📤 Pending Withdrawal Requests
+              </div>
+              <span className="badge badge-warning">{pendingWithdrawals.length} pending</span>
             </div>
-          ) : allWithdrawalReqs.map(req => {
-            const isPending = req.status === 'pending';
-            return (
-              <div key={req.id} style={{
-                ...cs, display: 'flex', flexDirection: 'column', gap: '12px',
-                borderColor: isPending ? 'rgba(251,191,36,0.25)' : 'var(--border)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                      {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                    <StatusBadge status={req.status} />
-                  </div>
-                </div>
 
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Destination Account:</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                    <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  </div>
-                  {req.adminNote && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Note:</span>
-                      <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
+            {pendingWithdrawals.length === 0 ? (
+              <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
+                ✓ No pending withdrawal requests
+              </div>
+            ) : pendingWithdrawals.map(req => {
+              const isPending = req.status === 'pending';
+              return (
+                <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px', borderColor: 'rgba(251,191,36,0.25)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                        {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
+                      <StatusBadge status={req.status} />
+                    </div>
+                  </div>
 
-                {isPending && (
+                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Destination Account:</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
+                      <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <button onClick={() => handleWithdrawal(req.id, true)} className="btn btn-success btn-full" style={{ padding: '12px', fontWeight: 700 }}>
                       ✓ Approve & Release ${req.amountUSD.toFixed(2)} USD
@@ -966,10 +1047,66 @@ const AdminPanel = ({ user }) => {
                       <button onClick={() => handleWithdrawal(req.id, false)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* History Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+              📜 Withdrawal History
+            </div>
+            {(() => {
+              const completedWithdrawals = allWithdrawalReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
+              if (completedWithdrawals.length === 0) {
+                return (
+                  <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
+                    No completed withdrawals in history
+                  </div>
+                );
+              }
+              return completedWithdrawals.map(req => {
+                return (
+                  <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                          {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
+                        <StatusBadge status={req.status} />
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-3)' }}>Destination Address:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
+                        <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </div>
+                      {req.adminNote && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-3)' }}>Admin Note:</span>
+                          <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+
         </div>
       )}
 

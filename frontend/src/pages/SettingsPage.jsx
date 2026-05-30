@@ -378,7 +378,6 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
               {[
                 { id: 'pin',       icon: '🔢', label: 'PIN Code',            desc: '6-digit numeric PIN' },
                 { id: 'pattern',   icon: '🎨', label: 'Pattern Lock',         desc: '3x3 drawing grid pattern' },
-                { id: 'password',  icon: '🔑', label: 'Password',             desc: 'Text password' },
                 ...(biometricAvailable ? [{ id: 'biometric', icon: '👆', label: 'Biometric', desc: 'Fingerprint or Face ID' }] : []),
               ].map(opt => (
                 <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: lockMethod === opt.id ? 'var(--gold-bg)' : 'var(--bg-elevated)', border: `1px solid ${lockMethod === opt.id ? 'var(--border-active)' : 'var(--border)'}`, borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s ease' }}>
@@ -412,11 +411,6 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
             {lockMethod === 'biometric' && biometricRegistered && (
               <div style={{ fontSize: '12px', color: 'var(--status-success-text)', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', padding: '8px 12px', borderRadius: '8px', fontWeight: 500 }}>
                 ✓ Biometric registered and active
-              </div>
-            )}
-            {lockMethod === 'password' && (
-              <div style={{ fontSize: '12px', color: 'var(--text-3)', background: 'var(--bg-base)', border: '1px solid var(--border)', padding: '8px 12px', borderRadius: '8px' }}>
-                Your login password is used. Change it from the Sign In screen.
               </div>
             )}
           </div>
