@@ -41,7 +41,7 @@ export default defineSchema({
       accountNumber: v.string(),
       holderName: v.string(),
     }))),
-    numericId: v.number(),
+    numericId: v.optional(v.number()),
     isSuspended: v.optional(v.boolean()),
     warnings: v.optional(v.array(v.object({
       id: v.string(),
@@ -157,4 +157,16 @@ export default defineSchema({
     name: v.string(),
     value: v.number(),
   }).index("by_name", ["name"]),
+
+  withdrawRequests: defineTable({
+    userId: v.string(),
+    username: v.string(),
+    amountUSD: v.number(),
+    walletType: v.string(),
+    destinationAddress: v.string(),
+    status: v.string(),
+    adminNote: v.optional(v.string()),
+    createdAt: v.string(),
+    reviewedAt: v.optional(v.string()),
+  }).index("by_status", ["status"]).index("by_userId", ["userId"]),
 });

@@ -291,3 +291,110 @@ export const removeUser = mutation({
     return { success: true };
   }
 });
+
+export const listAllWithdrawalRequests = query({
+  handler: async (ctx) => {
+    const list = await ctx.db.query("withdrawRequests").collect();
+    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+});
+
+export const approveWithdrawal = mutation({
+  args: {
+    requestId: v.string(),
+    adminId: v.string(),
+    adminNote: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const reqId = ctx.db.normalizeId("withdrawRequests", args.requestId);
+    const req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) throw new Error("Withdrawal request not found");
+    if (req.status !== "pending") throw new Error("Request already reviewed");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const feePercent = settings?.flatFeePercent ?? 1.0;
+    const fee = req.amountUSD * (feePercent / 100);
+    const netAmount = req.amountUSD - fee;
+
+    const systemAdmin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (systemAdmin) {
+      await ctx.db.patch(systemAdmin._id, {
+        ethBalance: systemAdmin.ethBalance + fee,
+      });
+    }
+
+    await ctx.db.patch(reqId, {
+      status: "approved",
+      adminNote: args.adminNote,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    await ctx.db.insert("transactions", {
+      userId: req.userId,
+      type: "withdrawal",
+      amountETH: req.amountUSD,
+      amountUSD: req.amountUSD,
+      note: `Withdrawal approved to ${req.walletType} (${req.destinationAddress}) — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
+      createdAt: new Date().toISOString(),
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: req.userId,
+      type: "withdrawal_approved",
+      message: `✅ Your withdrawal of $${req.amountUSD.toFixed(2)} USD has been approved. Net sent: $${netAmount.toFixed(2)} USD (after ${feePercent}% fee of $${fee.toFixed(2)} USD) to ${req.walletType}.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  }
+});
+
+export const rejectWithdrawal = mutation({
+  args: {
+    requestId: v.string(),
+    adminId: v.string(),
+    adminNote: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const reqId = ctx.db.normalizeId("withdrawRequests", args.requestId);
+    const req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) throw new Error("Withdrawal request not found");
+    if (req.status !== "pending") throw new Error("Request already reviewed");
+
+    const userObjId = ctx.db.normalizeId("users", req.userId);
+    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (user) {
+      await ctx.db.patch(user._id, {
+        ethBalance: user.ethBalance + req.amountUSD,
+      });
+    }
+
+    await ctx.db.patch(reqId, {
+      status: "rejected",
+      adminNote: args.adminNote,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: req.userId,
+      type: "withdrawal_rejected",
+      message: `❌ Your withdrawal of $${req.amountUSD.toFixed(2)} USD has been rejected by the administrator. Reason: ${args.adminNote}. Refunded to active balance.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  }
+});

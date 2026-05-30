@@ -76,7 +76,7 @@ const WALLET_META = {
 };
 
 /* ── Lazy KYC Images Viewer ─────────────────────────────────── */
-const KycImages = ({ userId, getImageUrl }) => {
+const KycImages = ({ userId, getImageUrl, onImageClick }) => {
   const images = useQuery(api.admin.getUserKycImages, { userId });
 
   if (images === undefined) {
@@ -104,9 +104,9 @@ const KycImages = ({ userId, getImageUrl }) => {
         <div key={img.l}>
           <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>{img.l}</div>
           {img.src ? (
-            <a href={getImageUrl(img.src)} target="_blank" rel="noreferrer">
+            <div onClick={() => onImageClick && onImageClick(getImageUrl(img.src))} style={{ cursor: 'pointer' }}>
               <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
-            </a>
+            </div>
           ) : (
             <div style={{ height: '80px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
           )}
@@ -117,7 +117,7 @@ const KycImages = ({ userId, getImageUrl }) => {
 };
 
 /* ── Lazy Deposit Screenshot Viewer ─────────────────────────── */
-const DepositScreenshot = ({ requestId, getImageUrl }) => {
+const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
   const screenshotUrl = useQuery(api.depositRequests.getDepositScreenshot, { requestId });
 
   if (screenshotUrl === undefined) {
@@ -129,9 +129,9 @@ const DepositScreenshot = ({ requestId, getImageUrl }) => {
   if (!screenshotUrl) return null;
 
   return (
-    <a href={getImageUrl(screenshotUrl)} target="_blank" rel="noreferrer" style={{ width: '100%', display: 'block' }}>
+    <div onClick={() => onImageClick && onImageClick(getImageUrl(screenshotUrl))} style={{ width: '100%', display: 'block', cursor: 'pointer' }}>
       <img src={getImageUrl(screenshotUrl)} alt="Proof" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-base)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
-    </a>
+    </div>
   );
 };
 
@@ -139,7 +139,14 @@ const DepositScreenshot = ({ requestId, getImageUrl }) => {
    ADMIN PANEL
 ══════════════════════════════════════════════════════════════ */
 const AdminPanel = ({ user }) => {
-  const { approveDepositRequest, rejectDepositRequest, allDepositReqs } = useAuth();
+  const { 
+    approveDepositRequest, 
+    rejectDepositRequest, 
+    allDepositReqs,
+    allWithdrawalReqs,
+    approveWithdrawalRequest,
+    rejectWithdrawalRequest
+  } = useAuth();
 
   const [activeTab,   setActiveTab]   = useState('overview');
   const [period,      setPeriod]      = useState('week');
@@ -197,10 +204,22 @@ const AdminPanel = ({ user }) => {
   const [depositRejectNotes, setDepositRejectNotes] = useState({});
   const pendingDeposits = allDepositReqs.filter(r => r.status === 'pending');
 
+  // ── Withdrawal state ──────────────────────────────────────────
+  const [withdrawRejectNotes, setWithdrawRejectNotes] = useState({});
+  const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
+
+  // ── Lightbox Image viewer state ───────────────────────────────
+  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
+
   // ── Admin Action states ──────────────────────────────────────
   const [warnUserId, setWarnUserId] = useState(null);
   const [warnMessage, setWarnMessage] = useState('');
   const [warnLoading, setWarnLoading] = useState(false);
+
+  // ── User Search & Filters state ──────────────────────────────
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userFilterKyc, setUserFilterKyc]     = useState('all');
+  const [userFilterBan, setUserFilterBan]     = useState('all');
 
   // ── Support ──────────────────────────────────────────────────
   useEffect(() => {
@@ -222,6 +241,7 @@ const AdminPanel = ({ user }) => {
     { id: 'earnings',  em: '💰', title: 'Earnings', badge: 0 },
     { id: 'kyc',       em: '🛡️', title: 'KYC',     badge: kycQueue.length },
     { id: 'deposits',  em: '💵', title: 'Deposits', badge: pendingDeposits.length },
+    { id: 'withdrawals', em: '💸', title: 'Withdraws', badge: pendingWithdrawals.length },
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
     { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open').length },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
@@ -264,6 +284,21 @@ const AdminPanel = ({ user }) => {
     } catch (err) {
       showAlert("Error removing user: " + err.message, "error");
     }
+  };
+
+  const handleWithdrawal = async (requestId, approve) => {
+    const note = withdrawRejectNotes[requestId] || '';
+    if (!approve && !note.trim()) { showAlert('Enter rejection reason first.', 'error'); return; }
+    try {
+      if (approve) {
+        await approveWithdrawalRequest(requestId, note);
+        showAlert('✓ Withdrawal approved and processed!');
+      } else {
+        await rejectWithdrawalRequest(requestId, note);
+        showAlert('Withdrawal rejected and refunded.');
+      }
+      setWithdrawRejectNotes(p => ({ ...p, [requestId]: '' }));
+    } catch (e) { showAlert(e.message, 'error'); }
   };
 
   // ── Handlers ─────────────────────────────────────────────────
@@ -721,7 +756,7 @@ const AdminPanel = ({ user }) => {
                 ))}
               </div>
 
-              <KycImages userId={u.id} getImageUrl={getImageUrl} />
+              <KycImages userId={u.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
 
               <input
                 type="text"
@@ -795,7 +830,7 @@ const AdminPanel = ({ user }) => {
                 </div>
 
                 {req.hasScreenshot && (
-                  <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} />
+                  <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
                 )}
 
                 {isPending && (
@@ -806,6 +841,82 @@ const AdminPanel = ({ user }) => {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input type="text" value={depositRejectNotes[req.id] || ''} onChange={e => setDepositRejectNotes(p => ({ ...p, [req.id]: e.target.value }))} placeholder="Rejection reason…" style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'var(--font)', outline: 'none' }} />
                       <button onClick={() => handleRejectDeposit(req.id)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ══ WITHDRAWALS QUEUE ══════════════════════════════════ */}
+      {activeTab === 'withdrawals' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Withdrawal Requests</div>
+            <span className="badge badge-warning">{pendingWithdrawals.length} pending</span>
+          </div>
+
+          {allWithdrawalReqs.length === 0 ? (
+            <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: '36px', marginBottom: '10px' }}>💸</div>
+              <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No withdrawal requests yet</p>
+            </div>
+          ) : allWithdrawalReqs.map(req => {
+            const isPending = req.status === 'pending';
+            return (
+              <div key={req.id} style={{
+                ...cs, display: 'flex', flexDirection: 'column', gap: '12px',
+                borderColor: isPending ? 'rgba(251,191,36,0.25)' : 'var(--border)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
+                    <StatusBadge status={req.status} />
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Destination Account:</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
+                    <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
+                  {req.adminNote && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Note:</span>
+                      <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
+                    </div>
+                  )}
+                </div>
+
+                {isPending && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button onClick={() => handleWithdrawal(req.id, true)} className="btn btn-success btn-full" style={{ padding: '12px', fontWeight: 700 }}>
+                      ✓ Approve & Release ${req.amountUSD.toFixed(2)} USD
+                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        value={withdrawRejectNotes[req.id] || ''} 
+                        onChange={e => setWithdrawRejectNotes(p => ({ ...p, [req.id]: e.target.value }))} 
+                        placeholder="Rejection reason…" 
+                        style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'var(--font)', outline: 'none' }} 
+                      />
+                      <button onClick={() => handleWithdrawal(req.id, false)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
                     </div>
                   </div>
                 )}
@@ -906,102 +1017,226 @@ const AdminPanel = ({ user }) => {
       )}
 
       {/* ══ USERS ═════════════════════════════════════════════ */}
-      {activeTab === 'users' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-            All Users ({allUsersList?.length ?? 0})
-          </div>
-          {!allUsersList ? (
-            <div className="skeleton" style={{ height: '200px' }} />
-          ) : allUsersList.map(u => (
-            <div key={u._id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
-                <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
-                  {(u.username || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
-                    {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
-                    {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Suspended</span>}
-                    {u.warnings && u.warnings.length > 0 && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(251,191,36,0.1)', color: 'var(--status-warning-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-warning-border)' }}>⚠️ {u.warnings.length} Warn</span>}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{u.phone}</div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)' }}>${(u.ethBalance || 0).toFixed(2)}</div>
-                  <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '2px', color: u.kycStatus === 'approved' ? 'var(--status-success-text)' : u.kycStatus === 'pending' ? 'var(--status-warning-text)' : 'var(--text-3)' }}>
-                    {u.kycStatus === 'approved' ? '✓ Verified' : u.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
-                  </div>
-                </div>
+      {activeTab === 'users' && (() => {
+        const filteredUsers = (allUsersList || []).filter(u => {
+          const query = userSearchQuery.toLowerCase().trim();
+          const matchesSearch = !query || 
+            u.username?.toLowerCase().includes(query) ||
+            u.email?.toLowerCase().includes(query) ||
+            u.phone?.toLowerCase().includes(query) ||
+            u._id?.toString().toLowerCase().includes(query);
+            
+          const isVerified = u.kycStatus === 'approved';
+          const matchesKyc = userFilterKyc === 'all' ||
+            (userFilterKyc === 'verified' && isVerified) ||
+            (userFilterKyc === 'unverified' && !isVerified);
+            
+          const isBanned = !!u.isSuspended;
+          const matchesBan = userFilterBan === 'all' ||
+            (userFilterBan === 'banned' && isBanned) ||
+            (userFilterBan === 'active' && !isBanned);
+            
+          return matchesSearch && matchesKyc && matchesBan;
+        });
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            
+            {/* 🔍 Search & Filters Bar */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '10px', 
+              flexWrap: 'wrap', 
+              background: 'var(--bg-surface)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '16px', 
+              padding: '14px' 
+            }}>
+              
+              {/* Search input */}
+              <div style={{ flex: 2, minWidth: '220px', position: 'relative' }}>
+                <input 
+                  type="text" 
+                  value={userSearchQuery}
+                  onChange={e => setUserSearchQuery(e.target.value)}
+                  placeholder="Search by username, email, ID..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 10px 10px 36px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-1)',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font)',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease'
+                  }}
+                />
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
               </div>
 
-              {/* Action Buttons */}
-              {u.role !== 'admin' && (
-                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
-                  <button 
-                    onClick={() => setWarnUserId(u._id.toString())} 
-                    style={{ 
-                      background: 'rgba(251,191,36,0.06)', 
-                      border: '1px solid var(--status-warning-border)', 
-                      color: 'var(--status-warning-text)', 
-                      borderRadius: '8px', 
-                      padding: '5px 12px', 
-                      fontSize: '11px', 
-                      fontWeight: 700, 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontFamily: 'var(--font)'
-                    }}
-                  >
-                    ⚠️ Warn
-                  </button>
-                  <button 
-                    onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)} 
-                    style={{ 
-                      background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
-                      border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
-                      color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
-                      borderRadius: '8px', 
-                      padding: '5px 12px', 
-                      fontSize: '11px', 
-                      fontWeight: 700, 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontFamily: 'var(--font)'
-                    }}
-                  >
-                    {u.isSuspended ? '✅ Unpush (Activate)' : '🚫 Push (Suspend)'}
-                  </button>
-                  <button 
-                    onClick={() => handleRemoveUser(u._id.toString(), u.username)} 
-                    style={{ 
-                      background: 'rgba(248,113,113,0.12)', 
-                      border: '1px solid rgba(248,113,113,0.3)', 
-                      color: 'var(--status-danger-text)', 
-                      borderRadius: '8px', 
-                      padding: '5px 10px', 
-                      fontSize: '11px', 
-                      fontWeight: 700, 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      fontFamily: 'var(--font)'
-                    }}
-                    title="Remove User Permanently"
-                  >
-                    🗑️ Remove
-                  </button>
-                </div>
-              )}
+              {/* KYC Filter select */}
+              <div style={{ flex: 1, minWidth: '130px' }}>
+                <select
+                  value={userFilterKyc}
+                  onChange={e => setUserFilterKyc(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-1)',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">🌐 All Verification</option>
+                  <option value="verified">✓ Verified Only</option>
+                  <option value="unverified">✗ Unverified Only</option>
+                </select>
+              </div>
+
+              {/* Ban Filter select */}
+              <div style={{ flex: 1, minWidth: '130px' }}>
+                <select
+                  value={userFilterBan}
+                  onChange={e => setUserFilterBan(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-1)',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">🛡️ All Activity</option>
+                  <option value="active">✅ Active Only</option>
+                  <option value="banned">🚫 Banned Only</option>
+                </select>
+              </div>
+
             </div>
-          ))}
-        </div>
-      )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+                {userSearchQuery || userFilterKyc !== 'all' || userFilterBan !== 'all' 
+                  ? `Matching Users (${filteredUsers.length} of ${allUsersList?.length ?? 0})`
+                  : `All Users (${allUsersList?.length ?? 0})`
+                }
+              </div>
+            </div>
+
+            {!allUsersList ? (
+              <div className="skeleton" style={{ height: '200px' }} />
+            ) : filteredUsers.length === 0 ? (
+              <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
+                <div style={{ fontSize: '32px', marginBottom: '10px' }}>👥</div>
+                <p style={{ color: 'var(--text-3)', fontSize: '13px', margin: 0 }}>No matching users found</p>
+              </div>
+            ) : filteredUsers.map(u => (
+              <div key={u._id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                  <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
+                    {(u.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
+                      {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
+                      {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Banned</span>}
+                      {u.warnings && u.warnings.length > 0 && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(251,191,36,0.1)', color: 'var(--status-warning-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-warning-border)' }}>⚠️ {u.warnings.length} Warn</span>}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {u.email ? `${u.email} · ` : ''}{u.phone}
+                    </div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'monospace', marginTop: '2px' }}>
+                      ID: {u._id.toString()}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)' }}>${(u.ethBalance || 0).toFixed(2)}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '2px', color: u.kycStatus === 'approved' ? 'var(--status-success-text)' : u.kycStatus === 'pending' ? 'var(--status-warning-text)' : 'var(--text-3)' }}>
+                      {u.kycStatus === 'approved' ? '✓ Verified' : u.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                {u.role !== 'admin' && (
+                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={() => setWarnUserId(u._id.toString())} 
+                      style={{ 
+                        background: 'rgba(251,191,36,0.06)', 
+                        border: '1px solid var(--status-warning-border)', 
+                        color: 'var(--status-warning-text)', 
+                        borderRadius: '8px', 
+                        padding: '5px 12px', 
+                        fontSize: '11px', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontFamily: 'var(--font)'
+                      }}
+                    >
+                      ⚠️ Warn
+                    </button>
+                    <button 
+                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)} 
+                      style={{ 
+                        background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
+                        border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
+                        color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
+                        borderRadius: '8px', 
+                        padding: '5px 12px', 
+                        fontSize: '11px', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontFamily: 'var(--font)'
+                      }}
+                    >
+                      {u.isSuspended ? '✅ Unpush (Activate)' : '🚫 Push (Suspend)'}
+                    </button>
+                    <button 
+                      onClick={() => handleRemoveUser(u._id.toString(), u.username)} 
+                      style={{ 
+                        background: 'rgba(248,113,113,0.12)', 
+                        border: '1px solid rgba(248,113,113,0.3)', 
+                        color: 'var(--status-danger-text)', 
+                        borderRadius: '8px', 
+                        padding: '5px 10px', 
+                        fontSize: '11px', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontFamily: 'var(--font)'
+                      }}
+                      title="Remove User Permanently"
+                    >
+                      🗑️ Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ══ SETTINGS ══════════════════════════════════════════ */}
       {activeTab === 'settings' && (
@@ -1102,6 +1337,89 @@ const AdminPanel = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══ LIGHTBOX IMAGE VIEWER ════════════════════════════ */}
+      {activeLightboxImage && (
+        <div 
+          onClick={() => setActiveLightboxImage(null)}
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            background: 'rgba(5,7,12,0.95)', 
+            zIndex: 2000, 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '24px', 
+            backdropFilter: 'blur(12px)',
+            transition: 'all 0.3s ease',
+            cursor: 'zoom-out'
+          }}
+        >
+          {/* Close X Button */}
+          <button 
+            onClick={(e) => { e.stopPropagation(); setActiveLightboxImage(null); }} 
+            style={{ 
+              position: 'absolute', 
+              top: '20px', 
+              right: '20px', 
+              width: '44px', 
+              height: '44px', 
+              borderRadius: '50%', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid rgba(255,255,255,0.1)', 
+              color: 'var(--text-1)', 
+              fontSize: '24px', 
+              fontWeight: '400',
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              transition: 'all 0.2s ease',
+              outline: 'none'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            ×
+          </button>
+
+          {/* Centered Large Image */}
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            style={{ 
+              position: 'relative', 
+              maxWidth: '90%', 
+              maxHeight: '82vh', 
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)', 
+              borderRadius: '16px', 
+              overflow: 'hidden', 
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#0F121C',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <img 
+              src={activeLightboxImage} 
+              alt="KYC Document Large" 
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '82vh', 
+                objectFit: 'contain',
+                display: 'block'
+              }} 
+            />
+          </div>
+
+          <div style={{ marginTop: '16px', color: 'var(--text-3)', fontSize: '12px', fontWeight: 600, pointerEvents: 'none' }}>
+            Click anywhere outside or press Close to dismiss
           </div>
         </div>
       )}

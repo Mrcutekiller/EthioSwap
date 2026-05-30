@@ -29,6 +29,8 @@ export const AuthProvider = ({ children }) => {
   const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
   const convexAcknowledgeWarning   = useMutation(api.users.acknowledgeWarning);
   const convexSendById             = useMutation(api.users.sendById);
+  const convexApproveWithdrawal    = useMutation(api.admin.approveWithdrawal);
+  const convexRejectWithdrawal     = useMutation(api.admin.rejectWithdrawal);
 
   // ── Convex real-time queries ──────────────────────────
   const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
@@ -38,6 +40,8 @@ export const AuthProvider = ({ children }) => {
   const myDepositReqs  = useQuery(api.depositRequests.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
   const allDepositReqs = useQuery(api.depositRequests.listAll, user?.role === 'admin' ? undefined : "skip") ?? [];
   const myTransactions = useQuery(api.wallet.listTransactions, user?.id ? { userId: user.id } : "skip") ?? [];
+  const myWithdrawalReqs  = useQuery(api.users.listWithdrawalRequests, user?.id ? { userId: user.id } : "skip") ?? [];
+  const allWithdrawalReqs = useQuery(api.admin.listAllWithdrawalRequests, user?.role === 'admin' ? undefined : "skip") ?? [];
 
   const systemSettings = settings ?? {
     etbRatePerDollar: 190.0,
@@ -245,6 +249,20 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); }
   };
 
+  const approveWithdrawalRequest = async (requestId, adminNote) => {
+    try {
+      await convexApproveWithdrawal({ requestId, adminId: user.id, adminNote });
+      setSuccess('Withdrawal approved and processed!');
+    } catch (err) { setError(err.message); }
+  };
+
+  const rejectWithdrawalRequest = async (requestId, adminNote) => {
+    try {
+      await convexRejectWithdrawal({ requestId, adminId: user.id, adminNote });
+      setSuccess('Withdrawal request rejected and refunded.');
+    } catch (err) { setError(err.message); }
+  };
+
   const savePaymentAccounts = async (accountsOrObj) => {
     setLoading(true);
     try {
@@ -345,10 +363,12 @@ export const AuthProvider = ({ children }) => {
       user, wallet, listings, trades, systemSettings,
       error, success, loading, isLocked,
       myDepositReqs, allDepositReqs, myTransactions,
+      myWithdrawalReqs, allWithdrawalReqs,
       setError, setSuccess,
       login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
+      approveWithdrawalRequest, rejectWithdrawalRequest,
       acknowledgeWarning, sendById,
       ethUsdPrice: ETH_USD_PRICE,
     }}>

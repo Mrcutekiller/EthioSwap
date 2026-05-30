@@ -82,7 +82,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [copied, setCopied] = useState(false);
@@ -214,17 +214,28 @@ const WalletCard = () => {
   const pendingCount = myDepositReqs.filter(r => r.status === 'pending').length;
   const selWallet = WALLET_OPTIONS.find(w => w.id === depWalletType) || WALLET_OPTIONS[0];
 
-  const withdrawals = (myTransactions || [])
+  const legacyWithdrawals = (myTransactions || [])
     .filter(t => t.type === 'withdrawal')
     .map(t => ({
       id: t.id || t._id?.toString() || Math.random().toString(),
       amountUSD: t.amountUSD,
       walletType: 'On-Chain Withdrawal',
       createdAt: t.createdAt,
-      status: 'approved', // withdrawals are executed instantly
+      status: 'approved',
       type: 'withdrawal',
       note: t.note
     }));
+
+  const withdrawalsMapped = (myWithdrawalReqs || []).map(r => ({
+    id: r.id || r._id?.toString() || Math.random().toString(),
+    amountUSD: r.amountUSD,
+    walletType: r.walletType,
+    createdAt: r.createdAt,
+    status: r.status,
+    type: 'withdrawal',
+    adminNote: r.adminNote,
+    destinationAddress: r.destinationAddress
+  }));
 
   const depositsMapped = (myDepositReqs || []).map(r => ({
     id: r.id || r._id?.toString() || Math.random().toString(),
@@ -236,7 +247,7 @@ const WalletCard = () => {
     adminNote: r.adminNote
   }));
 
-  const combinedHistory = [...depositsMapped, ...withdrawals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const combinedHistory = [...depositsMapped, ...withdrawalsMapped, ...legacyWithdrawals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const linkedExchangeAccounts = (user?.paymentAccounts || [])
     .filter(acc => acc.bankName === 'Binance Pay' || acc.bankName === 'Bybit Pay');
@@ -358,7 +369,7 @@ const WalletCard = () => {
                             </span>
                           </div>
                           <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>
-                            {isDeposit ? `via ${item.walletType}` : 'to external address'}
+                            {isDeposit ? `via ${item.walletType}` : (item.destinationAddress ? `to ${item.walletType || 'External'} (${item.destinationAddress})` : (item.note || 'to external address'))}
                           </div>
                           {isRejected && item.adminNote && (
                             <div style={{ fontSize: '9px', color: 'var(--status-danger-text)', marginTop: '2px' }}>
@@ -924,12 +935,12 @@ const WalletCard = () => {
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-3)' }}>Platform Withdrawal Fee</span>
-                <span style={{ fontWeight: 600, color: 'var(--status-danger-text)' }}>1.0% (routed to admin)</span>
+                <span style={{ fontWeight: 600, color: 'var(--status-danger-text)' }}>{(systemSettings?.commissionValue ?? 1.0).toFixed(1)}% (routed to admin)</span>
               </div>
               {withdrawAmt && !isNaN(parseFloat(withdrawAmt)) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
                   <span>You receive (net)</span>
-                  <span>${(parseFloat(withdrawAmt) * 0.99).toFixed(2)} USD</span>
+                  <span>${(parseFloat(withdrawAmt) * (1 - (systemSettings?.commissionValue ?? 1.0) / 100)).toFixed(2)} USD</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

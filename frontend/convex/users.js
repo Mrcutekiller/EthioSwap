@@ -454,50 +454,41 @@ export const withdrawETH = mutation({
       throw new Error("Insufficient USD balance");
     }
 
-    const fee = args.amountETH * 0.01;
-    const netAmount = args.amountETH - fee;
-
     const newBalance = user.ethBalance - args.amountETH;
     await ctx.db.patch(user._id, { ethBalance: newBalance });
 
-    // Credit fee to admin
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
-      .unique();
-    if (admin) {
-      await ctx.db.patch(admin._id, {
-        ethBalance: admin.ethBalance + fee,
-      });
+    let walletType = "On-Chain (USDT)";
+    let destAddress = args.destinationAddress;
+    if (args.destinationAddress.includes(":")) {
+      const parts = args.destinationAddress.split(":");
+      walletType = parts[0];
+      destAddress = parts[1];
     }
 
-    const ethUsdPrice = 1;
-    const amountUSD = args.amountETH * ethUsdPrice;
-
-    // Transaction
-    await ctx.db.insert("transactions", {
+    const requestId = await ctx.db.insert("withdrawRequests", {
       userId: args.userId,
-      type: "withdrawal",
-      amountETH: args.amountETH,
-      amountUSD,
-      note: `Withdrawal of $${args.amountETH.toFixed(2)} USD to ${args.destinationAddress.substring(0, 8)}... — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
+      username: user.username,
+      amountUSD: args.amountETH,
+      walletType,
+      destinationAddress: destAddress,
+      status: "pending",
       createdAt: new Date().toISOString(),
     });
 
-    // Notification
     await ctx.db.insert("notifications", {
       userId: args.userId,
-      type: "withdrawal",
-      message: `Successfully withdrew $${args.amountETH.toFixed(2)} USD (Net sent: $${netAmount.toFixed(2)} USD, 1% fee: $${fee.toFixed(2)} USD) to ${args.destinationAddress.substring(0, 8)}...`,
+      type: "withdrawal_requested",
+      message: `⏳ Your withdrawal request of $${args.amountETH.toFixed(2)} USD to ${walletType} (${destAddress}) has been submitted and is pending admin review.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
 
-    // Mock Tx Hash
-    const randomHex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
-    const txHash = "0x" + randomHex;
-
-    return { id: user._id.toString(), ethBalance: newBalance, txHash };
+    return { 
+      success: true, 
+      id: requestId.toString(),
+      ethBalance: newBalance,
+      message: "Withdrawal request submitted successfully!"
+    };
   }
 });
 
@@ -652,5 +643,15 @@ export const sendById = mutation({
         numericId: recipient.numericId,
       },
     };
+  }
+});
+
+export const listWithdrawalRequests = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const list = await ctx.db.query("withdrawRequests")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .collect();
+    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 });
