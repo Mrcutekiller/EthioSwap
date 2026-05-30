@@ -157,6 +157,7 @@ const AdminPanel = ({ user }) => {
   const [supportReplyText,  setSupportReplyText]  = useState('');
   const [withdrawAddress,   setWithdrawAddress]   = useState('');
   const [withdrawingEarnings, setWithdrawingEarnings] = useState(false);
+  const [selectedUserDetailId, setSelectedUserDetailId] = useState(null);
   const chatEndRef = useRef(null);
 
   const showAlert = (msg, type = 'success') => {
@@ -184,6 +185,12 @@ const AdminPanel = ({ user }) => {
   const warnUserMutation      = useMutation(api.admin.warnUser);
   const toggleSuspendMutation = useMutation(api.admin.toggleSuspendUser);
   const removeUserMutation    = useMutation(api.admin.removeUser);
+  const setKycStatusMutation  = useMutation(api.admin.adminSetKycStatus);
+  
+  const selectedUserTxs = useQuery(
+    api.admin.getUserTransactionsForAdmin,
+    selectedUserDetailId && user ? { adminId: user.id, userId: selectedUserDetailId } : 'skip'
+  ) ?? [];
 
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
@@ -1183,7 +1190,20 @@ const AdminPanel = ({ user }) => {
                 <p style={{ color: 'var(--text-3)', fontSize: '13px', margin: 0 }}>No matching users found</p>
               </div>
             ) : filteredUsers.map(u => (
-              <div key={u._id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div 
+                key={u._id} 
+                onClick={() => setSelectedUserDetailId(u._id.toString())}
+                style={{ 
+                  ...cs, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,44,0.4)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
                   <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
                     {(u.username || 'U').charAt(0).toUpperCase()}
@@ -1214,7 +1234,7 @@ const AdminPanel = ({ user }) => {
                 {u.role !== 'admin' && (
                   <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
                     <button 
-                      onClick={() => setWarnUserId(u._id.toString())} 
+                      onClick={(e) => { e.stopPropagation(); setWarnUserId(u._id.toString()); }} 
                       style={{ 
                         background: 'rgba(251,191,36,0.06)', 
                         border: '1px solid var(--status-warning-border)', 
@@ -1233,7 +1253,7 @@ const AdminPanel = ({ user }) => {
                       ⚠️ Warn
                     </button>
                     <button 
-                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)} 
+                      onClick={(e) => { e.stopPropagation(); handleToggleSuspend(u._id.toString(), !!u.isSuspended); }} 
                       style={{ 
                         background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
                         border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
@@ -1252,7 +1272,7 @@ const AdminPanel = ({ user }) => {
                       {u.isSuspended ? '✅ Unpush (Activate)' : '🚫 Push (Suspend)'}
                     </button>
                     <button 
-                      onClick={() => handleRemoveUser(u._id.toString(), u.username)} 
+                      onClick={(e) => { e.stopPropagation(); handleRemoveUser(u._id.toString(), u.username); }} 
                       style={{ 
                         background: 'rgba(248,113,113,0.12)', 
                         border: '1px solid rgba(248,113,113,0.3)', 
@@ -1550,6 +1570,423 @@ const AdminPanel = ({ user }) => {
           </div>
         </div>
       )}
+
+      {/* ══ USER DETAILS DRAWER ══════════════════════════════ */}
+      {selectedUserDetailId && (() => {
+        const u = allUsersList?.find(userRecord => userRecord._id.toString() === selectedUserDetailId);
+        if (!u) return null;
+
+        const isMe = u._id.toString() === user?.id;
+        const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
+        const etbVal = totalBal * rate;
+
+        return (
+          <div 
+            onClick={() => setSelectedUserDetailId(null)}
+            style={{ 
+              position: 'fixed', 
+              inset: 0, 
+              background: 'rgba(5, 7, 12, 0.75)', 
+              zIndex: 1100, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              backdropFilter: 'blur(8px)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              style={{ 
+                width: '100%', 
+                maxWidth: '520px', 
+                height: '100%', 
+                background: 'var(--glass-bg)', 
+                borderLeft: '1px solid var(--glass-border)', 
+                boxShadow: '-10px 0 40px rgba(0,0,0,0.6)', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative'
+              }}
+            >
+              {/* Drawer Header */}
+              <div style={{ 
+                padding: '20px 24px', 
+                borderBottom: '1px solid var(--border)', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                background: 'rgba(255,255,255,0.02)'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-1)' }}>
+                    👤 User Profile Details
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-3)' }}>
+                    Joined: {new Date(u.joinedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedUserDetailId(null)} 
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '50%', 
+                    background: 'var(--bg-base)', 
+                    border: '1px solid var(--border)', 
+                    color: 'var(--text-2)', 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-base)'; e.currentTarget.style.color = 'var(--text-2)'; }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Drawer Scrollable Content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                
+                {/* Profile Overview (Avatar, Name, Badges) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px' }}>
+                  <div className="avatar" style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    fontSize: '24px', 
+                    background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', 
+                    color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)',
+                    flexShrink: 0
+                  }}>
+                    {(u.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text-1)' }}>@{u.username}</span>
+                      {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
+                      {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Banned</span>}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-2)', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'monospace', color: 'var(--text-3)' }}>Convex ID:</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{u._id.toString()}</span>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(u._id.toString());
+                          showAlert("✓ ID copied to clipboard!");
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', padding: '2px 4px', color: 'var(--gold-light)', marginLeft: '4px' }}
+                        title="Copy ID"
+                      >
+                        📋 Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4-Card Asset Metric Grid */}
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>💳 Account Asset Balances</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    
+                    {/* Card 1: Available Balance */}
+                    <div className="metric-card metric-card-teal" style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Available</div>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--teal-light)' }}>
+                        ${(u.ethBalance || 0).toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Locked Escrow */}
+                    <div className="metric-card metric-card-danger" style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Locked Escrow</div>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--status-danger-text)' }}>
+                        ${(u.ethLocked || 0).toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Total Balance */}
+                    <div className="metric-card metric-card-gold" style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Total Balance</div>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--gold-light)' }}>
+                        ${totalBal.toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                      </div>
+                    </div>
+
+                    {/* Card 4: ETB Value */}
+                    <div className="metric-card metric-card-indigo" style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>ETB Equivalent</div>
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--indigo-light)' }}>
+                        {Math.round(etbVal).toLocaleString()} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>ETB</span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Personal Information & Metadata */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '4px' }}>📋 Profile Information</div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Full Name:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.fullName || u.kycData?.name || "Not Specified"}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Email Address:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.email || "Not Specified"}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>Phone Number:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.phone || "Not Specified"}</span>
+                  </div>
+
+                  {u.kycData?.address && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-3)' }}>Residential Address:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-1)', textAlign: 'right', maxWidth: '240px' }}>{u.kycData.address}</span>
+                    </div>
+                  )}
+
+                  {u.kycData?.idType && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-3)' }}>KYC Document Type:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.kycData.idType}</span>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
+                    <span style={{ color: 'var(--text-3)' }}>On-chain Wallet Address:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--gold-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.ethAddress}</span>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(u.ethAddress);
+                          showAlert("✓ Wallet Address copied!");
+                        }}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', color: 'var(--text-2)', padding: '3px 8px', fontWeight: 600 }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KYC Identity Documents Section (if uploaded) */}
+                {(u.kycIdFront || u.kycIdBack || u.kycSelfie) && (
+                  <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>🪪 Identity Documents</div>
+                    <KycImages userId={u._id.toString()} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                  </div>
+                )}
+
+                {/* Administrative Controls & Moderation Action Buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🛠️ Administrative Controls</div>
+                  
+                  {isMe ? (
+                    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)', borderRadius: '12px', fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
+                      🛡️ This is your own administrator profile. Self-moderation is disabled.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      
+                      {/* Row 1: Verification Button */}
+                      {u.kycStatus === 'approved' ? (
+                        <button 
+                          onClick={async () => {
+                            if (!window.confirm("Are you sure you want to unverify this account? Identity status will be reset.")) return;
+                            try {
+                              await setKycStatusMutation({ adminId: user.id, userId: u._id.toString(), status: 'none', reason: 'Administratively reset' });
+                              showAlert("✗ Account unverified successfully.");
+                            } catch (err) {
+                              showAlert("Error unverifying account: " + err.message, "error");
+                            }
+                          }}
+                          className="btn btn-danger btn-full"
+                          style={{ padding: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          ✗ Unverify Account (Reset KYC Status)
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={async () => {
+                            if (!window.confirm("Verify this user's identity instantly?")) return;
+                            try {
+                              await setKycStatusMutation({ adminId: user.id, userId: u._id.toString(), status: 'approved' });
+                              showAlert("✓ Account verified instantly!");
+                            } catch (err) {
+                              showAlert("Error verifying account: " + err.message, "error");
+                            }
+                          }}
+                          className="btn btn-teal btn-full"
+                          style={{ padding: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#040A0A' }}
+                        >
+                          ✓ Verify Account (Instant KYC Approval)
+                        </button>
+                      )}
+
+                      {/* Row 2: Moderation Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <button 
+                          onClick={() => {
+                            setSelectedUserDetailId(null);
+                            setWarnUserId(u._id.toString());
+                          }}
+                          style={{ 
+                            background: 'rgba(251,191,36,0.06)', 
+                            border: '1px solid var(--status-warning-border)', 
+                            color: 'var(--status-warning-text)', 
+                            borderRadius: '10px', 
+                            padding: '12px', 
+                            fontSize: '12px', 
+                            fontWeight: 700, 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            fontFamily: 'var(--font)'
+                          }}
+                        >
+                          ⚠️ Issue Warning
+                        </button>
+                        
+                        <button 
+                          onClick={async () => {
+                            const actionText = u.isSuspended ? "activate" : "suspend";
+                            if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
+                            try {
+                              await toggleSuspendMutation({ userId: u._id.toString(), isSuspended: !u.isSuspended, adminId: user.id });
+                              showAlert(`User ${u.isSuspended ? 'activated' : 'suspended'} successfully.`);
+                            } catch (err) {
+                              showAlert("Error updating user status: " + err.message, "error");
+                            }
+                          }}
+                          style={{ 
+                            background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
+                            border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
+                            color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
+                            borderRadius: '10px', 
+                            padding: '12px', 
+                            fontSize: '12px', 
+                            fontWeight: 700, 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            fontFamily: 'var(--font)'
+                          }}
+                        >
+                          {u.isSuspended ? '✅ Unban User' : '🚫 Ban User'}
+                        </button>
+                      </div>
+
+                      {/* Row 3: Delete Button */}
+                      <button 
+                        onClick={async () => {
+                          if (await handleRemoveUser(u._id.toString(), u.username)) {
+                            setSelectedUserDetailId(null);
+                          }
+                        }}
+                        style={{ 
+                          background: 'rgba(248,113,113,0.12)', 
+                          border: '1px solid rgba(248,113,113,0.3)', 
+                          color: 'var(--status-danger-text)', 
+                          borderRadius: '10px', 
+                          padding: '12px', 
+                          fontSize: '12px', 
+                          fontWeight: 700, 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          fontFamily: 'var(--font)'
+                        }}
+                      >
+                        🗑️ Permanently Remove User Account
+                      </button>
+
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Dynamic User On-chain & Escrow Transaction History */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📜 User Transaction History</div>
+                  
+                  <div style={{ 
+                    maxHeight: '240px', 
+                    overflowY: 'auto', 
+                    background: 'var(--bg-surface)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '12px',
+                    padding: selectedUserTxs.length === 0 ? '20px' : '0'
+                  }}>
+                    {selectedUserTxs === undefined ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px' }}>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="skeleton" style={{ height: '36px', width: '100%' }} />
+                        ))}
+                      </div>
+                    ) : selectedUserTxs.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '12px', padding: '16px' }}>
+                        No transactions recorded for this user.
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-3)', textTransform: 'uppercase', fontSize: '9px', fontWeight: 700 }}>
+                            <th style={{ padding: '8px 12px' }}>Date</th>
+                            <th style={{ padding: '8px 12px' }}>Type</th>
+                            <th style={{ padding: '8px 12px' }}>Amount</th>
+                            <th style={{ padding: '8px 12px' }}>Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedUserTxs.map((tx) => {
+                            let typeColor = 'var(--text-2)';
+                            if (tx.type === 'deposit') typeColor = 'var(--teal-light)';
+                            if (tx.type === 'withdrawal') typeColor = 'var(--gold-light)';
+                            if (tx.type?.includes('fee') || tx.type === 'commission') typeColor = 'var(--indigo-light)';
+
+                            return (
+                              <tr key={tx._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                                  {new Date(tx.createdAt).toLocaleDateString()}
+                                </td>
+                                <td style={{ padding: '8px 12px', fontWeight: 700, textTransform: 'uppercase', color: typeColor }}>
+                                  {tx.type}
+                                </td>
+                                <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-1)' }}>
+                                  ${(tx.amountUSD || tx.amountETH || 0).toFixed(2)}
+                                </td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-3)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
+                                  {tx.note}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

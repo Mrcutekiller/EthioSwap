@@ -442,3 +442,68 @@ export const getAuditLogs = query({
   }
 });
 
+export const adminSetKycStatus = mutation({
+  args: {
+    adminId: v.string(),
+    userId: v.string(),
+    status: v.string(),
+    reason: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    const step = args.status === "approved" ? "approved" : "none";
+
+    await ctx.db.patch(userObjId, {
+      kycStatus: args.status,
+      kycStep: step,
+      kycRejectionReason: args.status === "rejected" ? (args.reason || "Reset by admin") : null
+    });
+
+    await logAdminAction(
+      ctx,
+      args.adminId,
+      args.status === "approved" ? "admin_verify_user" : "admin_unverify_user",
+      args.userId,
+      user.username,
+      args.status === "approved"
+        ? "Administratively verified user account (instant KYC approval)"
+        : `Administratively unverified user account. Reason: ${args.reason || "Reset by administrator"}`
+    );
+
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: args.status === "approved" ? "kyc_approved" : "kyc_rejected",
+      message: args.status === "approved"
+        ? "✓ Your account has been administratively verified by the team. You can now trade freely."
+        : `⚠ Your identity verification status has been reset by the administrator: ${args.reason || "Reset by administrator"}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  }
+});
+
+export const getUserTransactionsForAdmin = query({
+  args: { adminId: v.string(), userId: v.string() },
+  handler: async (ctx, args) => {
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const txs = await ctx.db.query("transactions")
+      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .collect();
+
+    return txs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50);
+  }
+});
+

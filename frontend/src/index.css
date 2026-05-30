@@ -2281,3 +2281,9 @@ p { line-height: 1.6; color: var(--text-2); }
     gap: 24px;
   }
 }
+
+/* Slide in from right for drawer */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
