@@ -10,6 +10,7 @@ const TradeRoom = () => {
   const [uploadFile, setUploadFile] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState('');
   const [timerAlert, setTimerAlert] = useState(false);
+  const [releasePin, setReleasePin] = useState('');
   
   const chatEndRef = useRef(null);
 
@@ -19,6 +20,7 @@ const TradeRoom = () => {
   const convexReleaseEscrow = useMutation(api.trades.releaseEscrow);
   const convexOpenDispute = useMutation(api.trades.openDispute);
   const convexCancelTrade = useMutation(api.trades.cancelTrade);
+  const autoCancelExpired = useMutation(api.trades.autoCancelExpiredTrade);
 
   // Find currently active trade
   const activeTrade = trades.find(t => t.id === selectedTradeId);
@@ -86,13 +88,19 @@ const TradeRoom = () => {
       if (diff <= 0) {
         setTimeRemaining('00:00 - Expired');
         setTimerAlert(true);
-        // Auto flag dispute if timer expired
-        if (activeTrade.status === 'paid' || activeTrade.status === 'payment_pending') {
+        // Auto actions on timer expiration
+        if (activeTrade.status === 'payment_pending') {
+          try {
+            await autoCancelExpired({ tradeId: activeTrade.id });
+          } catch (e) {
+            console.error("Auto-cancel trigger failed", e);
+          }
+        } else if (activeTrade.status === 'paid') {
           try {
             await convexOpenDispute({
               tradeId: activeTrade.id,
               userId: 'system',
-              reason: 'Timer expired.'
+              reason: 'Payment timer expired before release.'
             });
           } catch (e) {
             console.error("Auto-dispute trigger failed", e);
@@ -156,15 +164,24 @@ const TradeRoom = () => {
 
   // Seller releases ETH
   const handleReleaseEscrow = async () => {
+    if (user.transactionPin) {
+      if (!releasePin || releasePin.length !== 4) {
+        setError("Please enter your 4-digit security PIN before releasing escrow.");
+        return;
+      }
+    }
+
     const confirmRelease = window.confirm("⚠️ WARNING!\nAre you absolutely sure you received the correct ETB amount in your bank account?\n\nReleasing escrow is permanent, irreversible, and cannot be refunded by the platform. Click OK to release.");
     if (!confirmRelease) return;
 
     try {
       await convexReleaseEscrow({
         tradeId: activeTrade.id,
-        sellerId: user.id
+        sellerId: user.id,
+        pin: user.transactionPin ? releasePin : undefined
       });
       setSuccess("USD released to Buyer!");
+      setReleasePin('');
     } catch (err) {
       setError(err.message);
     }
@@ -344,11 +361,84 @@ const TradeRoom = () => {
                   const isSelf = msg.senderId === user.id;
 
                   if (isSystem) {
+                    let badgeStyles = {
+                      alignSelf: 'center',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      color: 'var(--text-2)',
+                      boxShadow: 'none'
+                    };
+                    let icon = '📢';
+
+                    if (msg.message.toLowerCase().includes('paid') || msg.message.includes('Marked as Paid')) {
+                      badgeStyles = {
+                        alignSelf: 'center',
+                        background: 'rgba(0, 212, 170, 0.08)',
+                        border: '1px solid rgba(0, 212, 170, 0.25)',
+                        color: 'var(--teal-light)',
+                        boxShadow: '0 0 15px rgba(0, 212, 170, 0.08)'
+                      };
+                      icon = '💳';
+                    } else if (msg.message.toLowerCase().includes('released') || msg.message.toLowerCase().includes('completed')) {
+                      badgeStyles = {
+                        alignSelf: 'center',
+                        background: 'rgba(52, 211, 153, 0.08)',
+                        border: '1px solid rgba(52, 211, 153, 0.25)',
+                        color: 'var(--status-success-text)',
+                        boxShadow: '0 0 15px rgba(52, 211, 153, 0.08)'
+                      };
+                      icon = '✅';
+                    } else if (msg.message.toLowerCase().includes('opened') || msg.message.toLowerCase().includes('initiated') || msg.message.toLowerCase().includes('started')) {
+                      badgeStyles = {
+                        alignSelf: 'center',
+                        background: 'rgba(200, 150, 44, 0.08)',
+                        border: '1px solid rgba(200, 150, 44, 0.25)',
+                        color: 'var(--gold-light)',
+                        boxShadow: '0 0 15px rgba(200, 150, 44, 0.08)'
+                      };
+                      icon = '🔐';
+                    } else if (msg.message.toLowerCase().includes('cancelled') || msg.message.toLowerCase().includes('expired')) {
+                      badgeStyles = {
+                        alignSelf: 'center',
+                        background: 'rgba(248, 113, 113, 0.08)',
+                        border: '1px solid rgba(248, 113, 113, 0.25)',
+                        color: 'var(--status-danger-text)',
+                        boxShadow: '0 0 15px rgba(248, 113, 113, 0.08)'
+                      };
+                      icon = '⏳';
+                    } else if (msg.message.toLowerCase().includes('dispute') || msg.message.toLowerCase().includes('disputed')) {
+                      badgeStyles = {
+                        alignSelf: 'center',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        color: 'var(--status-danger-text)',
+                        boxShadow: '0 0 15px rgba(239, 68, 68, 0.08)'
+                      };
+                      icon = '⚠️';
+                    }
+
                     return (
-                      <div key={idx} style={{ alignSelf: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.5rem 1rem', fontSize: '0.8rem', color: 'var(--text-secondary)', maxWidth: '80%', textAlign: 'center' }}>
-                        {msg.message}
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          {new Date(msg.timestamp).toLocaleTimeString()}
+                      <div key={idx} style={{ 
+                        ...badgeStyles, 
+                        borderRadius: '12px', 
+                        padding: '8px 16px', 
+                        fontSize: '12px', 
+                        fontWeight: 600, 
+                        maxWidth: '85%', 
+                        textAlign: 'center', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        backdropFilter: 'blur(8px)',
+                        margin: '10px 0'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '14px' }}>{icon}</span>
+                          <span>{msg.message}</span>
+                        </div>
+                        <div style={{ fontSize: '9px', opacity: 0.6 }}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                     );
@@ -566,6 +656,20 @@ const TradeRoom = () => {
                       The buyer has sent the Birr. Check your bank app now and confirm receipt of <strong>{activeTrade.amountETB.toLocaleString()} ETB</strong> before releasing.
                     </p>
                   </div>
+                  {user.transactionPin && (
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>🔒 Enter Security PIN to release:</div>
+                      <input 
+                        type="password" 
+                        maxLength={4} 
+                        pattern="\d*" 
+                        value={releasePin} 
+                        onChange={e => setReleasePin(e.target.value.replace(/\D/g, ''))} 
+                        placeholder="4-digit PIN" 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                      />
+                    </div>
+                  )}
                   <button onClick={handleReleaseEscrow} className="btn btn-teal glow-teal btn-full" style={{ width: '100%', padding: '12px', fontWeight: 800 }}>
                     ✓ Release USD Escrow
                   </button>

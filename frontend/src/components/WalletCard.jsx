@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../context/AuthContext.jsx';
 
 // ─── External wallet options for manual deposit ────────────────
@@ -85,6 +87,15 @@ const WalletCard = () => {
   const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
+
+  // Transaction PIN states
+  const setPinMutation = useMutation(api.users.setTransactionPin);
+  const [withdrawPin, setWithdrawPin] = useState('');
+  const [setupPin, setSetupPin] = useState('');
+  const [confirmSetupPin, setConfirmSetupPin] = useState('');
+  const [currentPin, setCurrentPin] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinMsg, setPinMsg] = useState({ type: '', text: '' });
   const [copied, setCopied] = useState(false);
 
   // Withdraw
@@ -161,9 +172,9 @@ const WalletCard = () => {
     }
 
     setWithdrawing(true);
-    const result = await withdrawETH(amt, dest);
+    const result = await withdrawETH(amt, dest, user.transactionPin ? withdrawPin : undefined);
     setWithdrawing(false);
-    if (result?.success) { setTxDetails(result); setWithdrawAmt(''); setDestAddress(''); }
+    if (result?.success) { setTxDetails(result); setWithdrawAmt(''); setDestAddress(''); setWithdrawPin(''); }
   };
 
   const handleSubmitDeposit = async (e) => {
@@ -257,6 +268,7 @@ const WalletCard = () => {
     { id: 'deposit',  label: '⬇', sub: 'Deposit' },
     { id: 'send',     label: '↗', sub: 'Send' },
     { id: 'withdraw', label: '⬆', sub: 'Withdraw' },
+    { id: 'security', label: '🔒', sub: 'Security' },
   ];
 
   return (
@@ -953,6 +965,22 @@ const WalletCard = () => {
               </div>
             </div>
 
+            {user.transactionPin && (
+              <div className="input-group fade-in-2" style={{ marginTop: '12px', marginBottom: '8px' }}>
+                <label className="input-label" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>🔒 Enter Transaction Security PIN</label>
+                <input 
+                  type="password" 
+                  maxLength={4} 
+                  pattern="\d*" 
+                  required 
+                  value={withdrawPin} 
+                  onChange={e => setWithdrawPin(e.target.value.replace(/\D/g, ''))} 
+                  placeholder="Enter 4-digit PIN" 
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '15px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                />
+              </div>
+            )}
+
             <button type="submit" disabled={withdrawing} className="btn btn-gold btn-full" style={{ padding: '14px' }}>
               {withdrawing ? 'Broadcasting…' : 'Withdraw USD ↗'}
             </button>
@@ -967,6 +995,216 @@ const WalletCard = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══ SECURITY PIN TAB ════════════════════════════════════ */}
+      {activeSection === 'security' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="fade-in-2">
+          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>🔒 Transaction Security PIN</div>
+          
+          <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.4, margin: 0 }}>
+              Add a 4-digit numeric Security PIN to protect your funds. When enabled, this PIN will be required prior to releasing escrow or submitting withdrawals.
+            </p>
+
+            {pinMsg.text && (
+              <div style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 500,
+                background: pinMsg.type === 'success' ? 'var(--status-success-bg)' : 'rgba(248,113,113,0.08)',
+                border: `1px solid ${pinMsg.type === 'success' ? 'var(--status-success-border)' : 'rgba(248,113,113,0.25)'}`,
+                color: pinMsg.type === 'success' ? 'var(--status-success-text)' : 'var(--status-danger-text)'
+              }}>
+                {pinMsg.text}
+              </div>
+            )}
+
+            {!user.transactionPin ? (
+              // ENABLE PIN FORM
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (setupPin.length !== 4 || confirmSetupPin.length !== 4) {
+                  setPinMsg({ type: 'error', text: 'PIN must be exactly 4 digits.' });
+                  return;
+                }
+                if (setupPin !== confirmSetupPin) {
+                  setPinMsg({ type: 'error', text: 'PINs do not match.' });
+                  return;
+                }
+                setPinLoading(true);
+                try {
+                  await setPinMutation({ userId: user.id, pin: setupPin });
+                  setPinMsg({ type: 'success', text: '✓ Security transaction PIN enabled successfully.' });
+                  setSetupPin('');
+                  setConfirmSetupPin('');
+                  user.transactionPin = setupPin;
+                } catch (err) {
+                  setPinMsg({ type: 'error', text: err.message });
+                } finally {
+                  setPinLoading(false);
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                
+                <div className="input-group">
+                  <label className="input-label" style={{ fontSize: '11px' }}>Set 4-Digit Security PIN</label>
+                  <input 
+                    type="password" 
+                    maxLength={4} 
+                    pattern="\d*" 
+                    required 
+                    value={setupPin} 
+                    onChange={e => setSetupPin(e.target.value.replace(/\D/g, ''))} 
+                    placeholder="Enter 4 digits" 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '15px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label" style={{ fontSize: '11px' }}>Confirm Security PIN</label>
+                  <input 
+                    type="password" 
+                    maxLength={4} 
+                    pattern="\d*" 
+                    required 
+                    value={confirmSetupPin} 
+                    onChange={e => setConfirmSetupPin(e.target.value.replace(/\D/g, ''))} 
+                    placeholder="Confirm 4 digits" 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '15px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                  />
+                </div>
+
+                <button type="submit" disabled={pinLoading} className="btn btn-gold btn-full btn-sm" style={{ marginTop: '6px' }}>
+                  {pinLoading ? 'Saving…' : 'Enable Security PIN'}
+                </button>
+              </form>
+            ) : (
+              // CHANGE / DISABLE PIN FORM
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', fontSize: '12px', color: 'var(--teal-light)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>✓</span> <span>Transaction PIN Security is Active</span>
+                </div>
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (currentPin !== user.transactionPin) {
+                    setPinMsg({ type: 'error', text: 'Current security PIN is incorrect.' });
+                    return;
+                  }
+                  if (setupPin.length !== 4 || confirmSetupPin.length !== 4) {
+                    setPinMsg({ type: 'error', text: 'New PIN must be exactly 4 digits.' });
+                    return;
+                  }
+                  if (setupPin !== confirmSetupPin) {
+                    setPinMsg({ type: 'error', text: 'New PINs do not match.' });
+                    return;
+                  }
+                  setPinLoading(true);
+                  try {
+                    await setPinMutation({ userId: user.id, pin: setupPin });
+                    setPinMsg({ type: 'success', text: '✓ Security transaction PIN updated successfully.' });
+                    setCurrentPin('');
+                    setSetupPin('');
+                    setConfirmSetupPin('');
+                    user.transactionPin = setupPin;
+                  } catch (err) {
+                    setPinMsg({ type: 'error', text: err.message });
+                  } finally {
+                    setPinLoading(false);
+                  }
+                }} style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '4px' }}>Change PIN</div>
+                  
+                  <div className="input-group">
+                    <label className="input-label" style={{ fontSize: '10px' }}>Current PIN</label>
+                    <input 
+                      type="password" 
+                      maxLength={4} 
+                      pattern="\d*" 
+                      required 
+                      value={currentPin} 
+                      onChange={e => setCurrentPin(e.target.value.replace(/\D/g, ''))} 
+                      placeholder="Current 4 digits" 
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label" style={{ fontSize: '10px' }}>New PIN</label>
+                    <input 
+                      type="password" 
+                      maxLength={4} 
+                      pattern="\d*" 
+                      required 
+                      value={setupPin} 
+                      onChange={e => setSetupPin(e.target.value.replace(/\D/g, ''))} 
+                      placeholder="New 4 digits" 
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label" style={{ fontSize: '10px' }}>Confirm New PIN</label>
+                    <input 
+                      type="password" 
+                      maxLength={4} 
+                      pattern="\d*" 
+                      required 
+                      value={confirmSetupPin} 
+                      onChange={e => setConfirmSetupPin(e.target.value.replace(/\D/g, ''))} 
+                      placeholder="Confirm new 4 digits" 
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', textAlign: 'center', letterSpacing: '0.4em' }} 
+                    />
+                  </div>
+
+                  <button type="submit" disabled={pinLoading} className="btn btn-gold btn-full btn-sm" style={{ marginTop: '4px' }}>
+                    {pinLoading ? 'Updating…' : 'Update Security PIN'}
+                  </button>
+                </form>
+
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Disable PIN</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input 
+                      type="password" 
+                      maxLength={4} 
+                      pattern="\d*" 
+                      value={currentPin} 
+                      onChange={e => setCurrentPin(e.target.value.replace(/\D/g, ''))} 
+                      placeholder="Current PIN to disable" 
+                      style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', textAlign: 'center', letterSpacing: '0.3em' }} 
+                    />
+                    <button 
+                      onClick={async () => {
+                        if (currentPin !== user.transactionPin) {
+                          setPinMsg({ type: 'error', text: 'Please enter your correct current PIN to disable security gating.' });
+                          return;
+                        }
+                        setPinLoading(true);
+                        try {
+                          await setPinMutation({ userId: user.id, pin: null });
+                          setPinMsg({ type: 'success', text: '✓ Security transaction PIN disabled successfully.' });
+                          setCurrentPin('');
+                          user.transactionPin = undefined;
+                        } catch (err) {
+                          setPinMsg({ type: 'error', text: err.message });
+                        } finally {
+                          setPinLoading(false);
+                        }
+                      }} 
+                      disabled={pinLoading || !currentPin} 
+                      className="btn btn-outline btn-sm" 
+                      style={{ borderColor: 'rgba(248,113,113,0.3)', color: 'var(--accent)' }}
+                    >
+                      Disable PIN
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

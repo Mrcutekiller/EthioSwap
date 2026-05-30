@@ -138,14 +138,19 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
         {/* CTA */}
         {user.kycStatus !== 'approved' && (
-          <div style={{ marginTop: '16px' }}>
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {user.kycStatus === 'rejected' && user.kycRejectionReason && (
+              <div className="fade-in-2" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '10px', padding: '12px', fontSize: '12.5px', color: 'var(--status-danger-text)', lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 700 }}>⚠️ Verification Failed:</span> {user.kycRejectionReason}
+              </div>
+            )}
             {user.kycStatus === 'pending' || user.kycStep === 'pending' ? (
               <div style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--status-warning-text)', fontWeight: 500 }}>
                 ⏳ Your documents are under admin review. You'll be notified soon.
               </div>
             ) : (
               <button onClick={() => setShowKYC(true)} className="btn btn-gold btn-full">
-                🛡️ Start Verification
+                {user.kycStatus === 'rejected' ? '🛡️ Restart Verification' : '🛡️ Start Verification'}
               </button>
             )}
           </div>

@@ -171,6 +171,7 @@ const AdminPanel = ({ user }) => {
   const revenue             = useQuery(api.admin.getRevenue, { period });
   const adminEarnings       = useQuery(api.admin.getAdminEarnings, user ? { adminId: user.id } : 'skip');
   const kycQueue            = useQuery(api.admin.getKycQueue)        ?? [];
+  const auditLogs           = useQuery(api.admin.getAuditLogs)       ?? [];
   const disputes            = useQuery(api.admin.getDisputes)        ?? [];
   const supportTickets      = useQuery(api.support.listAll)          ?? [];
 
@@ -245,6 +246,7 @@ const AdminPanel = ({ user }) => {
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
     { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open').length },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
+    { id: 'logs',      em: '📜', title: 'Audit Logs',badge: 0 },
     { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
   ];
 
@@ -254,7 +256,7 @@ const AdminPanel = ({ user }) => {
     if (!warnUserId || !warnMessage.trim()) return;
     setWarnLoading(true);
     try {
-      await warnUserMutation({ userId: warnUserId, message: warnMessage });
+      await warnUserMutation({ userId: warnUserId, message: warnMessage, adminId: user.id });
       showAlert("⚠️ Warning sent successfully.");
       setWarnUserId(null);
       setWarnMessage('');
@@ -269,7 +271,7 @@ const AdminPanel = ({ user }) => {
     const actionText = currentSuspended ? "activate (unpush)" : "suspend (push)";
     if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
     try {
-      await toggleSuspendMutation({ userId, isSuspended: !currentSuspended });
+      await toggleSuspendMutation({ userId, isSuspended: !currentSuspended, adminId: user.id });
       showAlert(`User ${currentSuspended ? 'activated' : 'suspended'} successfully.`);
     } catch (err) {
       showAlert("Error updating user status: " + err.message, "error");
@@ -279,7 +281,7 @@ const AdminPanel = ({ user }) => {
   const handleRemoveUser = async (userId, username) => {
     if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return;
     try {
-      await removeUserMutation({ userId });
+      await removeUserMutation({ userId, adminId: user.id });
       showAlert("User removed successfully.");
     } catch (err) {
       showAlert("Error removing user: " + err.message, "error");
@@ -555,6 +557,28 @@ const AdminPanel = ({ user }) => {
               <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.sellCount ?? 0}</div>
               <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>listings filled</div>
             </div>
+
+            <div className="metric-card metric-card-danger fade-in-6">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <div className="metric-icon metric-icon-danger">🔒</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Locked Escrow</div>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--status-danger-text)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                ${((allUsersList || []).reduce((s, u) => s + (u.ethLocked || 0), 0)).toFixed(2)}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>active held escrow</div>
+            </div>
+
+            <div className="metric-card metric-card-teal fade-in-6">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <div className="metric-icon metric-icon-teal">📊</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Active Trades</div>
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                {disputes.length + pendingDeposits.length}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>active queue items</div>
+            </div>
           </div>
 
           {/* Earnings preview */}
@@ -736,39 +760,55 @@ const AdminPanel = ({ user }) => {
                   <div style={{ fontWeight: 700, fontSize: '15px' }}>@{u.username}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>📞 {u.phone}</div>
                 </div>
-                <span className="badge badge-warning">⏳ Pending</span>
+                <span className="badge badge-warning">⏳ Pending Verification</span>
               </div>
 
-              <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '12px' }}>
-                {[
-                  { l: 'Full Name', v: u.kycData?.name },
-                  { l: 'Age',       v: u.kycData?.age },
-                  { l: 'ID Type',   v: u.kycData?.idType },
-                  { l: 'Address',   v: u.kycData?.address },
-                  { l: 'KYC Phone', v: u.kycData?.phone || u.phone, span: 2 },
-                ].map(f => (
-                  <div key={f.l} style={{ gridColumn: f.span === 2 ? 'span 2' : undefined }}>
-                    <div style={{ color: 'var(--text-3)', fontSize: '10px', marginBottom: '2px' }}>{f.l}</div>
-                    <div style={{ fontWeight: 600, color: f.v ? 'var(--text-1)' : 'var(--text-3)', fontStyle: f.v ? 'normal' : 'italic' }}>
-                      {f.v || 'Not provided'}
-                    </div>
+              {/* Side-by-side columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Left: Info Details */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '12px' }}>
+                  <div style={{ gridColumn: 'span 2', fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px' }}>
+                    📝 Submitted KYC Information
                   </div>
-                ))}
+                  {[
+                    { l: 'Full Name', v: u.kycData?.name },
+                    { l: 'Age',       v: u.kycData?.age },
+                    { l: 'ID Type',   v: u.kycData?.idType },
+                    { l: 'Address',   v: u.kycData?.address },
+                    { l: 'KYC Phone', v: u.kycData?.phone || u.phone, span: 2 },
+                  ].map(f => (
+                    <div key={f.l} style={{ gridColumn: f.span === 2 ? 'span 2' : undefined }}>
+                      <div style={{ color: 'var(--text-3)', fontSize: '10px', marginBottom: '2px' }}>{f.l}</div>
+                      <div style={{ fontWeight: 600, color: f.v ? 'var(--text-1)' : 'var(--text-3)', fontStyle: f.v ? 'normal' : 'italic' }}>
+                        {f.v || 'Not provided'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right: Documents Grid */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px' }}>
+                    📁 Uploaded KYC Documents
+                  </div>
+                  <KycImages userId={u.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                </div>
               </div>
 
-              <KycImages userId={u.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+              {/* Action Details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                <input
+                  type="text"
+                  value={rejectionReasons[u.id] || ''}
+                  onChange={e => setRejectionReasons(p => ({ ...p, [u.id]: e.target.value }))}
+                  placeholder="Rejection reason (required only if rejecting)…"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', fontFamily: 'var(--font)', outline: 'none' }}
+                />
 
-              <input
-                type="text"
-                value={rejectionReasons[u.id] || ''}
-                onChange={e => setRejectionReasons(p => ({ ...p, [u.id]: e.target.value }))}
-                placeholder="Rejection reason (required only if rejecting)…"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', fontFamily: 'var(--font)', outline: 'none' }}
-              />
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => handleKYC(u.id, true)}  className="btn btn-success" style={{ flex: 1, padding: '13px' }}>✓ Approve</button>
-                <button onClick={() => handleKYC(u.id, false)} className="btn btn-danger"  style={{ flex: 1, padding: '13px' }}>✗ Reject</button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handleKYC(u.id, true)}  className="btn btn-success" style={{ flex: 1, padding: '13px' }}>✓ Approve KYC</button>
+                  <button onClick={() => handleKYC(u.id, false)} className="btn btn-danger"  style={{ flex: 1, padding: '13px' }}>✗ Reject KYC</button>
+                </div>
               </div>
             </div>
           ))}
@@ -1237,6 +1277,93 @@ const AdminPanel = ({ user }) => {
           </div>
         );
       })()}
+
+      {/* ══ AUDIT LOGS ════════════════════════════════════════ */}
+      {activeTab === 'logs' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="fade-in-2">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
+              Administrative Audit Logs
+            </div>
+            <span className="badge badge-neutral">{auditLogs.length} events logged</span>
+          </div>
+
+          <div style={{ ...cs, padding: 0, overflow: 'hidden' }}>
+            {auditLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <div style={{ fontSize: '40px', marginBottom: '10px' }}>📜</div>
+                <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No administrative events logged yet</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-3)', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>
+                      <th style={{ padding: '12px 16px' }}>Timestamp</th>
+                      <th style={{ padding: '12px 16px' }}>Administrator</th>
+                      <th style={{ padding: '12px 16px' }}>Action</th>
+                      <th style={{ padding: '12px 16px' }}>Target Item</th>
+                      <th style={{ padding: '12px 16px' }}>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.map((log) => {
+                      let badgeColor = 'var(--text-3)';
+                      let badgeBg = 'rgba(255,255,255,0.05)';
+                      let badgeBorder = '1px solid rgba(255,255,255,0.1)';
+
+                      if (log.action.includes('approve') || log.action.includes('unsuspend')) {
+                        badgeColor = 'var(--status-success-text)';
+                        badgeBg = 'var(--status-success-bg)';
+                        badgeBorder = '1px solid var(--status-success-border)';
+                      } else if (log.action.includes('reject') || log.action.includes('suspend') || log.action.includes('remove')) {
+                        badgeColor = 'var(--status-danger-text)';
+                        badgeBg = 'rgba(248,113,113,0.08)';
+                        badgeBorder = '1px solid rgba(248,113,113,0.2)';
+                      } else if (log.action.includes('warn')) {
+                        badgeColor = 'var(--status-warning-text)';
+                        badgeBg = 'var(--status-warning-bg)';
+                        badgeBorder = '1px solid var(--status-warning-border)';
+                      }
+
+                      return (
+                        <tr key={log._id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <td style={{ padding: '12px 16px', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                            @{log.adminUsername}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ 
+                              padding: '2px 8px', 
+                              borderRadius: '6px', 
+                              fontSize: '10px', 
+                              fontWeight: 700, 
+                              textTransform: 'uppercase', 
+                              color: badgeColor, 
+                              background: badgeBg, 
+                              border: badgeBorder 
+                            }}>
+                              {log.action.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: 'var(--text-1)', fontWeight: 600 }}>
+                            @{log.targetName}
+                          </td>
+                          <td style={{ padding: '12px 16px', color: 'var(--text-2)', minWidth: '200px' }}>
+                            {log.details}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ══ SETTINGS ══════════════════════════════════════════ */}
       {activeTab === 'settings' && (

@@ -48,7 +48,9 @@ export default defineSchema({
       message: v.string(),
       createdAt: v.string(),
     }))),
+    transactionPin: v.optional(v.string()),
   }).index("by_username", ["username"]).index("by_numericId", ["numericId"]),
+
 
   listings: defineTable({
     sellerId: v.string(),
@@ -169,4 +171,15 @@ export default defineSchema({
     createdAt: v.string(),
     reviewedAt: v.optional(v.string()),
   }).index("by_status", ["status"]).index("by_userId", ["userId"]),
+
+  adminAuditLogs: defineTable({
+    adminId: v.string(),
+    adminUsername: v.string(),
+    action: v.string(),
+    targetId: v.string(),
+    targetName: v.string(),
+    details: v.string(),
+    createdAt: v.string(),
+  }).index("by_action", ["action"]),
 });
+

@@ -209,11 +209,11 @@ export const AuthProvider = ({ children }) => {
     finally { setLoading(false); }
   };
 
-  const withdrawETH = async (amountETH, destinationAddress) => {
+  const withdrawETH = async (amountETH, destinationAddress, pin) => {
     setLoading(true);
     try {
-      const data = await convexWithdraw({ userId: user.id, amountETH, destinationAddress });
-      setSuccess(`Withdrawal broadcast! Tx: ${data.txHash?.substring(0, 12)}...`);
+      const data = await convexWithdraw({ userId: user.id, amountETH, destinationAddress, pin });
+      setSuccess(`Withdrawal request submitted successfully!`);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }

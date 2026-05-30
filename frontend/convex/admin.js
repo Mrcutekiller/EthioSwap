@@ -3,6 +3,28 @@ import { v } from "convex/values";
 
 const USD_RATE = 1; // 1 unit = $1 (USD stable)
 
+async function logAdminAction(ctx, adminId, action, targetId, targetName, details) {
+  let adminUsername = "System Admin";
+  if (adminId) {
+    const adminObjId = ctx.db.normalizeId("users", adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (admin) {
+      adminUsername = admin.username;
+    }
+  }
+
+  await ctx.db.insert("adminAuditLogs", {
+    adminId: adminId || "system",
+    adminUsername,
+    action,
+    targetId,
+    targetName,
+    details,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+
 export const getRevenue = query({
   args: { period: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -200,7 +222,7 @@ export const getAdminEarnings = query({
 });
 
 export const warnUser = mutation({
-  args: { userId: v.string(), message: v.string() },
+  args: { userId: v.string(), message: v.string(), adminId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const userObjId = ctx.db.normalizeId("users", args.userId);
     if (!userObjId) throw new Error("Invalid user ID");
@@ -226,12 +248,15 @@ export const warnUser = mutation({
       createdAt: new Date().toISOString(),
     });
 
+    await logAdminAction(ctx, args.adminId, "warn_user", args.userId, user.username, `Issued warning: "${args.message}"`);
+
     return { success: true, warning: newWarning };
   }
 });
 
+
 export const toggleSuspendUser = mutation({
-  args: { userId: v.string(), isSuspended: v.boolean() },
+  args: { userId: v.string(), isSuspended: v.boolean(), adminId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const userObjId = ctx.db.normalizeId("users", args.userId);
     if (!userObjId) throw new Error("Invalid user ID");
@@ -263,12 +288,15 @@ export const toggleSuspendUser = mutation({
       createdAt: new Date().toISOString(),
     });
 
+    await logAdminAction(ctx, args.adminId, args.isSuspended ? "suspend_user" : "unsuspend_user", args.userId, user.username, args.isSuspended ? "Suspended user account" : "Restored user account");
+
     return { success: true };
   }
 });
 
+
 export const removeUser = mutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), adminId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const userObjId = ctx.db.normalizeId("users", args.userId);
     if (!userObjId) throw new Error("Invalid user ID");
@@ -286,11 +314,15 @@ export const removeUser = mutation({
       await ctx.db.delete(listing._id);
     }
 
+    const username = user.username;
     await ctx.db.delete(userObjId);
+
+    await logAdminAction(ctx, args.adminId, "remove_user", args.userId, username, "Permanently deleted user account");
 
     return { success: true };
   }
 });
+
 
 export const listAllWithdrawalRequests = query({
   handler: async (ctx) => {
@@ -353,6 +385,8 @@ export const approveWithdrawal = mutation({
       createdAt: new Date().toISOString(),
     });
 
+    await logAdminAction(ctx, args.adminId, "approve_withdrawal", args.requestId, req.username, `Approved withdrawal of $${req.amountUSD.toFixed(2)} USD to ${req.walletType}. Net: $${netAmount.toFixed(2)} USD`);
+
     return { success: true };
   }
 });
@@ -395,6 +429,16 @@ export const rejectWithdrawal = mutation({
       createdAt: new Date().toISOString(),
     });
 
+    await logAdminAction(ctx, args.adminId, "reject_withdrawal", args.requestId, req.username, `Rejected withdrawal of $${req.amountUSD.toFixed(2)} USD. Reason: ${args.adminNote}`);
+
     return { success: true };
   }
 });
+
+export const getAuditLogs = query({
+  handler: async (ctx) => {
+    const logs = await ctx.db.query("adminAuditLogs").collect();
+    return logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 100);
+  }
+});
+

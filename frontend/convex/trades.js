@@ -81,7 +81,7 @@ export const markPaid = mutation({
 });
 
 export const releaseEscrow = mutation({
-  args: { tradeId: v.string(), sellerId: v.string() },
+  args: { tradeId: v.string(), sellerId: v.string(), pin: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const tradeId = ctx.db.normalizeId("trades", args.tradeId);
     const trade = await ctx.db.get(tradeId);
@@ -91,6 +91,13 @@ export const releaseEscrow = mutation({
     const sellerId = ctx.db.normalizeId("users", trade.sellerId);
     const buyer = await ctx.db.get(buyerId);
     const seller = await ctx.db.get(sellerId);
+    if (!seller) throw new Error("Seller not found");
+
+    if (seller.transactionPin) {
+      if (!args.pin || args.pin !== seller.transactionPin) {
+        throw new Error("Invalid security transaction PIN.");
+      }
+    }
 
     // Calculate commission
     const settings = await ctx.db.query("systemSettings").first();
@@ -415,4 +422,54 @@ export const getRecentCompleted = query({
     }));
   }
 });
+
+export const autoCancelExpiredTrade = mutation({
+  args: { tradeId: v.string() },
+  handler: async (ctx, args) => {
+    const tradeId = ctx.db.normalizeId("trades", args.tradeId);
+    const trade = await ctx.db.get(tradeId);
+    if (!trade) throw new Error("Trade not found");
+    if (trade.status !== "payment_pending") return { success: false, reason: "Trade is not pending payment" };
+
+    const expires = new Date(trade.timerExpiresAt).getTime();
+    if (Date.now() < expires) return { success: false, reason: "Trade timer has not expired yet" };
+
+    const sellerId = ctx.db.normalizeId("users", trade.sellerId);
+    const seller = await ctx.db.get(sellerId);
+    if (seller) {
+      await ctx.db.patch(sellerId, {
+        ethBalance: seller.ethBalance + trade.amountETH,
+        ethLocked: Math.max(0, seller.ethLocked - trade.amountETH)
+      });
+    }
+
+    await ctx.db.patch(tradeId, {
+      status: "cancelled",
+      chat: [...trade.chat, {
+        senderId: "system",
+        message: "Trade automatically cancelled due to payment timer expiration. Locked escrow has been returned to the seller's active balance.",
+        timestamp: new Date().toISOString(),
+      }]
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: trade.buyerId,
+      type: "trade_cancelled",
+      message: `⏳ Trade for $${trade.amountETH.toFixed(2)} USD was automatically cancelled because the 30-minute payment window expired.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: trade.sellerId,
+      type: "trade_cancelled",
+      message: `⏳ Trade for $${trade.amountETH.toFixed(2)} USD was automatically cancelled because the payment window expired. Your escrow has been refunded to your active balance.`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  }
+});
+
 

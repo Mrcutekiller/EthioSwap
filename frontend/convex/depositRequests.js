@@ -151,6 +151,19 @@ export const approve = mutation({
       reviewedAt: new Date().toISOString(),
     });
 
+    // Log admin action to audit logs
+    const adminUser = await ctx.db.get(adminObjId);
+    const adminUsername = adminUser ? adminUser.username : "Admin";
+    await ctx.db.insert("adminAuditLogs", {
+      adminId: args.adminId,
+      adminUsername,
+      action: "approve_deposit",
+      targetId: args.requestId,
+      targetName: req.username,
+      details: `Approved deposit request of $${req.amountUSD.toFixed(2)} USD via ${req.walletType}. Credited: $${netAmount.toFixed(2)} USD`,
+      createdAt: new Date().toISOString(),
+    });
+
     // Log transaction
     await ctx.db.insert("transactions", {
       userId: req.userId,
@@ -196,6 +209,19 @@ export const reject = mutation({
       status: "rejected",
       adminNote: args.adminNote,
       reviewedAt: new Date().toISOString(),
+    });
+
+    // Log admin action to audit logs
+    const adminUser = await ctx.db.get(adminObjId);
+    const adminUsername = adminUser ? adminUser.username : "Admin";
+    await ctx.db.insert("adminAuditLogs", {
+      adminId: args.adminId,
+      adminUsername,
+      action: "reject_deposit",
+      targetId: args.requestId,
+      targetName: req.username,
+      details: `Rejected deposit request of $${req.amountUSD.toFixed(2)} USD. Reason: ${args.adminNote}`,
+      createdAt: new Date().toISOString(),
     });
 
     // Notify user

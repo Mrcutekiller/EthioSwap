@@ -381,6 +381,17 @@ export const kycAction = mutation({
       kycRejectionReason: args.approve ? null : args.reason,
     });
 
+    // Log admin action to audit logs
+    await ctx.db.insert("adminAuditLogs", {
+      adminId: args.adminId,
+      adminUsername: admin.username,
+      action: "kyc_action",
+      targetId: args.userId,
+      targetName: user.username,
+      details: args.approve ? "Approved user KYC verification" : `Rejected user KYC verification. Reason: ${args.reason}`,
+      createdAt: new Date().toISOString(),
+    });
+
     // Add user notification
     await ctx.db.insert("notifications", {
       userId: args.userId,
@@ -440,11 +451,18 @@ export const withdrawETH = mutation({
     userId: v.string(),
     amountETH: v.number(),
     destinationAddress: v.string(),
+    pin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userObjId = ctx.db.normalizeId("users", args.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
+
+    if (user.transactionPin) {
+      if (!args.pin || args.pin !== user.transactionPin) {
+        throw new Error("Invalid transaction security PIN.");
+      }
+    }
 
     if (args.amountETH < 10) {
       throw new Error("Minimum withdrawal amount is $10.00 USD");
@@ -655,3 +673,25 @@ export const listWithdrawalRequests = query({
     return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 });
+
+export const setTransactionPin = mutation({
+  args: { userId: v.string(), pin: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    if (!userObjId) throw new Error("Invalid user ID");
+    const user = await ctx.db.get(userObjId);
+    if (!user) throw new Error("User not found");
+
+    if (args.pin) {
+      if (args.pin.length !== 4 || !/^\d+$/.test(args.pin)) {
+        throw new Error("Transaction PIN must be exactly 4 digits");
+      }
+      await ctx.db.patch(userObjId, { transactionPin: args.pin });
+    } else {
+      await ctx.db.patch(userObjId, { transactionPin: undefined });
+    }
+
+    return { success: true };
+  }
+});
+
