@@ -719,7 +719,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </a>
               
               <div className="landing-download-qr">
-                <div className="landing-download-qr-box"></div>
+                <div className="landing-download-qr-box">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150&data=${encodeURIComponent(window.location.origin + '/#download')}`} 
+                    alt="Scan to Download" 
+                    style={{ width: '88px', height: '88px', display: 'block', borderRadius: '4px' }} 
+                  />
+                </div>
                 <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: '600' }}>Scan QR Code to Download</span>
               </div>
             </div>
