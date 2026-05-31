@@ -281,9 +281,21 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
       {/* ── HERO SECTION ── */}
       <header id="hero" className="landing-hero-section">
+        {/* Thin vertical structured grid lines (Stoicism-inspired) */}
+        <div className="landing-bg-grid-lines">
+          <div className="line"></div>
+          <div className="line"></div>
+          <div className="line"></div>
+          <div className="line"></div>
+        </div>
+
         <div className="landing-hero-bg">
           <div className="landing-hero-gradient-1"></div>
         </div>
+        
+        {/* NOVA-inspired background watermark */}
+        <div className="landing-watermark" style={{ top: '12%', left: '4%' }}>ESCROW</div>
+
         <div className="landing-container">
           <div className="landing-hero-grid">
             <div className="landing-hero-content">
@@ -309,15 +321,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <div className="landing-hero-stats">
                 <div className="landing-hero-stat">
                   <span className="number">100%</span>
-                  <span className="label">Escrow Protected</span>
+                  <span className="label">Escrow Lock</span>
                 </div>
                 <div className="landing-hero-stat">
                   <span className="number">&lt; 15 Min</span>
-                  <span className="label">Avg. Release Speed</span>
+                  <span className="label">Avg Release</span>
                 </div>
                 <div className="landing-hero-stat">
                   <span className="number">0.5%</span>
-                  <span className="label">Low Platform Fee</span>
+                  <span className="label">Platform Fee</span>
                 </div>
               </div>
             </div>
@@ -327,12 +339,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 <div className="floating-sphere sphere-1"></div>
                 <div className="floating-sphere sphere-2"></div>
                 
-                <div className="hologram-card">
+                {/* 3D App Showcase Phone Mockup (NOVA-inspired layout context) */}
+                <div className="hologram-phone-frame">
+                  <div className="phone-notch"></div>
                   <div className="hologram-glass"></div>
                   
                   <div className="hologram-content">
                     <div className="hologram-badge">
-                      <span className="badge-pill">SECURE ESCROW CONTRACT</span>
+                      <span className="badge-pill">ETHIOSWAP MOBILE</span>
                     </div>
                     
                     <div className="hologram-title">Dynamic Escrow</div>
@@ -343,28 +357,28 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                         <div className="shield-glow"></div>
                       </div>
                       
-                      <div className="orbit-asset usdt-token animate-orbit-1">
+                      <div className="orbit-asset usdt-token animate-orbit-1" style={{ scale: '0.85' }}>
                         <span className="asset-icon">💵</span>
                         <span className="asset-label">USDT</span>
                       </div>
-                      <div className="orbit-asset etb-token animate-orbit-2">
+                      <div className="orbit-asset etb-token animate-orbit-2" style={{ scale: '0.85' }}>
                         <span className="asset-icon">🇪🇹</span>
                         <span className="asset-label">ETB</span>
                       </div>
                     </div>
                     
-                    <div className="hologram-metrics">
+                    <div className="hologram-metrics" style={{ marginTop: 'auto', background: 'rgba(24, 28, 38, 0.8)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="metric-row">
-                        <span className="metric-label">Engine status</span>
-                        <span className="metric-value status-locked">🔒 SECURED BY LEDGER</span>
+                        <span className="metric-label">Security</span>
+                        <span className="metric-value status-locked" style={{ fontSize: '10px' }}>✓ PIN GATED</span>
                       </div>
                       <div className="metric-row">
-                        <span className="metric-label">Transaction speed</span>
-                        <span className="metric-value">⚡ ~15 Seconds (TRC20)</span>
+                        <span className="metric-label">Ledger Rate</span>
+                        <span className="metric-value" style={{ fontSize: '10px' }}>1 USD = 194.00 ETB</span>
                       </div>
                       <div className="metric-row">
-                        <span className="metric-label">Active trade pools</span>
-                        <span className="metric-value active-pulse">● Live Indexer</span>
+                        <span className="metric-label">Platform Fee</span>
+                        <span className="metric-value active-pulse" style={{ fontSize: '10px' }}>0.5% (Flat)</span>
                       </div>
                     </div>
                   </div>
