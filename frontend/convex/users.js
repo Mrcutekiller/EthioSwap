@@ -431,19 +431,31 @@ export const faucetDeposit = mutation({
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
 
-    const newBalance = user.ethBalance + args.amountETH;
+    const settings = await ctx.db.query("systemSettings").first();
+    const feePercent = settings?.flatFeePercent ?? 1.0;
+    const fee = Math.round((args.amountETH * (feePercent / 100)) * 100) / 100;
+    const totalAmount = Math.round((args.amountETH + fee) * 100) / 100;
+
+    const newBalance = user.ethBalance + totalAmount;
     await ctx.db.patch(user._id, { ethBalance: newBalance });
 
-    const ethUsdPrice = 1;
-    const amountUSD = args.amountETH * ethUsdPrice;
+    const systemAdmin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (systemAdmin) {
+      await ctx.db.patch(systemAdmin._id, {
+        ethBalance: systemAdmin.ethBalance + fee,
+      });
+    }
 
     // Transaction
     await ctx.db.insert("transactions", {
       userId: args.userId,
       type: "deposit",
-      amountETH: args.amountETH,
-      amountUSD,
-      note: `Faucet Deposit of $${args.amountETH.toFixed(2)} USD`,
+      amountETH: totalAmount,
+      amountUSD: totalAmount,
+      note: `Faucet Deposit of $${totalAmount.toFixed(2)} USD (Net: $${args.amountETH.toFixed(2)} + Fee: $${fee.toFixed(2)})`,
       createdAt: new Date().toISOString(),
     });
 
@@ -451,7 +463,7 @@ export const faucetDeposit = mutation({
     await ctx.db.insert("notifications", {
       userId: args.userId,
       type: "deposit",
-      message: `Your deposit of $${args.amountETH.toFixed(2)} USD has been confirmed.`,
+      message: `Your deposit of $${totalAmount.toFixed(2)} USD has been confirmed.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
@@ -514,30 +526,97 @@ export const withdrawETH = mutation({
       destAddress = parts[1];
     }
 
-    const requestId = await ctx.db.insert("withdrawRequests", {
-      userId: args.userId,
-      username: user.username,
-      amountUSD: args.amountETH,
-      walletType,
-      destinationAddress: destAddress,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    });
+    const isExchange = walletType.includes("Binance") || walletType.includes("Bybit") || walletType.includes("Pay");
+    if (!isExchange) {
+      const settings = await ctx.db.query("systemSettings").first();
+      const feePercent = settings?.flatFeePercent ?? 1.0;
+      
+      let networkFee = 0.00;
+      const dest = destAddress.trim();
+      if (dest.startsWith("T") || dest.startsWith("t")) {
+        networkFee = 0.10;
+      } else if (dest.startsWith("0x") || dest.startsWith("0X")) {
+        networkFee = 0.50;
+      } else {
+        networkFee = 0.10;
+      }
 
-    await ctx.db.insert("notifications", {
-      userId: args.userId,
-      type: "withdrawal_requested",
-      message: `⏳ Your withdrawal request of $${args.amountETH.toFixed(2)} USD to ${walletType} (${destAddress}) has been submitted and is pending admin review.`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+      const rawPlatformFee = args.amountETH * (feePercent / 100);
+      const platformFee = Math.round(rawPlatformFee * 100) / 100;
+      const fee = Math.round((platformFee + networkFee) * 100) / 100;
+      const netAmount = Math.round((args.amountETH - fee) * 100) / 100;
 
-    return { 
-      success: true, 
-      id: requestId.toString(),
-      ethBalance: newBalance,
-      message: "Withdrawal request submitted successfully!"
-    };
+      const systemAdmin = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+        .unique();
+      if (systemAdmin) {
+        await ctx.db.patch(systemAdmin._id, {
+          ethBalance: systemAdmin.ethBalance + fee,
+        });
+      }
+
+      const requestId = await ctx.db.insert("withdrawRequests", {
+        userId: args.userId,
+        username: user.username,
+        amountUSD: args.amountETH,
+        walletType,
+        destinationAddress: destAddress,
+        status: "approved",
+        createdAt: new Date().toISOString(),
+        reviewedAt: new Date().toISOString(),
+        adminNote: `Automatically processed via instant blockchain integration.`,
+      });
+
+      await ctx.db.insert("transactions", {
+        userId: args.userId,
+        type: "withdrawal",
+        amountETH: args.amountETH,
+        amountUSD: args.amountETH,
+        note: `On-Chain Withdrawal automatically approved to ${walletType} (${destAddress}) — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
+        createdAt: new Date().toISOString(),
+      });
+
+      await ctx.db.insert("notifications", {
+        userId: args.userId,
+        type: "withdrawal_approved",
+        message: `✅ Your withdrawal of $${args.amountETH.toFixed(2)} USD has been approved. Net sent: $${netAmount.toFixed(2)} USD (after platform + flat network fee of $${fee.toFixed(2)} USD) to ${walletType}.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      return { 
+        success: true, 
+        id: requestId.toString(),
+        ethBalance: newBalance,
+        message: "On-Chain withdrawal processed instantly!"
+      };
+    } else {
+      const requestId = await ctx.db.insert("withdrawRequests", {
+        userId: args.userId,
+        username: user.username,
+        amountUSD: args.amountETH,
+        walletType,
+        destinationAddress: destAddress,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      });
+
+      await ctx.db.insert("notifications", {
+        userId: args.userId,
+        type: "withdrawal_requested",
+        message: `⏳ Your withdrawal request of $${args.amountETH.toFixed(2)} USD to ${walletType} (${destAddress}) has been submitted and is pending admin review.`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      return { 
+        success: true, 
+        id: requestId.toString(),
+        ethBalance: newBalance,
+        message: "Withdrawal request submitted successfully!"
+      };
+    }
   }
 });
 

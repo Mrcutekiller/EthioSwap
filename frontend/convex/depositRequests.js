@@ -144,7 +144,7 @@ export const approve = mutation({
     const netAmount = Math.round((req.amountUSD - fee) * 100) / 100;
 
     await ctx.db.patch(user._id, {
-      ethBalance: user.ethBalance + netAmount,
+      ethBalance: user.ethBalance + req.amountUSD,
     });
 
     // Credit fee to admin
