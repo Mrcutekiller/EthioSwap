@@ -126,8 +126,9 @@ export const approve = mutation({
 
     const settings = await ctx.db.query("systemSettings").first();
     const feePercent = settings?.flatFeePercent ?? 0.5;
-    const fee = req.amountUSD * (feePercent / 100);
-    const netAmount = req.amountUSD - fee;
+    const rawFee = req.amountUSD * (feePercent / 100);
+    const fee = Math.round(rawFee * 100) / 100;
+    const netAmount = Math.round((req.amountUSD - fee) * 100) / 100;
 
     await ctx.db.patch(user._id, {
       ethBalance: user.ethBalance + netAmount,

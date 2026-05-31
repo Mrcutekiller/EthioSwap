@@ -205,7 +205,7 @@ const WalletCard = () => {
       ? `Sender Email: ${senderEmail.trim()} | Username: ${senderUsername.trim()}`
       : depReference.trim();
 
-    await createDepositRequest(parseFloat(depAmount), depWalletType, finalRef, screenshotBase64);
+    await createDepositRequest(parseFloat(depAmount) * (1 + depositFeePercent / 100), depWalletType, finalRef, screenshotBase64);
     
     // Automatically open checkout/transfer pages in new tabs
     if (depWalletType === 'binance') {
@@ -453,8 +453,8 @@ const WalletCard = () => {
             {depAmount && !isNaN(parseFloat(depAmount)) && parseFloat(depAmount) >= 10 ? (
               <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInUp 0.15s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-2)' }}>
-                  <span>Deposit Amount:</span>
-                  <span style={{ fontWeight: 700 }}>${parseFloat(depAmount).toFixed(2)} USD</span>
+                  <span>Net Amount Credited:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--teal-light)' }}>${parseFloat(depAmount).toFixed(2)} USD</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
                   <span>Platform Commission ({depositFeePercent}%):</span>
@@ -462,11 +462,7 @@ const WalletCard = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>
                   <span style={{ fontWeight: 700 }}>Total You Must Send:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--gold-light)' }}>${parseFloat(depAmount).toFixed(2)} USD (≈ {Math.round(parseFloat(depAmount) * rate).toLocaleString()} ETB)</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--teal-light)', borderTop: '1px dotted var(--border)', paddingTop: '6px', marginTop: '2px' }}>
-                  <span>Net Amount Credited:</span>
-                  <span style={{ fontWeight: 700 }}>${(parseFloat(depAmount) * (1 - depositFeePercent / 100)).toFixed(2)} USD</span>
+                  <span style={{ fontWeight: 800, color: 'var(--gold-light)' }}>${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD (≈ {Math.round(parseFloat(depAmount) * (1 + depositFeePercent / 100) * rate).toLocaleString()} ETB)</span>
                 </div>
               </div>
             ) : (
@@ -568,7 +564,7 @@ const WalletCard = () => {
                           {depWalletType === 'binance' ? '🔶 Pay via Binance Pay App ↗' : '🟡 Pay via Bybit Funding ↗'}
                         </button>
                         <div style={{ fontSize: '10px', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.4 }}>
-                          Send exactly **${parseFloat(depAmount).toFixed(2)} USD** via Binance/Bybit asset transfers, capture a screenshot, and submit proof below.
+                          Send exactly **${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD** via Binance/Bybit asset transfers, capture a screenshot, and submit proof below.
                         </div>
                       </div>
                     </div>
@@ -615,19 +611,19 @@ const WalletCard = () => {
                         <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(16,185,129,0.15)', borderRadius: '99px' }}>{depositFeeLabel}</span>
                       </div>
                       <p style={{ fontSize: '11px', color: 'var(--status-success-text)', lineHeight: 1.5, margin: 0 }}>
-                        Please fill out the form after transfer. Once approved, the funds minus a {depositFeePercent}% fee will be credited to your available balance. Fees are routed directly to the admin account.
+                        Please fill out the form after transfer. Once approved, your net deposit amount will be credited to your available balance, and the platform fee is routed directly to the admin account.
                       </p>
                     </div>
 
                     {/* Static amount read-only display to avoid double inputting */}
                     <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Amount to send</div>
-                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-1)' }}>${parseFloat(depAmount).toFixed(2)} USD</span>
+                        <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Amount to send (Total)</div>
+                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-1)' }}>${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Credited (net)</div>
-                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--teal-light)' }}>${(parseFloat(depAmount) * (1 - depositFeePercent / 100)).toFixed(2)} USD</span>
+                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--teal-light)' }}>${parseFloat(depAmount).toFixed(2)} USD</span>
                       </div>
                     </div>
 
