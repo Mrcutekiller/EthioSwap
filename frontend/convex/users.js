@@ -589,6 +589,7 @@ export const sendById = mutation({
     senderId: v.string(),
     recipientNumericId: v.number(),
     amount: v.number(),
+    pin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.amount <= 0) throw new Error("Amount must be greater than zero");
@@ -597,6 +598,13 @@ export const sendById = mutation({
     if (!senderObjId) throw new Error("Invalid sender ID");
     const sender = await ctx.db.get(senderObjId);
     if (!sender) throw new Error("Sender not found");
+
+    // Security PIN protection check
+    if (sender.transactionPin) {
+      if (!args.pin || args.pin !== sender.transactionPin) {
+        throw new Error("Invalid transaction security PIN.");
+      }
+    }
 
     const recipient = await ctx.db
       .query("users")
@@ -610,15 +618,29 @@ export const sendById = mutation({
       throw new Error(`Insufficient balance. Available: $${available.toFixed(2)} USD`);
     }
 
-    // Deduct from sender
+    // Load system settings to get commission rate
+    const settings = await ctx.db.query("systemSettings").unique();
+    const feePercent = settings?.flatFeePercent ?? 0.5;
+    const fee = args.amount * (feePercent / 100);
+    const netAmount = args.amount - fee;
+
+    // Deduct total amount from sender
     await ctx.db.patch(senderObjId, {
       ethBalance: sender.ethBalance - args.amount,
     });
 
-    // Credit to recipient
+    // Credit net amount to recipient
     await ctx.db.patch(recipient._id, {
-      ethBalance: recipient.ethBalance + args.amount,
+      ethBalance: recipient.ethBalance + netAmount,
     });
+
+    // Route commission fee to system admin
+    const admin = await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com")).unique();
+    if (admin && fee > 0) {
+      await ctx.db.patch(admin._id, {
+        ethBalance: admin.ethBalance + fee,
+      });
+    }
 
     // Transaction record for sender
     await ctx.db.insert("transactions", {
@@ -626,7 +648,7 @@ export const sendById = mutation({
       type: "send",
       amountETH: args.amount,
       amountUSD: args.amount,
-      note: `Sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId})`,
+      note: `Sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId}) — Fee: $${fee.toFixed(2)} USD (at ${feePercent}%)`,
       createdAt: new Date().toISOString(),
     });
 
@@ -634,9 +656,9 @@ export const sendById = mutation({
     await ctx.db.insert("transactions", {
       userId: recipient._id.toString(),
       type: "receive",
-      amountETH: args.amount,
-      amountUSD: args.amount,
-      note: `Received $${args.amount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId})`,
+      amountETH: netAmount,
+      amountUSD: netAmount,
+      note: `Received $${netAmount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId}) — Fee deducted: $${fee.toFixed(2)} USD`,
       createdAt: new Date().toISOString(),
     });
 
@@ -644,7 +666,7 @@ export const sendById = mutation({
     await ctx.db.insert("notifications", {
       userId: args.senderId,
       type: "transfer_sent",
-      message: `You sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId}).`,
+      message: `You sent $${args.amount.toFixed(2)} USD to @${recipient.username} (ID: ${args.recipientNumericId}). Fee: $${fee.toFixed(2)} USD.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
@@ -653,22 +675,14 @@ export const sendById = mutation({
     await ctx.db.insert("notifications", {
       userId: recipient._id.toString(),
       type: "transfer_received",
-      message: `You received $${args.amount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId}).`,
+      message: `You received $${netAmount.toFixed(2)} USD from @${sender.username} (ID: ${sender.numericId}).`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
 
-    return {
-      success: true,
-      newBalance: sender.ethBalance - args.amount,
-      recipient: {
-        username: recipient.username,
-        numericId: recipient.numericId,
-      },
-    };
+    return { success: true, recipient, newBalance: sender.ethBalance - args.amount };
   }
 });
-
 export const listWithdrawalRequests = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {

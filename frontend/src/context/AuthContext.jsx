@@ -276,13 +276,14 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); return null; }
   };
 
-  const sendById = async (recipientNumericId, amount) => {
+  const sendById = async (recipientNumericId, amount, pin) => {
     setLoading(true);
     try {
       const data = await convexSendById({
         senderId: user.id,
         recipientNumericId: parseInt(recipientNumericId),
         amount: parseFloat(amount),
+        pin: pin || undefined,
       });
       if (data?.success) {
         updateUser({ ethBalance: data.newBalance });
