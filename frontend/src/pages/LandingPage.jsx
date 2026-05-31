@@ -285,38 +285,90 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div className="landing-hero-gradient-1"></div>
         </div>
         <div className="landing-container">
-          <div className="landing-hero-content">
-            <div className="landing-hero-badge">
-              <span className="dot"></span>
-              <span>EthioSwap v2.4 Beta</span>
-            </div>
-            <h1 className="landing-hero-title">
-              Trade USD ($) & ETB.<br />
-              <span className="gold-text">Safe & Secure.</span>
-            </h1>
-            <p className="landing-hero-sub">
-              Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. No crypto knowledge required.
-            </p>
-            <div className="landing-hero-ctas">
-              <button onClick={onGetStarted} className="btn btn-gold btn-lg">
-                Create Account — It's Free
-              </button>
-              <a href="#download" className="btn btn-outline btn-lg">
-                📥 Download Android APK
-              </a>
-            </div>
-            <div className="landing-hero-stats">
-              <div className="landing-hero-stat">
-                <span className="number">100%</span>
-                <span className="label">Escrow Protected</span>
+          <div className="landing-hero-grid">
+            <div className="landing-hero-content">
+              <div className="landing-hero-badge">
+                <span className="dot"></span>
+                <span>EthioSwap v2.4 Beta</span>
               </div>
-              <div className="landing-hero-stat">
-                <span className="number">&lt; 15 Min</span>
-                <span className="label">Avg. Release Speed</span>
+              <h1 className="landing-hero-title">
+                Trade USD ($) & ETB.<br />
+                <span className="gold-text">Safe & Secure.</span>
+              </h1>
+              <p className="landing-hero-sub">
+                Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. No crypto knowledge required.
+              </p>
+              <div className="landing-hero-ctas">
+                <button onClick={onGetStarted} className="btn btn-gold btn-lg">
+                  Create Account — It's Free
+                </button>
+                <a href="#download" className="btn btn-outline btn-lg">
+                  📥 Download Android APK
+                </a>
               </div>
-              <div className="landing-hero-stat">
-                <span className="number">0%</span>
-                <span className="label">Commission Option</span>
+              <div className="landing-hero-stats">
+                <div className="landing-hero-stat">
+                  <span className="number">100%</span>
+                  <span className="label">Escrow Protected</span>
+                </div>
+                <div className="landing-hero-stat">
+                  <span className="number">&lt; 15 Min</span>
+                  <span className="label">Avg. Release Speed</span>
+                </div>
+                <div className="landing-hero-stat">
+                  <span className="number">0.5%</span>
+                  <span className="label">Low Platform Fee</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="landing-hero-visual-3d">
+              <div className="cube-wrapper">
+                <div className="floating-sphere sphere-1"></div>
+                <div className="floating-sphere sphere-2"></div>
+                
+                <div className="hologram-card">
+                  <div className="hologram-glass"></div>
+                  
+                  <div className="hologram-content">
+                    <div className="hologram-badge">
+                      <span className="badge-pill">SECURE ESCROW CONTRACT</span>
+                    </div>
+                    
+                    <div className="hologram-title">Dynamic Escrow</div>
+                    
+                    <div className="hologram-locker">
+                      <div className="locker-shield animate-float">
+                        <span className="shield-icon">🔒</span>
+                        <div className="shield-glow"></div>
+                      </div>
+                      
+                      <div className="orbit-asset usdt-token animate-orbit-1">
+                        <span className="asset-icon">💵</span>
+                        <span className="asset-label">USDT</span>
+                      </div>
+                      <div className="orbit-asset etb-token animate-orbit-2">
+                        <span className="asset-icon">🇪🇹</span>
+                        <span className="asset-label">ETB</span>
+                      </div>
+                    </div>
+                    
+                    <div className="hologram-metrics">
+                      <div className="metric-row">
+                        <span className="metric-label">Engine status</span>
+                        <span className="metric-value status-locked">🔒 SECURED BY LEDGER</span>
+                      </div>
+                      <div className="metric-row">
+                        <span className="metric-label">Transaction speed</span>
+                        <span className="metric-value">⚡ ~15 Seconds (TRC20)</span>
+                      </div>
+                      <div className="metric-row">
+                        <span className="metric-label">Active trade pools</span>
+                        <span className="metric-value active-pulse">● Live Indexer</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
