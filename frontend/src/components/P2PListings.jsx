@@ -212,82 +212,109 @@ const P2PListings = () => {
       </div>
 
       {/* ── Segmented Tab Control ── */}
-      <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', gap: '4px' }}>
+      <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '16px', padding: '4px', gap: '6px' }}>
         <button
           onClick={() => setP2pTab('buy')}
           style={{
-            flex: 1, padding: '10px 6px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font)', fontWeight: 700, fontSize: '12.5px',
-            background: p2pTab === 'buy' ? 'var(--gold)' : 'transparent',
-            color: p2pTab === 'buy' ? '#0A0C12' : 'var(--text-3)',
-            transition: 'all 0.15s ease',
+            flex: 1, padding: '12px 6px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font)', fontWeight: 800, fontSize: '13px',
+            background: p2pTab === 'buy' 
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.06))' 
+              : 'transparent',
+            color: p2pTab === 'buy' ? '#34D399' : 'var(--text-3)',
+            border: p2pTab === 'buy' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid transparent',
+            boxShadow: p2pTab === 'buy' ? '0 4px 12px rgba(16, 185, 129, 0.1)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          🟢 Buy USD
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} />
+          Buy USD
         </button>
         <button
           onClick={() => setP2pTab('sell')}
           style={{
-            flex: 1, padding: '10px 6px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font)', fontWeight: 700, fontSize: '12.5px',
-            background: p2pTab === 'sell' ? 'var(--gold)' : 'transparent',
-            color: p2pTab === 'sell' ? '#0A0C12' : 'var(--text-3)',
-            transition: 'all 0.15s ease',
+            flex: 1, padding: '12px 6px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--font)', fontWeight: 800, fontSize: '13px',
+            background: p2pTab === 'sell' 
+              ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(251, 191, 36, 0.06))' 
+              : 'transparent',
+            color: p2pTab === 'sell' ? '#FBBF24' : 'var(--text-3)',
+            border: p2pTab === 'sell' ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid transparent',
+            boxShadow: p2pTab === 'sell' ? '0 4px 12px rgba(245, 158, 11, 0.1)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          🟡 Sell USD
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block', boxShadow: '0 0 8px #F59E0B' }} />
+          Sell USD
         </button>
       </div>
 
       {/* ── Payment filter pills ─────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }}>
-        {['All', ...ALL_PAYMENT_METHODS.map(m => m.id)].map(p => (
-          <button key={p} onClick={() => setFilterPayment(p)} style={{
-            flexShrink: 0, padding: '6px 12px', borderRadius: '99px', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 600, transition: 'all 0.15s ease',
-            background: filterPayment === p ? 'var(--gold)' : 'var(--bg-elevated)',
-            color: filterPayment === p ? '#0A0C12' : 'var(--text-2)',
-            boxShadow: filterPayment === p ? '0 2px 8px rgba(200,150,44,0.3)' : 'none',
-          }}>
-            {p === 'All' ? '🌐 All' : (ALL_PAYMENT_METHODS.find(m => m.id === p)?.icon + ' ' + (ALL_PAYMENT_METHODS.find(m => m.id === p)?.label || p))}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        {['All', ...ALL_PAYMENT_METHODS.map(m => m.id)].map(p => {
+          const isSelected = filterPayment === p;
+          const method = ALL_PAYMENT_METHODS.find(m => m.id === p);
+          return (
+            <button key={p} onClick={() => setFilterPayment(p)} style={{
+              flexShrink: 0, padding: '8px 16px', borderRadius: '99px', border: '1px solid', cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700, transition: 'all 0.2s ease',
+              background: isSelected ? 'linear-gradient(135deg, var(--gold), var(--gold-light))' : 'rgba(255,255,255,0.02)',
+              color: isSelected ? '#0A0C12' : 'var(--text-2)',
+              borderColor: isSelected ? 'var(--gold-light)' : 'var(--border)',
+              boxShadow: isSelected ? '0 4px 12px rgba(200,150,44,0.25)' : 'none',
+            }}>
+              {p === 'All' ? '🌐 All Methods' : `${method?.icon} ${method?.label || p}`}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Preset Amount filter badges ─────────────────────── */}
-      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch', marginTop: '2px' }}>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginTop: '2px' }}>
         {[
           { id: 'All', label: '💰 All Amounts' },
           { id: 'under50', label: '💵 Under $50' },
           { id: '50to200', label: '💳 $50 - $200' },
           { id: 'over200', label: '🪙 $200+' },
-        ].map(b => (
-          <button key={b.id} type="button" onClick={() => setFilterAmountRange(b.id)} style={{
-            flexShrink: 0, padding: '5px 11px', borderRadius: '99px', border: '1px solid var(--border)', cursor: 'pointer',
-            fontFamily: 'var(--font)', fontSize: '10.5px', fontWeight: 600, transition: 'all 0.15s ease',
-            background: filterAmountRange === b.id ? 'var(--teal-bg)' : 'transparent',
-            color: filterAmountRange === b.id ? 'var(--teal-light)' : 'var(--text-3)',
-            borderColor: filterAmountRange === b.id ? 'var(--teal-light)' : 'var(--border)',
-          }}>
-            {b.label}
-          </button>
-        ))}
+        ].map(b => {
+          const isSelected = filterAmountRange === b.id;
+          return (
+            <button key={b.id} type="button" onClick={() => setFilterAmountRange(b.id)} style={{
+              flexShrink: 0, padding: '7px 14px', borderRadius: '99px', border: '1px solid', cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700, transition: 'all 0.2s ease',
+              background: isSelected ? 'var(--teal-bg)' : 'transparent',
+              color: isSelected ? 'var(--teal-light)' : 'var(--text-3)',
+              borderColor: isSelected ? 'var(--teal-light)' : 'var(--border)',
+              boxShadow: isSelected ? '0 0 10px rgba(0, 212, 170, 0.1)' : 'none',
+            }}>
+              {b.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── KYC Banner (if not verified) ─────────────────────── */}
       {!kycApproved && (
-        <div style={{
-          background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.2)',
-          borderRadius: '12px', padding: '14px 16px',
-          display: 'flex', alignItems: 'center', gap: '12px',
+        <div className="glass" style={{
+          background: 'rgba(251,191,36,0.03)', 
+          border: '1px solid rgba(251,191,36,0.2)',
+          borderLeft: '4px solid #F59E0B',
+          borderRadius: '16px', 
+          padding: '16px 20px',
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '16px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
         }}>
-          <div style={{ fontSize: '24px' }}>🛡️</div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--status-warning-text)' }}>
+          <div style={{ fontSize: '24px', filter: 'drop-shadow(0 0 8px rgba(251,191,36,0.3))' }}>🛡️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: '14px', color: '#FDE68A', letterSpacing: '-0.01em' }}>
               Identity Verification Required
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
-              You must complete KYC before buying or selling. Go to Profile → Verify Identity.
+            <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '4px', lineHeight: 1.4 }}>
+              Post listings and open escrow trades securely. Go to <strong style={{ color: 'var(--gold-light)' }}>Profile → Verify Identity</strong> to submit KYC documents.
             </div>
           </div>
         </div>
@@ -295,11 +322,11 @@ const P2PListings = () => {
 
       {/* ── Listings ─────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
-          <div style={{ fontWeight: 700, marginBottom: '4px' }}>No active offers</div>
-          <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
-            {filterPayment !== 'All' ? `No listings accept ${filterPayment}. Try a different filter.` : `Be the first to list a ${p2pTab === 'buy' ? 'sell' : 'buy'} offer!`}
+        <div className="card glass fade-in-2" style={{ padding: '60px 24px', textAlign: 'center', border: '1px dashed var(--border-hover)', borderRadius: '24px' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 16px', color: 'var(--text-3)' }}>📋</div>
+          <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-1)', marginBottom: '6px' }}>No active offers found</div>
+          <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0, lineHeight: 1.5, maxWidth: '280px', margin: '0 auto' }}>
+            {filterPayment !== 'All' ? `There are currently no listings matching the payment method "${filterPayment}".` : `Be the first one in Addis Ababa to post a ${p2pTab === 'buy' ? 'sell' : 'buy'} offer!`}
           </p>
         </div>
       ) : (

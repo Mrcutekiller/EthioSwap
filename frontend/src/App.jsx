@@ -375,7 +375,6 @@ const AppShell = () => {
       <header className="top-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Logo size={28} />
-          <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>EthioSwap</span>
         </div>
 
         {/* Desktop Navigation Links */}

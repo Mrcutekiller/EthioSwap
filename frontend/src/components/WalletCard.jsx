@@ -333,19 +333,37 @@ const WalletCard = () => {
       {activeSection === 'balance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* QR + Address */}
-          <div className="card fade-in-2">
-            <div className="section-title">Your Deposit Address</div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ background: 'white', padding: '6px', borderRadius: '8px', flexShrink: 0 }}>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=80&data=${wallet.ethAddress}`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
+          <div className="card glass fade-in-2" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '20px' }}>
+            <div className="section-title" style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '-0.01em', marginBottom: '14px' }}>Your Deposit Address</div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=${wallet.ethAddress}`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', marginBottom: '6px' }}>Send USD here (any network)</div>
-                <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '6px', padding: '8px', fontFamily: 'monospace', fontSize: '9.5px', color: 'var(--text-2)', wordBreak: 'break-all', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Send USD here (any network)</div>
+                <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '10.5px', color: 'var(--text-1)', wordBreak: 'break-all', lineHeight: 1.4, letterSpacing: '0.02em', userSelect: 'all' }}>
                   {wallet.ethAddress}
                 </div>
-                <button onClick={handleCopy} style={{ marginTop: '6px', background: 'none', border: 'none', color: copied ? 'var(--status-success-text)' : 'var(--gold-light)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                  {copied ? '✓ Copied!' : '📋 Copy Address'}
+                <button 
+                  onClick={handleCopy} 
+                  style={{ 
+                    marginTop: '8px', 
+                    background: copied ? 'var(--status-success-bg)' : 'rgba(200,150,44,0.1)', 
+                    border: copied ? '1px solid var(--status-success-border)' : '1px solid rgba(200,150,44,0.2)',
+                    borderRadius: '8px',
+                    color: copied ? 'var(--status-success-text)' : 'var(--gold-light)', 
+                    padding: '6px 12px',
+                    fontSize: '11px', 
+                    fontWeight: 700, 
+                    cursor: 'pointer', 
+                    fontFamily: 'var(--font)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {copied ? '✓ Copied Address' : '📋 Copy Address'}
                 </button>
               </div>
             </div>
