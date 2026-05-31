@@ -84,10 +84,11 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings, depositMock } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings, depositMock, confirmOnchainDeposit } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [checkingDeposit, setCheckingDeposit] = useState(false);
+  const [onchainTxHash, setOnchainTxHash] = useState('');
 
   // Transaction PIN states
   const setPinMutation = useMutation(api.users.setTransactionPin);
@@ -188,7 +189,7 @@ const WalletCard = () => {
   const wdDetails = getWithdrawalDetails();
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(wallet.ethAddress);
+    navigator.clipboard.writeText("TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c");
     setCopied(true); setSuccess('Address copied!');
     setTimeout(() => setCopied(false), 2000);
   };
@@ -738,12 +739,12 @@ const WalletCard = () => {
                     </div>
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                       <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=${wallet.ethAddress}`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>USDT TRC20 Deposit Address</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>USDT TRC20 Platform Receiving Address</div>
                         <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '10.5px', color: 'var(--text-1)', wordBreak: 'break-all', lineHeight: 1.4, letterSpacing: '0.02em', userSelect: 'all' }}>
-                          {wallet.ethAddress}
+                          TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c
                         </div>
                         <button 
                           onClick={handleCopy} 
@@ -766,42 +767,49 @@ const WalletCard = () => {
                         >
                           {copied ? '✓ Copied Address' : '📋 Copy TRC20 Address'}
                         </button>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '10px', padding: '8px 12px', marginTop: '12px', animation: 'fadeInUp 0.3s ease' }}>
-                          <span className="badge-pulse" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#00D4AA', boxShadow: '0 0 8px rgba(0, 212, 170, 0.6)' }}></span>
-                          <span style={{ fontSize: '10.5px', color: 'var(--indigo-light)', fontWeight: 600, letterSpacing: '0.01em' }}>
-                            Tron Network Status: <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>🟢 Stable (Avg. confirmation: 15-30s)</span>
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Faucet Simulation Panel */}
+                  {/* Real-Time Tron TRC20 Verification Form */}
                   <div style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.95) 0%, rgba(99,102,241,0.06) 100%)', border: '1px solid var(--indigo-border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--indigo-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>TRON Testnet Faucet</span>
-                      <span style={{ fontSize: '10px', color: 'var(--teal-light)', fontWeight: 600 }}>{depositFeePercent}% network fee</span>
+                      <span style={{ fontSize: '11px', color: 'var(--indigo-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Real-Time Verification</span>
+                      <span style={{ fontSize: '10px', color: 'var(--teal-light)', fontWeight: 600 }}>⚡ Automated</span>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-                      Instantly simulate an on-chain Tron Network USDT transaction. Click the button below to claim **${parseFloat(depAmount).toFixed(2)} USD** directly to your available balance for testing.
+                      Send exactly **${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD** to the platform receiving address above. Once sent, paste your Transaction Hash (TxID) below to instantly verify and credit your wallet.
                     </p>
+                    
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <input 
+                        type="text" 
+                        placeholder="Enter 64-char TxID (e.g. f83c...)" 
+                        className="input" 
+                        value={onchainTxHash} 
+                        onChange={e => setOnchainTxHash(e.target.value)} 
+                        required 
+                      />
+                    </div>
+
                     <button
                       type="button"
-                      disabled={checkingDeposit}
+                      disabled={checkingDeposit || !onchainTxHash.trim()}
                       onClick={async () => {
+                        if (!onchainTxHash.trim()) return;
                         setCheckingDeposit(true);
                         setSuccess('Scanning Tron blockchain block headers...');
-                        setTimeout(async () => {
-                          try {
-                            await depositMock(parseFloat(depAmount));
-                            setSuccess(`✓ Block confirmed! Faucet credited $${parseFloat(depAmount).toFixed(2)} USD (net of low Tron transaction fees) to your available wallet.`);
-                          } catch (err) {
-                            setError('Block confirmation timed out. Please try again.');
-                          } finally {
-                            setCheckingDeposit(false);
+                        try {
+                          const result = await confirmOnchainDeposit(parseFloat(depAmount) * (1 + depositFeePercent / 100), onchainTxHash);
+                          if (result?.success) {
+                            setSuccess(`✓ Deposit confirmed! Credited $${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD to your available balance.`);
+                            setOnchainTxHash('');
                           }
-                        }, 1500);
+                        } catch (err) {
+                          setError('Verification failed. Make sure TxID is valid and unique.');
+                        } finally {
+                          setCheckingDeposit(false);
+                        }
                       }}
                       className="btn btn-indigo btn-full animate-pulse"
                       style={{ padding: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}

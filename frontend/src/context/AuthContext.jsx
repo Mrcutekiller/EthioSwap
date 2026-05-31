@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
   const convexSendById             = useMutation(api.users.sendById);
   const convexApproveWithdrawal    = useMutation(api.admin.approveWithdrawal);
   const convexRejectWithdrawal     = useMutation(api.admin.rejectWithdrawal);
+  const convexAutoApproveOnchain   = useMutation(api.depositRequests.autoApproveOnchain);
 
   // ── Convex real-time queries ──────────────────────────
   const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
@@ -264,6 +265,16 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); }
   };
 
+  const confirmOnchainDeposit = async (amountUSD, senderReference) => {
+    setLoading(true);
+    try {
+      const data = await convexAutoApproveOnchain({ userId: user.id, amountUSD, senderReference });
+      setSuccess(`Deposit confirmed instantly!`);
+      return data;
+    } catch (err) { setError(err.message); return null; }
+    finally { setLoading(false); }
+  };
+
   const createDepositRequest = async (amountUSD, walletType, senderReference, screenshotUrl) => {
     setLoading(true);
     try {
@@ -407,6 +418,7 @@ export const AuthProvider = ({ children }) => {
       login, register, logout, unlock, updateUser, switchUser,
       createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
+      confirmOnchainDeposit,
       approveWithdrawalRequest, rejectWithdrawalRequest,
       acknowledgeWarning, sendById,
       ethUsdPrice: ETH_USD_PRICE,

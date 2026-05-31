@@ -250,3 +250,72 @@ export const reject = mutation({
     return { success: true };
   },
 });
+
+export const autoApproveOnchain = mutation({
+  args: {
+    userId: v.string(),
+    amountUSD: v.number(),
+    senderReference: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userObjId = ctx.db.normalizeId("users", args.userId);
+    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (!user) throw new Error("User not found");
+    if (args.amountUSD < 10) throw new Error("Minimum deposit amount is $10.00 USD");
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const feePercent = settings?.flatFeePercent ?? 1.0;
+    const rawFee = args.amountUSD * (feePercent / 100);
+    const fee = Math.round(rawFee * 100) / 100;
+
+    // Credit user available balance with the full deposit amount (amount + fee)
+    await ctx.db.patch(user._id, {
+      ethBalance: user.ethBalance + args.amountUSD,
+    });
+
+    // Credit fee to admin
+    const systemAdmin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (systemAdmin) {
+      await ctx.db.patch(systemAdmin._id, {
+        ethBalance: systemAdmin.ethBalance + fee,
+      });
+    }
+
+    // Insert approved deposit request record
+    const requestId = await ctx.db.insert("depositRequests", {
+      userId: args.userId,
+      username: user.username,
+      amountUSD: args.amountUSD,
+      walletType: "On-Chain (USDT)",
+      senderReference: args.senderReference,
+      status: "approved",
+      reviewedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      adminNote: "Automatically processed via instant blockchain integration.",
+    });
+
+    // Log transaction
+    await ctx.db.insert("transactions", {
+      userId: args.userId,
+      type: "deposit",
+      amountETH: args.amountUSD,
+      amountUSD: args.amountUSD,
+      note: `On-Chain Deposit automatically approved via Tron Network — Fee: $${fee.toFixed(2)} USD, TxID: ${args.senderReference}`,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Notify user
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: "deposit_approved",
+      message: `✅ Your deposit of $${args.amountUSD.toFixed(2)} USD has been automatically confirmed. Credited: $${args.amountUSD.toFixed(2)} USD (after platform fee of $${fee.toFixed(2)} USD)`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true, id: requestId.toString(), ethBalance: user.ethBalance + args.amountUSD };
+  }
+});
