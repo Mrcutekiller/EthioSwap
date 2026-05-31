@@ -101,6 +101,15 @@ export const register = mutation({
       throw new Error("Username is already taken");
     }
 
+    if (args.email) {
+      const existingEmail = await ctx.db.query("users")
+        .filter((q) => q.eq(q.field("email"), args.email.toLowerCase()))
+        .first();
+      if (existingEmail) {
+        throw new Error("Email is already registered");
+      }
+    }
+
     const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
 
     // Auto-increment numericId from counters

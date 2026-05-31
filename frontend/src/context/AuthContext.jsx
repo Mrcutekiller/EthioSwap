@@ -9,11 +9,60 @@ export const ETH_USD_PRICE = 3000.0;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]         = useState(null);
-  const [error, setError]       = useState(null);
+  const [error, setErrorState]  = useState(null);
   const [success, setSuccess]   = useState(null);
   const [loading, setLoading]   = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const idleTimer = useRef(null);
+
+  const setError = (message) => {
+    if (!message) {
+      setErrorState(null);
+      return;
+    }
+    const msg = message.toLowerCase();
+    if (msg.includes('username is already taken') || msg.includes('username already taken')) {
+      setErrorState('This username is already taken. Please choose another one.');
+      return;
+    }
+    if (msg.includes('email is already registered') || msg.includes('email already registered')) {
+      setErrorState('This email address is already registered. Try signing in.');
+      return;
+    }
+    if (msg.includes('invalid password') || msg.includes('incorrect password') || msg.includes('password mismatch')) {
+      setErrorState('Incorrect username or password. Please try again.');
+      return;
+    }
+    if (msg.includes('user not found') || msg.includes('no user found')) {
+      setErrorState('No account found with this username.');
+      return;
+    }
+    if (msg.includes('invalid transaction security pin') || msg.includes('invalid security transaction pin')) {
+      setErrorState('Incorrect transaction security PIN. Please try again.');
+      return;
+    }
+    if (msg.includes('insufficient balance') || msg.includes('insufficient available usd balance')) {
+      setErrorState('Insufficient balance to complete this transfer.');
+      return;
+    }
+    if (msg.includes('kyc verification required') || msg.includes('kyc identity verification')) {
+      setErrorState('KYC identity verification is required to perform this action.');
+      return;
+    }
+    if (msg.includes('minimum withdrawal amount')) {
+      setErrorState('Minimum withdrawal amount is $10.00 USD.');
+      return;
+    }
+    if (msg.includes('minimum deposit amount')) {
+      setErrorState('Minimum deposit amount is $10.00 USD.');
+      return;
+    }
+    const cleanMsg = message
+      .replace(/^Uncaught\s+Error:\s*/i, '')
+      .replace(/^ConvexError:\s*/i, '')
+      .replace(/\[\w+\]\s*/, '');
+    setErrorState(cleanMsg);
+  };
 
   // ── Convex mutations ──────────────────────────────────
   const convexLogin                = useMutation(api.users.login);

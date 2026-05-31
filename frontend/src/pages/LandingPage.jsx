@@ -844,14 +844,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 Ethiopia's premium peer-to-peer USD escrow exchange. Trade stable USD ($) safely using local bank transfers and mobile wallets.
               </p>
               <div className="landing-social-links">
-                <a href="https://t.me/ethioswap_p2p" target="_blank" rel="noreferrer" className="landing-social-link">
+                <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" className="landing-social-link" title="Telegram Channel">
                   ✈️
                 </a>
-                <a href="https://twitter.com/ethioswap" target="_blank" rel="noreferrer" className="landing-social-link">
-                  🐦
+                <a href="https://www.tiktok.com/@EthioSwap" target="_blank" rel="noreferrer" className="landing-social-link" title="TikTok Profile">
+                  🎵
                 </a>
-                <a href="https://github.com/ethioswap" target="_blank" rel="noreferrer" className="landing-social-link">
-                  🐱
+                <a href="https://www.instagram.com/EthioSwap" target="_blank" rel="noreferrer" className="landing-social-link" title="Instagram Profile">
+                  📸
                 </a>
               </div>
             </div>
@@ -871,7 +871,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <ul>
                 <li><a href="#about-us">About Us</a></li>
                 <li><a href="#faq">FAQ Help</a></li>
-                <li><a href="https://t.me/your_telegram_here" target="_blank" rel="noreferrer">Telegram Support 💬</a></li>
+                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer">Telegram Support 💬</a></li>
               </ul>
             </div>
             
