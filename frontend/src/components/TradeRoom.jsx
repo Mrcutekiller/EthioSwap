@@ -296,20 +296,95 @@ const TradeRoom = () => {
       {/* RIGHT COLUMN: Active Trade Room */}
       {activeTrade ? (
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          
-          {/* Progress Stepper */}
-          <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {tradeSteps.map((s, i) => (
-              <React.Fragment key={i}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: currentStep >= i ? 'var(--gold)' : 'var(--bg-base)', border: `2px solid ${currentStep >= i ? 'var(--gold)' : 'var(--border)'}`, color: currentStep >= i ? '#0A0C12' : 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
-                    {currentStep > i ? '✓' : i + 1}
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: currentStep === i ? 700 : 500, color: currentStep === i ? 'var(--text-1)' : 'var(--text-3)' }}>{s.label}</span>
+          {/* V3 Interactive Escrow Timeline Tracker */}
+          <div style={{ padding: '20px 24px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', width: '100%', padding: '0 10px' }}>
+              
+              {/* Connected Line Background */}
+              <div style={{ position: 'absolute', top: '16px', left: '60px', right: '60px', height: '3px', background: 'var(--border)', zIndex: 1 }} />
+              
+              {/* Dynamic Active Line Progress */}
+              <div style={{ 
+                position: 'absolute', 
+                top: '16px', 
+                left: '60px', 
+                width: `${currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : currentStep === 3 ? '100%' : '0%'}`, 
+                height: '3px', 
+                background: `linear-gradient(90deg, var(--gold) 0%, ${currentStep >= 2 ? 'var(--indigo)' : 'var(--gold)'} 50%, ${currentStep >= 3 ? 'var(--teal)' : 'var(--border)'} 100%)`, 
+                transition: 'width 0.4s var(--ease)', 
+                zIndex: 2 
+              }} />
+
+              {/* Step 1: Escrow Opened */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 3, flex: 1 }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  background: currentStep >= 1 ? 'rgba(200, 150, 44, 0.15)' : 'var(--bg-base)', 
+                  border: `2px solid ${currentStep >= 1 ? 'var(--gold)' : 'var(--border)'}`, 
+                  boxShadow: currentStep === 1 ? '0 0 15px rgba(200, 150, 44, 0.4)' : 'none',
+                  color: currentStep >= 1 ? 'var(--gold-light)' : 'var(--text-3)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  fontSize: '14px', 
+                  fontWeight: 800,
+                  transition: 'all 0.3s'
+                }} className={currentStep === 1 ? 'badge-pulse' : ''}>
+                  {currentStep > 1 ? '✓' : '🔒'}
                 </div>
-                {i < tradeSteps.length - 1 && <div style={{ flex: 1, height: '2px', background: currentStep > i ? 'var(--gold)' : 'var(--border)', margin: '0 16px' }} />}
-              </React.Fragment>
-            ))}
+                <span style={{ fontSize: '11px', fontWeight: currentStep >= 1 ? 700 : 500, color: currentStep >= 1 ? 'var(--text-1)' : 'var(--text-3)', textAlign: 'center' }}>Escrow Opened</span>
+                <span style={{ fontSize: '9px', color: 'var(--gold-light)', opacity: currentStep >= 1 ? 0.8 : 0.4 }}>USD Locked</span>
+              </div>
+
+              {/* Step 2: Payment Transferred */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 3, flex: 1 }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  background: currentStep >= 2 ? 'rgba(99, 102, 241, 0.15)' : 'var(--bg-base)', 
+                  border: `2px solid ${currentStep >= 2 ? 'var(--indigo)' : 'var(--border)'}`, 
+                  boxShadow: currentStep === 2 ? '0 0 15px rgba(99, 102, 241, 0.4)' : 'none',
+                  color: currentStep >= 2 ? 'var(--indigo-light)' : 'var(--text-3)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  fontSize: '14px', 
+                  fontWeight: 800,
+                  transition: 'all 0.3s'
+                }} className={currentStep === 2 ? 'badge-pulse' : ''}>
+                  {currentStep > 2 ? '✓' : '💸'}
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: currentStep >= 2 ? 700 : 500, color: currentStep >= 2 ? 'var(--text-1)' : 'var(--text-3)', textAlign: 'center' }}>Payment Sent</span>
+                <span style={{ fontSize: '9px', color: 'var(--indigo-light)', opacity: currentStep >= 2 ? 0.8 : 0.4 }}>Proof Uploaded</span>
+              </div>
+
+              {/* Step 3: Escrow Released */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', zIndex: 3, flex: 1 }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  background: currentStep >= 3 ? 'rgba(0, 212, 170, 0.15)' : 'var(--bg-base)', 
+                  border: `2px solid ${currentStep >= 3 ? 'var(--teal)' : 'var(--border)'}`, 
+                  boxShadow: currentStep === 3 ? '0 0 15px rgba(0, 212, 170, 0.4)' : 'none',
+                  color: currentStep >= 3 ? 'var(--teal-light)' : 'var(--text-3)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  fontSize: '14px', 
+                  fontWeight: 800,
+                  transition: 'all 0.3s'
+                }} className={currentStep === 3 ? 'badge-pulse' : ''}>
+                  🤝
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: currentStep >= 3 ? 700 : 500, color: currentStep >= 3 ? 'var(--text-1)' : 'var(--text-3)', textAlign: 'center' }}>Escrow Released</span>
+                <span style={{ fontSize: '9px', color: 'var(--teal-light)', opacity: currentStep >= 3 ? 0.8 : 0.4 }}>Trade Completed</span>
+              </div>
+
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', flex: 1, overflow: 'hidden' }}>

@@ -146,6 +146,47 @@ const WalletCard = () => {
   const available = wallet.ethAvailable ?? (wallet.ethBalance - (wallet.ethLocked || 0));
   const etbTotal  = wallet.ethBalance * rate;
 
+  const getWithdrawalDetails = () => {
+    const amt = parseFloat(withdrawAmt) || 0;
+    const commPercent = systemSettings?.commissionValue ?? 1.0;
+    const platformFee = Math.round((amt * commPercent / 100) * 100) / 100;
+    
+    let netFee = 0.00;
+    let methodLabel = '✓ Free transfer';
+    let deliveryLabel = '~5-15 mins';
+    
+    if (withdrawMethod === 'onchain') {
+      const dest = destAddress.trim();
+      if (dest.startsWith('T') || dest.startsWith('t')) {
+        netFee = 0.10;
+        methodLabel = 'flat $0.10 network fee (Tron TRC20)';
+        deliveryLabel = '~15 sec (Tron)';
+      } else if (dest.startsWith('0x') || dest.startsWith('0X')) {
+        netFee = 0.50;
+        methodLabel = 'flat $0.50 network fee (Ethereum ERC20)';
+        deliveryLabel = '~2-5 mins (Ethereum)';
+      } else {
+        netFee = 0.10;
+        methodLabel = 'flat $0.10 network fee (Tron TRC20)';
+        deliveryLabel = '~15 sec (Tron)';
+      }
+    }
+    
+    const totalFee = Math.round((platformFee + netFee) * 100) / 100;
+    const amountYouWillGet = Math.round(Math.max(amt - totalFee, 0) * 100) / 100;
+    
+    return {
+      platformFee,
+      netFee,
+      totalFee,
+      amountYouWillGet,
+      methodLabel,
+      deliveryLabel,
+      commPercent
+    };
+  };
+  const wdDetails = getWithdrawalDetails();
+
   const handleCopy = () => {
     navigator.clipboard.writeText(wallet.ethAddress);
     setCopied(true); setSuccess('Address copied!');
@@ -725,6 +766,13 @@ const WalletCard = () => {
                         >
                           {copied ? '✓ Copied Address' : '📋 Copy TRC20 Address'}
                         </button>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '10px', padding: '8px 12px', marginTop: '12px', animation: 'fadeInUp 0.3s ease' }}>
+                          <span className="badge-pulse" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#00D4AA', boxShadow: '0 0 8px rgba(0, 212, 170, 0.6)' }}></span>
+                          <span style={{ fontSize: '10.5px', color: 'var(--indigo-light)', fontWeight: 600, letterSpacing: '0.01em' }}>
+                            Tron Network Status: <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>🟢 Stable (Avg. confirmation: 15-30s)</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1085,20 +1133,20 @@ const WalletCard = () => {
                   <span style={{ fontWeight: 700 }}>${parseFloat(withdrawAmt).toFixed(2)} USD</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
-                  <span>Platform Commission ({(systemSettings?.commissionValue ?? 1.0).toFixed(1)}%):</span>
-                  <span style={{ color: 'var(--status-danger-text)' }}>-${(parseFloat(withdrawAmt) * (systemSettings?.commissionValue ?? 1.0) / 100).toFixed(2)} USD</span>
+                  <span>Platform Commission ({wdDetails.commPercent.toFixed(1)}%):</span>
+                  <span style={{ color: 'var(--status-danger-text)' }}>-${wdDetails.platformFee.toFixed(2)} USD</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
                   <span>Network Transfer Cost:</span>
-                  <span style={{ color: 'var(--text-2)' }}>{withdrawMethod === 'onchain' ? '~$0.10 network fee' : '✓ Free transfer'}</span>
+                  <span style={{ color: 'var(--text-2)' }}>{wdDetails.methodLabel}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
                   <span>Estimated Delivery:</span>
-                  <span style={{ color: 'var(--text-2)' }}>{withdrawMethod === 'onchain' ? '~15 sec (Tron)' : '~5-15 mins'}</span>
+                  <span style={{ color: 'var(--text-2)' }}>{wdDetails.deliveryLabel}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>
                   <span style={{ fontWeight: 700 }}>Amount You Will Get:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '14px' }}>${(parseFloat(withdrawAmt) * (1 - (systemSettings?.commissionValue ?? 1.0) / 100)).toFixed(2)} USD</span>
+                  <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '14px' }}>${wdDetails.amountYouWillGet.toFixed(2)} USD</span>
                 </div>
               </div>
             ) : (

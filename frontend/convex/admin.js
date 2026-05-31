@@ -69,13 +69,31 @@ export const getRevenue = query({
     const totalWithdrawal = withdrawals.reduce((s, t) => s + t.amountUSD, 0);
     const volumeUSD       = completedInPeriod.reduce((s, t) => s + (t.amountETH * USD_RATE), 0);
 
+    // Helper to calculate exact hybrid withdrawal fee for revenue calculations
+    const getWithdrawalFee = (r) => {
+      let networkFee = 0.00;
+      const isExchange = r.walletType.includes("Binance") || r.walletType.includes("Bybit") || r.walletType.includes("Pay");
+      if (!isExchange) {
+        const dest = r.destinationAddress.trim();
+        if (dest.startsWith("T") || dest.startsWith("t")) {
+          networkFee = 0.10;
+        } else if (dest.startsWith("0x") || dest.startsWith("0X")) {
+          networkFee = 0.50;
+        } else {
+          networkFee = 0.10;
+        }
+      }
+      const platformFee = Math.round((r.amountUSD * (feePercent / 100)) * 100) / 100;
+      return Math.round((platformFee + networkFee) * 100) / 100;
+    };
+
     // Calculate detailed fees in period
     const p2pFeesPeriod = completedInPeriod.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
     const depositFeesPeriod = depositsInPeriod.reduce((s, r) => {
       const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
       return s + Math.max(fee, 0);
     }, 0);
-    const withdrawalFeesPeriod = withdrawalsInPeriod.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+    const withdrawalFeesPeriod = withdrawalsInPeriod.reduce((s, r) => s + getWithdrawalFee(r), 0);
     const feesUSD = p2pFeesPeriod + depositFeesPeriod + withdrawalFeesPeriod;
 
     // Build 7-day chart
@@ -107,7 +125,7 @@ export const getRevenue = query({
         const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
         return s + Math.max(fee, 0);
       }, 0);
-      const dayWithFees = dayWithdrawReqsApproved.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+      const dayWithFees = dayWithdrawReqsApproved.reduce((s, r) => s + getWithdrawalFee(r), 0);
 
       chartData.push({
         day: dayStart.toLocaleDateString("en-US", { weekday: "short" }),
@@ -127,7 +145,7 @@ export const getRevenue = query({
       const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
       return s + Math.max(fee, 0);
     }, 0);
-    const allWithdrawalFees = withdrawReqs.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+    const allWithdrawalFees = withdrawReqs.reduce((s, r) => s + getWithdrawalFee(r), 0);
     const allFees = Math.round((allP2pFees + allDepositFees + allWithdrawalFees) * 100) / 100;
     
     const allTrades      = trades;
@@ -406,8 +424,24 @@ export const approveWithdrawal = mutation({
 
     const settings = await ctx.db.query("systemSettings").first();
     const feePercent = settings?.flatFeePercent ?? 1.0;
-    const rawFee = req.amountUSD * (feePercent / 100);
-    const fee = Math.round(rawFee * 100) / 100;
+    
+    // Determine dynamic flat network fee
+    let networkFee = 0.00;
+    const isExchange = req.walletType.includes("Binance") || req.walletType.includes("Bybit") || req.walletType.includes("Pay");
+    if (!isExchange) {
+      const dest = req.destinationAddress.trim();
+      if (dest.startsWith("T") || dest.startsWith("t")) {
+        networkFee = 0.10;
+      } else if (dest.startsWith("0x") || dest.startsWith("0X")) {
+        networkFee = 0.50;
+      } else {
+        networkFee = 0.10; // Default to Tron TRC20 network fee
+      }
+    }
+
+    const rawPlatformFee = req.amountUSD * (feePercent / 100);
+    const platformFee = Math.round(rawPlatformFee * 100) / 100;
+    const fee = Math.round((platformFee + networkFee) * 100) / 100;
     const netAmount = Math.round((req.amountUSD - fee) * 100) / 100;
 
     const systemAdmin = await ctx.db

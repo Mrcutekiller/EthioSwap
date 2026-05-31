@@ -486,12 +486,29 @@ export const withdrawETH = mutation({
       throw new Error("Insufficient USD balance");
     }
 
+    // Anti-spam velocity gating: max 2 pending withdrawals per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const pendingWithdrawals = await ctx.db
+      .query("withdrawRequests")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    const recentPending = pendingWithdrawals.filter(
+      (r) => r.status === "pending" && r.createdAt >= oneHourAgo
+    );
+    if (recentPending.length >= 2) {
+      throw new Error("Velocity limit exceeded: Maximum 2 pending withdrawals allowed per hour. Please wait for an administrator to review your pending requests.");
+    }
+
     const newBalance = user.ethBalance - args.amountETH;
     await ctx.db.patch(user._id, { ethBalance: newBalance });
 
     let walletType = "On-Chain (USDT)";
     let destAddress = args.destinationAddress;
-    if (args.destinationAddress.includes(":")) {
+    if (args.destinationAddress.includes(" | ")) {
+      const parts = args.destinationAddress.split(" | ");
+      walletType = parts[0];
+      destAddress = parts.slice(1).join(" | ");
+    } else if (args.destinationAddress.includes(":")) {
       const parts = args.destinationAddress.split(":");
       walletType = parts[0];
       destAddress = parts[1];

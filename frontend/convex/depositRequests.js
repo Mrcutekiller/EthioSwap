@@ -16,6 +16,19 @@ export const create = mutation({
     if (!user) throw new Error("User not found");
     if (args.amountUSD < 10) throw new Error("Minimum deposit amount is $10.00 USD");
 
+    // Anti-spam velocity gating: max 3 pending deposits per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const pendingDeposits = await ctx.db
+      .query("depositRequests")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+    const recentPending = pendingDeposits.filter(
+      (r) => r.status === "pending" && r.createdAt >= oneHourAgo
+    );
+    if (recentPending.length >= 3) {
+      throw new Error("Velocity limit exceeded: Maximum 3 pending manual deposits allowed per hour. Please wait for an administrator to review your pending requests.");
+    }
+
     const id = await ctx.db.insert("depositRequests", {
       userId: args.userId,
       username: user.username,
