@@ -1078,26 +1078,34 @@ const WalletCard = () => {
               {withdrawAmt && <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>≈ {Math.round(parseFloat(withdrawAmt) * rate).toLocaleString()} ETB</div>}
             </div>
 
-            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-3)' }}>Platform Withdrawal Fee</span>
-                <span style={{ fontWeight: 600, color: 'var(--status-danger-text)' }}>{(systemSettings?.commissionValue ?? 1.0).toFixed(1)}% (routed to admin)</span>
-              </div>
-              {withdrawAmt && !isNaN(parseFloat(withdrawAmt)) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
-                  <span>You receive (net)</span>
-                  <span>${(parseFloat(withdrawAmt) * (1 - (systemSettings?.commissionValue ?? 1.0) / 100)).toFixed(2)} USD</span>
+            {withdrawAmt && !isNaN(parseFloat(withdrawAmt)) && parseFloat(withdrawAmt) >= 10 ? (
+              <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInUp 0.15s ease', marginTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-2)' }}>
+                  <span>Requested Withdrawal:</span>
+                  <span style={{ fontWeight: 700 }}>${parseFloat(withdrawAmt).toFixed(2)} USD</span>
                 </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-3)' }}>Network fee</span>
-                <span style={{ fontWeight: 500 }}>{withdrawMethod === 'onchain' ? '~$0.10 (TRC20) / $0.50 (ERC20)' : '✓ FREE'}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
+                  <span>Platform Commission ({(systemSettings?.commissionValue ?? 1.0).toFixed(1)}%):</span>
+                  <span style={{ color: 'var(--status-danger-text)' }}>-${(parseFloat(withdrawAmt) * (systemSettings?.commissionValue ?? 1.0) / 100).toFixed(2)} USD</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
+                  <span>Network Transfer Cost:</span>
+                  <span style={{ color: 'var(--text-2)' }}>{withdrawMethod === 'onchain' ? '~$0.10 network fee' : '✓ Free transfer'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
+                  <span>Estimated Delivery:</span>
+                  <span style={{ color: 'var(--text-2)' }}>{withdrawMethod === 'onchain' ? '~15 sec (Tron)' : '~5-15 mins'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>
+                  <span style={{ fontWeight: 700 }}>Amount You Will Get:</span>
+                  <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '14px' }}>${(parseFloat(withdrawAmt) * (1 - (systemSettings?.commissionValue ?? 1.0) / 100)).toFixed(2)} USD</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-3)' }}>Confirmation time</span>
-                <span style={{ fontWeight: 500 }}>{withdrawMethod === 'onchain' ? '~15 seconds (Tron) / ~2 min (ETH)' : '~5–15 mins'}</span>
+            ) : (
+              <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', padding: '10px 12px', borderRadius: '8px', marginTop: '12px', lineHeight: 1.4 }}>
+                ⚠️ Enter a withdrawal amount of $10.00 USD or more to calculate commission fees and estimate the final amount you will receive.
               </div>
-            </div>
+            )}
 
             {user.transactionPin && (
               <div className="input-group fade-in-2" style={{ marginTop: '12px', marginBottom: '8px' }}>
