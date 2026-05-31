@@ -196,13 +196,13 @@ const AdminPanel = ({ user }) => {
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
   const [etbRateSell,      setEtbRateSell]     = useState('');
-  const [commissionValue,  setCommissionValue]  = useState('1.0');
+  const [commissionValue,  setCommissionValue]  = useState('0.5');
 
   useEffect(() => {
     if (settings) {
       setEtbRate(settings.etbRatePerDollar);
       setEtbRateSell(settings.etbRatePerDollarSell ?? settings.etbRatePerDollar ?? 186.0);
-      setCommissionValue(settings.commissionValue?.toString() || '1.0');
+      setCommissionValue(settings.commissionValue?.toString() || '0.5');
     }
   }, [settings]);
 
@@ -874,7 +874,7 @@ const AdminPanel = ({ user }) => {
               { label: 'This Week',  value: m?.feesThisWeek ?? 0,     icon: '📅' },
               { label: 'All Time',   value: m?.totalMyProfit ?? 0,    icon: '♾️' },
               { label: 'Wallet $',   value: adminEarnings?.walletBalance ?? 0, icon: '💳' },
-              { label: 'Commission', value: settings?.commissionValue ?? 1.0,  icon: '⚙️', suffix: '%' },
+              { label: 'Commission', value: settings?.commissionValue ?? 0.5,  icon: '⚙️', suffix: '%' },
             ].map((card, i) => (
               <div key={i} className="metric-card metric-card-teal fade-in-1">
                 <div style={{ fontSize: '18px', marginBottom: '4px' }}>{card.icon}</div>

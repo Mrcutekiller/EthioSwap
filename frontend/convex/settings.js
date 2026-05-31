@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
   masterWalletBalanceETH: 0.0,
   masterWalletAddress: "0x71C259654103112E118830F25f82bb54aA20336d",
   commissionType: "percentage",
-  commissionValue: 1.0,
+  commissionValue: 0.5,
 };
 
 export const get = query({
