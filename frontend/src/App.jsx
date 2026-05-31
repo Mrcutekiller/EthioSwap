@@ -253,10 +253,6 @@ const AppShell = () => {
     );
   }
 
-  // Locked → show lock screen
-  if (isLocked) {
-    return <AppLockScreen user={user} lockMethod={lockMethod} savedPin={savedPin} onUnlock={unlock} />;
-  }
 
   // Suspended → show gorgeous suspension lock screen
   if (user?.isSuspended) {

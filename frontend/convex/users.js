@@ -303,11 +303,16 @@ export const updateKycDocs = mutation({
     const patch = {};
     if (args.idFront) patch.kycIdFront = args.idFront;
     if (args.idBack) patch.kycIdBack = args.idBack;
-    if (patch.kycIdFront && patch.kycIdBack) patch.kycStep = "id_uploaded";
+
+    const hasFront = patch.kycIdFront || user.kycIdFront;
+    const hasBack = patch.kycIdBack || user.kycIdBack;
+    if (hasFront && hasBack) {
+      patch.kycStep = "id_uploaded";
+    }
 
     await ctx.db.patch(userObjId, patch);
 
-    return { kycStep: user.kycStep || "id_uploaded" };
+    return { kycStep: patch.kycStep || user.kycStep || "id_uploaded" };
   }
 });
 

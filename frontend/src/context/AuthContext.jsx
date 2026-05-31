@@ -62,9 +62,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsed = JSON.parse(saved);
         setUser(parsed);
-        // Force lock screen to pop up immediately on launch/open (only if lock is enabled)
-        const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
-        if (lockEnabled) setIsLocked(true);
       } catch {}
     }
   }, []);
@@ -107,15 +104,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, [wallet]);
 
-  // Idle lock timer (5 minutes)
+  // Idle lock timer (disabled)
   const resetIdleTimer = useCallback(() => {
     clearTimeout(idleTimer.current);
-    if (!user) return;
-    const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
-    if (lockEnabled) {
-      idleTimer.current = setTimeout(() => setIsLocked(true), 5 * 60 * 1000);
-    }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -139,8 +131,6 @@ export const AuthProvider = ({ children }) => {
       const data = await convexLogin({ username, password });
       persistUser(data);
       setSuccess(`Welcome back, ${data.username}!`);
-      const lockEnabled = localStorage.getItem('ethioswap_lock_enabled') !== 'false';
-      if (lockEnabled) setIsLocked(true);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
@@ -159,7 +149,6 @@ export const AuthProvider = ({ children }) => {
       });
       persistUser(data);
       setSuccess('Account created! Complete KYC verification to start trading.');
-      setIsLocked(true);
       return data;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }

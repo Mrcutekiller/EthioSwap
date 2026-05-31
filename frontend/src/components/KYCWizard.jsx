@@ -32,12 +32,11 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
   const streamRef = useRef(null);
 
   // Helper to compress and convert File/Blob to compressed base64 JPEG
-  const toBase64 = (file) => new Promise((resolve, reject) => {
+  const compressImage = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = new Image();
-      img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const MAX_WIDTH = 480;
@@ -66,9 +65,14 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
         const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.4);
         resolve(compressedDataUrl);
       };
-      img.onerror = () => reject(new Error("Failed to load image for compression"));
+      img.onerror = () => {
+        reject(new Error("Failed to load image for compression"));
+      };
+      img.src = event.target.result;
     };
-    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onerror = (err) => {
+      reject(new Error("Failed to read file"));
+    };
   });
 
   // Cleanup camera on unmount
@@ -121,23 +125,38 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
   const handleCapture = async () => {
     const blob = await captureFrame();
     if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const file = new File([blob], `${cameraTarget}_capture.jpg`, { type: 'image/jpeg' });
-
-    if (cameraTarget === 'front') { setIdFront(file); setFrontPreview(url); }
-    else if (cameraTarget === 'back') { setIdBack(file); setBackPreview(url); }
-    else if (cameraTarget === 'face') { setSelfieCapture(file); setSelfiePreview(url); }
-
-    stopCamera();
+    setLoading(true);
+    setError('');
+    try {
+      const compressed = await compressImage(blob);
+      if (cameraTarget === 'front') { setIdFront(compressed); setFrontPreview(compressed); }
+      else if (cameraTarget === 'back') { setIdBack(compressed); setBackPreview(compressed); }
+      else if (cameraTarget === 'face') { setSelfieCapture(compressed); setSelfiePreview(compressed); }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to compress captured image.');
+    } finally {
+      setLoading(false);
+      stopCamera();
+    }
   };
 
-  const handleFileChange = (e, side) => {
+  const handleFileChange = async (e, side) => {
     const file = e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    if (side === 'front') { setIdFront(file); setFrontPreview(url); }
-    else if (side === 'back') { setIdBack(file); setBackPreview(url); }
-    else if (side === 'face') { setSelfieCapture(file); setSelfiePreview(url); }
+    setLoading(true);
+    setError('');
+    try {
+      const compressed = await compressImage(file);
+      if (side === 'front') { setIdFront(compressed); setFrontPreview(compressed); }
+      else if (side === 'back') { setIdBack(compressed); setBackPreview(compressed); }
+      else if (side === 'face') { setSelfieCapture(compressed); setSelfiePreview(compressed); }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to read and compress image. Please try a different photo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveInfo = async (e) => {
@@ -169,31 +188,16 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!idFront || !idBack) { setError('Please capture or upload both front and back of your ID.'); return; }
     setLoading(true); setError('');
     try {
-      const frontBase64 = await toBase64(idFront);
-      
       await updateDocs({
         userId: user.id,
-        idFront: frontBase64,
-        idBack: '',
-      });
-
-      const backBase64 = await toBase64(idBack);
-      
-      await updateDocs({
-        userId: user.id,
-        idFront: '',
-        idBack: backBase64,
+        idFront: idFront,
+        idBack: idBack,
       });
 
       setStep(5); // Go to selfie step
     } catch (err) {
       console.error('KYC upload error:', err);
-      const msg = err?.message || '';
-      if (msg.includes('too long') || msg.includes('too large') || msg.includes('1MB') || msg.includes('size')) {
-        setError('Images too large. Please use smaller/lower-quality images and try again.');
-      } else {
-        setError(msg || 'Upload failed. Try again.');
-      }
+      setError(err.message || 'Upload failed. Try again.');
     } finally {
       setLoading(false);
     }
@@ -203,11 +207,9 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!selfieCapture) { setError('Please capture a selfie first.'); return; }
     setLoading(true); setError('');
     try {
-      const selfieBase64 = await toBase64(selfieCapture);
-      
       const updatedUser = await updateSelfie({
         userId: user.id,
-        selfie: selfieBase64
+        selfie: selfieCapture
       });
       setStep(6); // Done
       if (onComplete) onComplete(updatedUser);
