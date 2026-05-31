@@ -141,7 +141,7 @@ const WalletCard = () => {
   );
 
   const rate      = systemSettings?.etbRatePerDollar ?? 190;
-  const depositFeePercent = systemSettings?.flatFeePercent ?? 0.5;
+  const depositFeePercent = systemSettings?.flatFeePercent ?? 1.0;
   const depositFeeLabel = depositFeePercent > 0 ? `${depositFeePercent}% Fee` : 'No Fee';
   const available = wallet.ethAvailable ?? (wallet.ethBalance - (wallet.ethLocked || 0));
   const etbTotal  = wallet.ethBalance * rate;

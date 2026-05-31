@@ -94,10 +94,10 @@ export const AuthProvider = ({ children }) => {
 
   const systemSettings = settings ?? {
     etbRatePerDollar: 190.0,
-    flatFeePercent: 0.5,
+    flatFeePercent: 1.0,
     maxFeeUSD: 0.5,
     commissionType: 'percentage',
-    commissionValue: 0.5,
+    commissionValue: 1.0,
   };
 
   // Auto-clear alerts

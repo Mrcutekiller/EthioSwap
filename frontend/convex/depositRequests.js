@@ -125,7 +125,7 @@ export const approve = mutation({
     if (!user) throw new Error("User not found");
 
     const settings = await ctx.db.query("systemSettings").first();
-    const feePercent = settings?.flatFeePercent ?? 0.5;
+    const feePercent = settings?.flatFeePercent ?? 1.0;
     const rawFee = req.amountUSD * (feePercent / 100);
     const fee = Math.round(rawFee * 100) / 100;
     const netAmount = Math.round((req.amountUSD - fee) * 100) / 100;

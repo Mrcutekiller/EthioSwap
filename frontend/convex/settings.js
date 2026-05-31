@@ -4,13 +4,13 @@ import { v } from "convex/values";
 const DEFAULT_SETTINGS = {
   etbRatePerDollar: 190.0,
   etbRatePerDollarSell: 186.0,
-  flatFeePercent: 0.5,
+  flatFeePercent: 1.0,
   maxFeeUSD: 0.50,
   collectedFeesETH: 0.0,
   masterWalletBalanceETH: 0.0,
   masterWalletAddress: "0x71C259654103112E118830F25f82bb54aA20336d",
   commissionType: "percentage",
-  commissionValue: 0.5,
+  commissionValue: 1.0,
 };
 
 export const get = query({

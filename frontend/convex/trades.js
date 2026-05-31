@@ -102,7 +102,7 @@ export const releaseEscrow = mutation({
     // Calculate commission
     const settings = await ctx.db.query("systemSettings").first();
     const commissionType = settings?.commissionType || "percentage";
-    const commissionValue = settings?.commissionValue ?? 0.5;
+    const commissionValue = settings?.commissionValue ?? 1.0;
 
     let fee = 0;
     if (commissionType === "percentage") {
@@ -303,7 +303,7 @@ export const adminReleaseEscrow = mutation({
     // Calculate commission
     const settings = await ctx.db.query("systemSettings").first();
     const commissionType = settings?.commissionType || "percentage";
-    const commissionValue = settings?.commissionValue ?? 0.5;
+    const commissionValue = settings?.commissionValue ?? 1.0;
 
     let fee = 0;
     if (commissionType === "percentage") {

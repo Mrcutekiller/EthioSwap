@@ -35,6 +35,17 @@ export const getRevenue = query({
       .filter((q) => q.eq(q.field("status"), "completed"))
       .collect();
     const users = (await ctx.db.query("users").collect()).map(u => ({ joinedAt: u.joinedAt }));
+    const depositReqs = await ctx.db
+      .query("depositRequests")
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+    const withdrawReqs = await ctx.db
+      .query("withdrawRequests")
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+
+    const settings = await ctx.db.query("systemSettings").first();
+    const feePercent = settings?.flatFeePercent ?? 1.0;
 
     const now = new Date();
     const getStart = (p) => {
@@ -51,11 +62,21 @@ export const getRevenue = query({
     const deposits          = transactions.filter(t => t.type === "deposit"    && new Date(t.createdAt) >= start);
     const withdrawals       = transactions.filter(t => t.type === "withdrawal" && new Date(t.createdAt) >= start);
     const completedInPeriod = trades.filter(t => new Date(t.completedAt || t.createdAt) >= start);
+    const depositsInPeriod   = depositReqs.filter(r => new Date(r.reviewedAt || r.createdAt) >= start);
+    const withdrawalsInPeriod = withdrawReqs.filter(r => new Date(r.reviewedAt || r.createdAt) >= start);
 
     const totalDeposit    = deposits.reduce((s, t) => s + t.amountUSD, 0);
     const totalWithdrawal = withdrawals.reduce((s, t) => s + t.amountUSD, 0);
     const volumeUSD       = completedInPeriod.reduce((s, t) => s + (t.amountETH * USD_RATE), 0);
-    const feesUSD         = completedInPeriod.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+
+    // Calculate detailed fees in period
+    const p2pFeesPeriod = completedInPeriod.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+    const depositFeesPeriod = depositsInPeriod.reduce((s, r) => {
+      const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
+      return s + Math.max(fee, 0);
+    }, 0);
+    const withdrawalFeesPeriod = withdrawalsInPeriod.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+    const feesUSD = p2pFeesPeriod + depositFeesPeriod + withdrawalFeesPeriod;
 
     // Build 7-day chart
     const chartData = [];
@@ -63,6 +84,7 @@ export const getRevenue = query({
       const dayStart = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
       const dayTrades = completedInPeriod.filter(t => {
         const d = new Date(t.completedAt || t.createdAt);
         return d >= dayStart && d < dayEnd;
@@ -71,11 +93,27 @@ export const getRevenue = query({
         const d = new Date(tx.createdAt);
         return d >= dayStart && d < dayEnd;
       });
+      const dayDepositReqsApproved = depositReqs.filter(r => {
+        const d = new Date(r.reviewedAt || r.createdAt);
+        return d >= dayStart && d < dayEnd;
+      });
+      const dayWithdrawReqsApproved = withdrawReqs.filter(r => {
+        const d = new Date(r.reviewedAt || r.createdAt);
+        return d >= dayStart && d < dayEnd;
+      });
+
+      const dayP2pFees = dayTrades.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+      const dayDepFees = dayDepositReqsApproved.reduce((s, r) => {
+        const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
+        return s + Math.max(fee, 0);
+      }, 0);
+      const dayWithFees = dayWithdrawReqsApproved.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+
       chartData.push({
         day: dayStart.toLocaleDateString("en-US", { weekday: "short" }),
         volumeUSD: dayTrades.reduce((s, t) => s + (t.amountETH * USD_RATE), 0),
         depositUSD: dayDeposits.reduce((s, tx) => s + tx.amountUSD, 0),
-        feeUSD: dayTrades.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0),
+        feeUSD: Math.round((dayP2pFees + dayDepFees + dayWithFees) * 100) / 100,
         count: dayTrades.length,
       });
     }
@@ -83,23 +121,44 @@ export const getRevenue = query({
     // All-time metrics
     const allDeposits    = transactions.filter(t => t.type === "deposit");
     const allWithdrawals = transactions.filter(t => t.type === "withdrawal");
-    const allFees        = trades.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+    
+    const allP2pFees = trades.reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+    const allDepositFees = depositReqs.reduce((s, r) => {
+      const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
+      return s + Math.max(fee, 0);
+    }, 0);
+    const allWithdrawalFees = withdrawReqs.reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+    const allFees = Math.round((allP2pFees + allDepositFees + allWithdrawalFees) * 100) / 100;
+    
     const allTrades      = trades;
-
-    // Buy / sell count (buyer perspective)
-    const buyCount  = allTrades.length; // each completed trade = 1 buy
-    const sellCount = allTrades.length; // same number of sells
+    const buyCount  = allTrades.length;
+    const sellCount = allTrades.length;
 
     // Users this week
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const newUsersThisWeek = users.filter(u => new Date(u.joinedAt) >= oneWeekAgo).length;
+
+    // Fees this week
+    const weekP2pFees = trades
+      .filter(t => new Date(t.completedAt || t.createdAt) >= oneWeekAgo)
+      .reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0);
+    const weekDepFees = depositReqs
+      .filter(r => new Date(r.reviewedAt || r.createdAt) >= oneWeekAgo)
+      .reduce((s, r) => {
+        const fee = r.amountUSD - Math.round((r.amountUSD / (1 + feePercent / 100)) * 100) / 100;
+        return s + Math.max(fee, 0);
+      }, 0);
+    const weekWithFees = withdrawReqs
+      .filter(r => new Date(r.reviewedAt || r.createdAt) >= oneWeekAgo)
+      .reduce((s, r) => s + (r.amountUSD * (feePercent / 100)), 0);
+    const feesThisWeek = Math.round((weekP2pFees + weekDepFees + weekWithFees) * 100) / 100;
 
     return {
       period,
       volumeUSD,
       depositUSD: totalDeposit,
       withdrawalUSD: totalWithdrawal,
-      feesUSD,
+      feesUSD: Math.round(feesUSD * 100) / 100,
       tradeCount: completedInPeriod.length,
       userCount: users.length,
       chartData,
@@ -112,9 +171,7 @@ export const getRevenue = query({
         newUsersThisWeek,
         buyCount,
         sellCount,
-        feesThisWeek:      trades
-          .filter(t => new Date(t.completedAt || t.createdAt) >= oneWeekAgo)
-          .reduce((s, t) => s + ((t.feeETH || 0) * USD_RATE), 0),
+        feesThisWeek,
       },
     };
   }
