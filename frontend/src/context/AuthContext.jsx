@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
     flatFeePercent: 1.0,
     maxFeeUSD: 0.5,
     commissionType: 'percentage',
-    commissionValue: 0.5,
+    commissionValue: 1.0,
   };
 
   // Auto-clear alerts

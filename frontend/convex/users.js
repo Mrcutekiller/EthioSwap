@@ -629,7 +629,7 @@ export const sendById = mutation({
 
     // Load system settings to get commission rate
     const settings = await ctx.db.query("systemSettings").unique();
-    const feePercent = settings?.commissionValue ?? 0.5;
+    const feePercent = settings?.commissionValue ?? 1.0;
     const fee = args.amount * (feePercent / 100);
     const netAmount = args.amount - fee;
 
