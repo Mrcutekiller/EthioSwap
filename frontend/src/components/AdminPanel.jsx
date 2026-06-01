@@ -170,6 +170,8 @@ const AdminPanel = ({ user }) => {
   const [messageSubject, setMessageSubject] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [warnMessage, setWarnMessage] = useState('');
+  const [warnLoading, setWarnLoading] = useState(false);
 
   // Verification Resubmission Reason popup
   const [resubmitUserId, setResubmitUserId] = useState(null);
