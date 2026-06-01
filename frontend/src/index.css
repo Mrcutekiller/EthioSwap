@@ -2063,6 +2063,29 @@ p { line-height: 1.6; color: var(--text-2); }
   pointer-events: none;
 }
 .metric-card:hover { transform: translateY(-2px); border-color: var(--border-hover); }
+.metric-card-arrow {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: bold;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.metric-card:hover .metric-card-arrow {
+  transform: translate(1px, -1px);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
 .metric-card-gold   { border-color: rgba(200,150,44,0.25); background: linear-gradient(135deg,var(--bg-surface),rgba(200,150,44,0.04)); }
 .metric-card-teal   { border-color: rgba(0,212,170,0.2);   background: linear-gradient(135deg,var(--bg-surface),rgba(0,212,170,0.04)); }
 .metric-card-indigo { border-color: rgba(99,102,241,0.2);  background: linear-gradient(135deg,var(--bg-surface),rgba(99,102,241,0.04)); }

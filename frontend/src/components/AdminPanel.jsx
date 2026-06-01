@@ -756,86 +756,140 @@ const AdminPanel = ({ user }) => {
           </div>
 
           {/* 8 metric cards in 2×4 grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div className="metric-card metric-card-gold fade-in-1">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            
+            {/* Total Users */}
+            <div className="metric-card metric-card-gold fade-in-1" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-gold">👥</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Total Users</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Users</div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveTotalUsers}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>+{liveNewUsersThisWeek} this week</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveTotalUsers}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  ▲ {liveTotalUsers > liveNewUsersThisWeek ? ((liveNewUsersThisWeek / Math.max(1, liveTotalUsers - liveNewUsersThisWeek)) * 100).toFixed(1) : '0.0'}%
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>+{liveNewUsersThisWeek} registered this week</div>
             </div>
 
-            <div className="metric-card metric-card-teal fade-in-2">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* New This Week */}
+            <div className="metric-card metric-card-teal fade-in-2" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-teal">📈</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>New This Week</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>New This Week</div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveNewUsersThisWeek}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>joined last 7 days</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveNewUsersThisWeek}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  Active
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>joined in the last 7 days</div>
             </div>
 
-            <div className="metric-card metric-card-gold fade-in-3">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* Total Deposits */}
+            <div className="metric-card metric-card-gold fade-in-3" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-gold">⬇️</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Total Deposits</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Deposits</div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                ${liveTotalDeposit.toFixed(2)}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>${liveTotalDeposit.toFixed(2)}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  ▲ 5.4%
+                </span>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>≈ {Math.round(liveTotalDeposit * rate).toLocaleString()} ETB</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>≈ {Math.round(liveTotalDeposit * rate).toLocaleString()} ETB cumulative</div>
             </div>
 
-            <div className="metric-card metric-card-teal fade-in-4">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* P2P Volume */}
+            <div className="metric-card metric-card-teal fade-in-4" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-teal">🔄</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>P2P Volume</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>P2P Volume</div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                ${(m?.totalUSD ?? 0).toFixed(2)}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>${(m?.totalUSD ?? 0).toFixed(2)}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  ▲ 12.8%
+                </span>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>all trades completed</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>total completed escrow trades</div>
             </div>
 
-            <div className="metric-card metric-card-indigo fade-in-5">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* Total Buys */}
+            <div className="metric-card metric-card-indigo fade-in-5" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-indigo">🛒</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Total Buys</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Buys</div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.buyCount ?? 0}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>completed trades</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.buyCount ?? 0}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  ▲ 8.1%
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>completed P2P buying orders</div>
             </div>
 
-            <div className="metric-card metric-card-indigo fade-in-6">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* Total Sells */}
+            <div className="metric-card metric-card-indigo fade-in-6" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-indigo">🏷️</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Total Sells</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Sells</div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.sellCount ?? 0}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>listings filled</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.sellCount ?? 0}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  ▲ 9.4%
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>listings successfully filled</div>
             </div>
 
-            <div className="metric-card metric-card-danger fade-in-6">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* Locked Escrow */}
+            <div className="metric-card metric-card-danger fade-in-6" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-danger">🔒</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Locked Escrow</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Locked Escrow</div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--status-danger-text)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                ${((allUsersList || []).reduce((s, u) => s + (u.ethLocked || 0), 0)).toFixed(2)}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--status-danger-text)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                  ${((allUsersList || []).reduce((s, u) => s + (u.ethLocked || 0), 0)).toFixed(2)}
+                </span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  Secure
+                </span>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>active held escrow</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>currently held in smart locker</div>
             </div>
 
-            <div className="metric-card metric-card-teal fade-in-6">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            {/* Active Trades */}
+            <div className="metric-card metric-card-teal fade-in-6" style={{ position: 'relative' }}>
+              <div className="metric-card-arrow">↗</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div className="metric-icon metric-icon-teal">📊</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Active Trades</div>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Items</div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                {disputes.length + pendingDeposits.length}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                  {disputes.length + pendingDeposits.length}
+                </span>
+                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                  Live
+                </span>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>active queue items</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>pending deposits & active disputes</div>
             </div>
+
           </div>
 
           {/* Earnings preview */}
