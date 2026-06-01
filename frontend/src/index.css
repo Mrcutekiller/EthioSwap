@@ -228,7 +228,14 @@ p { line-height: 1.6; color: var(--text-2); }
   color: var(--gold-light);
 }
 
+@keyframes bounceTab {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
 .nav-item.active svg {
+  animation: bounceTab 0.3s ease-out;
   filter: drop-shadow(0 0 6px var(--gold));
 }
 
@@ -2680,4 +2687,18 @@ p { line-height: 1.6; color: var(--text-2); }
 
 .landing-hero-stat:last-child {
   border-right: none !important;
+}
+
+/* Responsive Header Balance for Mobile view */
+.mobile-only-header-balance {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+@media (min-width: 769px) {
+  .mobile-only-header-balance {
+    display: none !important;
+  }
 }

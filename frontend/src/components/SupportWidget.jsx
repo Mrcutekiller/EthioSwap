@@ -83,7 +83,7 @@ const SupportWidget = () => {
           style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', color: '#0A0C12', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(212,175,55,0.3)', transition: 'all 0.2s ease', outline: 'none' }}
           title="Help & Support"
         >
-          💬
+          ···
         </button>
       )}
 

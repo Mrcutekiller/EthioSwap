@@ -12,6 +12,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const buyRate = systemSettings?.etbRatePerDollar ?? 190;
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 180;
 
+  // Track window size for responsive layouts
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Custom cursor position state
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
   const [cursorHovered, setCursorHovered] = useState(false);
@@ -233,10 +241,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       {/* ── STYLE INJECTIONS ── */}
       <style>{`
         /* Custom fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
         .serif-title {
-          font-family: 'Instrument Serif', serif;
+          font-family: 'Playfair Display', serif;
+          font-weight: 700;
           font-style: normal;
         }
         
@@ -282,6 +291,10 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         @keyframes autoRotatePhone {
           0% { transform: perspective(1000px) rotateY(0deg); }
           100% { transform: perspective(1000px) rotateY(360deg); }
+        }
+        @keyframes slideDownMenu {
+          0% { transform: translateY(-100%); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
         }
         .phone-mockup-3d {
           animation: autoRotatePhone 20s linear infinite;
@@ -450,42 +463,234 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       )}
 
       {/* ── FLOATING TOP HEADER NAVBAR ── */}
-      <nav className={`nav-floating ${scrolled ? 'scrolled' : ''}`}>
+      <nav className={`nav-floating ${scrolled ? 'scrolled' : ''}`} style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: scrolled ? '64px' : '80px',
+        background: scrolled ? 'rgba(10, 10, 10, 0.92)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.07)' : 'none',
+        zIndex: 1000,
+        transition: 'all 0.3s ease'
+      }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
           <Logo size={36} showText={true} />
-          
-          <ul style={{ display: 'flex', alignItems: 'center', gap: '28px', listStyle: 'none', margin: 0, padding: 0 }}>
-            {['features', 'timeline', 'market', 'audience', 'download'].map(navId => (
-              <li key={navId} className="desktop-only">
-                <a 
-                  href={`#${navId}`}
-                  onMouseEnter={() => setCursorHovered(true)}
-                  onMouseLeave={() => setCursorHovered(false)}
-                  style={{
-                    color: '#c8c8c8', textTransform: 'capitalize', textDecoration: 'none',
-                    fontSize: '14px', fontWeight: 500, transition: 'color 0.2s'
-                  }}
-                  onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                  onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                >
-                  {navId === 'timeline' ? 'How It Works' : navId === 'audience' ? 'Target Audience' : navId === 'download' ? 'Download APK' : navId}
-                </a>
-              </li>
-            ))}
-            <li style={{ marginLeft: '12px' }}>
+
+          {/* DESKTOP LAYOUT (>1024px) */}
+          {width > 1024 && (
+            <>
+              <ul style={{ display: 'flex', alignItems: 'center', gap: '24px', listStyle: 'none', margin: 0, padding: 0 }}>
+                {[
+                  { id: 'features', label: 'Features', target: '#features' },
+                  { id: 'audience', label: "Who It's For", target: '#audience' },
+                  { id: 'timeline', label: 'How It Works', target: '#timeline' },
+                  { id: 'market', label: 'Live P2P', target: '#market' },
+                  { id: 'about', label: 'About Us', target: 'about', isModal: true },
+                  { id: 'faq', label: 'FAQ', target: '#faq' },
+                  { id: 'download', label: 'Download App', target: '#download' }
+                ].map(link => (
+                  <li key={link.id}>
+                    {link.isModal ? (
+                      <button 
+                        onClick={() => setOpenModal(link.target)}
+                        onMouseEnter={() => setCursorHovered(true)}
+                        onMouseLeave={() => setCursorHovered(false)}
+                        style={{
+                          background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer',
+                          fontSize: '14px', fontWeight: 500, transition: 'color 0.2s', padding: 0,
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                        onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <a 
+                        href={link.target}
+                        onMouseEnter={() => setCursorHovered(true)}
+                        onMouseLeave={() => setCursorHovered(false)}
+                        style={{
+                          color: '#c8c8c8', textDecoration: 'none',
+                          fontSize: '14px', fontWeight: 500, transition: 'color 0.2s'
+                        }}
+                        onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                        onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                      >
+                        {link.label}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
               <button
                 onClick={onSignIn}
                 onMouseEnter={() => setCursorHovered(true)}
                 onMouseLeave={() => setCursorHovered(false)}
                 className="cta-btn-gold"
-                style={{ height: '40px', fontSize: '14px', borderRadius: '8px' }}
+                style={{ height: '36px', fontSize: '14px', padding: '0 16px', borderRadius: '8px' }}
               >
                 Sign In
               </button>
-            </li>
-          </ul>
+            </>
+          )}
+
+          {/* TABLET LAYOUT (768px - 1024px) */}
+          {width >= 768 && width <= 1024 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <ul style={{ display: 'flex', alignItems: 'center', gap: '18px', listStyle: 'none', margin: 0, padding: 0 }}>
+                {[
+                  { id: 'market', label: 'Live P2P', target: '#market' },
+                  { id: 'timeline', label: 'How It Works', target: '#timeline' },
+                  { id: 'download', label: 'Download App', target: '#download' }
+                ].map(link => (
+                  <li key={link.id}>
+                    <a 
+                      href={link.target}
+                      onMouseEnter={() => setCursorHovered(true)}
+                      onMouseLeave={() => setCursorHovered(false)}
+                      style={{
+                        color: '#c8c8c8', textDecoration: 'none',
+                        fontSize: '13px', fontWeight: 500, transition: 'color 0.2s'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                      onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+                <li>
+                  <button 
+                    onClick={() => setMobileMenuOpen(true)}
+                    onMouseEnter={() => setCursorHovered(true)}
+                    onMouseLeave={() => setCursorHovered(false)}
+                    style={{
+                      background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer',
+                      fontSize: '18px', fontWeight: 700, padding: 0
+                    }}
+                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                  >
+                    ···
+                  </button>
+                </li>
+              </ul>
+              <button
+                onClick={onSignIn}
+                onMouseEnter={() => setCursorHovered(true)}
+                onMouseLeave={() => setCursorHovered(false)}
+                className="cta-btn-gold"
+                style={{ height: '36px', fontSize: '13px', padding: '0 12px', borderRadius: '8px' }}
+              >
+                Sign In
+              </button>
+            </div>
+          )}
+
+          {/* MOBILE LAYOUT (<768px) */}
+          {width < 768 && (
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              onMouseEnter={() => setCursorHovered(true)}
+              onMouseLeave={() => setCursorHovered(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px' }}
+            >
+              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
+            </button>
+          )}
         </div>
       </nav>
+
+      {/* MOBILE FULL-SCREEN SLIDE-DOWN OVERLAY MENU */}
+      {mobileMenuOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#0a0a0a',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '24px',
+          animation: 'slideDownMenu 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          {/* Header row in mobile overlay */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+            <Logo size={36} showText={true} />
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                background: 'none', border: 'none', color: '#f5c518', fontSize: '28px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Stacked links separated by thin gold divider */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', gap: '4px' }}>
+            {[
+              { id: 'features', label: 'Features', target: '#features' },
+              { id: 'audience', label: "Who It's For", target: '#audience' },
+              { id: 'timeline', label: 'How It Works', target: '#timeline' },
+              { id: 'market', label: 'Live P2P', target: '#market' },
+              { id: 'about', label: 'About Us', target: 'about', isModal: true },
+              { id: 'faq', label: 'FAQ', target: '#faq' },
+              { id: 'download', label: 'Download App', target: '#download' }
+            ].map((link, idx, arr) => (
+              <div key={link.id} style={{ alignSelf: 'stretch', textAlign: 'center' }}>
+                {link.isModal ? (
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); setOpenModal(link.target); }}
+                    style={{
+                      display: 'block', width: '100%', background: 'none', border: 'none', color: '#c8c8c8',
+                      fontSize: '18px', fontWeight: 600, padding: '16px 0', cursor: 'pointer',
+                      textAlign: 'center', fontFamily: 'inherit', transition: 'color 0.2s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <a
+                    href={link.target}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'block', color: '#c8c8c8', textDecoration: 'none',
+                      fontSize: '18px', fontWeight: 600, padding: '16px 0', transition: 'color 0.2s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
+                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
+                  >
+                    {link.label}
+                  </a>
+                )}
+                {idx < arr.length - 1 && (
+                  <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '80px', margin: '0 auto' }} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Sign In at bottom full width gold bg */}
+          <div style={{ marginTop: 'auto', paddingBottom: '20px' }}>
+            <button
+              onClick={() => { setMobileMenuOpen(false); onSignIn(); }}
+              className="cta-btn-gold"
+              style={{ width: '100%', height: '48px', fontSize: '16px', borderRadius: '10px' }}
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── SPLIT LAYOUT HERO SECTION ── */}
       <header id="hero" style={{
@@ -523,14 +728,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
 
               {/* Title heading in serif */}
-              <h1 className="serif-title" style={{ fontSize: '56px', lineHeight: 1.1, color: '#f0f2f8', margin: '0 0 16px 0', fontWeight: 400 }}>
-                Trade USD ($) & ETB.<br />
+              <h1 className="serif-title" style={{ fontSize: width < 768 ? '40px' : '64px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 16px 0', fontWeight: 700 }}>
+                Trade USD ($) &<br />
+                ETB.<br />
                 <span style={{ color: '#f5c518' }}>Safe & Secure.</span>
               </h1>
 
               {/* Subtitle */}
-              <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, maxWidth: '480px', margin: '0 0 32px 0' }}>
-                Buy and sell USD stable assets for Ethiopian Birr — secured by smart contract escrow locks, validated by verified local bank transfers, protected by administrator arbitration.
+              <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, maxWidth: '460px', margin: '0 0 32px 0' }}>
+                Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. No crypto knowledge required.
               </p>
 
               {/* Side by side CTAs */}
@@ -540,6 +746,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   onMouseEnter={() => setCursorHovered(true)}
                   onMouseLeave={() => setCursorHovered(false)}
                   className="cta-btn-gold"
+                  style={{ height: '48px', borderRadius: '10px' }}
                 >
                   Create Account — It's Free
                 </button>
@@ -548,26 +755,24 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   onMouseEnter={() => setCursorHovered(true)}
                   onMouseLeave={() => setCursorHovered(false)}
                   className="cta-btn-outline"
+                  style={{ height: '48px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
-                  Download Android APK
+                  📱 Download Android APK
                 </a>
               </div>
 
-              {/* Stat pills below */}
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {[
-                  { n: '100%', l: 'Escrow Lock' },
-                  { n: '< 15 Min', l: 'Avg Release' },
-                  { n: '0.5%', l: 'Platform Fee' }
-                ].map((st, i) => (
-                  <div key={i} style={{
-                    background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: '10px', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '8px'
-                  }}>
-                    <strong style={{ color: '#f5c518', fontSize: '15px' }}>{st.n}</strong>
-                    <span style={{ color: '#c8c8c8', fontSize: '12px' }}>{st.l}</span>
-                  </div>
-                ))}
+              {/* Stats row (3 pills, dark bg, 12px, separated by gold dots) */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '50px', padding: '8px 20px', fontSize: '12px', color: '#c8c8c8',
+                fontWeight: 600
+              }}>
+                <span>100% Escrow Lock</span>
+                <span style={{ color: '#f5c518' }}>•</span>
+                <span>&lt; 15 Min Avg Release</span>
+                <span style={{ color: '#f5c518' }}>•</span>
+                <span>0.5% Platform Fee</span>
               </div>
 
             </div>
@@ -834,6 +1039,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           </div>
 
           {/* Table Container */}
+          {width < 768 && (
+            <div style={{ fontSize: '11px', color: '#f5c518', textAlign: 'right', marginBottom: '8px', fontWeight: 600, letterSpacing: '0.05em' }}>
+              scroll ➔
+            </div>
+          )}
           <div className="card-premium" style={{ background: '#111318', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.07)', padding: '24px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>

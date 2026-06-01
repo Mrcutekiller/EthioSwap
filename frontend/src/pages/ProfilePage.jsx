@@ -87,30 +87,53 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
       {/* 3D Flipping Digital ID Card */}
       <div className="card" style={{ padding: '16px' }}>
         <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <span>🪪 Digital Member ID Card</span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              type="button" 
-              onClick={(e) => { e.stopPropagation(); setCardTheme(cardTheme === 'black' ? 'white' : 'black'); }} 
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              🎨 {cardTheme === 'black' ? 'White Card' : 'Black Card'}
-            </button>
-            <button 
-              type="button" 
-              onClick={(e) => { e.stopPropagation(); setIsFlipped(!isFlipped); }} 
-              style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', color: 'var(--gold-light)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-            >
-              🔄 Flip Card
-            </button>
+          
+          {/* Segmented Control Pill */}
+          <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '99px', padding: '3px', gap: '2px', position: 'relative', width: '130px', height: '28px' }}>
+            <div style={{
+              position: 'absolute',
+              top: '3px',
+              bottom: '3px',
+              left: isFlipped ? 'calc(50% + 1px)' : '3px',
+              width: 'calc(50% - 4px)',
+              background: '#f5c518',
+              borderRadius: '99px',
+              transition: 'left 0.2s ease',
+              zIndex: 0
+            }} />
+            {['Front', 'Back'].map((face, idx) => {
+              const isFaceActive = (idx === 0 && !isFlipped) || (idx === 1 && isFlipped);
+              return (
+                <button
+                  key={face}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setIsFlipped(idx === 1); }}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: isFaceActive ? '#080A10' : 'var(--text-2)',
+                    zIndex: 1,
+                    textAlign: 'center',
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {face}
+                </button>
+              );
+            })}
           </div>
         </div>
         <p style={{ fontSize: '11.5px', color: 'var(--text-3)', margin: '0 0 12px 0' }}>
-          Your premium digital credentials with cryptographically generated deposit addresses and QR verification. Click anywhere on the card to flip it.
+          Your premium digital credentials with cryptographically generated deposit addresses and QR verification. Use the selector above or click the card to flip.
         </p>
 
         <style>{`
@@ -150,61 +173,41 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             transition: all 0.3s ease;
           }
           
-          /* Matte Obsidian Black theme */
-          .id-card-theme-black {
-            background: linear-gradient(135deg, #0d0e12 0%, #1b1e28 50%, #07080a 100%);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+          /* Front: Obsidian Black */
+          .id-card-front-obsidian {
+            background: linear-gradient(135deg, #0a0a0a 0%, #111318 100%);
+            border: 1.5px solid #f5c518;
             color: #ffffff;
-            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.15);
-          }
-          .id-card-theme-black .id-card-label {
-            color: rgba(255, 255, 255, 0.45);
-          }
-          .id-card-theme-black .id-card-value {
-            color: #ffffff;
-          }
-          .id-card-theme-black .id-card-sub-value {
-            color: #cbd5e1;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.1);
           }
 
-          /* Prism Silver-White theme */
-          .id-card-theme-white {
-            background: linear-gradient(135deg, #ffffff 0%, #f4f6fa 50%, #e2e8f0 100%);
+          /* Back: Prism Silver-White */
+          .id-card-back-prism {
+            background: linear-gradient(135deg, #ffffff 0%, #f4f6fa 100%);
             border: 1px solid rgba(0, 0, 0, 0.1);
-            color: #1a1f2c;
+            color: #0a0a0a;
             box-shadow: 0 16px 45px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.9);
-          }
-          .id-card-theme-white .id-card-label {
-            color: #64748b;
-          }
-          .id-card-theme-white .id-card-value {
-            color: #0f172a;
-          }
-          .id-card-theme-white .id-card-sub-value {
-            color: #334155;
-          }
-
-          .id-card-back {
             transform: rotateY(180deg);
           }
           
-          .id-card-chip {
+          .id-card-chip-gold {
             width: 32px;
             height: 24px;
             border-radius: 5px;
             position: relative;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
-            border: 1px solid rgba(0,0,0,0.15);
-            transition: all 0.3s ease;
-          }
-          .id-card-theme-black .id-card-chip {
-            background: linear-gradient(135deg, #d4af37, #f39c12);
+            background: linear-gradient(135deg, #f5c518, #d4af37);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
             border: 1px solid rgba(255,255,255,0.1);
           }
-          .id-card-theme-white .id-card-chip {
+
+          .id-card-chip-silver {
+            width: 32px;
+            height: 24px;
+            border-radius: 5px;
+            position: relative;
             background: linear-gradient(135deg, #abb2bf, #5c6370);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+            border: 1px solid rgba(0,0,0,0.15);
           }
 
           .id-card-badge {
@@ -215,7 +218,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             text-transform: uppercase;
             letter-spacing: 0.05em;
           }
-          .id-card-badge-verified { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+          .id-card-badge-verified { background: rgba(16,185,129,0.15); color: #00d4a0; border: 1px solid rgba(16,185,129,0.3); }
           .id-card-badge-pending { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
           .id-card-badge-rejected { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
           .id-card-badge-unverified { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
@@ -231,15 +234,10 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             background-position: center;
             width: 190px;
             height: 190px;
-            opacity: 0.07;
-            filter: grayscale(100%);
+            opacity: 0.06;
             pointer-events: none;
             z-index: 0;
             transition: all 0.3s ease;
-          }
-          .id-card-theme-white .id-card-watermark {
-            opacity: 0.05;
-            filter: none;
           }
           
           .id-card-sheen {
@@ -251,9 +249,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.03) 100%);
             pointer-events: none;
             z-index: 2;
-          }
-          .id-card-theme-white .id-card-sheen {
-            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.02) 100%);
           }
 
           .id-card-content {
@@ -269,25 +264,21 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         <div className="id-card-perspective" onClick={() => setIsFlipped(!isFlipped)}>
           <div className={`id-card-inner ${isFlipped ? 'flipped' : ''}`}>
             
-            {/* FRONT SIDE */}
-            <div className={`id-card-front id-card-theme-${cardTheme}`}>
-              {/* Reflective Sheen Overlay */}
+            {/* FRONT SIDE (Obsidian Dark Card) */}
+            <div className="id-card-front id-card-front-obsidian">
               <div className="id-card-sheen" />
-              
-              {/* Background Faded Watermark Logo */}
-              <div className="id-card-watermark" />
+              <div className="id-card-watermark" style={{ filter: 'grayscale(100%)', opacity: 0.07 }} />
 
-              {/* ID Card Content Wrap */}
               <div className="id-card-content">
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', paddingBottom: '8px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <img src="/favicon.png" style={{ width: '16px', height: '16px', objectFit: 'contain' }} alt="Logo" />
-                    <span style={{ fontSize: '12px', fontWeight: 900, color: cardTheme === 'black' ? 'var(--gold-light)' : '#1e3b8a', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
                       EthiSwap
                     </span>
-                    <span style={{ fontSize: '9px', fontWeight: 600, color: cardTheme === 'black' ? '#8a99ad' : '#64748b', letterSpacing: '0.05em', marginLeft: '4px' }}>
-                      DIGITAL ID
+                    <span style={{ fontSize: '9px', fontWeight: 600, color: '#cbd5e1', letterSpacing: '0.05em', marginLeft: '4px' }}>
+                      MEMBER ID
                     </span>
                   </div>
                   {user.kycStatus === 'approved' && <span className="id-card-badge id-card-badge-verified">✓ Verified</span>}
@@ -308,8 +299,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                           height: '70px', 
                           borderRadius: '10px', 
                           objectFit: 'cover', 
-                          border: cardTheme === 'black' ? '1.5px solid var(--border-active)' : '1.5px solid rgba(0,0,0,0.12)', 
-                          boxShadow: cardTheme === 'black' ? '0 0 10px rgba(200, 150, 44, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.08)' 
+                          border: '1.5px solid #f5c518', 
+                          boxShadow: '0 0 10px rgba(245, 197, 24, 0.2)' 
                         }} 
                         alt="Selfie" 
                       />
@@ -318,20 +309,20 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                         width: '70px', 
                         height: '70px', 
                         borderRadius: '10px', 
-                        background: cardTheme === 'black' ? 'var(--gold-bg)' : '#e2e8f0', 
-                        border: cardTheme === 'black' ? '1.5px solid var(--border)' : '1.5px solid rgba(0,0,0,0.08)', 
+                        background: 'rgba(245, 197, 24, 0.08)', 
+                        border: '1.5px solid rgba(255, 255, 255, 0.08)', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center', 
                         fontSize: '20px', 
                         fontWeight: 800, 
-                        color: cardTheme === 'black' ? 'var(--gold-light)' : '#475569' 
+                        color: '#f5c518' 
                       }}>
                         {(fullName || 'U').substring(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <div className="id-card-chip" />
-                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: cardTheme === 'black' ? 'var(--text-3)' : '#475569', fontWeight: 700 }}>
+                    <div className="id-card-chip-gold" />
+                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#cbd5e1', fontWeight: 700 }}>
                       #{user.numericId || '—'}
                     </div>
                   </div>
@@ -339,34 +330,34 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                   {/* Info block */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
                     <div>
-                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</div>
-                      <div className="id-card-value" style={{ fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(255,255,255,0.45)' }}>Full Name</div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {fullName}
                       </div>
                     </div>
 
                     <div>
-                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email</div>
-                      <div className="id-card-sub-value" style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(255,255,255,0.45)' }}>Email Address</div>
+                      <div style={{ fontSize: '11px', color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {email}
                       </div>
                     </div>
 
                     <div>
-                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Username</div>
-                      <div className="id-card-sub-value" style={{ fontSize: '11px', fontWeight: 600 }}>
+                      <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(255,255,255,0.45)' }}>Trader Handle</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#cbd5e1' }}>
                         @{user.username}
                       </div>
                     </div>
 
                     <div style={{ marginTop: 'auto', display: 'flex', gap: '4px', flexDirection: 'column' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: cardTheme === 'black' ? 'var(--teal-light)' : '#0284c7' }}>ERC20:</span>
-                        <span className="id-card-label" style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ethAddr}</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#00d4a0' }}>ERC20:</span>
+                        <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgba(255,255,255,0.45)' }}>{ethAddr}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: cardTheme === 'black' ? 'var(--gold-light)' : '#b45309' }}>TRC20:</span>
-                        <span className="id-card-label" style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tronAddr || '—'}</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#f5c518' }}>TRC20:</span>
+                        <span style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgba(255,255,255,0.45)' }}>{tronAddr || '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -377,8 +368,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                       background: 'white', 
                       padding: '5px', 
                       borderRadius: '8px', 
-                      border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                      boxShadow: cardTheme === 'black' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'
+                      border: '1px solid rgba(255,255,255,0.1)'
                     }}>
                       <img 
                         src={qrCodeUrl} 
@@ -391,67 +381,63 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
                 {/* Bottom hint */}
                 <div style={{ 
-                  borderTop: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', 
+                  borderTop: '1px solid rgba(255,255,255,0.08)', 
                   paddingTop: '6px', 
                   marginTop: '8px', 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
                   fontSize: '9px', 
-                  color: cardTheme === 'black' ? 'var(--text-3)' : '#64748b' 
+                  color: 'rgba(255,255,255,0.3)' 
                 }}>
                   <span>🔒 SECURED MEMBERSHIP CREDENTIAL</span>
-                  <span>💡 TAP CARD TO FLIP</span>
+                  <span>💡 TAP TO FLIP CARD</span>
                 </div>
               </div>
             </div>
 
-            {/* BACK SIDE */}
-            <div className={`id-card-back id-card-theme-${cardTheme}`}>
-              {/* Reflective Sheen Overlay */}
-              <div className="id-card-sheen" />
-              
-              {/* Background Faded Watermark Logo */}
-              <div className="id-card-watermark" />
+            {/* BACK SIDE (Prism Silver-White Card) */}
+            <div className="id-card-back id-card-back-prism">
+              <div className="id-card-sheen" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.02) 100%)' }} />
+              <div className="id-card-watermark" style={{ opacity: 0.05 }} />
 
-              {/* ID Card Content Wrap */}
               <div className="id-card-content">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', paddingBottom: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: '8px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <img src="/favicon.png" style={{ width: '16px', height: '16px', objectFit: 'contain' }} alt="Logo" />
-                    <span style={{ fontSize: '12px', fontWeight: 900, color: cardTheme === 'black' ? 'var(--gold-light)' : '#1e3b8a', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: '#1a1f2c', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
                       EthiSwap
                     </span>
                   </div>
-                  <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b', fontWeight: 700 }}>KYC VERIFICATION DOCUMENTS</span>
+                  <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700 }}>KYC VERIFICATION STORAGE</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
                   {user.kycIdFront || user.kycIdBack || user.kycDocument ? (
                     <>
                       <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
-                        <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#cbd5e1' : '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Front Document</span>
+                        <span style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Front Document</span>
                         {user.kycIdFront ? (
                           <img 
                             src={user.kycIdFront} 
-                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)' }} 
+                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)' }} 
                             alt="ID Front" 
                           />
                         ) : (
-                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b' }}>None</div>
+                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#64748b' }}>None</div>
                         )}
                       </div>
                       
                       <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
-                        <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#cbd5e1' : '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Back Document</span>
+                        <span style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Back Document</span>
                         {user.kycIdBack || user.kycDocument ? (
                           <img 
                             src={user.kycIdBack || user.kycDocument} 
-                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)' }} 
+                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)' }} 
                             alt="ID Back" 
                           />
                         ) : (
-                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b' }}>None</div>
+                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#64748b' }}>None</div>
                         )}
                       </div>
                     </>
@@ -463,35 +449,34 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                       justifyContent: 'center', 
                       width: '100%', 
                       height: '120px', 
-                      background: cardTheme === 'black' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
-                      border: cardTheme === 'black' ? '1.5px dashed rgba(255,255,255,0.15)' : '1.5px dashed rgba(0,0,0,0.12)', 
+                      background: 'rgba(0,0,0,0.02)', 
+                      border: '1.5px dashed rgba(0,0,0,0.12)', 
                       borderRadius: '10px', 
-                      color: cardTheme === 'black' ? '#8a99ad' : '#64748b' 
+                      color: '#64748b' 
                     }}>
                       <span style={{ fontSize: '24px' }}>🔒</span>
-                      <span style={{ fontSize: '11px', marginTop: '6px', fontWeight: 600 }}>Documents not uploaded yet</span>
-                      <span style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>Complete Identity Verification to reveal scans</span>
+                      <span style={{ fontSize: '11px', marginTop: '6px', fontWeight: 600 }}>Documents Locked</span>
+                      <span style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>Verify Identity to reveal scans</span>
                     </div>
                   )}
                 </div>
 
                 {/* Bottom hint */}
                 <div style={{ 
-                  borderTop: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', 
+                  borderTop: '1px solid rgba(0,0,0,0.08)', 
                   paddingTop: '6px', 
                   marginTop: '12px', 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
                   fontSize: '9px', 
-                  color: cardTheme === 'black' ? 'var(--text-3)' : '#64748b' 
+                  color: '#64748b' 
                 }}>
                   <span>🛡️ CONFIDENTIAL KYC STORAGE</span>
-                  <span>💡 TAP CARD TO FLIP</span>
+                  <span>💡 TAP TO FLIP CARD</span>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -503,7 +488,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
         <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
           @{user.username}
-          {user.kycStatus === 'approved' && <span style={{ color: 'var(--secondary)', fontSize: '18px' }} title="Verified User">✓</span>}
+          {user.kycStatus === 'approved' && <span style={{ color: '#00d4a0', fontSize: '18px', fontWeight: '900' }} title="Verified P2P Trader">✓</span>}
         </h2>
         <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '12px' }}>Member since {joinDate}</p>
         {kycStatusBadge()}
@@ -603,17 +588,20 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               (user.paymentAccounts || []).map((acc) => {
                 const matched = SUPPORTED_BANKS.find(b => b.id === acc.bankName);
                 return (
-                  <div key={acc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>{matched?.icon || '🏦'}</span>
-                        <span>{matched?.label || acc.bankName}</span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '3px' }}>
-                        Acc: <strong>{acc.accountNumber}</strong> · Holder: {acc.holderName}
+                  <div key={acc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                      <span style={{ color: '#f5c518', fontSize: '16px', fontWeight: 800, paddingRight: '4px' }}>›</span>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{matched?.icon || '🏦'}</span>
+                          <span style={{ color: 'var(--text-1)' }}>{matched?.label || acc.bankName}</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '3px' }}>
+                          Acc: <strong style={{ color: '#ffffff', fontFamily: 'monospace' }}>{acc.accountNumber}</strong> · Holder: {acc.holderName}
+                        </div>
                       </div>
                     </div>
-                    <button onClick={() => handleDeleteAccount(acc.id)} style={{ padding: '6px 10px', background: 'rgba(248,113,113,0.1)', color: 'var(--status-danger-text)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => handleDeleteAccount(acc.id)} style={{ padding: '6px 10px', background: 'rgba(248,113,113,0.1)', color: 'var(--status-danger-text)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', zIndex: 1 }}>
                       Delete
                     </button>
                   </div>

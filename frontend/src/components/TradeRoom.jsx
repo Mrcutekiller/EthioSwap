@@ -3,6 +3,71 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from '../context/AuthContext.jsx';
 
+const GoldParticlesCanvas = () => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+
+    const resizeCanvas = () => {
+      if (canvas && canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const particles = [];
+    const particleCount = 40;
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * 400,
+        y: Math.random() * 400,
+        radius: Math.random() * 2 + 1,
+        speedX: (Math.random() - 0.5) * 0.4,
+        speedY: (Math.random() - 0.5) * 0.4 - 0.2,
+        alpha: Math.random() * 0.5 + 0.2
+      });
+    }
+
+    const drawParticles = () => {
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(245, 197, 24, ${p.alpha})`;
+        ctx.fill();
+
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = canvas.height;
+      });
+
+      animationFrameId = requestAnimationFrame(drawParticles);
+    };
+
+    drawParticles();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />;
+};
+
 const TradeRoom = () => {
   const { user, trades, setError, setSuccess } = useAuth();
   const [selectedTradeId, setSelectedTradeId] = useState(null);
@@ -235,12 +300,13 @@ const TradeRoom = () => {
     }
   };
 
-  const tradeSteps = [
-    { label: 'Open Trade', status: 'any' },
-    { label: 'Pay Seller', status: 'payment_pending' },
-    { label: 'Confirm Payment', status: 'paid' },
-    { label: 'USD Released', status: 'completed' }
-  ];
+  const getProgressPercent = (status) => {
+    if (status === 'payment_pending') return 25;
+    if (status === 'paid') return 50;
+    if (status === 'completed') return 100;
+    if (status === 'disputed') return 75;
+    return 0; // cancelled
+  };
 
   const currentStep = activeTrade ? (
     activeTrade.status === 'payment_pending' ? 1 :
@@ -248,49 +314,114 @@ const TradeRoom = () => {
     activeTrade.status === 'completed' ? 3 : 0
   ) : 0;
 
+  if (trades.length === 0) {
+    return (
+      <div style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: 'calc(100vh - 180px)', 
+        minHeight: '500px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '24px', 
+        background: '#0a0a0a',
+        borderRadius: '20px',
+        border: '1px solid var(--border)',
+        overflow: 'hidden'
+      }} className="fade-in-1">
+        <GoldParticlesCanvas />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center', maxWidth: '380px' }}>
+          <span style={{ fontSize: '64px', animation: 'float 3s ease-in-out infinite' }}>🤝</span>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>No Trades Yet</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            Ready to trade? Connect with trusted peers in Ethiopia, exchange USD and ETB safely, and let our secure escrow system protect your transactions.
+          </p>
+          <button 
+            onClick={() => {
+              const event = new CustomEvent('ethioswap_navigate', { detail: 'home' });
+              window.dispatchEvent(event);
+            }}
+            style={{
+              background: '#f5c518',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#080A10',
+              padding: '12px 28px',
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontFamily: 'var(--font)',
+              boxShadow: '0 4px 16px rgba(245, 197, 24, 0.2)',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            Browse P2P Marketplace
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', height: 'calc(100vh - 180px)', minHeight: '600px', padding: '0 1rem' }}>
       
       {/* LEFT COLUMN: Active Trades List */}
       <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto' }}>
-        <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>Your P2P Trades</h3>
+        <h3 style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>Your P2P Trades</h3>
         
-        {trades.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 1rem', fontSize: '0.85rem' }}>
-            No active or past trades. Start a buy listing trade!
-          </div>
-        ) : (
-          trades.map(t => {
-            const isBuyer = t.buyerId === user.id;
-            const partnerName = isBuyer ? t.sellerName : t.buyerName;
+        {trades.map(t => {
+          const isBuyer = t.buyerId === user.id;
+          const partnerName = isBuyer ? t.sellerName : t.buyerName;
 
-            return (
-              <div 
-                key={t.id} 
-                onClick={() => setSelectedTradeId(t.id)}
-                className="glass-card"
-                style={{
-                  cursor: 'pointer',
-                  padding: '1rem',
-                  borderColor: selectedTradeId === t.id ? 'var(--primary)' : 'var(--border-color)',
-                  background: selectedTradeId === t.id ? 'rgba(255,255,255,0.03)' : 'transparent',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.4rem'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>@{partnerName}</span>
-                  {getStatusBadge(t.status)}
+          return (
+            <div 
+              key={t.id} 
+              onClick={() => setSelectedTradeId(t.id)}
+              className="glass-card"
+              style={{
+                cursor: 'pointer',
+                padding: '16px',
+                borderRadius: '12px',
+                border: selectedTradeId === t.id ? '1.5px solid #f5c518' : '1px solid var(--border)',
+                background: selectedTradeId === t.id ? 'rgba(245,197,24,0.04)' : 'var(--bg-surface)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-1)' }}>@{partnerName}</span>
+                {getStatusBadge(t.status)}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-2)', fontFamily: 'monospace' }}>
+                <span style={{ color: '#f5c518', fontWeight: 600 }}>${parseFloat(t.amountETH).toFixed(2)} USD</span>
+                <span style={{ color: '#00d4a0', fontWeight: 600 }}>{Math.round(t.amountETB).toLocaleString()} ETB</span>
+              </div>
+              
+              {/* Progress bar in Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 700 }}>
+                  <span>Progress</span>
+                  <span>{getProgressPercent(t.status)}%</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  <span>${parseFloat(t.amountETH).toFixed(2)} USD</span>
-                  <span>{Math.round(t.amountETB).toLocaleString()} ETB</span>
+                <div style={{ width: '100%', height: '4px', background: 'var(--bg-elevated)', borderRadius: '99px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${getProgressPercent(t.status)}%`, 
+                    height: '100%', 
+                    background: t.status === 'completed' ? '#00d4a0' : t.status === 'disputed' ? '#ef4444' : '#f5c518',
+                    borderRadius: '99px',
+                    transition: 'width 0.3s ease'
+                  }} />
                 </div>
               </div>
-            );
-          })
-        )}
+            </div>
+          );
+        })}
       </div>
 
       {/* RIGHT COLUMN: Active Trade Room */}

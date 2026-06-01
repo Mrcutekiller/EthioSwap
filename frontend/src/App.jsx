@@ -233,6 +233,17 @@ const AppShell = () => {
     }
   }, []);
 
+  // Custom internal navigation handler
+  React.useEffect(() => {
+    const handleNavigate = (e) => {
+      if (e.detail) {
+        setTab(e.detail);
+      }
+    };
+    window.addEventListener('ethioswap_navigate', handleNavigate);
+    return () => window.removeEventListener('ethioswap_navigate', handleNavigate);
+  }, []);
+
   // Not logged in → show landing or login/register
   if (!user) {
     if (authMode === null) {
@@ -372,10 +383,27 @@ const AppShell = () => {
     <div className="app-shell">
 
       {/* ── TOP BAR ── */}
-      <header className="top-bar">
+      <header className="top-bar" style={{ position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Logo size={28} />
         </div>
+
+        {/* Center Mobile Header Balance (USD + ETB) */}
+        {wallet && user.role !== 'admin' && (
+          <div className="mobile-only-header-balance" style={{
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', lineHeight: '1.1' }}>
+              ${(wallet.ethAvailable ?? 0).toFixed(2)} USD
+            </div>
+            <div style={{ fontSize: '11px', color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace', marginTop: '1px' }}>
+              ≈ {Math.round((wallet.ethAvailable ?? 0) * (systemSettings?.etbRatePerDollar ?? 190)).toLocaleString()} ETB
+            </div>
+          </div>
+        )}
 
         {/* Desktop Navigation Links */}
         <div className="desktop-nav">
@@ -393,17 +421,15 @@ const AppShell = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Wallet balance */}
+          {/* Desktop-only Wallet balance */}
           {wallet && user.role !== 'admin' && (
-            <div style={{ textAlign: 'right' }}>
+            <div className="desktop-nav" style={{ textAlign: 'right', flexDirection: 'column' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)', lineHeight: '1.1' }}>${(wallet.ethAvailable ?? 0).toFixed(2)} USD</div>
               <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>≈ {Math.round((wallet.ethAvailable ?? 0) * (systemSettings?.etbRatePerDollar ?? 190)).toLocaleString()} ETB</div>
             </div>
           )}
 
-
-
-          {/* User profile capsule */}
+          {/* User profile capsule (Desktop only) */}
           <div className="desktop-nav" style={{ gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '11px', fontWeight: 700 }}>@{user.username}</span>
@@ -420,8 +446,8 @@ const AppShell = () => {
             {notifCount > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', borderRadius: '99px', minWidth: '16px', height: '16px', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid var(--bg-base)' }}>{notifCount}</span>}
           </button>
 
-          {/* Quick Logout (Desktop only) */}
-          <button onClick={logout} className="desktop-nav" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-danger-text)', cursor: 'pointer' }} title="Logout">
+          {/* Quick Logout (Always visible on mobile/desktop right side) */}
+          <button onClick={logout} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-danger-text)', cursor: 'pointer' }} title="Logout">
             <Icon d={Icons.logout} size={16} />
           </button>
         </div>

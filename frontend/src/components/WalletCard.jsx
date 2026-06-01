@@ -89,6 +89,7 @@ const WalletCard = () => {
   const [activeSection, setActiveSection] = useState('balance');
   const [checkingDeposit, setCheckingDeposit] = useState(false);
   const [onchainTxHash, setOnchainTxHash] = useState('');
+  const [qrNetwork, setQrNetwork] = useState('trc20');
 
   // Transaction PIN states
   const setPinMutation = useMutation(api.users.setTransactionPin);
@@ -259,27 +260,34 @@ const WalletCard = () => {
 
       {/* ── Balance Hero ──────────────────────────────────────── */}
       <div className="fade-in-1" style={{
-        background: 'linear-gradient(135deg, rgba(17,19,24,0.95) 0%, rgba(200,150,44,0.08) 100%)',
-        border: '1px solid rgba(200,150,44,0.3)', borderRadius: '22px', padding: '22px',
-        position: 'relative', overflow: 'hidden',
+        background: 'linear-gradient(135deg, rgba(17,19,24,0.95) 0%, rgba(245,197,24,0.06) 100%)',
+        border: '1.5px solid transparent',
+        backgroundImage: 'linear-gradient(rgba(17,19,24,0.98), rgba(17,19,24,0.98)), linear-gradient(135deg, #f5c518 0%, rgba(0,212,170,0.5) 100%)',
+        backgroundOrigin: 'border-box',
+        backgroundClip: 'padding-box, border-box',
+        borderRadius: '22px', 
+        padding: '22px',
+        position: 'relative', 
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       }}>
         {/* Glow orbs */}
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '150px', height: '150px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(200,150,44,0.15),transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '150px', height: '150px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(245,197,24,0.15),transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(0,212,170,0.08),transparent 70%)', pointerEvents: 'none' }} />
 
-        <div style={{ fontSize: '10px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '10px', color: '#f5c518', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>EthioSwap Wallet</span>
           {wallet.numericId && (
-            <span style={{ background: 'rgba(200,150,44,0.15)', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', letterSpacing: '0.03em' }}>
+            <span style={{ background: 'rgba(245,197,24,0.15)', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', letterSpacing: '0.03em', fontWeight: 800 }}>
               ID: #{wallet.numericId}
             </span>
           )}
         </div>
-        <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px' }}>
-          <span className="gradient-text-gold">${wallet.ethBalance.toFixed(2)}</span>
+        <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px', fontFamily: 'Inter, sans-serif' }}>
+          <span style={{ color: '#f5c518' }}>${wallet.ethBalance.toFixed(2)}</span>
           <span style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: 500, marginLeft: '6px' }}>USD</span>
         </div>
-        <div style={{ fontSize: '16px', color: 'var(--teal-light)', fontWeight: 600, marginBottom: '18px' }}>
+        <div style={{ fontSize: '16px', color: '#00d4a0', fontWeight: 600, marginBottom: '18px', fontFamily: 'Inter, sans-serif' }}>
           ≈ {Math.round(etbTotal).toLocaleString()} ETB
         </div>
 
@@ -288,26 +296,46 @@ const WalletCard = () => {
             { label: 'Available', usd: available, etb: available * rate },
             { label: 'In Escrow', usd: wallet.ethLocked || 0, etb: (wallet.ethLocked || 0) * rate, accent: true },
           ].map(c => (
-            <div key={c.label} style={{ background: 'rgba(10,12,18,0.5)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{c.label}</div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: c.accent ? 'var(--gold-light)' : 'var(--text-1)' }}>${c.usd.toFixed(2)}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>≈ {Math.round(c.etb).toLocaleString()} ETB</div>
+            <div key={c.label} style={{ 
+              background: 'rgba(10,12,18,0.6)', 
+              border: c.accent ? '1.5px solid rgba(245,197,24,0.2)' : '1.5px solid rgba(0,212,170,0.2)', 
+              borderRadius: '99px', 
+              padding: '8px 16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '2px' }}>{c.label}</div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: c.accent ? '#f5c518' : 'var(--text-1)' }}>${c.usd.toFixed(2)}</div>
+              <div style={{ fontSize: '9px', color: '#00d4a0', fontWeight: 600 }}>≈ {Math.round(c.etb).toLocaleString()} ETB</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Tab toggle ────────────────────────────────────────── */}
-      <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', gap: '2px' }}>
+      <div style={{ position: 'relative', display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', gap: '2px' }}>
+        <div style={{
+          position: 'absolute',
+          top: '4px',
+          bottom: '4px',
+          left: `calc(${tabs.findIndex(t => t.id === activeSection) * 20}% + ${4 - tabs.findIndex(t => t.id === activeSection) * 1.6}px)`,
+          width: 'calc(20% - 6px)',
+          background: 'var(--bg-elevated)',
+          borderRadius: '10px',
+          transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 0,
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+        }} />
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveSection(t.id)} style={{
             flex: 1, padding: '9px 4px', borderRadius: '10px', border: 'none', cursor: 'pointer',
             fontFamily: 'var(--font)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            background: activeSection === t.id ? 'var(--bg-elevated)' : 'transparent',
+            background: 'transparent',
+            zIndex: 1,
+            position: 'relative',
             transition: 'all 0.15s ease',
           }}>
             <span style={{ fontSize: '16px', lineHeight: 1 }}>{t.label}</span>
-            <span style={{ fontSize: '10px', fontWeight: 600, color: activeSection === t.id ? 'var(--gold-light)' : 'var(--text-3)' }}>{t.sub}</span>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: activeSection === t.id ? '#f5c518' : 'var(--text-3)', transition: 'color 0.15s' }}>{t.sub}</span>
           </button>
         ))}
       </div>
@@ -318,23 +346,24 @@ const WalletCard = () => {
           {/* QR + Address */}
           <div className="card glass fade-in-2" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '20px' }}>
             <div className="section-title" style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '-0.01em', marginBottom: '14px' }}>Your Deposit Address</div>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=${wallet.ethAddress}`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Send USD here (any network)</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Send USD here</div>
                 <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '10.5px', color: 'var(--text-1)', wordBreak: 'break-all', lineHeight: 1.4, letterSpacing: '0.02em', userSelect: 'all' }}>
                   {wallet.ethAddress}
                 </div>
                 <button 
-                  onClick={handleCopy} 
+                  onClick={() => handleCopy(wallet.ethAddress)} 
                   style={{ 
                     marginTop: '8px', 
                     background: copied ? 'var(--status-success-bg)' : 'rgba(200,150,44,0.1)', 
                     border: copied ? '1px solid var(--status-success-border)' : '1px solid rgba(200,150,44,0.2)',
                     borderRadius: '8px',
-                    color: copied ? 'var(--status-success-text)' : 'var(--gold-light)', 
+                    color: copied ? 'var(--status-success-text)' : '#f5c518', 
                     padding: '6px 12px',
                     fontSize: '11px', 
                     fontWeight: 700, 
@@ -350,10 +379,44 @@ const WalletCard = () => {
                 </button>
               </div>
             </div>
+
+            {/* Network Selector Chips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supported Networks</div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['TRC-20', 'ERC-20', 'BEP-20'].map(net => {
+                  const isActive = qrNetwork === net.toLowerCase().replace('-', '');
+                  return (
+                    <button
+                      key={net}
+                      onClick={() => setQrNetwork(net.toLowerCase().replace('-', ''))}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '99px',
+                        border: isActive ? '1px solid #f5c518' : '1px solid var(--border)',
+                        background: isActive ? 'rgba(245, 197, 24, 0.08)' : 'transparent',
+                        color: isActive ? '#f5c518' : 'var(--text-2)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {net}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-3)', lineHeight: 1.4, marginTop: '2px' }}>
+                {qrNetwork === 'trc20' && "⚡ Tron Network (TRC-20) transfers process within 15 seconds. Recommended for lowest fees."}
+                {qrNetwork === 'erc20' && "⛓️ Ethereum Network (ERC-20) transfers process within 2-5 minutes. Standard network gas fees apply."}
+                {qrNetwork === 'bep20' && "🔶 BNB Smart Chain Network (BEP-20) transfers process within 1 minute. Fast & economical."}
+              </div>
+            </div>
           </div>
 
           {/* Unified Deposit & Withdrawal History */}
-          {combinedHistory.length > 0 && (
+          {combinedHistory.length > 0 ? (
             <div className="card fade-in-3">
               <div className="section-title">📊 Deposit & Withdrawal History</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -367,10 +430,19 @@ const WalletCard = () => {
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <div style={{
                           width: '32px', height: '32px', borderRadius: '8px', 
-                          background: isDeposit ? 'rgba(0, 212, 170, 0.12)' : 'rgba(99, 102, 241, 0.12)', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                          background: isDeposit ? 'rgba(0, 212, 170, 0.12)' : 'rgba(239, 68, 68, 0.12)', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                          {isDeposit ? '⬇️' : '↗️'}
+                          <span style={{ 
+                            color: isDeposit ? '#00d4a0' : '#ef4444', 
+                            fontSize: '18px', 
+                            fontWeight: 800,
+                            transform: isDeposit ? 'rotate(0deg)' : 'rotate(180deg)',
+                            display: 'inline-block',
+                            lineHeight: 1
+                          }}>
+                            ↑
+                          </span>
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -392,7 +464,7 @@ const WalletCard = () => {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: isDeposit ? 'var(--teal-light)' : 'var(--gold-light)' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: isDeposit ? '#00d4a0' : '#f5c518' }}>
                           {isDeposit ? '+' : '-'}${item.amountUSD.toFixed(2)} USD
                         </div>
                         <StatusBadge status={item.status} />
@@ -402,8 +474,32 @@ const WalletCard = () => {
                 })}
               </div>
             </div>
+          ) : (
+            <div className="card fade-in-3" style={{ padding: '24px', textAlign: 'center', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '32px' }}>📊</span>
+              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-1)' }}>No Transactions Yet</div>
+              <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0, maxWidth: '280px', lineHeight: 1.4 }}>
+                Your deposit, withdrawal, and peer-to-peer transfer history will appear here once you make your first transfer.
+              </p>
+              <button 
+                onClick={() => setActiveSection('deposit')}
+                style={{
+                  background: 'rgba(245, 197, 24, 0.1)',
+                  border: '1px solid rgba(245, 197, 24, 0.2)',
+                  color: '#f5c518',
+                  borderRadius: '8px',
+                  padding: '6px 16px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)',
+                  marginTop: '4px'
+                }}
+              >
+                Make a Deposit
+              </button>
+            </div>
           )}
-
         </div>
       )}
 
