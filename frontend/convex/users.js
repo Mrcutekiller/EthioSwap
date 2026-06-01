@@ -241,9 +241,9 @@ export const login = mutation({
           phone: "+251000000000",
           ethAddress,
           ethPrivateKey,
-          ethBalance: 100.0,
+          ethBalance: 0.0,
           ethLocked: 0.0,
-          etbBalance: 1000000.0,
+          etbBalance: 0.0,
           displayName: "System Admin",
           bio: "EthioSwap Official Admin",
           reputation: 1000,
@@ -253,9 +253,16 @@ export const login = mutation({
           numericId: adminNumericId,
         });
         user = await ctx.db.get(id);
-      } else if (user.role !== "admin") {
-        // Ensure the role is admin if the credentials match
-        await ctx.db.patch(user._id, { role: "admin", kycStatus: "approved", kycStep: "approved" });
+      } else {
+        // If user already exists, reset their mock balances if they were set
+        const patchData = { role: "admin", kycStatus: "approved", kycStep: "approved" };
+        if (user.ethBalance === 100.0 || user.ethBalance === 100.05) {
+          patchData.ethBalance = 0.0;
+        }
+        if (user.etbBalance === 1000000.0) {
+          patchData.etbBalance = 0.0;
+        }
+        await ctx.db.patch(user._id, patchData);
         user = await ctx.db.get(user._id);
       }
     }
@@ -535,8 +542,12 @@ export const withdrawETH = mutation({
       }
     }
 
-    if (args.amountETH < 5) {
+    const isAdmin = user.role === "admin";
+    if (!isAdmin && args.amountETH < 5) {
       throw new ConvexError("Minimum withdrawal amount is $5.00 USD");
+    }
+    if (args.amountETH <= 0) {
+      throw new ConvexError("Amount must be greater than zero");
     }
 
     if (user.ethBalance < args.amountETH) {

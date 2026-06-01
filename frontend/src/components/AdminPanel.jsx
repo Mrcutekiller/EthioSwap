@@ -157,6 +157,7 @@ const AdminPanel = ({ user }) => {
   const [selectedTicket,    setSelectedTicket]    = useState(null);
   const [supportReplyText,  setSupportReplyText]  = useState('');
   const [withdrawAddress,   setWithdrawAddress]   = useState('');
+  const [withdrawAmount,    setWithdrawAmount]    = useState('');
   const [withdrawingEarnings, setWithdrawingEarnings] = useState(false);
   const [selectedUserDetailId, setSelectedUserDetailId] = useState(null);
   const chatEndRef = useRef(null);
@@ -379,11 +380,17 @@ const AdminPanel = ({ user }) => {
     if (!withdrawAddress.trim()) { showAlert('Enter your Binance deposit address.', 'error'); return; }
     const available = adminEarnings?.walletBalance ?? 0;
     if (available <= 0) { showAlert('No balance to withdraw.', 'error'); return; }
+
+    const amt = parseFloat(withdrawAmount);
+    if (isNaN(amt) || amt <= 0) { showAlert('Enter a valid amount to withdraw.', 'error'); return; }
+    if (amt > available) { showAlert(`Insufficient balance. Maximum available is $${available.toFixed(2)} USD.`, 'error'); return; }
+
     setWithdrawingEarnings(true);
     try {
-      await convexWithdraw({ userId: user.id, amountETH: available, destinationAddress: withdrawAddress });
-      showAlert(`✓ Withdrawal of $${available.toFixed(2)} USD sent to Binance!`);
+      await convexWithdraw({ userId: user.id, amountETH: amt, destinationAddress: withdrawAddress });
+      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD sent to Binance!`);
       setWithdrawAddress('');
+      setWithdrawAmount('');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setWithdrawingEarnings(false); }
   };
@@ -925,6 +932,32 @@ const AdminPanel = ({ user }) => {
                   onChange={e => setWithdrawAddress(e.target.value)}
                 />
               </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label">Amount to Withdraw ($ USD)</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ position: 'absolute', left: '12px', color: 'var(--text-3)', fontWeight: 600, fontSize: '14px' }}>$</span>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{ paddingLeft: '28px', width: '100%' }}
+                    value={withdrawAmount}
+                    onChange={e => setWithdrawAmount(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawAmount((adminEarnings?.walletBalance ?? 0).toFixed(2))}
+                    style={{
+                      position: 'absolute', right: '8px', background: 'rgba(0,212,170,0.15)', color: 'var(--teal-light)',
+                      border: '1px solid rgba(0,212,170,0.25)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px',
+                      fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)'
+                    }}
+                  >
+                    MAX
+                  </button>
+                </div>
+              </div>
               <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                 <span style={{ color: 'var(--text-2)' }}>Available to withdraw:</span>
                 <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '16px' }}>
@@ -932,7 +965,7 @@ const AdminPanel = ({ user }) => {
                 </span>
               </div>
               <button type="submit" disabled={withdrawingEarnings || !adminEarnings?.walletBalance} className="btn btn-teal btn-full" style={{ padding: '14px', fontSize: '14px' }}>
-                {withdrawingEarnings ? '⏳ Sending…' : '💸 Withdraw All Earnings to Binance'}
+                {withdrawingEarnings ? '⏳ Sending…' : '💸 Withdraw Earnings to Binance'}
               </button>
             </form>
           </div>
