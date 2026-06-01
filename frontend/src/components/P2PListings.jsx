@@ -95,18 +95,27 @@ const P2PListings = () => {
       alert('Please fill in all fields.');
       return;
     }
+    if (parseFloat(amountETH) < 1) {
+      alert('Minimum ad amount is $1.00 USD.');
+      return;
+    }
+    const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : rate;
+    const minUSD = parseFloat(minLimit) / effectiveRate;
+    if (minUSD < 0.99) {
+      alert(`Minimum transaction limit must be at least $1.00 USD equivalent (≈ ${Math.round(effectiveRate)} ETB).`);
+      return;
+    }
+
     const selectedPayments = createType === 'sell' 
       ? linkedAccounts.map(a => a.bankName) 
       : ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
       
-    const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : undefined;
-    
     await createListing(
       parseFloat(amountETH), 
       parseFloat(minLimit), 
       parseFloat(maxLimit), 
       selectedPayments, 
-      effectiveRate, 
+      useCustomRate && customRate ? parseFloat(customRate) : undefined, 
       createType === 'sell' ? linkedAccounts : [], 
       createType
     );
@@ -121,7 +130,7 @@ const P2PListings = () => {
     e.preventDefault();
     setTradeError('');
     const amt = parseFloat(tradeAmountETH);
-    if (isNaN(amt) || amt <= 0) { setTradeError('Please enter a valid amount.'); return; }
+    if (isNaN(amt) || amt < 1) { setTradeError('Minimum transaction amount is $1.00 USD.'); return; }
     if (amt > selectedListing.amountETH) {
       setTradeError(`Maximum available is $${selectedListing.amountETH.toFixed(2)} USD.`);
       return;

@@ -50,11 +50,11 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     if (msg.includes('minimum withdrawal amount')) {
-      setErrorState('Minimum withdrawal amount is $10.00 USD.');
+      setErrorState('Minimum withdrawal amount is $5.00 USD.');
       return;
     }
     if (msg.includes('minimum deposit amount')) {
-      setErrorState('Minimum deposit amount is $10.00 USD.');
+      setErrorState('Minimum deposit amount is $5.00 USD.');
       return;
     }
     const cleanMsg = message

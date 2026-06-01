@@ -187,6 +187,13 @@ const AdminPanel = ({ user }) => {
   const toggleSuspendMutation = useMutation(api.admin.toggleSuspendUser);
   const removeUserMutation    = useMutation(api.admin.removeUser);
   const setKycStatusMutation  = useMutation(api.admin.adminSetKycStatus);
+  const backfillNumericIds    = useMutation(api.admin.backfillNumericIds);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      backfillNumericIds({ adminId: user.id }).catch(console.error);
+    }
+  }, [user, backfillNumericIds]);
   
   const selectedUserTxs = useQuery(
     api.admin.getUserTransactionsForAdmin,

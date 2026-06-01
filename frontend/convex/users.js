@@ -112,16 +112,33 @@ export const register = mutation({
 
     const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
 
-    // Auto-increment numericId from counters
-    const counterDoc = await ctx.db.query("counters")
-      .withIndex("by_name", (q) => q.eq("name", "userId"))
-      .unique();
-    let nextNumericId = 1;
-    if (counterDoc) {
-      nextNumericId = counterDoc.value + 1;
-      await ctx.db.patch(counterDoc._id, { value: nextNumericId });
-    } else {
-      await ctx.db.insert("counters", { name: "userId", value: 1 });
+    // Generate a unique 6-digit numericId (exactly 6 digits, e.g. 100000 - 999999)
+    let nextNumericId;
+    let attempts = 0;
+    while (attempts < 50) {
+      const candidateId = Math.floor(100000 + Math.random() * 900000);
+      const existingUser = await ctx.db.query("users")
+        .withIndex("by_numericId", (q) => q.eq("numericId", candidateId))
+        .unique();
+      if (!existingUser) {
+        nextNumericId = candidateId;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!nextNumericId) {
+      // Fallback sequential starting at 100000
+      const counterDoc = await ctx.db.query("counters")
+        .withIndex("by_name", (q) => q.eq("name", "userId"))
+        .unique();
+      if (counterDoc) {
+        nextNumericId = Math.max(100000, counterDoc.value + 1);
+        await ctx.db.patch(counterDoc._id, { value: nextNumericId });
+      } else {
+        nextNumericId = 100000;
+        await ctx.db.insert("counters", { name: "userId", value: 100000 });
+      }
     }
 
     const newUser = {
@@ -192,17 +209,24 @@ export const login = mutation({
       if (!user) {
         // Auto-create the admin if it doesn't exist yet
         const { ethAddress, ethPrivateKey } = generateMockEthCredentials();
-        // Get next numericId for admin
-        const counterDoc = await ctx.db.query("counters")
-          .withIndex("by_name", (q) => q.eq("name", "userId"))
-          .unique();
-        let adminNumericId = 1;
-        if (counterDoc) {
-          adminNumericId = counterDoc.value + 1;
-          await ctx.db.patch(counterDoc._id, { value: adminNumericId });
-        } else {
-          await ctx.db.insert("counters", { name: "userId", value: 1 });
+        // Generate unique 6-digit ID for admin
+        let adminNumericId;
+        let attempts = 0;
+        while (attempts < 50) {
+          const candidateId = Math.floor(100000 + Math.random() * 900000);
+          const existingUser = await ctx.db.query("users")
+            .withIndex("by_numericId", (q) => q.eq("numericId", candidateId))
+            .unique();
+          if (!existingUser) {
+            adminNumericId = candidateId;
+            break;
+          }
+          attempts++;
         }
+        if (!adminNumericId) {
+          adminNumericId = 100000;
+        }
+
         const id = await ctx.db.insert("users", {
           username: adminEmail,
           passwordHash: adminPassword,
@@ -238,6 +262,27 @@ export const login = mutation({
 
     if (!user || user.passwordHash !== args.password) {
       throw new Error("Invalid username or password");
+    }
+
+    // Self-healing check: Ensure the logging-in user has a valid 6-digit unique numeric ID
+    if (!user.numericId || user.numericId < 100000 || user.numericId > 999999) {
+      let unique6DigitId;
+      let attempts = 0;
+      while (attempts < 50) {
+        const candidateId = Math.floor(100000 + Math.random() * 900000);
+        const existingUser = await ctx.db.query("users")
+          .withIndex("by_numericId", (q) => q.eq("numericId", candidateId))
+          .unique();
+        if (!existingUser) {
+          unique6DigitId = candidateId;
+          break;
+        }
+        attempts++;
+      }
+      if (unique6DigitId) {
+        await ctx.db.patch(user._id, { numericId: unique6DigitId });
+        user.numericId = unique6DigitId; // update in-memory object for response
+      }
     }
 
     const lastActive = new Date().toISOString();
@@ -490,8 +535,8 @@ export const withdrawETH = mutation({
       }
     }
 
-    if (args.amountETH < 10) {
-      throw new Error("Minimum withdrawal amount is $10.00 USD");
+    if (args.amountETH < 5) {
+      throw new Error("Minimum withdrawal amount is $5.00 USD");
     }
 
     if (user.ethBalance < args.amountETH) {

@@ -14,7 +14,7 @@ export const create = mutation({
     const userObjId = ctx.db.normalizeId("users", args.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
-    if (args.amountUSD < 10) throw new Error("Minimum deposit amount is $10.00 USD");
+    if (args.amountUSD < 5) throw new Error("Minimum deposit amount is $5.00 USD");
 
     // Anti-spam velocity gating: max 3 pending deposits per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -261,7 +261,7 @@ export const autoApproveOnchain = mutation({
     const userObjId = ctx.db.normalizeId("users", args.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
     if (!user) throw new Error("User not found");
-    if (args.amountUSD < 10) throw new Error("Minimum deposit amount is $10.00 USD");
+    if (args.amountUSD < 5) throw new Error("Minimum deposit amount is $5.00 USD");
 
     const settings = await ctx.db.query("systemSettings").first();
     const feePercent = settings?.flatFeePercent ?? 1.0;

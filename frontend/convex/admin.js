@@ -599,3 +599,39 @@ export const getUserTransactionsForAdmin = query({
   }
 });
 
+export const backfillNumericIds = mutation({
+  args: { adminId: v.string() },
+  handler: async (ctx, args) => {
+    const adminObjId = ctx.db.normalizeId("users", args.adminId);
+    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+
+    const allUsers = await ctx.db.query("users").collect();
+    let updatedCount = 0;
+
+    for (const u of allUsers) {
+      if (!u.numericId || u.numericId < 100000 || u.numericId > 999999) {
+        let unique6DigitId;
+        let attempts = 0;
+        while (attempts < 50) {
+          const candidateId = Math.floor(100000 + Math.random() * 900000);
+          const existingUser = await ctx.db.query("users")
+            .withIndex("by_numericId", (q) => q.eq("numericId", candidateId))
+            .unique();
+          if (!existingUser) {
+            unique6DigitId = candidateId;
+            break;
+          }
+          attempts++;
+        }
+        if (unique6DigitId) {
+          await ctx.db.patch(u._id, { numericId: unique6DigitId });
+          updatedCount++;
+        }
+      }
+    }
+
+    return { success: true, updatedCount };
+  }
+});
+

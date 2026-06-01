@@ -198,7 +198,7 @@ const WalletCard = () => {
     e.preventDefault(); setTxDetails(null);
     const amt = parseFloat(withdrawAmt);
     if (isNaN(amt) || amt <= 0) { setError('Enter a valid amount.'); return; }
-    if (amt < 10) { setError('Minimum withdrawal amount is $10.00 USD.'); return; }
+    if (amt < 5) { setError('Minimum withdrawal amount is $5.00 USD.'); return; }
     if (amt > available)         { setError(`Max: $${available.toFixed(2)}`); return; }
     
     let dest = destAddress;
@@ -225,7 +225,7 @@ const WalletCard = () => {
     e.preventDefault();
     const isBinanceOrBybit = depWalletType === 'binance' || depWalletType === 'bybit';
     if (!depAmount || parseFloat(depAmount) <= 0) { setError('Enter amount.'); return; }
-    if (parseFloat(depAmount) < 10) { setError('Minimum deposit amount is $10.00 USD.'); return; }
+    if (parseFloat(depAmount) < 5) { setError('Minimum deposit amount is $5.00 USD.'); return; }
     
     if (isBinanceOrBybit) {
       if (!senderEmail.trim() || !senderUsername.trim()) {
@@ -476,7 +476,7 @@ const WalletCard = () => {
           <div className="card glass fade-in-2" style={{ border: '1px solid rgba(200,150,44,0.25)', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>1. Calculate Deposit Invoice</span>
-              <span style={{ fontSize: '9px', padding: '1px 6px', background: 'var(--gold-bg)', color: 'var(--gold-light)', borderRadius: '99px', fontWeight: 700 }}>Min: $10.00</span>
+              <span style={{ fontSize: '9px', padding: '1px 6px', background: 'var(--gold-bg)', color: 'var(--gold-light)', borderRadius: '99px', fontWeight: 700 }}>Min: $5.00</span>
             </div>
             
             <div className="input-group" style={{ marginBottom: 0 }}>
@@ -486,13 +486,13 @@ const WalletCard = () => {
                 step="0.01" 
                 required 
                 className="input" 
-                placeholder="Enter amount (e.g. 10, 50, 100)" 
+                placeholder="Enter amount (e.g. 5, 50, 100)" 
                 value={depAmount} 
                 onChange={e => setDepAmount(e.target.value)} 
               />
             </div>
 
-            {depAmount && !isNaN(parseFloat(depAmount)) && parseFloat(depAmount) >= 10 ? (
+            {depAmount && !isNaN(parseFloat(depAmount)) && parseFloat(depAmount) >= 5 ? (
               <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInUp 0.15s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-2)' }}>
                   <span>Net Amount Credited:</span>
@@ -509,12 +509,12 @@ const WalletCard = () => {
               </div>
             ) : (
               <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', padding: '10px 12px', borderRadius: '8px', lineHeight: 1.4 }}>
-                ⚠️ Please enter a deposit amount of $10.00 USD or more to calculate commission fees, total due, and unlock the administrator's payment addresses / copy links.
+                ⚠️ Please enter a deposit amount of $5.00 USD or more to calculate commission fees, total due, and unlock the administrator's payment addresses / copy links.
               </div>
             )}
           </div>
 
-          {!(depAmount && !isNaN(parseFloat(depAmount)) && parseFloat(depAmount) >= 10) ? (
+          {!(depAmount && !isNaN(parseFloat(depAmount)) && parseFloat(depAmount) >= 5) ? (
             /* LOCKED DETAILS */
             <div className="card glass fade-in-3" style={{ padding: '24px', textAlign: 'center', opacity: 0.65, border: '1.5px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '32px' }}>🔒</span>
