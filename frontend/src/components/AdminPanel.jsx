@@ -941,63 +941,6 @@ const AdminPanel = ({ user }) => {
       {/* ── MAIN WORKSPACE CONTAINER ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
-        {/* ── TOP HEADER NAVBAR ── */}
-        <div style={{
-          height: '70px',
-          background: '#0a0c12',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 28px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 90
-        }}>
-          {/* Left: Page Title */}
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#f0f2f8', margin: 0, textTransform: 'capitalize' }}>
-              {activeTab === 'overview' ? 'Stats Dashboard' : activeTab === 'settings' ? 'System Configuration' : activeTab === 'logs' ? 'Administrative Audit Logs' : activeTab}
-            </h2>
-          </div>
-
-          {/* Right: User / Badge / Bell / Logout */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'rgba(0, 212, 160, 0.1)',
-                color: '#00d4a0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: '14px'
-              }}>
-                {(user?.username || 'A').charAt(0).toUpperCase()}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#f0f2f8' }}>{user?.email || 'admin@ethioswap.com'}</span>
-                <span style={{ fontSize: '10px', color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00d4a0' }}></span>
-                  Verified Admin
-                </span>
-              </div>
-            </div>
-
-            <div style={{ color: '#8b92a8', cursor: 'pointer', position: 'relative' }} title="Notifications">
-              <span style={{ fontSize: '18px' }}>🔔</span>
-              <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '5px', height: '5px', borderRadius: '50%', background: '#00d4a0' }}></span>
-            </div>
-
-            <button onClick={handleLogout} className="btn-premium-ghost" style={{ padding: '8px 12px', fontSize: '13px' }}>
-              Logout
-            </button>
-          </div>
-        </div>
-
         {/* ── CENTRAL SCROLLABLE WORKSPACE ── */}
         <div style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>
           
