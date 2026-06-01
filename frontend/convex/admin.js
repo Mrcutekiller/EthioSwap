@@ -7,7 +7,11 @@ async function logAdminAction(ctx, adminId, action, targetId, targetName, detail
   let adminUsername = "System Admin";
   if (adminId) {
     const adminObjId = ctx.db.normalizeId("users", adminId);
-    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    let admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (!admin) {
+      const allUsers = await ctx.db.query("users").collect();
+      admin = allUsers.find(u => u._id.toString() === adminId || u.username === adminId || (adminId === "usr_admin" && u.role === "admin")) || null;
+    }
     if (admin) {
       adminUsername = admin.username;
     }
@@ -413,12 +417,21 @@ export const approveWithdrawal = mutation({
     adminNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    let admin = null;
     const adminObjId = ctx.db.normalizeId("users", args.adminId);
-    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (adminObjId) admin = await ctx.db.get(adminObjId);
+    if (!admin) {
+      const allUsers = await ctx.db.query("users").collect();
+      admin = allUsers.find(u => u._id.toString() === args.adminId || u.username === args.adminId || (args.adminId === "usr_admin" && u.role === "admin")) || null;
+    }
     if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
 
     const reqId = ctx.db.normalizeId("withdrawRequests", args.requestId);
-    const req = reqId ? await ctx.db.get(reqId) : null;
+    let req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) {
+      const allReqs = await ctx.db.query("withdrawRequests").collect();
+      req = allReqs.find(r => r._id.toString() === args.requestId) || null;
+    }
     if (!req) throw new Error("Withdrawal request not found");
     if (req.status !== "pending") throw new Error("Request already reviewed");
 
@@ -427,9 +440,9 @@ export const approveWithdrawal = mutation({
     
     // Determine dynamic flat network fee
     let networkFee = 0.00;
-    const isExchange = req.walletType.includes("Binance") || req.walletType.includes("Bybit") || req.walletType.includes("Pay");
+    const isExchange = req.walletType && (req.walletType.includes("Binance") || req.walletType.includes("Bybit") || req.walletType.includes("Pay"));
     if (!isExchange) {
-      const dest = req.destinationAddress.trim();
+      const dest = req.destinationAddress ? req.destinationAddress.trim() : "";
       if (dest.startsWith("T") || dest.startsWith("t")) {
         networkFee = 0.10;
       } else if (dest.startsWith("0x") || dest.startsWith("0X")) {
@@ -439,10 +452,11 @@ export const approveWithdrawal = mutation({
       }
     }
 
-    const rawPlatformFee = req.amountUSD * (feePercent / 100);
+    const amountUSD = req.amountUSD || 0;
+    const rawPlatformFee = amountUSD * (feePercent / 100);
     const platformFee = Math.round(rawPlatformFee * 100) / 100;
     const fee = Math.round((platformFee + networkFee) * 100) / 100;
-    const netAmount = Math.round((req.amountUSD - fee) * 100) / 100;
+    const netAmount = Math.round((amountUSD - fee) * 100) / 100;
 
     const systemAdmin = await ctx.db
       .query("users")
@@ -450,11 +464,11 @@ export const approveWithdrawal = mutation({
       .unique();
     if (systemAdmin) {
       await ctx.db.patch(systemAdmin._id, {
-        ethBalance: systemAdmin.ethBalance + fee,
+        ethBalance: (systemAdmin.ethBalance || 0) + fee,
       });
     }
 
-    await ctx.db.patch(reqId, {
+    await ctx.db.patch(req._id, {
       status: "approved",
       adminNote: args.adminNote,
       reviewedAt: new Date().toISOString(),
@@ -463,21 +477,21 @@ export const approveWithdrawal = mutation({
     await ctx.db.insert("transactions", {
       userId: req.userId,
       type: "withdrawal",
-      amountETH: req.amountUSD,
-      amountUSD: req.amountUSD,
-      note: `Withdrawal approved to ${req.walletType} (${req.destinationAddress}) — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
+      amountETH: amountUSD,
+      amountUSD: amountUSD,
+      note: `Withdrawal approved to ${req.walletType || "External"} (${req.destinationAddress || "N/A"}) — Fee: $${fee.toFixed(2)} USD, Net Sent: $${netAmount.toFixed(2)} USD`,
       createdAt: new Date().toISOString(),
     });
 
     await ctx.db.insert("notifications", {
       userId: req.userId,
       type: "withdrawal_approved",
-      message: `✅ Your withdrawal of $${req.amountUSD.toFixed(2)} USD has been approved. Net sent: $${netAmount.toFixed(2)} USD (after ${feePercent}% fee of $${fee.toFixed(2)} USD) to ${req.walletType}.`,
+      message: `✅ Your withdrawal of $${amountUSD.toFixed(2)} USD has been approved. Net sent: $${netAmount.toFixed(2)} USD (after ${feePercent}% fee of $${fee.toFixed(2)} USD) to ${req.walletType || "External"}.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
 
-    await logAdminAction(ctx, args.adminId, "approve_withdrawal", args.requestId, req.username, `Approved withdrawal of $${req.amountUSD.toFixed(2)} USD to ${req.walletType}. Net: $${netAmount.toFixed(2)} USD`);
+    await logAdminAction(ctx, args.adminId, "approve_withdrawal", args.requestId, req.username || "Unknown", `Approved withdrawal of $${amountUSD.toFixed(2)} USD to ${req.walletType || "External"}. Net: $${netAmount.toFixed(2)} USD`);
 
     return { success: true };
   }
@@ -490,24 +504,37 @@ export const rejectWithdrawal = mutation({
     adminNote: v.string(),
   },
   handler: async (ctx, args) => {
+    let admin = null;
     const adminObjId = ctx.db.normalizeId("users", args.adminId);
-    const admin = adminObjId ? await ctx.db.get(adminObjId) : null;
+    if (adminObjId) admin = await ctx.db.get(adminObjId);
+    if (!admin) {
+      const allUsers = await ctx.db.query("users").collect();
+      admin = allUsers.find(u => u._id.toString() === args.adminId || u.username === args.adminId || (args.adminId === "usr_admin" && u.role === "admin")) || null;
+    }
     if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
 
     const reqId = ctx.db.normalizeId("withdrawRequests", args.requestId);
-    const req = reqId ? await ctx.db.get(reqId) : null;
+    let req = reqId ? await ctx.db.get(reqId) : null;
+    if (!req) {
+      const allReqs = await ctx.db.query("withdrawRequests").collect();
+      req = allReqs.find(r => r._id.toString() === args.requestId) || null;
+    }
     if (!req) throw new Error("Withdrawal request not found");
     if (req.status !== "pending") throw new Error("Request already reviewed");
 
     const userObjId = ctx.db.normalizeId("users", req.userId);
-    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    let user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (!user) {
+      const allUsers = await ctx.db.query("users").collect();
+      user = allUsers.find(u => u._id.toString() === req.userId) || null;
+    }
     if (user) {
       await ctx.db.patch(user._id, {
-        ethBalance: user.ethBalance + req.amountUSD,
+        ethBalance: (user.ethBalance || 0) + (req.amountUSD || 0),
       });
     }
 
-    await ctx.db.patch(reqId, {
+    await ctx.db.patch(req._id, {
       status: "rejected",
       adminNote: args.adminNote,
       reviewedAt: new Date().toISOString(),
@@ -516,12 +543,12 @@ export const rejectWithdrawal = mutation({
     await ctx.db.insert("notifications", {
       userId: req.userId,
       type: "withdrawal_rejected",
-      message: `❌ Your withdrawal of $${req.amountUSD.toFixed(2)} USD has been rejected by the administrator. Reason: ${args.adminNote}. Refunded to active balance.`,
+      message: `❌ Your withdrawal of $${(req.amountUSD || 0).toFixed(2)} USD has been rejected by the administrator. Reason: ${args.adminNote}. Refunded to active balance.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
 
-    await logAdminAction(ctx, args.adminId, "reject_withdrawal", args.requestId, req.username, `Rejected withdrawal of $${req.amountUSD.toFixed(2)} USD. Reason: ${args.adminNote}`);
+    await logAdminAction(ctx, args.adminId, "reject_withdrawal", args.requestId, req.username || "Unknown", `Rejected withdrawal of $${(req.amountUSD || 0).toFixed(2)} USD. Reason: ${args.adminNote}`);
 
     return { success: true };
   }
