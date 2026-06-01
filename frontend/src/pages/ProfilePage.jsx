@@ -22,6 +22,13 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [newBank, setNewBank] = useState('CBE');
   const [newAccNum, setNewAccNum] = useState('');
   const [newHolder, setNewHolder] = useState('');
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [cardTheme, setCardTheme] = useState('black'); // 'black' or 'white'
+
+  const getTronAddress = (ethAddr) => {
+    if (!ethAddr) return '';
+    return 'T' + ethAddr.replace('0x', '').substring(0, 33);
+  };
 
   const handleAddAccount = async (e) => {
     e.preventDefault();
@@ -71,8 +78,423 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     ? new Date(user.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'Recently';
 
+  const fullName = user.fullName || user.kycData?.name || user.displayName || user.username;
+  const email = user.email || 'No email registered';
+  const ethAddr = user.ethAddress || '—';
+  const tronAddr = getTronAddress(user.ethAddress);
+  const qrData = `EthiSwap Digital ID\nName: ${fullName}\nEmail: ${email}\nUsername: ${user.username}\nID: ${user.numericId || '—'}\nUSDT-ERC20: ${ethAddr}\nUSDT-TRC20: ${tronAddr}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120&data=${encodeURIComponent(qrData)}`;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+      {/* 3D Flipping Digital ID Card */}
+      <div className="card" style={{ padding: '16px' }}>
+        <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <span>🪪 Digital Member ID Card</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              type="button" 
+              onClick={(e) => { e.stopPropagation(); setCardTheme(cardTheme === 'black' ? 'white' : 'black'); }} 
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              🎨 {cardTheme === 'black' ? 'White Card' : 'Black Card'}
+            </button>
+            <button 
+              type="button" 
+              onClick={(e) => { e.stopPropagation(); setIsFlipped(!isFlipped); }} 
+              style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', color: 'var(--gold-light)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              🔄 Flip Card
+            </button>
+          </div>
+        </div>
+        <p style={{ fontSize: '11.5px', color: 'var(--text-3)', margin: '0 0 12px 0' }}>
+          Your premium digital credentials with cryptographically generated deposit addresses and QR verification. Click anywhere on the card to flip it.
+        </p>
+
+        <style>{`
+          .id-card-perspective {
+            perspective: 1200px;
+            width: 100%;
+            max-width: 440px;
+            height: 270px;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          }
+          .id-card-perspective:hover {
+            transform: scale(1.02) translateY(-2px);
+          }
+          .id-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+          }
+          .id-card-inner.flipped {
+            transform: rotateY(180deg);
+          }
+          .id-card-front, .id-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 16px;
+            transition: all 0.3s ease;
+          }
+          
+          /* Matte Obsidian Black theme */
+          .id-card-theme-black {
+            background: linear-gradient(135deg, #0d0e12 0%, #1b1e28 50%, #07080a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+          }
+          .id-card-theme-black .id-card-label {
+            color: rgba(255, 255, 255, 0.45);
+          }
+          .id-card-theme-black .id-card-value {
+            color: #ffffff;
+          }
+          .id-card-theme-black .id-card-sub-value {
+            color: #cbd5e1;
+          }
+
+          /* Prism Silver-White theme */
+          .id-card-theme-white {
+            background: linear-gradient(135deg, #ffffff 0%, #f4f6fa 50%, #e2e8f0 100%);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: #1a1f2c;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+          }
+          .id-card-theme-white .id-card-label {
+            color: #64748b;
+          }
+          .id-card-theme-white .id-card-value {
+            color: #0f172a;
+          }
+          .id-card-theme-white .id-card-sub-value {
+            color: #334155;
+          }
+
+          .id-card-back {
+            transform: rotateY(180deg);
+          }
+          
+          .id-card-chip {
+            width: 32px;
+            height: 24px;
+            border-radius: 5px;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+            border: 1px solid rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+          }
+          .id-card-theme-black .id-card-chip {
+            background: linear-gradient(135deg, #d4af37, #f39c12);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+          }
+          .id-card-theme-white .id-card-chip {
+            background: linear-gradient(135deg, #abb2bf, #5c6370);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+          }
+
+          .id-card-badge {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 99px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .id-card-badge-verified { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+          .id-card-badge-pending { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+          .id-card-badge-rejected { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+          .id-card-badge-unverified { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
+          
+          .id-card-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-image: url(/favicon.png);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 190px;
+            height: 190px;
+            opacity: 0.07;
+            filter: grayscale(100%);
+            pointer-events: none;
+            z-index: 0;
+            transition: all 0.3s ease;
+          }
+          .id-card-theme-white .id-card-watermark {
+            opacity: 0.05;
+            filter: none;
+          }
+          
+          .id-card-sheen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.03) 100%);
+            pointer-events: none;
+            z-index: 2;
+          }
+          .id-card-theme-white .id-card-sheen {
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.02) 100%);
+          }
+
+          .id-card-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+          }
+        `}</style>
+
+        <div className="id-card-perspective" onClick={() => setIsFlipped(!isFlipped)}>
+          <div className={`id-card-inner ${isFlipped ? 'flipped' : ''}`}>
+            
+            {/* FRONT SIDE */}
+            <div className={`id-card-front id-card-theme-${cardTheme}`}>
+              {/* Reflective Sheen Overlay */}
+              <div className="id-card-sheen" />
+              
+              {/* Background Faded Watermark Logo */}
+              <div className="id-card-watermark" />
+
+              {/* ID Card Content Wrap */}
+              <div className="id-card-content">
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', paddingBottom: '8px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src="/favicon.png" style={{ width: '16px', height: '16px', objectFit: 'contain' }} alt="Logo" />
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: cardTheme === 'black' ? 'var(--gold-light)' : '#1e3b8a', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                      EthiSwap
+                    </span>
+                    <span style={{ fontSize: '9px', fontWeight: 600, color: cardTheme === 'black' ? '#8a99ad' : '#64748b', letterSpacing: '0.05em', marginLeft: '4px' }}>
+                      DIGITAL ID
+                    </span>
+                  </div>
+                  {user.kycStatus === 'approved' && <span className="id-card-badge id-card-badge-verified">✓ Verified</span>}
+                  {user.kycStatus === 'pending' && <span className="id-card-badge id-card-badge-pending">⏳ Review</span>}
+                  {user.kycStatus === 'rejected' && <span className="id-card-badge id-card-badge-rejected">✗ Rejected</span>}
+                  {user.kycStatus !== 'approved' && user.kycStatus !== 'pending' && user.kycStatus !== 'rejected' && <span className="id-card-badge id-card-badge-unverified">👤 Unverified</span>}
+                </div>
+
+                {/* Core row */}
+                <div style={{ display: 'flex', gap: '14px', flex: 1, minHeight: 0 }}>
+                  {/* Photo & Chip */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    {user.kycSelfie ? (
+                      <img 
+                        src={user.kycSelfie} 
+                        style={{ 
+                          width: '70px', 
+                          height: '70px', 
+                          borderRadius: '10px', 
+                          objectFit: 'cover', 
+                          border: cardTheme === 'black' ? '1.5px solid var(--border-active)' : '1.5px solid rgba(0,0,0,0.12)', 
+                          boxShadow: cardTheme === 'black' ? '0 0 10px rgba(200, 150, 44, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.08)' 
+                        }} 
+                        alt="Selfie" 
+                      />
+                    ) : (
+                      <div style={{ 
+                        width: '70px', 
+                        height: '70px', 
+                        borderRadius: '10px', 
+                        background: cardTheme === 'black' ? 'var(--gold-bg)' : '#e2e8f0', 
+                        border: cardTheme === 'black' ? '1.5px solid var(--border)' : '1.5px solid rgba(0,0,0,0.08)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontSize: '20px', 
+                        fontWeight: 800, 
+                        color: cardTheme === 'black' ? 'var(--gold-light)' : '#475569' 
+                      }}>
+                        {(fullName || 'U').substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="id-card-chip" />
+                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: cardTheme === 'black' ? 'var(--text-3)' : '#475569', fontWeight: 700 }}>
+                      #{user.numericId || '—'}
+                    </div>
+                  </div>
+
+                  {/* Info block */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                    <div>
+                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</div>
+                      <div className="id-card-value" style={{ fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {fullName}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email</div>
+                      <div className="id-card-sub-value" style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {email}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="id-card-label" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Username</div>
+                      <div className="id-card-sub-value" style={{ fontSize: '11px', fontWeight: 600 }}>
+                        @{user.username}
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 'auto', display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: cardTheme === 'black' ? 'var(--teal-light)' : '#0284c7' }}>ERC20:</span>
+                        <span className="id-card-label" style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ethAddr}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: cardTheme === 'black' ? 'var(--gold-light)' : '#b45309' }}>TRC20:</span>
+                        <span className="id-card-label" style={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tronAddr || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ 
+                      background: 'white', 
+                      padding: '5px', 
+                      borderRadius: '8px', 
+                      border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                      boxShadow: cardTheme === 'black' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'
+                    }}>
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="QR" 
+                        style={{ width: '80px', height: '80px', display: 'block' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom hint */}
+                <div style={{ 
+                  borderTop: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', 
+                  paddingTop: '6px', 
+                  marginTop: '8px', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  fontSize: '9px', 
+                  color: cardTheme === 'black' ? 'var(--text-3)' : '#64748b' 
+                }}>
+                  <span>🔒 SECURED MEMBERSHIP CREDENTIAL</span>
+                  <span>💡 TAP CARD TO FLIP</span>
+                </div>
+              </div>
+            </div>
+
+            {/* BACK SIDE */}
+            <div className={`id-card-back id-card-theme-${cardTheme}`}>
+              {/* Reflective Sheen Overlay */}
+              <div className="id-card-sheen" />
+              
+              {/* Background Faded Watermark Logo */}
+              <div className="id-card-watermark" />
+
+              {/* ID Card Content Wrap */}
+              <div className="id-card-content">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', paddingBottom: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src="/favicon.png" style={{ width: '16px', height: '16px', objectFit: 'contain' }} alt="Logo" />
+                    <span style={{ fontSize: '12px', fontWeight: 900, color: cardTheme === 'black' ? 'var(--gold-light)' : '#1e3b8a', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+                      EthiSwap
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b', fontWeight: 700 }}>KYC VERIFICATION DOCUMENTS</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
+                  {user.kycIdFront || user.kycIdBack || user.kycDocument ? (
+                    <>
+                      <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
+                        <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#cbd5e1' : '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Front Document</span>
+                        {user.kycIdFront ? (
+                          <img 
+                            src={user.kycIdFront} 
+                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)' }} 
+                            alt="ID Front" 
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b' }}>None</div>
+                        )}
+                      </div>
+                      
+                      <div style={{ width: '50%', display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
+                        <span style={{ fontSize: '9px', color: cardTheme === 'black' ? '#cbd5e1' : '#64748b', textTransform: 'uppercase', textAlign: 'center', fontWeight: 600 }}>Back Document</span>
+                        {user.kycIdBack || user.kycDocument ? (
+                          <img 
+                            src={user.kycIdBack || user.kycDocument} 
+                            style={{ width: '100%', height: '100px', borderRadius: '8px', objectFit: 'cover', border: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)' }} 
+                            alt="ID Back" 
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '100px', borderRadius: '8px', background: 'rgba(0,0,0,0.04)', border: '1px dashed rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: cardTheme === 'black' ? '#8a99ad' : '#64748b' }}>None</div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      width: '100%', 
+                      height: '120px', 
+                      background: cardTheme === 'black' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+                      border: cardTheme === 'black' ? '1.5px dashed rgba(255,255,255,0.15)' : '1.5px dashed rgba(0,0,0,0.12)', 
+                      borderRadius: '10px', 
+                      color: cardTheme === 'black' ? '#8a99ad' : '#64748b' 
+                    }}>
+                      <span style={{ fontSize: '24px' }}>🔒</span>
+                      <span style={{ fontSize: '11px', marginTop: '6px', fontWeight: 600 }}>Documents not uploaded yet</span>
+                      <span style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>Complete Identity Verification to reveal scans</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom hint */}
+                <div style={{ 
+                  borderTop: cardTheme === 'black' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', 
+                  paddingTop: '6px', 
+                  marginTop: '12px', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  fontSize: '9px', 
+                  color: cardTheme === 'black' ? 'var(--text-3)' : '#64748b' 
+                }}>
+                  <span>🛡️ CONFIDENTIAL KYC STORAGE</span>
+                  <span>💡 TAP CARD TO FLIP</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       {/* Profile Header Card */}
       <div className="card" style={{ textAlign: 'center', padding: '28px 20px' }}>

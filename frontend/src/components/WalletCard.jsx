@@ -106,27 +106,13 @@ const WalletCard = () => {
   const [withdrawing, setWithdrawing]  = useState(false);
   const [txDetails,   setTxDetails]    = useState(null);
   
-  // Dual withdrawal states
-  const [withdrawMethod, setWithdrawMethod] = useState('onchain');
-  const [selectedExchangeAccount, setSelectedExchangeAccount] = useState(null);
+  // Dual withdrawal network selector
+  const [withdrawNetwork, setWithdrawNetwork] = useState('trc20');
   
-  // Connect Exchange Profile states
-  const [linkExchangeName, setLinkExchangeName] = useState('Binance Pay');
-  const [linkExchangeIdType, setLinkExchangeIdType] = useState('Email');
-  const [linkExchangeIdVal, setLinkExchangeIdVal] = useState('');
-  const [linkExchangeHolder, setLinkExchangeHolder] = useState('');
-  const [linkingExchange, setLinkingExchange] = useState(false);
-
-  // Deposit method: 'A' = manual, 'B' = onchain
-  const [depMethod,     setDepMethod]     = useState('A');
-  const [depWalletType, setDepWalletType] = useState('binance');
-  const [depAmount,     setDepAmount]     = useState('');
-  const [depReference,  setDepReference]  = useState('');
+  // Deposit network selector & inputs
+  const [depNetwork, setDepNetwork] = useState('trc20');
+  const [depAmount, setDepAmount] = useState('');
   const [depSubmitting, setDepSubmitting] = useState(false);
-  const [senderEmail,    setSenderEmail]    = useState('');
-  const [senderUsername, setSenderUsername] = useState('');
-  const [screenshotBase64, setScreenshotBase64] = useState('');
-  const [screenshotPreview, setScreenshotPreview] = useState('');
 
   // Send by ID state
   const [sendRecipientId, setSendRecipientId] = useState('');
@@ -152,26 +138,11 @@ const WalletCard = () => {
     const commPercent = systemSettings?.commissionValue ?? 1.0;
     const platformFee = Math.round((amt * commPercent / 100) * 100) / 100;
     
-    let netFee = 0.00;
-    let methodLabel = '✓ Free transfer';
-    let deliveryLabel = '~5-15 mins';
-    
-    if (withdrawMethod === 'onchain') {
-      const dest = destAddress.trim();
-      if (dest.startsWith('T') || dest.startsWith('t')) {
-        netFee = 0.10;
-        methodLabel = 'flat $0.10 network fee (Tron TRC20)';
-        deliveryLabel = '~15 sec (Tron)';
-      } else if (dest.startsWith('0x') || dest.startsWith('0X')) {
-        netFee = 0.50;
-        methodLabel = 'flat $0.50 network fee (Ethereum ERC20)';
-        deliveryLabel = '~2-5 mins (Ethereum)';
-      } else {
-        netFee = 0.10;
-        methodLabel = 'flat $0.10 network fee (Tron TRC20)';
-        deliveryLabel = '~15 sec (Tron)';
-      }
-    }
+    let netFee = withdrawNetwork === 'trc20' ? 0.10 : 0.50;
+    let methodLabel = withdrawNetwork === 'trc20' 
+      ? 'flat $0.10 network fee (Tron TRC20)' 
+      : 'flat $0.50 network fee (Ethereum ERC20)';
+    let deliveryLabel = withdrawNetwork === 'trc20' ? '~15 sec (Tron)' : '~2-5 mins (Ethereum)';
     
     const totalFee = Math.round((platformFee + netFee) * 100) / 100;
     const amountYouWillGet = Math.round(Math.max(amt - totalFee, 0) * 100) / 100;
@@ -188,8 +159,8 @@ const WalletCard = () => {
   };
   const wdDetails = getWithdrawalDetails();
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText("TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c");
+  const handleCopy = (address) => {
+    navigator.clipboard.writeText(address);
     setCopied(true); setSuccess('Address copied!');
     setTimeout(() => setCopied(false), 2000);
   };
@@ -198,19 +169,18 @@ const WalletCard = () => {
     e.preventDefault(); setTxDetails(null);
     const amt = parseFloat(withdrawAmt);
     if (isNaN(amt) || amt <= 0) { setError('Enter a valid amount.'); return; }
-    if (amt < 5) { setError('Minimum withdrawal amount is $5.00 USD.'); return; }
+    if (amt < 10) { setError('Minimum withdrawal amount is $10.00 USD.'); return; }
     if (amt > available)         { setError(`Max: $${available.toFixed(2)}`); return; }
     
-    let dest = destAddress;
-    if (withdrawMethod === 'exchange') {
-      if (!selectedExchangeAccount) {
-        setError('Please select or connect a Binance Pay or Bybit Pay account first.');
+    const dest = destAddress.trim();
+    if (withdrawNetwork === 'trc20') {
+      if (!dest.startsWith('T') && !dest.startsWith('t')) {
+        setError('TRC20 addresses must start with T.');
         return;
       }
-      dest = `${selectedExchangeAccount.bankName} | ${selectedExchangeAccount.accountNumber} (${selectedExchangeAccount.holderName})`;
     } else {
-      if (!destAddress.startsWith('0x') && !destAddress.startsWith('T')) {
-        setError('Invalid on-chain address.');
+      if (!dest.startsWith('0x') && !dest.startsWith('0X')) {
+        setError('ERC20 addresses must start with 0x.');
         return;
       }
     }
@@ -223,51 +193,23 @@ const WalletCard = () => {
 
   const handleSubmitDeposit = async (e) => {
     e.preventDefault();
-    const isBinanceOrBybit = depWalletType === 'binance' || depWalletType === 'bybit';
     if (!depAmount || parseFloat(depAmount) <= 0) { setError('Enter amount.'); return; }
     if (parseFloat(depAmount) < 5) { setError('Minimum deposit amount is $5.00 USD.'); return; }
-    
-    if (isBinanceOrBybit) {
-      if (!senderEmail.trim() || !senderUsername.trim()) {
-        setError('Please enter both your sending account email and username.');
-        return;
-      }
-    } else {
-      if (!depReference.trim()) { setError('Enter TX reference.'); return; }
-    }
-
-    if (!screenshotBase64) {
-      setError('Please upload a screenshot of your payment receipt as transaction proof.');
-      return;
-    }
+    if (!onchainTxHash.trim()) { setError('Please enter your transaction TxID.'); return; }
 
     setDepSubmitting(true);
     
-    const finalRef = isBinanceOrBybit 
-      ? `Sender Email: ${senderEmail.trim()} | Username: ${senderUsername.trim()}`
-      : depReference.trim();
-
-    await createDepositRequest(parseFloat(depAmount) * (1 + depositFeePercent / 100), depWalletType, finalRef, screenshotBase64);
-    
-    // Automatically open checkout/transfer pages in new tabs
-    if (depWalletType === 'binance') {
-      window.open('https://pay.binance.com', '_blank');
-    } else if (depWalletType === 'bybit') {
-      window.open('https://www.bybit.com/en/assets/funding', '_blank');
-    }
-
-    setSuccess('Deposit request submitted! Admin will verify and credit your wallet.');
-    setDepAmount(''); 
-    setDepReference('');
-    setSenderEmail('');
-    setSenderUsername('');
-    setScreenshotBase64('');
-    setScreenshotPreview('');
+    const result = await confirmOnchainDeposit(parseFloat(depAmount), onchainTxHash.trim());
     setDepSubmitting(false);
+
+    if (result?.success) {
+      setSuccess(`✓ On-chain deposit of $${parseFloat(depAmount).toFixed(2)} USD processed automatically and credited to your available balance!`);
+      setDepAmount(''); 
+      setOnchainTxHash('');
+    }
   };
 
   const pendingCount = myDepositReqs.filter(r => r.status === 'pending').length;
-  const selWallet = WALLET_OPTIONS.find(w => w.id === depWalletType) || WALLET_OPTIONS[0];
 
   const legacyWithdrawals = (myTransactions || [])
     .filter(t => t.type === 'withdrawal')
@@ -303,9 +245,6 @@ const WalletCard = () => {
   }));
 
   const combinedHistory = [...depositsMapped, ...withdrawalsMapped, ...legacyWithdrawals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const linkedExchangeAccounts = (user?.paymentAccounts || [])
-    .filter(acc => acc.bankName === 'Binance Pay' || acc.bankName === 'Bybit Pay');
 
   const tabs = [
     { id: 'balance',  label: '💰', sub: 'Balance' },
@@ -509,7 +448,7 @@ const WalletCard = () => {
               </div>
             ) : (
               <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', padding: '10px 12px', borderRadius: '8px', lineHeight: 1.4 }}>
-                ⚠️ Please enter a deposit amount of $5.00 USD or more to calculate commission fees, total due, and unlock the administrator's payment addresses / copy links.
+                ⚠️ Please enter a deposit amount of $5.00 USD or more to calculate commission fees, total due, and unlock the platform's receiving addresses and QR codes.
               </div>
             )}
           </div>
@@ -527,329 +466,130 @@ const WalletCard = () => {
             /* UNLOCKED DETAILS & METHODS */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'fadeInUp 0.3s ease' }}>
               
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                Choose Deposit Method
+              <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Select On-Chain Network
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* Option A — Manual */}
-                <div onClick={() => setDepMethod('A')} className={`option-card ${depMethod === 'A' ? 'selected-gold' : ''}`}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🤝</div>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-1)', marginBottom: '4px' }}>Manual</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px', lineHeight: 1.4 }}>
-                    Send from any wallet, submit TX proof, admin reviews
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span className="option-badge option-badge-manual">⏱ 5–30 min</span>
-                    <span className="option-badge option-badge-free">{depositFeePercent > 0 ? `${depositFeePercent}% fee` : '✓ No fee'}</span>
-                  </div>
-                </div>
-
-                {/* Option B — On-chain */}
-                <div onClick={() => setDepMethod('B')} className={`option-card ${depMethod === 'B' ? 'selected-indigo' : ''}`}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>⛓️</div>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-1)', marginBottom: '4px' }}>On-Chain</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px', lineHeight: 1.4 }}>
-                    Auto-detected via blockchain — no admin needed
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                     <span className="option-badge option-badge-fast">⚡ 1–5 min</span>
-                     <span className="option-badge option-badge-free">{depositFeePercent > 0 ? `${depositFeePercent}% fee` : '✓ FREE'}</span>
-                     <span className="option-badge option-badge-soon">🔧 Setup needed</span>
-                  </div>
-                </div>
+              {/* TRC20 vs ERC20 Selection Tabs */}
+              <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', gap: '2px' }}>
+                {[
+                  { id: 'trc20', label: '⚡ Tron Network (USDT-TRC20)', feeNote: 'Ultra-low fees (~$0.10 network fee)' },
+                  { id: 'erc20', label: '⛓️ Ethereum Network (USDT-ERC20)', feeNote: 'Ethereum network fees apply (~$0.50 network fee)' }
+                ].map(n => (
+                  <button 
+                    key={n.id} 
+                    type="button" 
+                    onClick={() => setDepNetwork(n.id)} 
+                    style={{
+                      flex: 1, 
+                      padding: '10px 4px', 
+                      borderRadius: '7px', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      fontFamily: 'var(--font)', 
+                      fontSize: '11.5px', 
+                      fontWeight: 700, 
+                      transition: 'all 0.15s',
+                      background: depNetwork === n.id ? 'var(--bg-base)' : 'transparent',
+                      color: depNetwork === n.id ? 'var(--gold-light)' : 'var(--text-3)',
+                      boxShadow: depNetwork === n.id ? 'inset 0 0 0 1px var(--border)' : 'none'
+                    }}
+                  >
+                    <div>{n.label}</div>
+                    <div style={{ fontSize: '8.5px', fontWeight: 500, opacity: 0.7, marginTop: '2px' }}>{n.feeNote}</div>
+                  </button>
+                ))}
               </div>
 
-              {/* ─── OPTION A — Manual form ─────────────────────── */}
-              {depMethod === 'A' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'fadeInUp 0.25s ease' }}>
-                  {/* Wallet type selector */}
-                  <div>
-                    <div className="section-title">From which wallet?</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      {WALLET_OPTIONS.map(w => (
-                        <button key={w.id} type="button" onClick={() => setDepWalletType(w.id)} style={{ padding: '12px', borderRadius: '12px', border: `2px solid ${depWalletType === w.id ? w.color : 'var(--border)'}`, background: depWalletType === w.id ? `${w.color}15` : 'var(--bg-elevated)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '22px' }}>{w.icon}</span>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: depWalletType === w.id ? 'var(--text-1)' : 'var(--text-3)' }}>{w.label}</span>
-                        </button>
-                      ))}
-                    </div>
+              {/* Address details card */}
+              <div className="card glass glow-indigo fade-in-2" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '20px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--indigo-light)' }}>
+                    {depNetwork === 'trc20' ? '⚡ USDT-TRC20 Platform Address' : '⛓️ USDT-ERC20 Platform Address'}
                   </div>
-
-                  {/* Interactive Admin Payment Card */}
-                  {(depWalletType === 'binance' || depWalletType === 'bybit') && (
-                    <div style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.98) 0%, rgba(200,150,44,0.05) 100%)', border: '1px solid rgba(200,150,44,0.25)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Recipient Account</span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600 }}>{depositFeeLabel}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(10,12,18,0.6)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px' }}>
-                          <span style={{ fontSize: '14px' }}>✉️</span>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-1)', fontFamily: 'monospace' }}>birukf37@gmail.com</span>
-                        </div>
-                        <button type="button" onClick={() => {
-                          navigator.clipboard.writeText('birukf37@gmail.com');
-                          setSuccess('Admin payment email copied!');
-                        }} style={{ flexShrink: 0, padding: '11px 14px', background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', borderRadius: '10px', color: 'var(--gold-light)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          📋 Copy
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <button type="button" onClick={() => {
-                          if (depWalletType === 'binance') {
-                            window.open('https://pay.binance.com', '_blank');
-                          } else {
-                            window.open('https://www.bybit.com/en/assets/funding', '_blank');
-                          }
-                        }} className="btn btn-teal btn-full" style={{ padding: '12px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                          {depWalletType === 'binance' ? '🔶 Pay via Binance Pay App ↗' : '🟡 Pay via Bybit Funding ↗'}
-                        </button>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.4 }}>
-                          Send exactly **${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD** via Binance/Bybit asset transfers, capture a screenshot, and submit proof below.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Steps for other wallets */}
-                  {(depWalletType !== 'binance' && depWalletType !== 'bybit') && (
-                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '10px' }}>
-                        {selWallet.icon} Steps for {selWallet.label}:
-                      </div>
-                      <div className="timeline">
-                        {selWallet.steps.map((s, i) => (
-                          <div key={i} className="timeline-item">
-                            <div className="timeline-dot active" style={{ background: 'var(--gold-bg)', border: '1px solid var(--border-active)', color: 'var(--gold-light)' }}>{i + 1}</div>
-                            <div className="timeline-line" />
-                            <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '4px' }}>{s}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Address card */}
-                  <div className="card" style={{ padding: '14px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '6px' }}>Your EthioSwap Receiving Address:</div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-2)', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', wordBreak: 'break-all', lineHeight: 1.5 }}>
-                        {wallet.ethAddress}
-                      </div>
-                      <button type="button" onClick={handleCopy} style={{ flexShrink: 0, padding: '10px', background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.3)', borderRadius: '8px', color: 'var(--gold-light)', fontSize: '16px', cursor: 'pointer' }}>
-                        {copied ? '✓' : '📋'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Submit form */}
-                  <form onSubmit={handleSubmitDeposit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    
-                    {/* Form Alert Info */}
-                    <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-success-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>🛡️ Securing Your Funds</span>
-                        <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(16,185,129,0.15)', borderRadius: '99px' }}>{depositFeeLabel}</span>
-                      </div>
-                      <p style={{ fontSize: '11px', color: 'var(--status-success-text)', lineHeight: 1.5, margin: 0 }}>
-                        Please fill out the form after transfer. Once approved, your net deposit amount will be credited to your available balance, and the platform fee is routed directly to the admin account.
-                      </p>
-                    </div>
-
-                    {/* Static amount read-only display to avoid double inputting */}
-                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Amount to send (Total)</div>
-                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-1)' }}>${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Credited (net)</div>
-                        <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--teal-light)' }}>${parseFloat(depAmount).toFixed(2)} USD</span>
-                      </div>
-                    </div>
-
-                    { (depWalletType === 'binance' || depWalletType === 'bybit') ? (
-                      <>
-                        <div className="input-group" style={{ marginBottom: 0 }}>
-                          <label className="input-label">Your Sending Account Email</label>
-                          <input type="email" required className="input" placeholder="e.g. yourname@gmail.com" value={senderEmail} onChange={e => setSenderEmail(e.target.value)} />
-                        </div>
-                        <div className="input-group" style={{ marginBottom: 0 }}>
-                          <label className="input-label">Your Sending Account Username / Nickname</label>
-                          <input type="text" required className="input" placeholder="e.g. yourname123" value={senderUsername} onChange={e => setSenderUsername(e.target.value)} />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label className="input-label">TX ID / Reference</label>
-                        <input type="text" required className="input" placeholder="Paste transaction hash, order ID…" value={depReference} onChange={e => setDepReference(e.target.value)} />
-                      </div>
-                    )}
-
-                    {/* Screenshot Uploader Component */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label className="input-label">Upload Payment Receipt / Screenshot</label>
-                      {screenshotPreview ? (
-                        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-elevated)', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                          <img src={screenshotPreview} alt="Screenshot preview" style={{ maxWidth: '100%', maxHeight: '160px', borderRadius: '8px', objectFit: 'contain' }} />
-                          <button type="button" onClick={() => {
-                            setScreenshotBase64('');
-                            setScreenshotPreview('');
-                          }} style={{ padding: '6px 12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--status-danger-text)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                            🗑️ Remove Photo
-                          </button>
-                        </div>
-                      ) : (
-                        <label style={{ background: 'var(--bg-elevated)', border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-                          <span style={{ fontSize: '28px' }}>📸</span>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-1)' }}>Choose screenshot or transaction proof</span>
-                          <span style={{ fontSize: '10px', color: 'var(--text-3)', textAlign: 'center' }}>Receipt will be compressed securely under 50KB</span>
-                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            try {
-                              const base64 = await toBase64(file);
-                              setScreenshotBase64(base64);
-                              setScreenshotPreview(URL.createObjectURL(file));
-                            } catch (err) {
-                              setError('Failed to compress image. Please select another file.');
-                            }
-                          }} />
-                        </label>
-                      )}
-                    </div>
-
-                    <button type="submit" disabled={depSubmitting} className="btn btn-gold btn-full" style={{ padding: '14px', marginTop: '8px' }}>
-                      {depSubmitting ? '⏳ Submitting…' : '📤 Submit Deposit Request'}
-                    </button>
-                  </form>
+                  <span className="option-badge option-badge-fast">⚡ Instant Detection</span>
                 </div>
-              )}
-
-              {/* ─── OPTION B — On-chain info ────────────────────── */}
-              {depMethod === 'B' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', animation: 'fadeInUp 0.25s ease' }}>
-
-                  {/* Premium Tron TRC20 Wallet Box */}
-                  <div className="card glass glow-indigo fade-in-2" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '20px', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--indigo-light)' }}>⛓️ Tron Network (TRC20) Wallet</div>
-                      <span className="option-badge option-badge-fast">⚡ Instant Detection</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c`} alt="QR" style={{ width: '80px', height: '80px', display: 'block' }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>USDT TRC20 Platform Receiving Address</div>
-                        <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '10.5px', color: 'var(--text-1)', wordBreak: 'break-all', lineHeight: 1.4, letterSpacing: '0.02em', userSelect: 'all' }}>
-                          TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c
-                        </div>
-                        <button 
-                          onClick={handleCopy} 
-                          style={{ 
-                            marginTop: '8px', 
-                            background: copied ? 'var(--status-success-bg)' : 'rgba(99, 102, 241, 0.1)', 
-                            border: copied ? '1px solid var(--status-success-border)' : '1px solid rgba(99, 102, 241, 0.2)',
-                            borderRadius: '8px',
-                            color: copied ? 'var(--status-success-text)' : 'var(--indigo-light)', 
-                            padding: '6px 12px',
-                            fontSize: '11px', 
-                            fontWeight: 700, 
-                            cursor: 'pointer', 
-                            fontFamily: 'var(--font)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {copied ? '✓ Copied Address' : '📋 Copy TRC20 Address'}
-                        </button>
-                      </div>
-                    </div>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=${depNetwork === 'trc20' ? "TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c" : (systemSettings?.masterWalletAddress || "0x71C259654103112E118830F25f82bb54aA20336d")}`} 
+                      alt="QR" 
+                      style={{ width: '80px', height: '80px', display: 'block' }} 
+                    />
                   </div>
-
-                  {/* Real-Time Tron TRC20 Verification Form */}
-                  <div style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.95) 0%, rgba(99,102,241,0.06) 100%)', border: '1px solid var(--indigo-border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--indigo-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Real-Time Verification</span>
-                      <span style={{ fontSize: '10px', color: 'var(--teal-light)', fontWeight: 600 }}>⚡ Automated</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>USDT Platform Receiving Address</div>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '10.5px', color: 'var(--text-1)', wordBreak: 'break-all', lineHeight: 1.4, letterSpacing: '0.02em', userSelect: 'all' }}>
+                      {depNetwork === 'trc20' ? "TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c" : (systemSettings?.masterWalletAddress || "0x71C259654103112E118830F25f82bb54aA20336d")}
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-                      Send exactly **${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD** to the platform receiving address above. Once sent, paste your Transaction Hash (TxID) below to instantly verify and credit your wallet.
-                    </p>
-                    
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <input 
-                        type="text" 
-                        placeholder="Enter 64-char TxID (e.g. f83c...)" 
-                        className="input" 
-                        value={onchainTxHash} 
-                        onChange={e => setOnchainTxHash(e.target.value)} 
-                        required 
-                      />
-                    </div>
-
-                    <button
+                    <button 
                       type="button"
-                      disabled={checkingDeposit || !onchainTxHash.trim()}
-                      onClick={async () => {
-                        if (!onchainTxHash.trim()) return;
-                        setCheckingDeposit(true);
-                        setSuccess('Submitting blockchain transaction reference for review...');
-                        try {
-                          const result = await confirmOnchainDeposit(parseFloat(depAmount) * (1 + depositFeePercent / 100), onchainTxHash);
-                          if (result?.success) {
-                            setSuccess(`✓ Deposit request submitted! Admin will verify the transaction and credit your wallet shortly.`);
-                            setOnchainTxHash('');
-                          }
-                        } catch (err) {
-                          setError('Submission failed. Make sure TxID is valid and unique.');
-                        } finally {
-                          setCheckingDeposit(false);
-                        }
+                      onClick={() => handleCopy(depNetwork === 'trc20' ? "TNVT3GvY7C31s4K8bXF7a7W9gN23vW9X2c" : (systemSettings?.masterWalletAddress || "0x71C259654103112E118830F25f82bb54aA20336d"))} 
+                      style={{ 
+                        marginTop: '8px', 
+                        background: copied ? 'var(--status-success-bg)' : 'rgba(99, 102, 241, 0.1)', 
+                        border: copied ? '1px solid var(--status-success-border)' : '1px solid rgba(99, 102, 241, 0.2)',
+                        borderRadius: '8px',
+                        color: copied ? 'var(--status-success-text)' : 'var(--indigo-light)', 
+                        padding: '6px 12px',
+                        fontSize: '11px', 
+                        fontWeight: 700, 
+                        cursor: 'pointer', 
+                        fontFamily: 'var(--font)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
                       }}
-                      className="btn btn-indigo btn-full animate-pulse"
-                      style={{ padding: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      {checkingDeposit ? '⏳ Submitting deposit verification request...' : `⚡ Submit & Verify On-Chain Deposit $${parseFloat(depAmount).toFixed(2)} USD`}
+                      {copied ? '✓ Copied Address' : `📋 Copy ${depNetwork.toUpperCase()} Address`}
                     </button>
                   </div>
-
-                  {/* Low Fee Notice */}
-                  <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>🛡️ Decentralized & Hack-Proof</span>
-                      <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(0,212,170,0.15)', borderRadius: '99px' }}>TRC20</span>
-                    </div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5, margin: 0 }}>
-                      EthioSwap accounts use secure custodial ledger architecture backed by standard cryptographic PIN checks. On-chain Tron (USDT-TRC20) deposits are processed instantly with ultra-low network fees of under $0.10.
-                    </p>
-                  </div>
-
-                  {/* How it works */}
-                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--indigo-light)', marginBottom: '10px' }}>⚡ Auto-Detection Timeline:</div>
-                    <div className="timeline">
-                      {[
-                        { step: 'Send USDT (TRC20) to your EthioSwap address', done: true },
-                        { step: 'Blockchain block confirms in ~15-30 sec (Tron TRC20)', done: true },
-                        { step: 'On-chain indexer scans and auto-detects transaction', done: true },
-                        { step: 'Ledger balance updated & user notification dispatched instantly', done: true },
-                      ].map((s, i) => (
-                        <div key={i} className="timeline-item">
-                          <div className="timeline-dot done" style={{ background: 'var(--teal-bg)', border: '1px solid rgba(0,212,170,0.3)', color: 'var(--teal)' }}>✓</div>
-                          <div className="timeline-line" />
-                          <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '4px' }}>{s.step}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                 </div>
-              )}
+              </div>
+
+              {/* Unified automated verification form */}
+              <form onSubmit={handleSubmitDeposit} style={{ background: 'linear-gradient(135deg, rgba(17,19,24,0.95) 0%, rgba(99,102,241,0.06) 100%)', border: '1px solid var(--indigo-border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--indigo-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Real-Time Verification</span>
+                  <span style={{ fontSize: '10px', color: 'var(--teal-light)', fontWeight: 600 }}>⚡ Automated</span>
+                </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
+                  Send exactly **${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD** via your selected network to the address above. Once processed, paste the Transaction Hash (TxID) below to instantly verify and credit your wallet.
+                </p>
+                
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label className="input-label">Transaction Hash (TxID)</label>
+                  <input 
+                    type="text" 
+                    placeholder="Enter 64-char TxID (e.g. f83c... or 0x...)" 
+                    className="input" 
+                    value={onchainTxHash} 
+                    onChange={e => setOnchainTxHash(e.target.value)} 
+                    required 
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={depSubmitting || !onchainTxHash.trim()}
+                  className="btn btn-indigo btn-full animate-pulse"
+                  style={{ padding: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}
+                >
+                  {depSubmitting ? '⏳ Submitting deposit verification...' : `⚡ Automatically Confirm & Verify Deposit`}
+                </button>
+              </form>
+
+              {/* Low Fee Notice */}
+              <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🛡️ Secured Automated Ledger</span>
+                  <span style={{ fontSize: '9px', padding: '1px 6px', background: 'rgba(0,212,170,0.15)', borderRadius: '99px' }}>{depNetwork.toUpperCase()}</span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.5, margin: 0 }}>
+                  On-chain USDT ({depNetwork.toUpperCase()}) deposits are checked by the backend instantly. Once validated, your available balance will be credited automatically. 
+                </p>
+              </div>
 
             </div>
           )}
@@ -977,165 +717,72 @@ const WalletCard = () => {
         <div className="card fade-in-2">
           <div className="section-title">Withdraw USD</div>
           <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
-            Send USD to your Binance, Bybit, or external wallet. (Min: $10.00 USD)
+            Send USD instantly to your external TRC20 or ERC20 wallet. (Min: $10.00 USD)
           </p>
 
-          {/* Withdrawal Destination Type Selector */}
+          {/* Withdrawal Network Selector */}
           <div style={{ display: 'flex', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', marginBottom: '14px', gap: '2px' }}>
             {[
-              { id: 'onchain', label: '⛓️ On-Chain USDT' },
-              { id: 'exchange', label: '🔗 Connect / Pay Exchange' }
+              { id: 'trc20', label: '⚡ Tron Network (USDT-TRC20)' },
+              { id: 'erc20', label: '⛓️ Ethereum Network (USDT-ERC20)' }
             ].map(m => (
-              <button key={m.id} type="button" onClick={() => setWithdrawMethod(m.id)} style={{
-                flex: 1, padding: '8px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s',
-                background: withdrawMethod === m.id ? 'var(--bg-base)' : 'transparent',
-                color: withdrawMethod === m.id ? 'var(--gold-light)' : 'var(--text-3)',
-                boxShadow: withdrawMethod === m.id ? 'inset 0 0 0 1px var(--border)' : 'none'
-              }}>
+              <button 
+                key={m.id} 
+                type="button" 
+                onClick={() => setWithdrawNetwork(m.id)} 
+                style={{
+                  flex: 1, 
+                  padding: '10px 4px', 
+                  borderRadius: '7px', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  fontFamily: 'var(--font)', 
+                  fontSize: '11.5px', 
+                  fontWeight: 700, 
+                  transition: 'all 0.15s',
+                  background: withdrawNetwork === m.id ? 'var(--bg-base)' : 'transparent',
+                  color: withdrawNetwork === m.id ? 'var(--gold-light)' : 'var(--text-3)',
+                  boxShadow: withdrawNetwork === m.id ? 'inset 0 0 0 1px var(--border)' : 'none'
+                }}
+              >
                 {m.label}
               </button>
             ))}
           </div>
 
           <form onSubmit={handleWithdraw} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {withdrawMethod === 'onchain' ? (
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Destination Address</label>
-                <input className="input" type="text" placeholder="T… (TRC20) or 0x… (ERC20)" value={destAddress} onChange={e => setDestAddress(e.target.value)} required />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'fadeInUp 0.15s ease' }}>
-                <label className="input-label">Select Connected Account</label>
-                {linkedExchangeAccounts.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {linkedExchangeAccounts.map(acc => (
-                      <div key={acc.id} onClick={() => setSelectedExchangeAccount(acc)} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                        background: selectedExchangeAccount?.id === acc.id ? 'linear-gradient(135deg, rgba(200,150,44,0.08), transparent)' : 'var(--bg-elevated)',
-                        border: `1.5px solid ${selectedExchangeAccount?.id === acc.id ? 'var(--gold)' : 'var(--border)'}`,
-                        transition: 'all 0.15s ease'
-                      }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '14px' }}>{acc.bankName === 'Binance Pay' ? '🔶' : '🟡'}</span>
-                            <span style={{ fontWeight: 700, fontSize: '12px' }}>{acc.bankName}</span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{acc.accountNumber}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-2)' }}>{acc.holderName}</div>
-                          {selectedExchangeAccount?.id === acc.id && <span style={{ color: 'var(--gold-light)', fontSize: '11px', fontWeight: 700 }}>✓ Selected</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ background: 'var(--bg-base)', border: '1px dashed var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--text-3)', lineHeight: 1.4 }}>
-                    No connected exchange profiles yet. Please link your Binance or Bybit account below to withdraw.
-                  </div>
-                )}
-
-                {/* Inline form to link an exchange account */}
-                <div style={{ marginTop: '6px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                    🔗 Link New Binance / Bybit Account
-                  </div>
-                  
-                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Platform Selector */}
-                    <div>
-                      <div style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>Exchange Platform</div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {['Binance Pay', 'Bybit Pay'].map(p => (
-                          <button key={p} type="button" onClick={() => setLinkExchangeName(p)} style={{
-                            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '10px', fontWeight: 700, transition: 'all 0.15s',
-                            background: linkExchangeName === p ? 'var(--bg-base)' : 'transparent',
-                            color: linkExchangeName === p ? 'var(--gold-light)' : 'var(--text-3)',
-                            boxShadow: linkExchangeName === p ? 'inset 0 0 0 1px var(--border)' : 'none'
-                          }}>
-                            {p === 'Binance Pay' ? '🔶 Binance' : '🟡 Bybit'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Linking identifier selector */}
-                    <div>
-                      <div style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '4px' }}>Link Profile via</div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {['Email', 'Username'].map(t => (
-                          <button key={t} type="button" onClick={() => setLinkExchangeIdType(t)} style={{
-                            flex: 1, padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '10px', fontWeight: 700, transition: 'all 0.15s',
-                            background: linkExchangeIdType === t ? 'var(--bg-base)' : 'transparent',
-                            color: linkExchangeIdType === t ? 'var(--gold-light)' : 'var(--text-3)',
-                            boxShadow: linkExchangeIdType === t ? 'inset 0 0 0 1px var(--border)' : 'none'
-                          }}>
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Link identifier input */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
-                        Exchange {linkExchangeIdType} ID
-                      </span>
-                      <input className="input" type={linkExchangeIdType === 'Email' ? 'email' : 'text'} placeholder={linkExchangeIdType === 'Email' ? 'yourname@gmail.com' : 'yourname123'} value={linkExchangeIdVal} onChange={e => setLinkExchangeIdVal(e.target.value)} style={{ padding: '8px 10px', fontSize: '11px', borderRadius: '8px' }} />
-                    </div>
-
-                    {/* Holder nickname */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
-                        Nickname / Holder Name
-                      </span>
-                      <input className="input" type="text" placeholder="e.g. Nickname" value={linkExchangeHolder} onChange={e => setLinkExchangeHolder(e.target.value)} style={{ padding: '8px 10px', fontSize: '11px', borderRadius: '8px' }} />
-                    </div>
-
-                    <button type="button" disabled={linkingExchange} onClick={async () => {
-                      if (!linkExchangeIdVal.trim() || !linkExchangeHolder.trim()) {
-                        setError('Please fill out exchange ID and nickname.');
-                        return;
-                      }
-                      setLinkingExchange(true);
-                      const newAcc = {
-                        id: 'acc_' + Math.random().toString(36).substring(2, 9),
-                        bankName: linkExchangeName,
-                        accountNumber: `${linkExchangeIdType}: ${linkExchangeIdVal.trim()}`,
-                        holderName: linkExchangeHolder.trim()
-                      };
-                      const currentAccounts = user?.paymentAccounts || [];
-                      try {
-                        await savePaymentAccounts({
-                          userId: user.id,
-                          accounts: [...currentAccounts, newAcc]
-                        });
-                        setSuccess('Exchange account linked successfully!');
-                        setSelectedExchangeAccount(newAcc);
-                        setLinkExchangeIdVal('');
-                        setLinkExchangeHolder('');
-                      } catch (err) {
-                        setError(err.message || 'Failed to link account.');
-                      } finally {
-                        setLinkingExchange(false);
-                      }
-                    }} className="btn btn-gold btn-full" style={{ padding: '10px', fontSize: '11px', fontWeight: 700, marginTop: '4px' }}>
-                      {linkingExchange ? 'Connecting…' : '🔗 Save & Link Exchange Account'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label className="input-label">
+                {withdrawNetwork === 'trc20' ? 'USDT TRC20 Destination Address' : 'USDT ERC20 Destination Address'}
+              </label>
+              <input 
+                className="input" 
+                type="text" 
+                placeholder={withdrawNetwork === 'trc20' ? "T… (e.g. TNVT3GvY...)" : "0x… (e.g. 0x71C2596...)"} 
+                value={destAddress} 
+                onChange={e => setDestAddress(e.target.value)} 
+                required 
+              />
+            </div>
 
             <div className="input-group" style={{ marginBottom: 0 }}>
-              <label className="input-label">Amount (USD)</label>
-              <input className="input" type="number" step="0.01" min="10" placeholder={`Max: $${available.toFixed(2)}`} value={withdrawAmt} onChange={e => setWithdrawAmt(e.target.value)} required />
+              <label className="input-label">Amount to Withdraw (USD)</label>
+              <input 
+                className="input" 
+                type="number" 
+                step="0.01" 
+                min="10" 
+                placeholder={`Max: $${available.toFixed(2)}`} 
+                value={withdrawAmt} 
+                onChange={e => setWithdrawAmt(e.target.value)} 
+                required 
+              />
               {withdrawAmt && <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>≈ {Math.round(parseFloat(withdrawAmt) * rate).toLocaleString()} ETB</div>}
             </div>
 
             {withdrawAmt && !isNaN(parseFloat(withdrawAmt)) && parseFloat(withdrawAmt) >= 10 ? (
-              <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInUp 0.15s ease', marginTop: '12px' }}>
+              <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInUp 0.15s ease', marginTop: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-2)' }}>
                   <span>Requested Withdrawal:</span>
                   <span style={{ fontWeight: 700 }}>${parseFloat(withdrawAmt).toFixed(2)} USD</span>
@@ -1145,7 +792,7 @@ const WalletCard = () => {
                   <span style={{ color: 'var(--status-danger-text)' }}>-${wdDetails.platformFee.toFixed(2)} USD</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
-                  <span>Network Transfer Cost:</span>
+                  <span>Network Gas Transfer Cost:</span>
                   <span style={{ color: 'var(--text-2)' }}>{wdDetails.methodLabel}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)' }}>
@@ -1153,18 +800,18 @@ const WalletCard = () => {
                   <span style={{ color: 'var(--text-2)' }}>{wdDetails.deliveryLabel}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-1)', borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>
-                  <span style={{ fontWeight: 700 }}>Amount You Will Get:</span>
+                  <span style={{ fontWeight: 700 }}>Net Amount You Will Receive:</span>
                   <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '14px' }}>${wdDetails.amountYouWillGet.toFixed(2)} USD</span>
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', padding: '10px 12px', borderRadius: '8px', marginTop: '12px', lineHeight: 1.4 }}>
-                ⚠️ Enter a withdrawal amount of $10.00 USD or more to calculate commission fees and estimate the final amount you will receive.
+              <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', padding: '10px 12px', borderRadius: '8px', marginTop: '4px', lineHeight: 1.4 }}>
+                ⚠️ Enter a withdrawal amount of $10.00 USD or more to calculate platform commission and estimate the final amount you will receive.
               </div>
             )}
 
             {user.transactionPin && (
-              <div className="input-group fade-in-2" style={{ marginTop: '12px', marginBottom: '8px' }}>
+              <div className="input-group fade-in-2" style={{ marginTop: '6px', marginBottom: '4px' }}>
                 <label className="input-label" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>🔒 Enter Transaction Security PIN</label>
                 <input 
                   type="password" 
@@ -1179,18 +826,23 @@ const WalletCard = () => {
               </div>
             )}
 
-            <button type="submit" disabled={withdrawing} className="btn btn-gold btn-full" style={{ padding: '14px' }}>
-              {withdrawing ? 'Broadcasting…' : 'Withdraw USD ↗'}
+            <button type="submit" disabled={withdrawing} className="btn btn-gold btn-full" style={{ padding: '14px', marginTop: '4px' }}>
+              {withdrawing ? '⚡ Broadcasting transaction...' : 'Withdraw USD On-Chain ↗'}
             </button>
           </form>
 
           {txDetails && (
             <div style={{ marginTop: '14px', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: '10px', padding: '14px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--status-success-text)', marginBottom: '6px' }}>✓ Withdrawal Broadcast!</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--status-success-text)', marginBottom: '6px' }}>✓ Withdrawal Processed Instantly!</div>
               <div style={{ fontFamily: 'monospace', fontSize: '10px', color: 'var(--text-2)', wordBreak: 'break-all', marginBottom: '8px' }}>{txDetails.txHash}</div>
-              {txDetails.txHash.startsWith('0x') && (
-                <a href={`https://tronscan.org/#/transaction/${txDetails.txHash}`} target="_blank" rel="noreferrer" style={{ color: 'var(--gold-light)', fontSize: '12px', fontWeight: 600 }}>View on TronScan ↗</a>
-              )}
+              <a 
+                href={`https://tronscan.org/#/transaction/${txDetails.txHash}`} 
+                target="_blank" 
+                rel="noreferrer" 
+                style={{ color: 'var(--gold-light)', fontSize: '12px', fontWeight: 600 }}
+              >
+                View on Blockchain Explorer ↗
+              </a>
             </div>
           )}
         </div>
