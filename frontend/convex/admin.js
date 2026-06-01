@@ -215,6 +215,10 @@ export const getKycQueue = query({
         kycStep: u.kycStep,
         kycData: u.kycData,
         joinedAt: u.joinedAt,
+        kycIdFront: u.kycIdFront,
+        kycIdBack: u.kycIdBack,
+        kycSelfie: u.kycSelfie,
+        kycDocument: u.kycDocument,
       }));
   }
 });

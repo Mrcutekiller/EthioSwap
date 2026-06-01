@@ -76,16 +76,21 @@ const WALLET_META = {
 };
 
 /* ── Lazy KYC Images Viewer ─────────────────────────────────── */
-const KycImages = ({ userId, getImageUrl, onImageClick }) => {
-  const images = useQuery(api.admin.getUserKycImages, { userId });
+const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, kycSelfie, kycDocument }) => {
+  const hasDirectDocs = kycIdFront || kycIdBack || kycSelfie || kycDocument;
+  const images = useQuery(api.admin.getUserKycImages, hasDirectDocs ? 'skip' : { userId });
 
-  if (images === undefined) {
+  const front = kycIdFront || images?.kycIdFront;
+  const back = kycIdBack || images?.kycIdBack || kycDocument || images?.kycDocument;
+  const selfie = kycSelfie || images?.kycSelfie;
+
+  if (!hasDirectDocs && images === undefined) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
         {[1, 2, 3].map((_, i) => (
           <div key={i}>
             <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Loading…</div>
-            <div className="skeleton" style={{ height: '80px', border: '1px solid var(--border)' }} />
+            <div className="skeleton" style={{ height: '140px', border: '1px solid var(--border)' }} />
           </div>
         ))}
       </div>
@@ -93,9 +98,9 @@ const KycImages = ({ userId, getImageUrl, onImageClick }) => {
   }
 
   const items = [
-    { l: 'ID Front', src: images?.kycIdFront },
-    { l: 'ID Back',  src: images?.kycIdBack },
-    { l: 'Selfie',   src: images?.kycSelfie },
+    { l: 'ID Front', src: front },
+    { l: 'ID Back / Doc',  src: back },
+    { l: 'Selfie',   src: selfie },
   ];
 
   return (
@@ -104,11 +109,12 @@ const KycImages = ({ userId, getImageUrl, onImageClick }) => {
         <div key={img.l}>
           <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>{img.l}</div>
           {img.src ? (
-            <div onClick={() => onImageClick && onImageClick(getImageUrl(img.src))} style={{ cursor: 'pointer' }}>
-              <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            <div onClick={() => onImageClick && onImageClick(getImageUrl(img.src))} style={{ cursor: 'pointer', position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block', transition: 'all 0.25s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '9px', padding: '4px', textAlign: 'center', fontWeight: 600 }}>🔍 View Full</div>
             </div>
           ) : (
-            <div style={{ height: '80px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
+            <div style={{ height: '140px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
           )}
         </div>
       ))}
@@ -151,6 +157,7 @@ const AdminPanel = ({ user }) => {
   const [activeTab,   setActiveTab]   = useState('overview');
   const [chartType,   setChartType]   = useState('volume'); // 'volume' | 'users'
   const [period,      setPeriod]      = useState('week');
+  const [hoveredIdx,  setHoveredIdx]  = useState(null);
   const [alertMsg,    setAlertMsg]    = useState(null);
   const [alertType,   setAlertType]   = useState('success');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -260,7 +267,7 @@ const AdminPanel = ({ user }) => {
     { id: 'deposits',  em: '💵', title: 'Deposits', badge: pendingDeposits.length },
     { id: 'withdrawals', em: '💸', title: 'Withdraws', badge: pendingWithdrawals.length },
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
-    { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open').length },
+    { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
     { id: 'logs',      em: '📜', title: 'Audit Logs',badge: 0 },
     { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
@@ -643,7 +650,10 @@ const AdminPanel = ({ user }) => {
 
                 {/* Data Points and Tooltip Circles */}
                 {points.map((p, idx) => {
-                  const isLast = idx === points.length - 1;
+                  const isHovered = hoveredIdx === idx;
+                  const showTooltip = isHovered || (hoveredIdx === null && idx === points.length - 1);
+                  const isMainPoint = idx === points.length - 1;
+
                   return (
                     <g key={idx}>
                       {/* Vertical line indicator on hover */}
@@ -652,35 +662,52 @@ const AdminPanel = ({ user }) => {
                         y1={paddingY}
                         x2={p.x}
                         y2={svgHeight - paddingY}
-                        stroke="rgba(255,255,255,0.015)"
+                        stroke={isHovered ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.02)"}
                         strokeWidth="1"
+                        strokeDasharray={isHovered ? "2 2" : "none"}
+                        style={{ transition: 'stroke 0.2s ease' }}
                       />
+                      
+                      {/* Circular marker glow (outer shadow ring) */}
+                      {(isHovered || (hoveredIdx === null && isMainPoint)) && (
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r="8"
+                          fill={chartType === 'volume' ? '#00D4AA' : '#C8962C'}
+                          opacity="0.25"
+                          style={{ transition: 'all 0.2s ease' }}
+                        />
+                      )}
+
                       {/* Circular marker */}
                       <circle
                         cx={p.x}
                         cy={p.y}
-                        r={isLast ? "5" : "3.5"}
-                        fill={chartType === 'volume' ? '#34EAC4' : '#E8B84B'}
-                        stroke="#111318"
-                        strokeWidth={isLast ? "2" : "1.5"}
-                        style={{ filter: isLast ? 'drop-shadow(0 0 4px rgba(255,255,255,0.4))' : 'none' }}
+                        r={isHovered || (hoveredIdx === null && isMainPoint) ? "5.5" : "3.5"}
+                        fill={chartType === 'volume' ? '#00D4AA' : '#C8962C'}
+                        stroke="#0D111A"
+                        strokeWidth={isHovered || (hoveredIdx === null && isMainPoint) ? "2.5" : "1.5"}
+                        style={{ transition: 'all 0.2s ease' }}
                       />
+
                       {/* Mini-tooltip for values above the points */}
-                      {isLast && (
-                        <g>
+                      {showTooltip && (
+                        <g style={{ pointerEvents: 'none' }}>
                           <rect
-                            x={p.x - 28}
-                            y={p.y - 25}
-                            width="56"
-                            height="16"
-                            rx="4"
-                            fill="var(--bg-elevated)"
-                            stroke="rgba(255,255,255,0.08)"
-                            strokeWidth="1"
+                            x={p.x - 30}
+                            y={p.y - 28}
+                            width="60"
+                            height="18"
+                            rx="5"
+                            fill="var(--bg-surface)"
+                            stroke={chartType === 'volume' ? 'rgba(0, 212, 170, 0.3)' : 'rgba(200, 150, 44, 0.3)'}
+                            strokeWidth="1.5"
+                            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
                           />
                           <text
                             x={p.x}
-                            y={p.y - 14}
+                            y={p.y - 16}
                             fontSize="8.5"
                             fontWeight="800"
                             textAnchor="middle"
@@ -691,6 +718,17 @@ const AdminPanel = ({ user }) => {
                           </text>
                         </g>
                       )}
+
+                      {/* Invisible hover helper with large target area */}
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r="16"
+                        fill="transparent"
+                        style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                        onMouseEnter={() => setHoveredIdx(idx)}
+                        onMouseLeave={() => setHoveredIdx(null)}
+                      />
                     </g>
                   );
                 })}
@@ -1069,7 +1107,15 @@ const AdminPanel = ({ user }) => {
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px' }}>
                     📁 Uploaded KYC Documents
                   </div>
-                  <KycImages userId={u.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                  <KycImages 
+                    userId={u.id} 
+                    getImageUrl={getImageUrl} 
+                    onImageClick={setActiveLightboxImage} 
+                    kycIdFront={u.kycIdFront}
+                    kycIdBack={u.kycIdBack}
+                    kycSelfie={u.kycSelfie}
+                    kycDocument={u.kycDocument}
+                  />
                 </div>
               </div>
 
@@ -1417,13 +1463,30 @@ const AdminPanel = ({ user }) => {
                 <div style={{ ...cs, textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>No tickets</div>
               ) : supportTickets.map(t => {
                 const lastMsg = t.messages[t.messages.length - 1];
+                const isUnread = lastMsg && lastMsg.senderId !== user?.id && lastMsg.senderId !== 'usr_admin' && (!selectedTicket || selectedTicket.id !== t.id);
                 return (
-                  <div key={t.id} onClick={() => setSelectedTicket(t)} style={{ ...cs, cursor: 'pointer', borderColor: t.status === 'open' ? 'rgba(200,150,44,0.2)' : 'var(--border)' }}>
+                  <div key={t.id} onClick={() => setSelectedTicket(t)} style={{ ...cs, cursor: 'pointer', borderColor: isUnread ? 'var(--status-danger-border)' : t.status === 'open' ? 'rgba(200,150,44,0.2)' : 'var(--border)', position: 'relative', background: isUnread ? 'rgba(239,68,68,0.02)' : 'var(--bg-surface)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px' }}>@{t.username || 'User'}</span>
+                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        @{t.username || 'User'}
+                        {isUnread && (
+                          <span style={{ background: '#ef4444', color: 'white', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '99px' }}>1</span>
+                        )}
+                      </span>
                       <StatusBadge status={t.status} />
                     </div>
-                    {lastMsg && <div style={{ fontSize: '12px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastMsg.senderName}: {lastMsg.message}</div>}
+                    {lastMsg && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: isUnread ? 'var(--text-1)' : 'var(--text-3)', 
+                        fontWeight: isUnread ? 700 : 400, 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap' 
+                      }}>
+                        {lastMsg.senderName}: {lastMsg.message}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -2189,7 +2252,15 @@ const AdminPanel = ({ user }) => {
                 {(u.kycIdFront || u.kycIdBack || u.kycSelfie) && (
                   <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>🪪 Identity Documents</div>
-                    <KycImages userId={u._id.toString()} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                    <KycImages 
+                      userId={u._id.toString()} 
+                      getImageUrl={getImageUrl} 
+                      onImageClick={setActiveLightboxImage} 
+                      kycIdFront={u.kycIdFront}
+                      kycIdBack={u.kycIdBack}
+                      kycSelfie={u.kycSelfie}
+                      kycDocument={u.kycDocument}
+                    />
                   </div>
                 )}
 
