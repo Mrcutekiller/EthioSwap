@@ -84,7 +84,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => {
 });
 
 const WalletCard = () => {
-  const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings, depositMock, confirmOnchainDeposit } = useAuth();
+  const { user, wallet, withdrawETH, myDepositReqs, myWithdrawalReqs, myTransactions, createDepositRequest, savePaymentAccounts, sendById, setError, setSuccess, systemSettings, confirmOnchainDeposit } = useAuth();
 
   const [activeSection, setActiveSection] = useState('balance');
   const [checkingDeposit, setCheckingDeposit] = useState(false);
@@ -798,15 +798,15 @@ const WalletCard = () => {
                       onClick={async () => {
                         if (!onchainTxHash.trim()) return;
                         setCheckingDeposit(true);
-                        setSuccess('Scanning Tron blockchain block headers...');
+                        setSuccess('Submitting blockchain transaction reference for review...');
                         try {
                           const result = await confirmOnchainDeposit(parseFloat(depAmount) * (1 + depositFeePercent / 100), onchainTxHash);
                           if (result?.success) {
-                            setSuccess(`✓ Deposit confirmed! Credited $${(parseFloat(depAmount) * (1 + depositFeePercent / 100)).toFixed(2)} USD to your available balance.`);
+                            setSuccess(`✓ Deposit request submitted! Admin will verify the transaction and credit your wallet shortly.`);
                             setOnchainTxHash('');
                           }
                         } catch (err) {
-                          setError('Verification failed. Make sure TxID is valid and unique.');
+                          setError('Submission failed. Make sure TxID is valid and unique.');
                         } finally {
                           setCheckingDeposit(false);
                         }
@@ -814,7 +814,7 @@ const WalletCard = () => {
                       className="btn btn-indigo btn-full animate-pulse"
                       style={{ padding: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      {checkingDeposit ? '🔍 Scanning Tron Blocks & Indexing transaction...' : `⚡ Check for Deposits & Claim Faucet $${parseFloat(depAmount).toFixed(2)} USD`}
+                      {checkingDeposit ? '⏳ Submitting deposit verification request...' : `⚡ Submit & Verify On-Chain Deposit $${parseFloat(depAmount).toFixed(2)} USD`}
                     </button>
                   </div>
 

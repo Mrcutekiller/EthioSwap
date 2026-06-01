@@ -480,57 +480,6 @@ export const kycAction = mutation({
   }
 });
 
-export const faucetDeposit = mutation({
-  args: {
-    userId: v.string(),
-    amountETH: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const userObjId = ctx.db.normalizeId("users", args.userId);
-    const user = userObjId ? await ctx.db.get(userObjId) : null;
-    if (!user) throw new Error("User not found");
-
-    const settings = await ctx.db.query("systemSettings").first();
-    const feePercent = settings?.flatFeePercent ?? 1.0;
-    const fee = Math.round((args.amountETH * (feePercent / 100)) * 100) / 100;
-    const totalAmount = Math.round((args.amountETH + fee) * 100) / 100;
-
-    const newBalance = user.ethBalance + totalAmount;
-    await ctx.db.patch(user._id, { ethBalance: newBalance });
-
-    const systemAdmin = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
-      .unique();
-    if (systemAdmin) {
-      await ctx.db.patch(systemAdmin._id, {
-        ethBalance: systemAdmin.ethBalance + fee,
-      });
-    }
-
-    // Transaction
-    await ctx.db.insert("transactions", {
-      userId: args.userId,
-      type: "deposit",
-      amountETH: totalAmount,
-      amountUSD: totalAmount,
-      note: `Faucet Deposit of $${totalAmount.toFixed(2)} USD (Net: $${args.amountETH.toFixed(2)} + Fee: $${fee.toFixed(2)})`,
-      createdAt: new Date().toISOString(),
-    });
-
-    // Notification
-    await ctx.db.insert("notifications", {
-      userId: args.userId,
-      type: "deposit",
-      message: `Your deposit of $${totalAmount.toFixed(2)} USD has been confirmed.`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
-
-    return { id: user._id.toString(), ethBalance: newBalance };
-  }
-});
-
 export const withdrawETH = mutation({
   args: {
     userId: v.string(),

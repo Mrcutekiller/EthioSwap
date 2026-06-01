@@ -71,7 +71,6 @@ export const AuthProvider = ({ children }) => {
   const convexPauseListing         = useMutation(api.listings.pause);
   const convexInitiateTrade        = useMutation(api.trades.initiateTrade);
   const convexWithdraw             = useMutation(api.users.withdrawETH);
-  const convexDepositMock          = useMutation(api.users.faucetDeposit);
   const convexCreateDepositRequest = useMutation(api.depositRequests.create);
   const convexApproveDeposit       = useMutation(api.depositRequests.approve);
   const convexRejectDeposit        = useMutation(api.depositRequests.reject);
@@ -258,13 +257,6 @@ export const AuthProvider = ({ children }) => {
     finally { setLoading(false); }
   };
 
-  const depositMock = async (amountETH) => {
-    try {
-      await convexDepositMock({ userId: user.id, amountETH });
-      setSuccess(`Deposited $${parseFloat(amountETH).toFixed(2)} USD successfully!`);
-    } catch (err) { setError(err.message); }
-  };
-
   const confirmOnchainDeposit = async (amountUSD, senderReference) => {
     setLoading(true);
     try {
@@ -416,7 +408,7 @@ export const AuthProvider = ({ children }) => {
       myWithdrawalReqs, allWithdrawalReqs,
       setError, setSuccess,
       login, register, logout, unlock, updateUser, switchUser,
-      createListing, pauseListing, initiateTrade, withdrawETH, depositMock,
+      createListing, pauseListing, initiateTrade, withdrawETH,
       createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
       confirmOnchainDeposit,
       approveWithdrawalRequest, rejectWithdrawalRequest,

@@ -275,59 +275,32 @@ export const autoApproveOnchain = mutation({
     if (!user) throw new ConvexError("User not found");
     if (args.amountUSD < 5) throw new ConvexError("Minimum deposit amount is $5.00 USD");
 
-    const settings = await ctx.db.query("systemSettings").first();
-    const feePercent = settings?.flatFeePercent ?? 1.0;
-    const rawFee = args.amountUSD * (feePercent / 100);
-    const fee = Math.round(rawFee * 100) / 100;
-
-    // Credit user available balance with the full deposit amount (amount + fee)
-    await ctx.db.patch(user._id, {
-      ethBalance: user.ethBalance + args.amountUSD,
-    });
-
-    // Credit fee to admin
-    const systemAdmin = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
-      .unique();
-    if (systemAdmin) {
-      await ctx.db.patch(systemAdmin._id, {
-        ethBalance: systemAdmin.ethBalance + fee,
-      });
-    }
-
-    // Insert approved deposit request record
+    // Insert pending deposit request record for admin review (Real Money only, no auto-credit)
     const requestId = await ctx.db.insert("depositRequests", {
       userId: args.userId,
       username: user.username,
       amountUSD: args.amountUSD,
       walletType: "On-Chain (USDT)",
       senderReference: args.senderReference,
-      status: "approved",
-      reviewedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      adminNote: "Automatically processed via instant blockchain integration.",
-    });
-
-    // Log transaction
-    await ctx.db.insert("transactions", {
-      userId: args.userId,
-      type: "deposit",
-      amountETH: args.amountUSD,
-      amountUSD: args.amountUSD,
-      note: `On-Chain Deposit automatically approved via Tron Network — Fee: $${fee.toFixed(2)} USD, TxID: ${args.senderReference}`,
+      status: "pending",
       createdAt: new Date().toISOString(),
     });
 
-    // Notify user
-    await ctx.db.insert("notifications", {
-      userId: args.userId,
-      type: "deposit_approved",
-      message: `✅ Your deposit of $${args.amountUSD.toFixed(2)} USD has been automatically confirmed. Credited: $${args.amountUSD.toFixed(2)} USD (after platform fee of $${fee.toFixed(2)} USD)`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    // Notify admin to review and check their actual TRON wallet
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
+      .unique();
+    if (admin) {
+      await ctx.db.insert("notifications", {
+        userId: admin._id.toString(),
+        type: "deposit_request",
+        message: `💵 New on-chain deposit request from @${user.username}: $${args.amountUSD.toFixed(2)} USD (TxID: ${args.senderReference})`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
-    return { success: true, id: requestId.toString(), ethBalance: user.ethBalance + args.amountUSD };
+    return { success: true, id: requestId.toString(), ethBalance: user.ethBalance };
   }
 });
