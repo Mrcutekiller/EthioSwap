@@ -1,5 +1,5 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // Helper to generate realistic mock Ethereum credentials
 function generateMockEthCredentials() {
@@ -98,7 +98,7 @@ export const register = mutation({
       .withIndex("by_username", (q) => q.eq("username", args.username.toLowerCase()))
       .unique();
     if (existing) {
-      throw new Error("Username is already taken");
+      throw new ConvexError("Username is already taken");
     }
 
     if (args.email) {
@@ -106,7 +106,7 @@ export const register = mutation({
         .filter((q) => q.eq(q.field("email"), args.email.toLowerCase()))
         .first();
       if (existingEmail) {
-        throw new Error("Email is already registered");
+        throw new ConvexError("Email is already registered");
       }
     }
 
@@ -261,7 +261,7 @@ export const login = mutation({
     }
 
     if (!user || user.passwordHash !== args.password) {
-      throw new Error("Invalid username or password");
+      throw new ConvexError("Invalid username or password");
     }
 
     // Self-healing check: Ensure the logging-in user has a valid 6-digit unique numeric ID
@@ -527,20 +527,20 @@ export const withdrawETH = mutation({
   handler: async (ctx, args) => {
     const userObjId = ctx.db.normalizeId("users", args.userId);
     const user = userObjId ? await ctx.db.get(userObjId) : null;
-    if (!user) throw new Error("User not found");
+    if (!user) throw new ConvexError("User not found");
 
     if (user.transactionPin) {
       if (!args.pin || args.pin !== user.transactionPin) {
-        throw new Error("Invalid transaction security PIN.");
+        throw new ConvexError("Invalid transaction security PIN.");
       }
     }
 
     if (args.amountETH < 5) {
-      throw new Error("Minimum withdrawal amount is $5.00 USD");
+      throw new ConvexError("Minimum withdrawal amount is $5.00 USD");
     }
 
     if (user.ethBalance < args.amountETH) {
-      throw new Error("Insufficient USD balance");
+      throw new ConvexError("Insufficient USD balance");
     }
 
     // Anti-spam velocity gating: max 2 pending withdrawals per hour
