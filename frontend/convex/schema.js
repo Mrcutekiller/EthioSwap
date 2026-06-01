@@ -29,6 +29,8 @@ export default defineSchema({
     ethBalance: v.number(),
     ethLocked: v.number(),
     etbBalance: v.number(),
+    binanceBalance: v.optional(v.number()),
+    bybitBalance: v.optional(v.number()),
     displayName: v.string(),
     bio: v.string(),
     reputation: v.number(),

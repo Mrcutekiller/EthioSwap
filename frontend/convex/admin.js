@@ -222,8 +222,13 @@ export const getKycQueue = query({
 export const getUserKycImages = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    let user = null;
     const userObjId = ctx.db.normalizeId("users", args.userId);
-    const user = userObjId ? await ctx.db.get(userObjId) : null;
+    if (userObjId) user = await ctx.db.get(userObjId);
+    if (!user) {
+      const allUsers = await ctx.db.query("users").collect();
+      user = allUsers.find(u => u._id.toString() === args.userId) || null;
+    }
     if (!user) return null;
     return {
       kycIdFront: user.kycIdFront,
@@ -293,6 +298,8 @@ export const getAdminEarnings = query({
     return {
       walletBalance: admin.ethBalance,
       walletLocked:  admin.ethLocked || 0,
+      binanceBalance: admin.binanceBalance || 0,
+      bybitBalance:  admin.bybitBalance || 0,
       totalEarned,
       earnedWeek,
       earnedMonth,

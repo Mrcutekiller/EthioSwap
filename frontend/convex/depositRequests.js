@@ -153,9 +153,21 @@ export const approve = mutation({
       .withIndex("by_username", (q) => q.eq("username", "ethioswap@gmail.com"))
       .unique();
     if (systemAdmin) {
-      await ctx.db.patch(systemAdmin._id, {
-        ethBalance: systemAdmin.ethBalance + fee,
-      });
+      const isBinance = req.walletType && req.walletType.toLowerCase().includes("binance");
+      const isBybit = req.walletType && req.walletType.toLowerCase().includes("bybit");
+      if (isBinance) {
+        await ctx.db.patch(systemAdmin._id, {
+          binanceBalance: (systemAdmin.binanceBalance || 0) + fee,
+        });
+      } else if (isBybit) {
+        await ctx.db.patch(systemAdmin._id, {
+          bybitBalance: (systemAdmin.bybitBalance || 0) + fee,
+        });
+      } else {
+        await ctx.db.patch(systemAdmin._id, {
+          ethBalance: (systemAdmin.ethBalance || 0) + fee,
+        });
+      }
     }
 
     // Mark request approved

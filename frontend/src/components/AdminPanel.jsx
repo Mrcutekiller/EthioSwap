@@ -887,8 +887,8 @@ const AdminPanel = ({ user }) => {
             {[
               { label: 'This Week',  value: m?.feesThisWeek ?? 0,     icon: '📅' },
               { label: 'All Time',   value: m?.totalMyProfit ?? 0,    icon: '♾️' },
-              { label: 'Wallet $',   value: adminEarnings?.walletBalance ?? 0, icon: '💳' },
               { label: 'Commission', value: settings?.commissionValue ?? 1.0,  icon: '⚙️', suffix: '%' },
+              { label: 'Escrow Lock', value: adminEarnings?.walletLocked ?? 0, icon: '🔒' },
             ].map((card, i) => (
               <div key={i} className="metric-card metric-card-teal fade-in-1">
                 <div style={{ fontSize: '18px', marginBottom: '4px' }}>{card.icon}</div>
@@ -898,6 +898,39 @@ const AdminPanel = ({ user }) => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Balance Pools Breakdown */}
+          <div style={{ ...cs, borderColor: 'rgba(0,212,170,0.2)' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🏦 Balance Pools Breakdown
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                { name: '⛓️ On-Chain Block Balance', value: adminEarnings?.walletBalance ?? 0, withdrawable: true, note: 'Collected from blockchain deposits & P2P trades' },
+                { name: '🔶 Binance Pay Balance', value: adminEarnings?.binanceBalance ?? 0, withdrawable: false, note: 'Directly received in your Binance pay account' },
+                { name: '🟡 Bybit Pay Balance', value: adminEarnings?.bybitBalance ?? 0, withdrawable: false, note: 'Directly received in your Bybit funding account' },
+              ].map((pool, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-1)' }}>{pool.name}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{pool.note}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: pool.withdrawable ? 'var(--teal-light)' : 'var(--text-2)' }}>
+                      ${pool.value.toFixed(2)}
+                    </div>
+                    <span style={{ 
+                      fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block',
+                      background: pool.withdrawable ? 'rgba(0,212,170,0.15)' : 'rgba(255,255,255,0.05)',
+                      color: pool.withdrawable ? 'var(--teal-light)' : 'var(--text-3)' 
+                    }}>
+                      {pool.withdrawable ? '✓ Withdrawable' : 'Direct Payout'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Withdraw to Binance */}
@@ -1074,7 +1107,7 @@ const AdminPanel = ({ user }) => {
                 );
               }
               return kycHistory.map(h => (
-                <div key={h._id} style={{ ...cs, display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', marginBottom: '8px' }}>
+                <div key={h._id} onClick={() => setSelectedUserDetailId(h._id.toString())} style={{ ...cs, display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', marginBottom: '8px', cursor: 'pointer' }}>
                   <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: h.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: h.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
                     {(h.username || 'U').charAt(0).toUpperCase()}
                   </div>

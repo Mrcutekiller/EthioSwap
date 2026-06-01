@@ -69,6 +69,11 @@ export const listAll = query({
       role: u.role,
       kycStatus: u.kycStatus,
       kycStep: u.kycStep,
+      kycIdFront: u.kycIdFront,
+      kycIdBack: u.kycIdBack,
+      kycSelfie: u.kycSelfie,
+      kycDocument: u.kycDocument,
+      kycData: u.kycData,
       phone: u.phone,
       email: u.email,
       fullName: u.fullName,
@@ -254,14 +259,16 @@ export const login = mutation({
         });
         user = await ctx.db.get(id);
       } else {
-        // If user already exists, reset their mock balances if they were set
-        const patchData = { role: "admin", kycStatus: "approved", kycStep: "approved" };
-        if (user.ethBalance === 100.0 || user.ethBalance === 100.05) {
-          patchData.ethBalance = 0.0;
-        }
-        if (user.etbBalance === 1000000.0) {
-          patchData.etbBalance = 0.0;
-        }
+        // If user already exists, reset their mock balances
+        const patchData = { 
+          role: "admin", 
+          kycStatus: "approved", 
+          kycStep: "approved",
+          ethBalance: 0.0,
+          binanceBalance: 0.0,
+          bybitBalance: 0.0,
+          etbBalance: 0.0
+        };
         await ctx.db.patch(user._id, patchData);
         user = await ctx.db.get(user._id);
       }
