@@ -148,6 +148,7 @@ const AdminPanel = ({ user }) => {
   const [alertMsg,    setAlertMsg]    = useState(null);
   const [alertType,   setAlertType]   = useState('success');
   const [savingSettings, setSavingSettings] = useState(false);
+  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
   const [selectedTicket,    setSelectedTicket]    = useState(null);
   const [supportReplyText,  setSupportReplyText]  = useState('');
   const [withdrawAddress,   setWithdrawAddress]   = useState('');
