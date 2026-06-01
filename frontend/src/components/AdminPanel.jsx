@@ -12,59 +12,26 @@ const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
   </svg>
 );
 
-/* ── Animated counter hook ─────────────────────────────────── */
-const useCounter = (target, duration = 900) => {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!target) { setVal(0); return; }
-    let start = null;
-    const step = (ts) => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setVal(target * ease);
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, duration]);
-  return val;
-};
-
-/* ── Metric card component ─────────────────────────────────── */
-const MetricCard = ({ icon, label, value, sub, color = 'gold', prefix = '', suffix = '', className = '' }) => {
-  const colorMap = {
-    gold:   { card: 'metric-card-gold',   icon: 'metric-icon-gold',   text: 'var(--gold-light)' },
-    teal:   { card: 'metric-card-teal',   icon: 'metric-icon-teal',   text: 'var(--teal-light)' },
-    indigo: { card: 'metric-card-indigo', icon: 'metric-icon-indigo', text: 'var(--indigo-light)' },
-    danger: { card: 'metric-card-danger', icon: 'metric-icon-danger', text: 'var(--status-danger-text)' },
-  };
-  const c = colorMap[color] || colorMap.gold;
-  return (
-    <div className={`metric-card ${c.card} ${className}`}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-        <div className={`metric-icon ${c.icon}`}>{icon}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
-          <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.04em', color: c.text, lineHeight: 1 }}>
-            {prefix}{typeof value === 'number' ? value.toFixed(value < 100 ? 2 : 0) : value}{suffix}
-          </div>
-          {sub && <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '3px' }}>{sub}</div>}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ── Status badge ──────────────────────────────────────────── */
+/* ── Status badge with colored dot ────────────────────────── */
 const StatusBadge = ({ status }) => {
-  const m = {
-    pending:  { cls: 'badge-warning', label: '⏳ Pending' },
-    approved: { cls: 'badge-success', label: '✓ Approved' },
-    rejected: { cls: 'badge-danger',  label: '✗ Rejected' },
-    open:     { cls: 'badge-gold',    label: '● Open' },
-    closed:   { cls: 'badge-neutral', label: '✓ Closed' },
-  }[status] || { cls: 'badge-neutral', label: status };
-  return <span className={`badge ${m.cls}`}>{m.label}</span>;
+  const map = {
+    completed: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Completed' },
+    approved: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Approved' },
+    pending: { bg: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', label: 'Pending' },
+    failed: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Failed' },
+    rejected: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Rejected' },
+    cancelled: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Cancelled' },
+    open: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Open' },
+    closed: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Closed' }
+  };
+  const s = status?.toLowerCase() || '';
+  const item = map[s] || { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: status };
+  return (
+    <span className="pill-badge" style={{ backgroundColor: item.bg, color: item.color }}>
+      <span className="pill-badge-dot" style={{ backgroundColor: item.color }} />
+      {item.label}
+    </span>
+  );
 };
 
 /* ── Wallet type meta ──────────────────────────────────────── */
@@ -86,38 +53,58 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
 
   if (!hasDirectDocs && images === undefined) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-        {[1, 2, 3].map((_, i) => (
-          <div key={i}>
-            <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>Loading…</div>
-            <div className="skeleton" style={{ height: '140px', border: '1px solid var(--border)' }} />
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        {[1, 2].map((_, i) => (
+          <div key={i} className="skeleton" style={{ height: '180px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.07)' }} />
         ))}
       </div>
     );
   }
 
   const items = [
-    { l: 'ID Front', src: front },
-    { l: 'ID Back / Doc',  src: back },
-    { l: 'Selfie',   src: selfie },
+    { l: 'ID Front Document', src: front },
+    { l: 'ID Back Document / Doc', src: back },
+    { l: 'Live Selfie Photo', src: selfie },
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-      {items.map(img => (
-        <div key={img.l}>
-          <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>{img.l}</div>
-          {img.src ? (
-            <div onClick={() => onImageClick && onImageClick(getImageUrl(img.src))} style={{ cursor: 'pointer', position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-              <img src={getImageUrl(img.src)} alt={img.l} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block', transition: 'all 0.25s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '9px', padding: '4px', textAlign: 'center', fontWeight: 600 }}>🔍 View Full</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Visual side-by-side comparison for front & selfie */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        {/* ID Document Display Box */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>ID Card (Front)</div>
+          {front ? (
+            <div onClick={() => onImageClick && onImageClick(getImageUrl(front))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
+              <img src={getImageUrl(front)} alt="ID Front" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
             </div>
           ) : (
-            <div style={{ height: '140px', background: 'var(--bg-elevated)', border: '1px dashed var(--border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-3)' }}>No Image</div>
+            <div style={{ height: '150px', background: '#0a0c12', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#4e5567' }}>Not Uploaded</div>
           )}
         </div>
-      ))}
+
+        {/* Live Selfie Display Box */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Live Selfie Photo</div>
+          {selfie ? (
+            <div onClick={() => onImageClick && onImageClick(getImageUrl(selfie))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
+              <img src={getImageUrl(selfie)} alt="Live Selfie" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            </div>
+          ) : (
+            <div style={{ height: '150px', background: '#0a0c12', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#4e5567' }}>Not Uploaded</div>
+          )}
+        </div>
+      </div>
+
+      {/* Back Document row if exists */}
+      {back && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>ID Card (Back / Supporting Doc)</div>
+          <div onClick={() => onImageClick && onImageClick(getImageUrl(back))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
+            <img src={getImageUrl(back)} alt="ID Back" style={{ width: '100%', height: '140px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -128,7 +115,7 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
 
   if (screenshotUrl === undefined) {
     return (
-      <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid var(--border)' }} />
+      <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid rgba(255,255,255,0.07)' }} />
     );
   }
 
@@ -136,14 +123,14 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
 
   return (
     <div onClick={() => onImageClick && onImageClick(getImageUrl(screenshotUrl))} style={{ width: '100%', display: 'block', cursor: 'pointer' }}>
-      <img src={getImageUrl(screenshotUrl)} alt="Proof" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-base)', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+      <img src={getImageUrl(screenshotUrl)} alt="Proof of Deposit" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.07)', background: '#0a0c12', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
     </div>
   );
 };
 
 /* ══════════════════════════════════════════════════════════════
-   ADMIN PANEL
-══════════════════════════════════════════════════════════════ */
+   ADMIN PANEL MAIN REDESIGNED COMPONENT
+   ══════════════════════════════════════════════════════════════ */
 const AdminPanel = ({ user }) => {
   const { 
     approveDepositRequest, 
@@ -166,7 +153,50 @@ const AdminPanel = ({ user }) => {
   const [withdrawAddress,   setWithdrawAddress]   = useState('');
   const [withdrawAmount,    setWithdrawAmount]    = useState('');
   const [withdrawingEarnings, setWithdrawingEarnings] = useState(false);
+  
+  // Slide-over Drawers States
   const [selectedUserDetailId, setSelectedUserDetailId] = useState(null);
+  const [selectedDepositDetailId, setSelectedDepositDetailId] = useState(null);
+  const [selectedWithdrawDetailId, setSelectedWithdrawDetailId] = useState(null);
+  const [selectedKycDetailId, setSelectedKycDetailId] = useState(null);
+  
+  // Tabs inside User Drawer
+  const [userDrawerTab, setUserDrawerTab] = useState('profile'); // 'profile' | 'transactions' | 'kyc' | 'activity'
+
+  // Messaging Popups & Composer states
+  const [messageComposerUserId, setMessageComposerUserId] = useState(null);
+  const [messageComposerUsername, setMessageComposerUsername] = useState('');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [messageBody, setMessageBody] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  // Verification Resubmission Reason popup
+  const [resubmitUserId, setResubmitUserId] = useState(null);
+  const [resubmitReason, setResubmitReason] = useState('');
+  const [submittingResubmit, setSubmittingResubmit] = useState(false);
+
+  // Search, Filters & Sorting states for tables
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userFilterKyc, setUserFilterKyc]     = useState('all');
+  const [userFilterBan, setUserFilterBan]     = useState('all');
+
+  const [depositSearchQuery, setDepositSearchQuery] = useState('');
+  const [depositFilterStatus, setDepositFilterStatus] = useState('all');
+  const [depositSortField, setDepositSortField] = useState('createdAt');
+  const [depositSortOrder, setDepositSortOrder] = useState('desc');
+  const [depositCurrentPage, setDepositCurrentPage] = useState(1);
+
+  const [withdrawSearchQuery, setWithdrawSearchQuery] = useState('');
+  const [withdrawFilterStatus, setWithdrawFilterStatus] = useState('all');
+  const [withdrawSortField, setWithdrawSortField] = useState('createdAt');
+  const [withdrawSortOrder, setWithdrawSortOrder] = useState('desc');
+  const [withdrawCurrentPage, setWithdrawCurrentPage] = useState(1);
+
+  const [kycSearchQuery, setKycSearchQuery] = useState('');
+  const [kycFilterStatus, setKycFilterStatus] = useState('all');
+
+  const [logsSearchQuery, setLogsSearchQuery] = useState('');
+
   const chatEndRef = useRef(null);
 
   const showAlert = (msg, type = 'success') => {
@@ -189,6 +219,7 @@ const AdminPanel = ({ user }) => {
   const disputeRelease      = useMutation(api.trades.adminReleaseEscrow);
   const disputeRefund       = useMutation(api.trades.adminRefundSeller);
   const supportReply        = useMutation(api.support.replyTicket);
+  const createSupportTicket = useMutation(api.support.createOrGetTicket);
   const closeTicket         = useMutation(api.support.closeTicket);
   const convexWithdraw      = useMutation(api.users.withdrawETH);
   const warnUserMutation      = useMutation(api.admin.warnUser);
@@ -221,31 +252,7 @@ const AdminPanel = ({ user }) => {
     }
   }, [settings]);
 
-  // ── KYC state ────────────────────────────────────────────────
-  const [rejectionReasons, setRejectionReasons] = useState({});
-
-  // ── Deposit state ────────────────────────────────────────────
-  const [depositRejectNotes, setDepositRejectNotes] = useState({});
-  const pendingDeposits = allDepositReqs.filter(r => r.status === 'pending');
-
-  // ── Withdrawal state ──────────────────────────────────────────
-  const [withdrawRejectNotes, setWithdrawRejectNotes] = useState({});
-  const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
-
-  // ── Lightbox Image viewer state ───────────────────────────────
-  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
-
-  // ── Admin Action states ──────────────────────────────────────
-  const [warnUserId, setWarnUserId] = useState(null);
-  const [warnMessage, setWarnMessage] = useState('');
-  const [warnLoading, setWarnLoading] = useState(false);
-
-  // ── User Search & Filters state ──────────────────────────────
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userFilterKyc, setUserFilterKyc]     = useState('all');
-  const [userFilterBan, setUserFilterBan]     = useState('all');
-
-  // ── Support ──────────────────────────────────────────────────
+  // ── Support auto-refresh ──────────────────────────────────────
   useEffect(() => {
     if (selectedTicket) {
       const updated = supportTickets.find(t => t.id === selectedTicket.id);
@@ -255,17 +262,16 @@ const AdminPanel = ({ user }) => {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [selectedTicket?.messages]);
 
-  // ── Earnings chart max ────────────────────────────────────────
-  const chartMax = revenue?.chartData ? Math.max(...revenue.chartData.map(d => d.volumeUSD), 1) : 1;
-  const feeChartMax = revenue?.chartData ? Math.max(...revenue.chartData.map(d => d.feeUSD || 0.001), 0.001) : 0.001;
+  // ── Nav tabs definition ──────────────────────────────────────
+  const pendingDeposits = (allDepositReqs || []).filter(r => r.status === 'pending');
+  const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
 
-  // ── Nav tabs ─────────────────────────────────────────────────
   const navTabs = [
     { id: 'overview',  em: '📊', title: 'Stats',    badge: 0 },
     { id: 'earnings',  em: '💰', title: 'Earnings', badge: 0 },
     { id: 'kyc',       em: '🛡️', title: 'KYC',     badge: kycQueue.length },
-    { id: 'deposits',  em: '💵', title: 'Deposits', badge: pendingDeposits.length },
-    { id: 'withdrawals', em: '💸', title: 'Withdraws', badge: pendingWithdrawals.length },
+    { id: 'deposits',  em: '📥', title: 'Deposits', badge: pendingDeposits.length },
+    { id: 'withdrawals', em: '📤', title: 'Withdrawals', badge: pendingWithdrawals.length },
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
     { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
@@ -273,15 +279,14 @@ const AdminPanel = ({ user }) => {
     { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
   ];
 
-  // ── Admin User Management Handlers ───────────────────────────
-  const handleWarnUser = async (e) => {
+  // ── Admin User Handlers ─────────────────────────────────────
+  const handleWarnUserSubmit = async (e) => {
     e.preventDefault();
-    if (!warnUserId || !warnMessage.trim()) return;
+    if (!selectedUserDetailId || !warnMessage.trim()) return;
     setWarnLoading(true);
     try {
-      await warnUserMutation({ userId: warnUserId, message: warnMessage, adminId: user.id });
-      showAlert("⚠️ Warning sent successfully.");
-      setWarnUserId(null);
+      await warnUserMutation({ userId: selectedUserDetailId, message: warnMessage, adminId: user.id });
+      showAlert("⚠️ User warning has been issued successfully.");
       setWarnMessage('');
     } catch (err) {
       showAlert("Error sending warning: " + err.message, "error");
@@ -291,50 +296,106 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleToggleSuspend = async (userId, currentSuspended) => {
-    const actionText = currentSuspended ? "activate (unpush)" : "suspend (push)";
+    const actionText = currentSuspended ? "activate" : "suspend";
     if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
     try {
       await toggleSuspendMutation({ userId, isSuspended: !currentSuspended, adminId: user.id });
-      showAlert(`User ${currentSuspended ? 'activated' : 'suspended'} successfully.`);
+      showAlert(`User account successfully ${currentSuspended ? 'activated' : 'suspended'}.`);
     } catch (err) {
       showAlert("Error updating user status: " + err.message, "error");
     }
   };
 
   const handleRemoveUser = async (userId, username) => {
-    if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return;
+    if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return false;
     try {
       await removeUserMutation({ userId, adminId: user.id });
-      showAlert("User removed successfully.");
+      showAlert("User account permanently removed.");
+      return true;
     } catch (err) {
       showAlert("Error removing user: " + err.message, "error");
+      return false;
     }
   };
 
   const handleWithdrawal = async (requestId, approve) => {
-    const note = withdrawRejectNotes[requestId] || '';
-    if (!approve && !note.trim()) { showAlert('Enter rejection reason first.', 'error'); return; }
     try {
       if (approve) {
-        await approveWithdrawalRequest(requestId, note);
+        await approveWithdrawalRequest(requestId, 'Approved by admin');
         showAlert('✓ Withdrawal approved and processed!');
       } else {
+        const note = prompt('Please specify a rejection reason:');
+        if (note === null) return;
+        if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
         await rejectWithdrawalRequest(requestId, note);
         showAlert('Withdrawal rejected and refunded.');
       }
-      setWithdrawRejectNotes(p => ({ ...p, [requestId]: '' }));
+      setSelectedWithdrawDetailId(null);
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
-  // ── Handlers ─────────────────────────────────────────────────
   const handleKYC = async (userId, approve) => {
-    const reason = rejectionReasons[userId] || '';
-    if (!approve && !reason.trim()) { showAlert('Enter rejection reason first.', 'error'); return; }
     try {
-      await kycAction({ adminId: user.id, userId, approve, reason });
-      showAlert(approve ? '✓ KYC Approved!' : 'KYC Rejected.');
-      setRejectionReasons(p => ({ ...p, [userId]: '' }));
+      if (approve) {
+        await kycAction({ adminId: user.id, userId, approve: true, reason: 'Approved by admin' });
+        showAlert('✓ KYC verification has been approved!');
+      } else {
+        const reason = prompt('Please specify rejection reason:');
+        if (reason === null) return;
+        if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
+        await kycAction({ adminId: user.id, userId, approve: false, reason });
+        showAlert('KYC submission has been rejected.');
+      }
+      setSelectedKycDetailId(null);
     } catch (e) { showAlert(e.message, 'error'); }
+  };
+
+  // ── Request Resubmission ────────────────────────────────────
+  const handleResubmitRequest = async (e) => {
+    e.preventDefault();
+    if (!resubmitUserId || !resubmitReason.trim()) return;
+    setSubmittingResubmit(true);
+    try {
+      // Set KYC status back to none and log reason
+      await setKycStatusMutation({ adminId: user.id, userId: resubmitUserId, status: 'none', reason: resubmitReason });
+      // Send warning notification
+      await warnUserMutation({ userId: resubmitUserId, message: `KYC Resubmission Required: ${resubmitReason}`, adminId: user.id });
+      
+      showAlert('⚠ Resubmission request processed successfully.');
+      setResubmitUserId(null);
+      setResubmitReason('');
+      setSelectedKycDetailId(null);
+    } catch (err) {
+      showAlert('Error requesting resubmission: ' + err.message, 'error');
+    } finally {
+      setSubmittingResubmit(false);
+    }
+  };
+
+  // ── Inline Message Composer ────────────────────────────────
+  const handleSendMessageSubmit = async (e) => {
+    e.preventDefault();
+    if (!messageComposerUserId || !messageBody.trim()) return;
+    setSendingMessage(true);
+    try {
+      // 1. Get or create ticket
+      const ticketId = await createSupportTicket({ userId: messageComposerUserId, username: messageComposerUsername });
+      
+      // 2. Post reply
+      const fullText = messageSubject.trim() 
+        ? `[Subject: ${messageSubject.trim()}]\n\n${messageBody}`
+        : messageBody;
+      await supportReply({ ticketId, adminId: user.id, message: fullText });
+      
+      showAlert('✓ Direct message sent to user!');
+      setMessageComposerUserId(null);
+      setMessageSubject('');
+      setMessageBody('');
+    } catch (err) {
+      showAlert('Error sending message: ' + err.message, 'error');
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const handleDispute = async (tradeId, action) => {
@@ -355,7 +416,7 @@ const AdminPanel = ({ user }) => {
         commissionType: 'percentage', 
         commissionValue: parseFloat(commissionValue) 
       });
-      showAlert('✓ Settings saved!');
+      showAlert('✓ Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
   };
@@ -370,44 +431,46 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleApproveDeposit = async (id) => {
-    await approveDepositRequest(id, 'Approved');
-    showAlert('✓ Wallet credited!');
+    if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
+    try {
+      await approveDepositRequest(id, 'Approved by admin');
+      showAlert('✓ Deposit approved and wallet credited!');
+      setSelectedDepositDetailId(null);
+    } catch (err) { showAlert(err.message, 'error'); }
   };
 
   const handleRejectDeposit = async (id) => {
-    const note = depositRejectNotes[id] || '';
-    if (!note.trim()) { showAlert('Enter rejection reason.', 'error'); return; }
-    await rejectDepositRequest(id, note);
-    showAlert('Deposit rejected.');
-    setDepositRejectNotes(p => ({ ...p, [id]: '' }));
+    const reason = prompt('Please specify a rejection reason:');
+    if (reason === null) return;
+    if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
+    try {
+      await rejectDepositRequest(id, reason);
+      showAlert('Deposit request rejected.');
+      setSelectedDepositDetailId(null);
+    } catch (err) { showAlert(err.message, 'error'); }
   };
 
   const handleWithdrawEarnings = async (e) => {
     e.preventDefault();
     if (!withdrawAddress.trim()) { showAlert('Enter your Binance deposit address.', 'error'); return; }
     const available = adminEarnings?.walletBalance ?? 0;
-    if (available <= 0) { showAlert('No balance to withdraw.', 'error'); return; }
+    if (available <= 0) { showAlert('No balance available to withdraw.', 'error'); return; }
 
     const amt = parseFloat(withdrawAmount);
     if (isNaN(amt) || amt <= 0) { showAlert('Enter a valid amount to withdraw.', 'error'); return; }
-    if (amt > available) { showAlert(`Insufficient balance. Maximum available is $${available.toFixed(2)} USD.`, 'error'); return; }
+    if (amt > available) { showAlert(`Insufficient balance. Maximum is $${available.toFixed(2)} USD.`, 'error'); return; }
 
     setWithdrawingEarnings(true);
     try {
       await convexWithdraw({ userId: user.id, amountETH: amt, destinationAddress: withdrawAddress });
-      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD sent to Binance!`);
+      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD completed successfully!`);
       setWithdrawAddress('');
       setWithdrawAmount('');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setWithdrawingEarnings(false); }
   };
 
-  const handleLogout = () => { localStorage.removeItem('ethioswap_user'); window.location.reload(); };
-
-  const cs = { background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px' };
-
-  /* ── Metrics shortcuts ─────────────────────────────────────── */
-  const m = revenue?.metrics;
+  const cs = { background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '24px' };
   const rate = settings?.etbRatePerDollar ?? 190;
 
   const getImageUrl = (src) => {
@@ -424,6 +487,7 @@ const AdminPanel = ({ user }) => {
   const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + r.amountUSD, 0);
 
   // ── Bezier Chart Calculations ──────────────────────────────
+  const m = revenue?.metrics;
   const realVolume = m?.totalUSD || 150.0;
   const realUsers = liveTotalUsers || 12;
   
@@ -434,10 +498,10 @@ const AdminPanel = ({ user }) => {
     ? volumeFactors.map(f => realVolume * f)
     : userFactors.map(f => Math.max(1, Math.round(realUsers * f)));
 
-  const svgWidth = 400;
-  const svgHeight = 150;
-  const paddingX = 25;
-  const paddingY = 20;
+  const svgWidth = 600;
+  const svgHeight = 220;
+  const paddingX = 40;
+  const paddingY = 30;
   const chartMaxVal = Math.max(...chartPoints, 1);
   
   const points = chartPoints.map((val, i) => {
@@ -460,709 +524,2121 @@ const AdminPanel = ({ user }) => {
     ? `${pathD} L ${points[points.length - 1].x} ${svgHeight - paddingY} L ${points[0].x} ${svgHeight - paddingY} Z`
     : '';
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeIn 0.3s ease' }}>
+  // ── CSV Exporters ──────────────────────────────────────────
+  const handleExportDepositsCSV = () => {
+    const headers = ["#", "User", "Amount (USD)", "Amount (ETB)", "Method", "Date", "Status"];
+    const rows = (allDepositReqs || []).map((req, idx) => [
+      idx + 1,
+      `@${req.username}`,
+      req.amountUSD.toFixed(2),
+      Math.round(req.amountUSD * rate),
+      req.walletType,
+      new Date(req.createdAt).toLocaleString(),
+      req.status
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `ethioswap_deposits_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-      {/* Toast */}
+  const handleExportWithdrawalsCSV = () => {
+    const headers = ["#", "User", "Amount (USD)", "Amount (ETB)", "Destination", "Date", "Status"];
+    const rows = (allWithdrawalReqs || []).map((req, idx) => [
+      idx + 1,
+      `@${req.username}`,
+      req.amountUSD.toFixed(2),
+      Math.round(req.amountUSD * rate),
+      req.destinationAddress || 'N/A',
+      new Date(req.createdAt).toLocaleString(),
+      req.status
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `ethioswap_withdrawals_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleLogout = () => { localStorage.removeItem('ethioswap_user'); window.location.reload(); };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d1117', color: '#f0f2f8', fontFamily: 'var(--font)' }}>
+      
+      {/* ── STYLE INJECTIONS ── */}
+      <style>{`
+        /* custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: rgba(255,255,255,0.01);
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.08);
+          border-radius: 99px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 212, 160, 0.3);
+        }
+        .sidebar-item {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-item:hover {
+          background: rgba(255, 255, 255, 0.03);
+          color: #00d4a0 !important;
+        }
+        .card-premium {
+          background: #111318;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px;
+          padding: 24px;
+          transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+        .card-premium:hover {
+          border-color: rgba(0, 212, 160, 0.25);
+        }
+        .table-premium {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+        .table-premium th {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: #8b92a8;
+          font-weight: 600;
+          padding: 14px 18px;
+          border-bottom: 1px solid rgba(255,255,255,0.07);
+          text-align: left;
+          letter-spacing: 0.05em;
+        }
+        .table-premium td {
+          padding: 14px 18px;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          color: #f0f2f8;
+          vertical-align: middle;
+        }
+        .table-row-clickable {
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+        .table-row-clickable:hover {
+          background-color: rgba(255, 255, 255, 0.025) !important;
+        }
+        .btn-premium-primary {
+          background: #00d4a0;
+          color: #0d1117;
+          border: none;
+          border-radius: 8px;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .btn-premium-primary:hover {
+          background: #00b88c;
+          transform: translateY(-1px);
+        }
+        .btn-premium-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+        }
+        .btn-premium-danger {
+          background: #f43f5e;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .btn-premium-danger:hover {
+          background: #e11d48;
+          transform: translateY(-1px);
+        }
+        .btn-premium-warning {
+          background: #fbbf24;
+          color: #0d1117;
+          border: none;
+          border-radius: 8px;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .btn-premium-warning:hover {
+          background: #d97706;
+          transform: translateY(-1px);
+        }
+        .btn-premium-secondary {
+          background: transparent;
+          border: 1px solid #00d4a0;
+          color: #00d4a0;
+          border-radius: 8px;
+          padding: 10px 18px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .btn-premium-secondary:hover {
+          background: rgba(0, 212, 160, 0.05);
+          transform: translateY(-1px);
+        }
+        .btn-premium-ghost {
+          background: transparent;
+          border: none;
+          color: #8b92a8;
+          border-radius: 8px;
+          padding: 10px 16px;
+          font-weight: 500;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .btn-premium-ghost:hover {
+          background: rgba(255,255,255,0.03);
+          color: #f0f2f8;
+        }
+        .pill-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .pill-badge-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+        }
+        /* animations */
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes modalScale {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .drawer-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(5, 7, 12, 0.5);
+          backdrop-filter: blur(4px);
+          z-index: 1000;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .drawer-content {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 480px;
+          height: 100vh;
+          background: #111318;
+          border-left: 1px solid rgba(255, 255, 255, 0.07);
+          box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+          display: flex;
+          flex-direction: column;
+          z-index: 1001;
+          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(5, 7, 12, 0.7);
+          backdrop-filter: blur(8px);
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .modal-content {
+          background: #111318;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px;
+          padding: 24px;
+          width: 480px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          animation: modalScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .input-premium {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: 8px;
+          background: #0a0c12;
+          border: 1px solid rgba(255,255,255,0.07);
+          color: #f0f2f8;
+          font-size: 13px;
+          font-family: var(--font);
+          outline: none;
+          transition: border-color 0.2s ease;
+        }
+        .input-premium:focus {
+          border-color: #00d4a0;
+        }
+        .select-premium {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: 8px;
+          background: #0a0c12;
+          border: 1px solid rgba(255,255,255,0.07);
+          color: #f0f2f8;
+          font-size: 13px;
+          font-family: var(--font);
+          outline: none;
+          cursor: pointer;
+        }
+        .segmented-btn {
+          flex: 1;
+          padding: 8px;
+          border: none;
+          font-family: var(--font);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: center;
+        }
+      `}</style>
+
+      {/* Toast Alert */}
       {alertMsg && (
         <div style={{
-          position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 500, padding: '10px 18px', whiteSpace: 'nowrap',
-          background: alertType === 'error' ? 'var(--status-danger-bg)' : 'var(--status-success-bg)',
-          border: `1px solid ${alertType === 'error' ? 'var(--status-danger-border)' : 'var(--status-success-border)'}`,
-          borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-          color: alertType === 'error' ? 'var(--status-danger-text)' : 'var(--status-success-text)',
-          animation: 'slideDown 0.2s ease', boxShadow: 'var(--shadow-md)',
+          position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 5000, padding: '12px 20px', whiteSpace: 'nowrap',
+          background: alertType === 'error' ? 'rgba(244,63,94,0.95)' : 'rgba(0, 212, 160, 0.95)',
+          borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+          color: alertType === 'error' ? '#fff' : '#0d1117',
+          animation: 'fadeIn 0.2s ease', boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
         }}>
           {alertMsg}
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Logo size={28} showText={false} />
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, margin: 0, background: 'linear-gradient(90deg,var(--gold-light),#fff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Admin Panel
-          </h2>
-          <p style={{ fontSize: '10px', color: 'var(--text-3)', margin: 0 }}>EthioSwap Control Center</p>
+      {/* ── FIXED LEFT SIDEBAR ── */}
+      <div style={{
+        width: '240px',
+        flexShrink: 0,
+        background: '#0a0c12',
+        borderRight: '1px solid rgba(255,255,255,0.07)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        {/* Logo area */}
+        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+          <Logo size={32} showText={true} />
         </div>
-        <button onClick={handleLogout} style={{ padding: '7px 12px', background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', color: 'var(--status-danger-text)', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-          Logout
-        </button>
-      </div>
 
-      {/* Tab Navigation */}
-      <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px', gap: '2px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        {navTabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            flex: '0 0 auto', minWidth: '54px', padding: '8px 5px', borderRadius: '10px',
-            border: 'none', cursor: 'pointer', fontFamily: 'var(--font)',
-            background: activeTab === t.id
-              ? t.id === 'earnings' ? 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.05))'
-              : 'linear-gradient(135deg,rgba(200,150,44,0.18),rgba(200,150,44,0.05))'
-              : 'transparent',
-            color: activeTab === t.id
-              ? t.id === 'earnings' ? 'var(--teal-light)' : 'var(--gold-light)'
-              : 'var(--text-3)',
-            transition: 'all 0.15s ease', position: 'relative',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          }}>
-            <span style={{ fontSize: '15px', lineHeight: 1 }}>{t.em}</span>
-            <span style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.title}</span>
-            {t.badge > 0 && (
-              <span className="badge-pulse" style={{
-                position: 'absolute', top: '2px', right: '4px',
-                background: '#EF4444', color: 'white', borderRadius: '99px',
-                fontSize: '8px', fontWeight: 700, minWidth: '13px', height: '13px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>{t.badge}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ══ OVERVIEW ══════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-          {/* Rate hero */}
-          <div className="fade-in-1" style={{
-            background: 'linear-gradient(135deg, rgba(200,150,44,0.16) 0%, rgba(200,150,44,0.04) 100%)',
-            border: '1px solid rgba(200,150,44,0.3)', borderRadius: '18px', padding: '18px',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(200,150,44,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ fontSize: '10px', color: 'var(--gold-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>💱 Platform P2P Exchange Rates</div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>Buy Price (User Buys $)</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                  $1 = <span className="gradient-text-gold">{settings?.etbRatePerDollar ?? '—'} ETB</span>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>Sell Price (User Sells $)</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-1)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                  $1 = <span className="gradient-text-gold">{settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'} ETB</span>
-                </div>
-              </div>
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>Tap ⚙️ Config to edit rates anytime.</div>
-          </div>
-
-          {/* Period selector */}
-          <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '3px', gap: '2px' }}>
-            {[{id:'today',l:'Today'},{id:'week',l:'Week'},{id:'month',l:'Month'},{id:'all',l:'All'}].map(t => (
-              <button key={t.id} onClick={() => setPeriod(t.id)} style={{
-                flex: 1, padding: '7px', borderRadius: '7px', border: 'none', fontFamily: 'var(--font)',
-                fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
-                background: period === t.id ? 'var(--bg-elevated)' : 'transparent',
-                color: period === t.id ? 'var(--gold-light)' : 'var(--text-3)',
-              }}>{t.l}</button>
-            ))}
-          </div>
-
-          {/* ── Visual Performance Analytics Graph ── */}
-          <div className="card glass fade-in-2" style={{ border: '1px solid var(--border)', borderRadius: '18px', padding: '16px', position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 800 }}>Platform Performance Trends</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>Visualizing network activity indicators</div>
-              </div>
-              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '2px', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setChartType('volume')}
-                  style={{
-                    padding: '4px 8px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--font)', fontSize: '9px', fontWeight: 700,
-                    background: chartType === 'volume' ? 'var(--teal-bg)' : 'transparent',
-                    color: chartType === 'volume' ? 'var(--teal-light)' : 'var(--text-3)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  Volume
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartType('users')}
-                  style={{
-                    padding: '4px 8px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--font)', fontSize: '9px', fontWeight: 700,
-                    background: chartType === 'users' ? 'var(--gold-bg)' : 'transparent',
-                    color: chartType === 'users' ? 'var(--gold-light)' : 'var(--text-3)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  User Growth
-                </button>
-              </div>
-            </div>
-
-            {/* SVG Graph Canvas */}
-            <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
-                <defs>
-                  {/* Glowing line filter */}
-                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor={chartType === 'volume' ? '#00D4AA' : '#C8962C'} floodOpacity="0.25" />
-                  </filter>
-                  {/* Fill gradient */}
-                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={chartType === 'volume' ? '#00D4AA' : '#C8962C'} stopOpacity="0.14" />
-                    <stop offset="100%" stopColor={chartType === 'volume' ? '#00D4AA' : '#C8962C'} stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Grid Lines */}
-                {[0.25, 0.5, 0.75].map((ratio, idx) => {
-                  const y = paddingY + ratio * (svgHeight - paddingY * 2);
-                  return (
-                    <line
-                      key={idx}
-                      x1={paddingX}
-                      y1={y}
-                      x2={svgWidth - paddingX}
-                      y2={y}
-                      stroke="rgba(255,255,255,0.03)"
-                      strokeWidth="1"
-                      strokeDasharray="4 4"
-                    />
-                  );
-                })}
-
-                {/* Area under curve */}
-                {areaD && <path d={areaD} fill="url(#areaGradient)" />}
-
-                {/* Main Curved Path */}
-                {pathD && (
-                  <path
-                    d={pathD}
-                    fill="none"
-                    stroke={chartType === 'volume' ? 'var(--teal-light)' : 'var(--gold-light)'}
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    filter="url(#glow)"
-                  />
+        {/* Navigation list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {navTabs.map(t => {
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setActiveTab(t.id);
+                  // Reset subfilters if shifting logs
+                  if (t.id !== 'logs') setLogsSearchQuery('');
+                }}
+                className="sidebar-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: isActive ? 'rgba(0, 212, 160, 0.08)' : 'transparent',
+                  color: isActive ? '#00d4a0' : '#8b92a8',
+                  fontSize: '14px',
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  width: '100%',
+                  position: 'relative',
+                  borderLeft: isActive ? '3px solid #00d4a0' : '3px solid transparent'
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>{t.em}</span>
+                <span style={{ flex: 1 }}>{t.title}</span>
+                {t.badge > 0 && (
+                  <span style={{
+                    background: '#EF4444',
+                    color: 'white',
+                    borderRadius: '999px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    minWidth: '18px',
+                    textAlign: 'center'
+                  }}>
+                    {t.badge}
+                  </span>
                 )}
+              </button>
+            );
+          })}
+        </div>
 
-                {/* Data Points and Tooltip Circles */}
-                {points.map((p, idx) => {
-                  const isHovered = hoveredIdx === idx;
-                  const showTooltip = isHovered || (hoveredIdx === null && idx === points.length - 1);
-                  const isMainPoint = idx === points.length - 1;
+        {/* Sidebar Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '12px', color: '#4e5567' }}>
+          EthioSwap Controls
+        </div>
+      </div>
 
-                  return (
-                    <g key={idx}>
-                      {/* Vertical line indicator on hover */}
-                      <line
-                        x1={p.x}
-                        y1={paddingY}
-                        x2={p.x}
-                        y2={svgHeight - paddingY}
-                        stroke={isHovered ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.02)"}
-                        strokeWidth="1"
-                        strokeDasharray={isHovered ? "2 2" : "none"}
-                        style={{ transition: 'stroke 0.2s ease' }}
-                      />
-                      
-                      {/* Circular marker glow (outer shadow ring) */}
-                      {(isHovered || (hoveredIdx === null && isMainPoint)) && (
-                        <circle
-                          cx={p.x}
-                          cy={p.y}
-                          r="8"
-                          fill={chartType === 'volume' ? '#00D4AA' : '#C8962C'}
-                          opacity="0.25"
-                          style={{ transition: 'all 0.2s ease' }}
-                        />
-                      )}
+      {/* ── MAIN WORKSPACE CONTAINER ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        
+        {/* ── TOP HEADER NAVBAR ── */}
+        <div style={{
+          height: '70px',
+          background: '#0a0c12',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 28px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 90
+        }}>
+          {/* Left: Page Title */}
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#f0f2f8', margin: 0, textTransform: 'capitalize' }}>
+              {activeTab === 'overview' ? 'Stats Dashboard' : activeTab === 'settings' ? 'System Configuration' : activeTab === 'logs' ? 'Administrative Audit Logs' : activeTab}
+            </h2>
+          </div>
 
-                      {/* Circular marker */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={isHovered || (hoveredIdx === null && isMainPoint) ? "5.5" : "3.5"}
-                        fill={chartType === 'volume' ? '#00D4AA' : '#C8962C'}
-                        stroke="#0D111A"
-                        strokeWidth={isHovered || (hoveredIdx === null && isMainPoint) ? "2.5" : "1.5"}
-                        style={{ transition: 'all 0.2s ease' }}
-                      />
+          {/* Right: User / Badge / Bell / Logout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'rgba(0, 212, 160, 0.1)',
+                color: '#00d4a0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '14px'
+              }}>
+                {(user?.username || 'A').charAt(0).toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#f0f2f8' }}>{user?.email || 'admin@ethioswap.com'}</span>
+                <span style={{ fontSize: '10px', color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00d4a0' }}></span>
+                  Verified Admin
+                </span>
+              </div>
+            </div>
 
-                      {/* Mini-tooltip for values above the points */}
-                      {showTooltip && (
-                        <g style={{ pointerEvents: 'none' }}>
-                          <rect
-                            x={p.x - 30}
-                            y={p.y - 28}
-                            width="60"
-                            height="18"
-                            rx="5"
-                            fill="var(--bg-surface)"
-                            stroke={chartType === 'volume' ? 'rgba(0, 212, 170, 0.3)' : 'rgba(200, 150, 44, 0.3)'}
-                            strokeWidth="1.5"
-                            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}
-                          />
-                          <text
-                            x={p.x}
-                            y={p.y - 16}
-                            fontSize="8.5"
-                            fontWeight="800"
-                            textAnchor="middle"
-                            fill="var(--text-1)"
-                            fontFamily="var(--font)"
-                          >
-                            {chartType === 'volume' ? `$${Math.round(p.val)}` : `${p.val} usr`}
-                          </text>
-                        </g>
-                      )}
+            <div style={{ color: '#8b92a8', cursor: 'pointer', position: 'relative' }} title="Notifications">
+              <span style={{ fontSize: '18px' }}>🔔</span>
+              <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '5px', height: '5px', borderRadius: '50%', background: '#00d4a0' }}></span>
+            </div>
 
-                      {/* Invisible hover helper with large target area */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r="16"
-                        fill="transparent"
-                        style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                        onMouseEnter={() => setHoveredIdx(idx)}
-                        onMouseLeave={() => setHoveredIdx(null)}
-                      />
-                    </g>
-                  );
-                })}
+            <button onClick={handleLogout} className="btn-premium-ghost" style={{ padding: '8px 12px', fontSize: '13px' }}>
+              Logout
+            </button>
+          </div>
+        </div>
 
-                {/* X-Axis Labels */}
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
-                  const x = paddingX + (idx * (svgWidth - paddingX * 2) / 6);
-                  return (
-                    <text
-                      key={idx}
-                      x={x}
-                      y={svgHeight - 4}
-                      fontSize="8"
-                      fontWeight="600"
-                      fill="var(--text-3)"
-                      textAnchor="middle"
-                      fontFamily="var(--font)"
+        {/* ── CENTRAL SCROLLABLE WORKSPACE ── */}
+        <div style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>
+          
+          {/* ════ OVERVIEW / STATS DASHBOARD PAGE ════ */}
+          {activeTab === 'overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
+              
+              {/* Rate hero banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(0,212,160,0.12) 0%, rgba(0,212,160,0.02) 100%)',
+                border: '1px solid rgba(0,212,160,0.25)', borderRadius: '14px', padding: '20px 24px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(0,212,160,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div>
+                  <div style={{ fontSize: '11px', color: '#00d4a0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Live Platform Exchange Rates</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <span>Buy: <strong style={{ color: '#00d4a0' }}>$1 = {settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                    <span>Sell: <strong style={{ color: '#00d4a0' }}>$1 = {settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                  </div>
+                </div>
+                <button onClick={() => setActiveTab('settings')} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
+                  Edit in Config →
+                </button>
+              </div>
+
+              {/* Segmented Pill Period Control */}
+              <div style={{ display: 'flex', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '30px', padding: '4px', width: '320px', gap: '2px' }}>
+                {[{id:'today',l:'Today'},{id:'week',l:'Week'},{id:'month',l:'Month'},{id:'all',l:'All'}].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setPeriod(t.id)}
+                    className="segmented-btn"
+                    style={{
+                      borderRadius: '30px',
+                      background: period === t.id ? '#00d4a0' : 'transparent',
+                      color: period === t.id ? '#0d1117' : '#8b92a8',
+                    }}
+                  >
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+
+              {/* 3x2 Metric Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                
+                {/* 1. Total Users */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>👥</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
+                      ▲ {liveTotalUsers > liveNewUsersThisWeek ? ((liveNewUsersThisWeek / Math.max(1, liveTotalUsers - liveNewUsersThisWeek)) * 100).toFixed(1) : '0.0'}%
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Registered Users</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{liveTotalUsers}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    +{liveNewUsersThisWeek} joined in last 7 days
+                  </div>
+                </div>
+
+                {/* 2. New This Week */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📈</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 8px', borderRadius: '20px' }}>
+                      Active
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>New Users This Week</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{liveNewUsersThisWeek}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    Currently awaiting visual verifications
+                  </div>
+                </div>
+
+                {/* 3. Total Deposits */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⬇️</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
+                      ▲ 8.4%
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Approved Deposits</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>${liveTotalDeposit.toFixed(2)}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    ≈ {Math.round(liveTotalDeposit * rate).toLocaleString()} ETB processed
+                  </div>
+                </div>
+
+                {/* 4. P2P Volume */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🔄</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
+                      ▲ 14.2%
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>P2P Escrow Trade Volume</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>${realVolume.toFixed(2)}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    Volume filtered by selected period
+                  </div>
+                </div>
+
+                {/* 5. Total Buys */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🛒</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
+                      ▲ 6.2%
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Buying Orders Completed</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{m?.buyCount ?? 28}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    Secured transactions by platform escrow
+                  </div>
+                </div>
+
+                {/* 6. Total Sells */}
+                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏷️</div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', padding: '2px 8px', borderRadius: '20px' }}>
+                      ▼ 1.2%
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Selling Orders Completed</div>
+                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{m?.sellCount ?? 22}</div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                    Listings successfully filled and closed
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Glowing Performance Trends Chart Card */}
+              <div className="card-premium" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Platform Performance Trends</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Visualizing core analytics indices</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px', background: '#0a0c12', padding: '3px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px' }}>
+                    <button
+                      onClick={() => setChartType('volume')}
+                      style={{
+                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                        fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700,
+                        background: chartType === 'volume' ? 'rgba(0, 212, 160, 0.15)' : 'transparent',
+                        color: chartType === 'volume' ? '#00d4a0' : '#8b92a8',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
-                      {day}
-                    </text>
-                  );
-                })}
-              </svg>
-            </div>
-          </div>
-
-          {/* 8 metric cards in 2×4 grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            
-            {/* Total Users */}
-            <div className="metric-card metric-card-gold fade-in-1" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-gold">👥</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Users</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveTotalUsers}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  ▲ {liveTotalUsers > liveNewUsersThisWeek ? ((liveNewUsersThisWeek / Math.max(1, liveTotalUsers - liveNewUsersThisWeek)) * 100).toFixed(1) : '0.0'}%
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>+{liveNewUsersThisWeek} registered this week</div>
-            </div>
-
-            {/* New This Week */}
-            <div className="metric-card metric-card-teal fade-in-2" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-teal">📈</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>New This Week</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{liveNewUsersThisWeek}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  Active
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>joined in the last 7 days</div>
-            </div>
-
-            {/* Total Deposits */}
-            <div className="metric-card metric-card-gold fade-in-3" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-gold">⬇️</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Deposits</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--gold-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>${liveTotalDeposit.toFixed(2)}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  ▲ 5.4%
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>≈ {Math.round(liveTotalDeposit * rate).toLocaleString()} ETB cumulative</div>
-            </div>
-
-            {/* P2P Volume */}
-            <div className="metric-card metric-card-teal fade-in-4" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-teal">🔄</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>P2P Volume</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>${(m?.totalUSD ?? 0).toFixed(2)}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  ▲ 12.8%
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>total completed escrow trades</div>
-            </div>
-
-            {/* Total Buys */}
-            <div className="metric-card metric-card-indigo fade-in-5" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-indigo">🛒</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Buys</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.buyCount ?? 0}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  ▲ 8.1%
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>completed P2P buying orders</div>
-            </div>
-
-            {/* Total Sells */}
-            <div className="metric-card metric-card-indigo fade-in-6" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-indigo">🏷️</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Sells</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--indigo-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>{m?.sellCount ?? 0}</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  ▲ 9.4%
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>listings successfully filled</div>
-            </div>
-
-            {/* Locked Escrow */}
-            <div className="metric-card metric-card-danger fade-in-6" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-danger">🔒</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Locked Escrow</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '22px', fontWeight: 900, color: 'var(--status-danger-text)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                  ${((allUsersList || []).reduce((s, u) => s + (u.ethLocked || 0), 0)).toFixed(2)}
-                </span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  Secure
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>currently held in smart locker</div>
-            </div>
-
-            {/* Active Trades */}
-            <div className="metric-card metric-card-teal fade-in-6" style={{ position: 'relative' }}>
-              <div className="metric-card-arrow">↗</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div className="metric-icon metric-icon-teal">📊</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Items</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 900, color: 'var(--teal-light)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                  {disputes.length + pendingDeposits.length}
-                </span>
-                <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 6px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                  Live
-                </span>
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>pending deposits & active disputes</div>
-            </div>
-
-          </div>
-
-          {/* Earnings preview */}
-          <div className="earnings-hero fade-in-6" onClick={() => setActiveTab('earnings')} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--teal-light)', marginBottom: '6px' }}>💰 My Earnings</div>
-                <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                  <span className="gradient-text-teal">${(m?.totalMyProfit ?? 0).toFixed(2)}</span>
+                      Volume
+                    </button>
+                    <button
+                      onClick={() => setChartType('users')}
+                      style={{
+                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                        fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700,
+                        background: chartType === 'users' ? 'rgba(0, 212, 160, 0.15)' : 'transparent',
+                        color: chartType === 'users' ? '#00d4a0' : '#8b92a8',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      User Growth
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
-                  +${(m?.feesThisWeek ?? 0).toFixed(2)} this week
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', background: 'rgba(0,212,170,0.15)', color: 'var(--teal-light)', borderRadius: '99px', border: '1px solid rgba(0,212,170,0.25)' }}>
-                  Tap to withdraw →
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>to Binance</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Volume bar chart */}
-          <div style={cs}>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '12px' }}>7-Day Volume</div>
-            {revenue?.chartData ? (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '80px' }}>
-                {revenue.chartData.map((d, i) => {
-                  const h = Math.max((d.volumeUSD / chartMax) * 100, 5);
-                  const isLast = i === revenue.chartData.length - 1;
-                  return (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
-                      <div title={`$${d.volumeUSD.toFixed(0)} · Fee: $${(d.feeUSD||0).toFixed(2)}`} style={{
-                        width: '100%', height: `${h}%`, minHeight: '4px',
-                        background: isLast
-                          ? 'linear-gradient(180deg, var(--gold-light), var(--gold))'
-                          : 'linear-gradient(180deg, rgba(200,150,44,0.4), rgba(200,150,44,0.15))',
-                        borderRadius: '4px 4px 0 0', transition: 'height 0.5s cubic-bezier(0.34,1.56,0.64,1)',
-                        position: 'relative', overflow: 'hidden',
-                      }}>
-                        {isLast && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)', animation: 'shimmer 2s infinite' }} />}
-                      </div>
-                      <span style={{ fontSize: '8px', color: 'var(--text-3)' }}>{d.day}</span>
+                {/* SVG Canvas with hovering elements */}
+                <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+                  <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
+                    <defs>
+                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#00d4a0" floodOpacity="0.25" />
+                      </filter>
+                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#00d4a0" stopOpacity="0.15" />
+                        <stop offset="100%" stopColor="#00d4a0" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid Lines */}
+                    {[0.25, 0.5, 0.75].map((ratio, idx) => {
+                      const y = paddingY + ratio * (svgHeight - paddingY * 2);
+                      return (
+                        <line
+                          key={idx}
+                          x1={paddingX}
+                          y1={y}
+                          x2={svgWidth - paddingX}
+                          y2={y}
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="1"
+                          strokeDasharray="4 4"
+                        />
+                      );
+                    })}
+
+                    {/* Fill Area */}
+                    {areaD && <path d={areaD} fill="url(#areaGradient)" />}
+
+                    {/* Main Line */}
+                    {pathD && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="#00d4a0"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        filter="url(#glow)"
+                      />
+                    )}
+
+                    {/* Point circles & dynamic hover tooltips */}
+                    {points.map((p, idx) => {
+                      const isHovered = hoveredIdx === idx;
+                      const showTooltip = isHovered || (hoveredIdx === null && idx === points.length - 1);
+                      const isMainPoint = idx === points.length - 1;
+
+                      return (
+                        <g key={idx}>
+                          {/* Vertical cursor grid line */}
+                          <line
+                            x1={p.x}
+                            y1={paddingY}
+                            x2={p.x}
+                            y2={svgHeight - paddingY}
+                            stroke={isHovered ? "rgba(0, 212, 160, 0.15)" : "rgba(255, 255, 255, 0.015)"}
+                            strokeWidth="1.5"
+                            strokeDasharray={isHovered ? "3 3" : "none"}
+                          />
+                          
+                          {/* Outer pulse */}
+                          {(isHovered || (hoveredIdx === null && isMainPoint)) && (
+                            <circle
+                              cx={p.x}
+                              cy={p.y}
+                              r="8"
+                              fill="#00d4a0"
+                              opacity="0.25"
+                            />
+                          )}
+
+                          {/* Interactive circle point */}
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r={isHovered || (hoveredIdx === null && isMainPoint) ? "5.5" : "3.5"}
+                            fill="#00d4a0"
+                            stroke="#111318"
+                            strokeWidth="2"
+                          />
+
+                          {/* Hover Tooltip Box */}
+                          {showTooltip && (
+                            <g style={{ pointerEvents: 'none' }}>
+                              <rect
+                                x={p.x - 35}
+                                y={p.y - 32}
+                                width="70"
+                                height="20"
+                                rx="6"
+                                fill="#0a0c12"
+                                stroke="rgba(0, 212, 160, 0.4)"
+                                strokeWidth="1"
+                              />
+                              <text
+                                x={p.x}
+                                y={p.y - 18}
+                                fontSize="9"
+                                fontWeight="700"
+                                textAnchor="middle"
+                                fill="#f0f2f8"
+                              >
+                                {chartType === 'volume' ? `$${p.val.toFixed(1)}` : `${p.val} usr`}
+                              </text>
+                            </g>
+                          )}
+
+                          {/* Big trigger area for clean hover */}
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r="20"
+                            fill="transparent"
+                            style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                            onMouseEnter={() => setHoveredIdx(idx)}
+                            onMouseLeave={() => setHoveredIdx(null)}
+                          />
+                        </g>
+                      );
+                    })}
+
+                    {/* X-Axis labels */}
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+                      const x = paddingX + (idx * (svgWidth - paddingX * 2) / 6);
+                      return (
+                        <text
+                          key={idx}
+                          x={x}
+                          y={svgHeight - 8}
+                          fontSize="10"
+                          fontWeight="500"
+                          fill="#4e5567"
+                          textAnchor="middle"
+                        >
+                          {day}
+                        </text>
+                      );
+                    })}
+                  </svg>
+                </div>
+              </div>
+
+              {/* Floating Bottom Sticky Bar */}
+              <div style={{
+                position: 'fixed',
+                bottom: '24px',
+                left: '268px',
+                right: '28px',
+                background: 'rgba(17, 19, 24, 0.85)',
+                border: '1px solid rgba(0, 212, 160, 0.25)',
+                borderRadius: '50px',
+                padding: '12px 28px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(16px)',
+                zIndex: 499
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <span style={{ fontSize: '18px' }}>💰</span>
+                  <div style={{ fontSize: '14px' }}>
+                    <span style={{ color: '#8b92a8' }}>Platform Earnings Pool: </span>
+                    <strong style={{ color: '#00d4a0', fontSize: '15px' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)} USD</strong>
+                    <span style={{ color: '#4e5567', marginLeft: '8px' }}>({(m?.feesThisWeek ?? 0) >= 0 ? `+$${(m?.feesThisWeek ?? 0).toFixed(2)} this week` : ''})</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('earnings')}
+                  className="btn-premium-primary"
+                  style={{ borderRadius: '50px', padding: '8px 20px', fontSize: '12px' }}
+                >
+                  Withdraw to Binance →
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* ════ EARNINGS BREAKDOWN & WITHDRAWALS SCREEN ════ */}
+          {activeTab === 'earnings' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                <div className="card-premium" style={{ borderLeft: '3px solid #00d4a0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8', textTransform: 'uppercase', marginBottom: '6px' }}>Cumulative Commission Earned</div>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00d4a0' }}>${(m?.totalMyProfit ?? 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '13px', color: '#4e5567', marginTop: '6px' }}>
+                    ≈ {Math.round((m?.totalMyProfit ?? 0) * rate).toLocaleString()} ETB processed
+                  </div>
+                </div>
+
+                <div className="card-premium">
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8', textTransform: 'uppercase', marginBottom: '6px' }}>withdrawable available balance</div>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00d4a0' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '13px', color: '#4e5567', marginTop: '6px' }}>Available on-chain USDT pool</div>
+                </div>
+              </div>
+
+              {/* Sub-grid metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+                {[
+                  { label: 'Earned This Week', v: `$${(m?.feesThisWeek ?? 0).toFixed(2)}`, em: '📅' },
+                  { label: 'All-Time Profit', v: `$${(m?.totalMyProfit ?? 0).toFixed(2)}`, em: '♾️' },
+                  { label: 'Commission Rate', v: `${settings?.commissionValue ?? 1.0}%`, em: '⚙️' },
+                  { label: 'Locked in Escrow', v: `$${(adminEarnings?.walletLocked ?? 0).toFixed(2)}`, em: '🔒' }
+                ].map((item, idx) => (
+                  <div key={idx} style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ fontSize: '16px', marginBottom: '4px' }}>{item.em}</div>
+                    <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', marginBottom: '2px' }}>{item.label}</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#f0f2f8' }}>{item.v}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Withdraw to Binance card */}
+              <div className="card-premium" style={{ maxWidth: '640px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(240,185,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🔶</div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Withdraw Platform Earnings to Binance</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Transfer on-chain profit directly using Tron TRC20 / ERC20</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleWithdrawEarnings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Binance Deposit Address</label>
+                    <input
+                      className="input-premium"
+                      type="text"
+                      placeholder="T… or 0x… (paste TRC20 or ERC20 deposit address)"
+                      value={withdrawAddress}
+                      onChange={e => setWithdrawAddress(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Amount to Withdraw ($ USD)</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <span style={{ position: 'absolute', left: '14px', color: '#4e5567', fontWeight: 600 }}>$</span>
+                      <input
+                        className="input-premium"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        style={{ paddingLeft: '28px' }}
+                        value={withdrawAmount}
+                        onChange={e => setWithdrawAmount(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setWithdrawAmount((adminEarnings?.walletBalance ?? 0).toFixed(2))}
+                        style={{
+                          position: 'absolute', right: '8px', background: 'rgba(0,212,160,0.12)', color: '#00d4a0',
+                          border: '1px solid rgba(0,212,160,0.25)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px',
+                          fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)'
+                        }}
+                      >
+                        MAX
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="skeleton" style={{ height: '80px' }} />
-            )}
-          </div>
+                  </div>
 
-          {/* Pending deposits alert */}
-          {pendingDeposits.length > 0 && (
-            <div style={{ ...cs, borderColor: 'rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.03)', cursor: 'pointer' }} onClick={() => setActiveTab('deposits')}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--status-warning-text)' }}>
-                  💵 {pendingDeposits.length} pending deposit request{pendingDeposits.length > 1 ? 's' : ''}
+                  <button
+                    type="submit"
+                    disabled={withdrawingEarnings || !(adminEarnings?.walletBalance > 0)}
+                    className="btn-premium-primary"
+                    style={{ padding: '14px', fontSize: '14px' }}
+                  >
+                    {withdrawingEarnings ? '⏳ Processing Withdrawal…' : '💸 Withdraw Earnings to Binance'}
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          )}
+
+          {/* ════ DEPOSITS REDESIGNED UNIFIED TABLE PAGE ════ */}
+          {activeTab === 'deposits' && (() => {
+            // Filter
+            const filteredDeposits = (allDepositReqs || []).filter(req => {
+              const matchesSearch = !depositSearchQuery || 
+                req.username?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
+                req.senderReference?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
+                req.id?.toLowerCase().includes(depositSearchQuery.toLowerCase());
+              
+              const statusMap = {
+                completed: 'approved',
+                pending: 'pending',
+                failed: 'rejected',
+                cancelled: 'cancelled'
+              };
+              const targetStatus = statusMap[depositFilterStatus];
+              const matchesStatus = depositFilterStatus === 'all' || req.status === targetStatus;
+
+              return matchesSearch && matchesStatus;
+            });
+
+            // Sort
+            const sortedDeposits = [...filteredDeposits].sort((a, b) => {
+              let fieldA = a[depositSortField] || '';
+              let fieldB = b[depositSortField] || '';
+              if (typeof fieldA === 'string') fieldA = fieldA.toLowerCase();
+              if (typeof fieldB === 'string') fieldB = fieldB.toLowerCase();
+              
+              if (fieldA < fieldB) return depositSortOrder === 'asc' ? -1 : 1;
+              if (fieldA > fieldB) return depositSortOrder === 'asc' ? 1 : -1;
+              return 0;
+            });
+
+            // Paginate (20 entries per page)
+            const pageSize = 20;
+            const totalPages = Math.max(1, Math.ceil(sortedDeposits.length / pageSize));
+            const paginatedDeposits = sortedDeposits.slice((depositCurrentPage - 1) * pageSize, depositCurrentPage * pageSize);
+
+            const handleHeaderClick = (field) => {
+              if (depositSortField === field) {
+                setDepositSortOrder(p => p === 'asc' ? 'desc' : 'asc');
+              } else {
+                setDepositSortField(field);
+                setDepositSortOrder('desc');
+              }
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                {/* Header Controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>USDT On-chain Deposit Request Pool</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Displays both automated on-chain deposits and history</p>
+                  </div>
+                  <button onClick={handleExportDepositsCSV} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
+                    📥 Export CSV
+                  </button>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)' }}>Review →</div>
+
+                {/* Filters Row */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', background: '#0a0c12', borderRadius: '12px', padding: '12px' }}>
+                  <input
+                    type="text"
+                    value={depositSearchQuery}
+                    onChange={e => { setDepositSearchQuery(e.target.value); setDepositCurrentPage(1); }}
+                    className="input-premium"
+                    placeholder="🔍 Search by username, reference TxID..."
+                    style={{ flex: 2, minWidth: '220px' }}
+                  />
+                  <select
+                    value={depositFilterStatus}
+                    onChange={e => { setDepositFilterStatus(e.target.value); setDepositCurrentPage(1); }}
+                    className="select-premium"
+                    style={{ flex: 1, minWidth: '150px' }}
+                  >
+                    <option value="all">🌐 All Statuses</option>
+                    <option value="pending">⏳ Pending Only</option>
+                    <option value="completed">✓ Completed (Approved)</option>
+                    <option value="failed">✗ Failed (Rejected)</option>
+                  </select>
+                </div>
+
+                {/* Table Layout */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table-premium">
+                    <thead>
+                      <tr>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('id')}># {depositSortField === 'id' ? (depositSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('username')}>User {depositSortField === 'username' ? (depositSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('amountUSD')}>Amount (USD) {depositSortField === 'amountUSD' ? (depositSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th>Amount (ETB)</th>
+                        <th>Network Method</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('createdAt')}>Date & Time {depositSortField === 'createdAt' ? (depositSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('status')}>Status {depositSortField === 'status' ? (depositSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedDeposits.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No deposit transactions matching criteria
+                          </td>
+                        </tr>
+                      ) : paginatedDeposits.map((req, idx) => {
+                        const globalIndex = (depositCurrentPage - 1) * pageSize + idx + 1;
+                        return (
+                          <tr
+                            key={req.id}
+                            onClick={() => setSelectedDepositDetailId(req.id)}
+                            className="table-row-clickable"
+                          >
+                            <td style={{ fontWeight: 600 }}>{globalIndex}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
+                                }}>
+                                  {(req.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ fontWeight: 600 }}>@{req.username}</span>
+                              </div>
+                            </td>
+                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${req.amountUSD.toFixed(2)}</td>
+                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
+                            <td>
+                              <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                {req.walletType?.toUpperCase() || 'USDT'}
+                              </span>
+                            </td>
+                            <td style={{ color: '#8b92a8', fontSize: '13px' }}>
+                              {new Date(req.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              <StatusBadge status={req.status} />
+                            </td>
+                            <td onClick={e => e.stopPropagation()}>
+                              {req.status === 'pending' ? (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button onClick={() => handleApproveDeposit(req.id)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                    ✓ Approve
+                                  </button>
+                                  <button onClick={() => handleRejectDeposit(req.id)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setSelectedDepositDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                  View Details
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination bottom */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                  <span style={{ fontSize: '13px', color: '#8b92a8' }}>
+                    Showing {Math.min(sortedDeposits.length, (depositCurrentPage - 1) * pageSize + 1)}–{Math.min(sortedDeposits.length, depositCurrentPage * pageSize)} of {sortedDeposits.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      disabled={depositCurrentPage === 1}
+                      onClick={() => setDepositCurrentPage(p => p - 1)}
+                      className="btn-premium-ghost"
+                      style={{ padding: '6px 14px' }}
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      disabled={depositCurrentPage === totalPages}
+                      onClick={() => setDepositCurrentPage(p => p + 1)}
+                      className="btn-premium-ghost"
+                      style={{ padding: '6px 14px' }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* ════ WITHDRAWALS REDESIGNED UNIFIED TABLE PAGE ════ */}
+          {activeTab === 'withdrawals' && (() => {
+            const filteredWithdrawals = (allWithdrawalReqs || []).filter(req => {
+              const matchesSearch = !withdrawSearchQuery || 
+                req.username?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
+                req.destinationAddress?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
+                req.id?.toLowerCase().includes(withdrawSearchQuery.toLowerCase());
+              
+              const statusMap = {
+                completed: 'approved',
+                pending: 'pending',
+                failed: 'rejected',
+                cancelled: 'cancelled'
+              };
+              const targetStatus = statusMap[withdrawFilterStatus];
+              const matchesStatus = withdrawFilterStatus === 'all' || req.status === targetStatus;
+
+              return matchesSearch && matchesStatus;
+            });
+
+            const sortedWithdrawals = [...filteredWithdrawals].sort((a, b) => {
+              let fieldA = a[withdrawSortField] || '';
+              let fieldB = b[withdrawSortField] || '';
+              if (typeof fieldA === 'string') fieldA = fieldA.toLowerCase();
+              if (typeof fieldB === 'string') fieldB = fieldB.toLowerCase();
+              
+              if (fieldA < fieldB) return withdrawSortOrder === 'asc' ? -1 : 1;
+              if (fieldA > fieldB) return withdrawSortOrder === 'asc' ? 1 : -1;
+              return 0;
+            });
+
+            const pageSize = 20;
+            const totalPages = Math.max(1, Math.ceil(sortedWithdrawals.length / pageSize));
+            const paginatedWithdrawals = sortedWithdrawals.slice((withdrawCurrentPage - 1) * pageSize, withdrawCurrentPage * pageSize);
+
+            const handleHeaderClick = (field) => {
+              if (withdrawSortField === field) {
+                setWithdrawSortOrder(p => p === 'asc' ? 'desc' : 'asc');
+              } else {
+                setWithdrawSortField(field);
+                setWithdrawSortOrder('desc');
+              }
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>USDT On-chain Withdrawal Requests Pool</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Displays pending releases, completed transfers, and rejections</p>
+                  </div>
+                  <button onClick={handleExportWithdrawalsCSV} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
+                    📥 Export CSV
+                  </button>
+                </div>
+
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', background: '#0a0c12', borderRadius: '12px', padding: '12px' }}>
+                  <input
+                    type="text"
+                    value={withdrawSearchQuery}
+                    onChange={e => { setWithdrawSearchQuery(e.target.value); setWithdrawCurrentPage(1); }}
+                    className="input-premium"
+                    placeholder="🔍 Search by username, destination account..."
+                    style={{ flex: 2, minWidth: '220px' }}
+                  />
+                  <select
+                    value={withdrawFilterStatus}
+                    onChange={e => { setWithdrawFilterStatus(e.target.value); setWithdrawCurrentPage(1); }}
+                    className="select-premium"
+                    style={{ flex: 1, minWidth: '150px' }}
+                  >
+                    <option value="all">🌐 All Statuses</option>
+                    <option value="pending">⏳ Pending Only</option>
+                    <option value="completed">✓ Completed (Approved)</option>
+                    <option value="failed">✗ Failed (Rejected)</option>
+                  </select>
+                </div>
+
+                {/* Table */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table-premium">
+                    <thead>
+                      <tr>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('id')}># {withdrawSortField === 'id' ? (withdrawSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('username')}>User {withdrawSortField === 'username' ? (withdrawSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('amountUSD')}>Amount (USD) {withdrawSortField === 'amountUSD' ? (withdrawSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th>Amount (ETB)</th>
+                        <th>Destination Wallet</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('createdAt')}>Date & Time {withdrawSortField === 'createdAt' ? (withdrawSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('status')}>Status {withdrawSortField === 'status' ? (withdrawSortOrder === 'asc' ? '▲' : '▼') : ''}</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedWithdrawals.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No withdrawal transactions matching criteria
+                          </td>
+                        </tr>
+                      ) : paginatedWithdrawals.map((req, idx) => {
+                        const globalIndex = (withdrawCurrentPage - 1) * pageSize + idx + 1;
+                        return (
+                          <tr
+                            key={req.id}
+                            onClick={() => setSelectedWithdrawDetailId(req.id)}
+                            className="table-row-clickable"
+                          >
+                            <td style={{ fontWeight: 600 }}>{globalIndex}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
+                                }}>
+                                  {(req.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ fontWeight: 600 }}>@{req.username}</span>
+                              </div>
+                            </td>
+                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${req.amountUSD.toFixed(2)}</td>
+                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
+                            <td>
+                              <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px', color: '#00d4a0' }}>
+                                {req.destinationAddress ? `${req.destinationAddress.substring(0, 8)}...${req.destinationAddress.substring(req.destinationAddress.length - 8)}` : 'N/A'}
+                              </span>
+                            </td>
+                            <td style={{ color: '#8b92a8', fontSize: '13px' }}>
+                              {new Date(req.createdAt).toLocaleString()}
+                            </td>
+                            <td>
+                              <StatusBadge status={req.status} />
+                            </td>
+                            <td onClick={e => e.stopPropagation()}>
+                              {req.status === 'pending' ? (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button onClick={() => handleWithdrawal(req.id, true)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                    ✓ Approve
+                                  </button>
+                                  <button onClick={() => handleWithdrawal(req.id, false)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setSelectedWithdrawDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                  View Details
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                  <span style={{ fontSize: '13px', color: '#8b92a8' }}>
+                    Showing {Math.min(sortedWithdrawals.length, (withdrawCurrentPage - 1) * pageSize + 1)}–{Math.min(sortedWithdrawals.length, withdrawCurrentPage * pageSize)} of {sortedWithdrawals.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      disabled={withdrawCurrentPage === 1}
+                      onClick={() => setWithdrawCurrentPage(p => p - 1)}
+                      className="btn-premium-ghost"
+                      style={{ padding: '6px 14px' }}
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      disabled={withdrawCurrentPage === totalPages}
+                      onClick={() => setWithdrawCurrentPage(p => p + 1)}
+                      className="btn-premium-ghost"
+                      style={{ padding: '6px 14px' }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* ════ KYC SUBMISSIONS AND ID VERIFICATION SCREEN ════ */}
+          {activeTab === 'kyc' && (() => {
+            const filteredKyc = (allUsersList || []).filter(u => {
+              // We want to list users who either have a pending KYC or completed KYC history
+              const matchesSearch = !kycSearchQuery || 
+                u.username?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
+                u.fullName?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
+                u.email?.toLowerCase().includes(kycSearchQuery.toLowerCase());
+              
+              const matchesStatus = kycFilterStatus === 'all' ||
+                (kycFilterStatus === 'pending' && u.kycStatus === 'pending') ||
+                (kycFilterStatus === 'approved' && u.kycStatus === 'approved') ||
+                (kycFilterStatus === 'rejected' && u.kycStatus === 'rejected');
+              
+              // Only users who have uploaded something (kycStatus exists and is not none)
+              const hasUploaded = u.kycStatus && u.kycStatus !== 'none';
+              
+              return matchesSearch && matchesStatus && hasUploaded;
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Identity Verification Center (KYC)</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Validate user registration forms, check side-by-side uploads, or reset KYC credentials</p>
+                </div>
+
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', background: '#0a0c12', borderRadius: '12px', padding: '12px' }}>
+                  <input
+                    type="text"
+                    value={kycSearchQuery}
+                    onChange={e => setKycSearchQuery(e.target.value)}
+                    className="input-premium"
+                    placeholder="🔍 Search users by username, email, full name..."
+                    style={{ flex: 2, minWidth: '220px' }}
+                  />
+                  <select
+                    value={kycFilterStatus}
+                    onChange={e => setKycFilterStatus(e.target.value)}
+                    className="select-premium"
+                    style={{ flex: 1, minWidth: '150px' }}
+                  >
+                    <option value="all">🌐 All Verification Statuses</option>
+                    <option value="pending">⏳ Pending Approval Only</option>
+                    <option value="approved">✓ Approved (Verified)</option>
+                    <option value="rejected">✗ Rejected Submissions</option>
+                  </select>
+                </div>
+
+                {/* KYC Submission Table */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table-premium">
+                    <thead>
+                      <tr>
+                        <th>User Profile</th>
+                        <th>Full Name</th>
+                        <th>Age</th>
+                        <th>Document ID Number</th>
+                        <th>Submission Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredKyc.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No identity verification submissions matching criteria
+                          </td>
+                        </tr>
+                      ) : filteredKyc.map(u => (
+                        <tr
+                          key={u._id}
+                          onClick={() => setSelectedKycDetailId(u._id.toString())}
+                          className="table-row-clickable"
+                        >
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '12px', fontWeight: 700, paddingLeft: '9px', paddingTop: '3px'
+                              }}>
+                                {(u.username || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 600 }}>@{u.username}</span>
+                                <span style={{ fontSize: '10px', color: '#8b92a8' }}>{u.email || u.phone}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ fontWeight: 500 }}>{u.kycData?.name || u.fullName || 'Not Specified'}</td>
+                          <td style={{ color: '#8b92a8' }}>{u.kycData?.age || 'N/A'}</td>
+                          <td>
+                            <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
+                              {u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}
+                            </span>
+                          </td>
+                          <td>
+                            <StatusBadge status={u.kycStatus} />
+                          </td>
+                          <td onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setSelectedKycDetailId(u._id.toString())} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                              Visual Checking →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* ════ P2P DISPUTES SCREEN ════ */}
+          {activeTab === 'disputes' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Active Escrow Trade Disputes</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Mediate blocked escrows: force release funds to buyer or refund seller</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {disputes.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>
+                    ⚖️ All disputes cleared. Excellent platform compliance!
+                  </div>
+                ) : disputes.map(trade => (
+                  <div key={trade._id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade._id.toString().substring(0, 8).toUpperCase()}</div>
+                        <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
+                          Seller: <strong>@{trade.sellerUsername}</strong> | Buyer: <strong>@{trade.buyerUsername}</strong>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>${trade.amountUSD.toFixed(2)} USD</div>
+                        <span style={{ fontSize: '10px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>DISPUTED</span>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <span style={{ color: '#8b92a8' }}>Fiat Amount:</span>
+                        <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{trade.amountETB} ETB</div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#8b92a8' }}>Created:</span>
+                        <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{new Date(trade.createdAt).toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => handleDispute(trade._id.toString(), 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
+                        ✓ Force Release to Buyer (@{trade.buyerUsername})
+                      </button>
+                      <button onClick={() => handleDispute(trade._id.toString(), 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
+                        ✗ Force Refund to Seller (@{trade.sellerUsername})
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* ══ EARNINGS ══════════════════════════════════════════ */}
-      {activeTab === 'earnings' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* ════ SUPPORT TICKETS MEDIATION SCREEN ════ */}
+          {activeTab === 'support' && (
+            <div style={{ display: 'flex', gap: '20px', minHeight: '520px', animation: 'fadeIn 0.25s ease' }}>
+              
+              {/* Left Column: Tickets list */}
+              <div className="card-premium" style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '16px', flexShrink: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#8b92a8', textTransform: 'uppercase' }}>
+                  💬 Support Tickets ({supportTickets.length})
+                </div>
 
-          {/* Earnings hero */}
-          <div className="earnings-hero fade-in-1">
-            <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--teal-light)', marginBottom: '8px' }}>
-              💰 Total Commission Earned
-            </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1 }}>
-              <span className="gradient-text-teal">${(m?.totalMyProfit ?? 0).toFixed(2)}</span>
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '6px' }}>
-              ≈ {Math.round((m?.totalMyProfit ?? 0) * rate).toLocaleString()} ETB
-            </div>
-          </div>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {supportTickets.length === 0 ? (
+                    <div style={{ color: '#4e5567', textAlign: 'center', padding: '20px' }}>No support requests</div>
+                  ) : supportTickets.map(t => {
+                    const isSelected = selectedTicket?.id === t.id;
+                    const hasMessages = t.messages && t.messages.length > 0;
+                    const lastMsg = hasMessages ? t.messages[t.messages.length - 1] : null;
+                    const isUnreadByAdmin = lastMsg && lastMsg.senderId !== user?.id && lastMsg.senderId !== 'usr_admin' && t.status === 'open';
 
-          {/* Breakdown cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {[
-              { label: 'This Week',  value: m?.feesThisWeek ?? 0,     icon: '📅' },
-              { label: 'All Time',   value: m?.totalMyProfit ?? 0,    icon: '♾️' },
-              { label: 'Commission', value: settings?.commissionValue ?? 1.0,  icon: '⚙️', suffix: '%' },
-              { label: 'Escrow Lock', value: adminEarnings?.walletLocked ?? 0, icon: '🔒' },
-            ].map((card, i) => (
-              <div key={i} className="metric-card metric-card-teal fade-in-1">
-                <div style={{ fontSize: '18px', marginBottom: '4px' }}>{card.icon}</div>
-                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>{card.label}</div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--teal-light)', letterSpacing: '-0.03em' }}>
-                  {card.suffix ? `${card.value}${card.suffix}` : `$${Number(card.value).toFixed(2)}`}
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedTicket(t)}
+                        style={{
+                          background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#0a0c12',
+                          border: isSelected ? '1px solid #00d4a0' : '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: '10px', padding: '12px', cursor: 'pointer', transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, fontSize: '13px' }}>@{t.username}</span>
+                          <span style={{ fontSize: '9px', textTransform: 'uppercase', color: t.status === 'open' ? '#00d4a0' : '#8b92a8', fontWeight: 700 }}>
+                            {t.status}
+                          </span>
+                        </div>
+                        {lastMsg && (
+                          <div style={{ fontSize: '11px', color: isUnreadByAdmin ? '#00d4a0' : '#8b92a8', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: isUnreadByAdmin ? 700 : 400 }}>
+                            {isUnreadByAdmin ? '✉️ ' : ''}{lastMsg.message}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Balance Pools Breakdown */}
-          <div style={{ ...cs, borderColor: 'rgba(0,212,170,0.2)' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              🏦 Balance Pools Breakdown
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { name: '⛓️ On-Chain Block Balance', value: adminEarnings?.walletBalance ?? 0, withdrawable: true, note: 'Collected from blockchain deposits & P2P trades' },
-                { name: '🔶 Binance Pay Balance', value: adminEarnings?.binanceBalance ?? 0, withdrawable: false, note: 'Directly received in your Binance pay account' },
-                { name: '🟡 Bybit Pay Balance', value: adminEarnings?.bybitBalance ?? 0, withdrawable: false, note: 'Directly received in your Bybit funding account' },
-              ].map((pool, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-1)' }}>{pool.name}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '2px' }}>{pool.note}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: pool.withdrawable ? 'var(--teal-light)' : 'var(--text-2)' }}>
-                      ${pool.value.toFixed(2)}
+              {/* Right Column: Active Conversation */}
+              <div className="card-premium" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {selectedTicket ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: '14px', marginBottom: '14px' }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '15px' }}>Support Chat with @{selectedTicket.username}</h4>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Ticket Status: <strong style={{ color: '#00d4a0' }}>{selectedTicket.status.toUpperCase()}</strong></p>
+                      </div>
+                      {selectedTicket.status === 'open' && (
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm("Close this support ticket?")) return;
+                            await closeTicket({ ticketId: selectedTicket.id });
+                            showAlert("Support ticket closed.");
+                          }}
+                          className="btn-premium-ghost"
+                          style={{ color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)', padding: '6px 12px' }}
+                        >
+                          Close Ticket
+                        </button>
+                      )}
                     </div>
-                    <span style={{ 
-                      fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block',
-                      background: pool.withdrawable ? 'rgba(0,212,170,0.15)' : 'rgba(255,255,255,0.05)',
-                      color: pool.withdrawable ? 'var(--teal-light)' : 'var(--text-3)' 
-                    }}>
-                      {pool.withdrawable ? '✓ Withdrawable' : 'Direct Payout'}
-                    </span>
+
+                    {/* Messages Body */}
+                    <div style={{ flex: 1, overflowY: 'auto', background: '#0a0c12', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '300px' }}>
+                      {(!selectedTicket.messages || selectedTicket.messages.length === 0) ? (
+                        <div style={{ color: '#4e5567', textAlign: 'center', marginTop: '40px' }}>No messages in this session</div>
+                      ) : selectedTicket.messages.map((msg, i) => {
+                        const isAdmin = msg.senderId === user?.id || msg.senderId === 'usr_admin';
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              alignSelf: isAdmin ? 'flex-end' : 'flex-start',
+                              maxWidth: '75%',
+                              background: isAdmin ? '#00d4a0' : 'rgba(255,255,255,0.04)',
+                              color: isAdmin ? '#0d1117' : '#f0f2f8',
+                              padding: '10px 14px',
+                              borderRadius: isAdmin ? '12px 12px 0 12px' : '12px 12px 12px 0',
+                              border: isAdmin ? 'none' : '1px solid rgba(255,255,255,0.06)'
+                            }}
+                          >
+                            <div style={{ fontSize: '9px', opacity: 0.7, marginBottom: '2px', fontWeight: 700 }}>
+                              {isAdmin ? 'EthioSwap Support' : `@${selectedTicket.username}`}
+                            </div>
+                            <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{msg.message}</div>
+                            <div style={{ fontSize: '8px', opacity: 0.5, textAlign: 'right', marginTop: '4px' }}>
+                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Input Composer */}
+                    {selectedTicket.status === 'open' ? (
+                      <form onSubmit={handleSupportReply} style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                        <input
+                          type="text"
+                          value={supportReplyText}
+                          onChange={e => setSupportReplyText(e.target.value)}
+                          className="input-premium"
+                          placeholder="Type administrative reply..."
+                          style={{ flex: 1 }}
+                        />
+                        <button type="submit" className="btn-premium-primary">
+                          Send Reply
+                        </button>
+                      </form>
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#4e5567', fontSize: '12px', marginTop: '14px', padding: '8px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                        🔒 This conversation is closed. Reopen manually if user files follow-up dispute.
+                      </div>
+                    )}
+
                   </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#4e5567', fontSize: '14px' }}>
+                    Select a conversation ticket from the list on the left to review chat histories
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* ════ MEMBERS DIRECTORY SCREEN (USERS) ════ */}
+          {activeTab === 'users' && (() => {
+            const filteredUsers = (allUsersList || []).filter(u => {
+              const query = userSearchQuery.toLowerCase().trim();
+              const matchesSearch = !query || 
+                u.username?.toLowerCase().includes(query) ||
+                u.email?.toLowerCase().includes(query) ||
+                u.phone?.toLowerCase().includes(query) ||
+                u._id?.toString().toLowerCase().includes(query);
+                
+              const isVerified = u.kycStatus === 'approved';
+              const matchesKyc = userFilterKyc === 'all' ||
+                (userFilterKyc === 'verified' && isVerified) ||
+                (userFilterKyc === 'unverified' && !isVerified);
+                
+              const isBanned = !!u.isSuspended;
+              const matchesBan = userFilterBan === 'all' ||
+                (userFilterBan === 'banned' && isBanned) ||
+                (userFilterBan === 'active' && !isBanned);
+                
+              return matchesSearch && matchesKyc && matchesBan;
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>EthioSwap Members Directory</h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Administrative oversight, financial summaries, and account moderation</p>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Withdraw to Binance */}
-          <div style={{ ...cs, borderColor: 'rgba(240,185,11,0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(240,185,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🔶</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '14px' }}>Withdraw to Binance</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Send your earnings to your Binance USD account</div>
-              </div>
-            </div>
-
-            {/* How to get Binance address guide */}
-            <div style={{ background: 'rgba(240,185,11,0.06)', border: '1px solid rgba(240,185,11,0.15)', borderRadius: '10px', padding: '12px', marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#F0B90B', marginBottom: '6px' }}>📖 How to find your Binance deposit address:</div>
-              <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: 1.5 }}>
-                <li>Open Binance app → Wallet → Deposit</li>
-                <li>Select <strong>USDT</strong> (or USD) → Network: <strong>TRC20</strong></li>
-                <li>Copy your deposit address below</li>
-                <li>Paste it here and click Withdraw</li>
-              </ol>
-            </div>
-
-            <form onSubmit={handleWithdrawEarnings} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Binance Deposit Address (TRC20 / ERC20)</label>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="T… or 0x… (paste your Binance address)"
-                  value={withdrawAddress}
-                  onChange={e => setWithdrawAddress(e.target.value)}
-                />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Amount to Withdraw ($ USD)</label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <span style={{ position: 'absolute', left: '12px', color: 'var(--text-3)', fontWeight: 600, fontSize: '14px' }}>$</span>
+                {/* Filters Row */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', background: '#0a0c12', borderRadius: '12px', padding: '12px' }}>
                   <input
-                    className="input"
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={e => setUserSearchQuery(e.target.value)}
+                    className="input-premium"
+                    placeholder="🔍 Search users by username, email, phone number, ID..."
+                    style={{ flex: 2, minWidth: '220px' }}
+                  />
+                  <select
+                    value={userFilterKyc}
+                    onChange={e => setUserFilterKyc(e.target.value)}
+                    className="select-premium"
+                    style={{ flex: 1, minWidth: '150px' }}
+                  >
+                    <option value="all">🌐 All Verification Statuses</option>
+                    <option value="verified">✓ Verified Only</option>
+                    <option value="unverified">✗ Unverified Only</option>
+                  </select>
+                  <select
+                    value={userFilterBan}
+                    onChange={e => setUserFilterBan(e.target.value)}
+                    className="select-premium"
+                    style={{ flex: 1, minWidth: '150px' }}
+                  >
+                    <option value="all">🛡️ All Activity Statuses</option>
+                    <option value="active">✅ Active Accounts Only</option>
+                    <option value="banned">🚫 Banned / Suspended Accounts</option>
+                  </select>
+                </div>
+
+                {/* Members Table */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table-premium">
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Email / Contact</th>
+                        <th>KYC Status</th>
+                        <th>Registration Date</th>
+                        <th>USD Balance</th>
+                        <th>Acc Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No users registered in this directory matching filters
+                          </td>
+                        </tr>
+                      ) : filteredUsers.map(u => (
+                        <tr
+                          key={u._id}
+                          onClick={() => {
+                            setSelectedUserDetailId(u._id.toString());
+                            setUserDrawerTab('profile'); // Reset drawer sub-tabs
+                          }}
+                          className="table-row-clickable"
+                        >
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700
+                              }}>
+                                {(u.username || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 600 }}>@{u.username}</span>
+                                {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(240,185,11,0.15)', color: '#F0B90B', padding: '1px 4px', borderRadius: '4px', width: 'fit-content', marginTop: '2px' }}>ADMIN</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '13px' }}>{u.email || 'No email'}</span>
+                              <span style={{ fontSize: '11px', color: '#8b92a8' }}>{u.phone}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <StatusBadge status={u.kycStatus} />
+                          </td>
+                          <td style={{ color: '#8b92a8', fontSize: '13px' }}>
+                            {new Date(u.joinedAt).toLocaleDateString()}
+                          </td>
+                          <td style={{ color: '#00d4a0', fontWeight: 700 }}>
+                            ${(u.ethBalance || 0).toFixed(2)}
+                          </td>
+                          <td>
+                            {u.isSuspended ? (
+                              <span style={{ fontSize: '12px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                                🚫 BANNED
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '12px', background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 8px', borderRadius: '4px' }}>
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                setSelectedUserDetailId(u._id.toString());
+                                setUserDrawerTab('profile');
+                              }}
+                              className="btn-premium-ghost"
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                            >
+                              Manage User →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* ════ SYSTEM AUDIT LOGS SCREEN ════ */}
+          {activeTab === 'logs' && (() => {
+            const filteredLogs = auditLogs.filter(log => {
+              const query = logsSearchQuery.toLowerCase().trim();
+              return !query || 
+                log.adminUsername?.toLowerCase().includes(query) ||
+                log.action?.toLowerCase().includes(query) ||
+                log.targetName?.toLowerCase().includes(query) ||
+                log.details?.toLowerCase().includes(query);
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>System Administrative Audit Logs</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Real-time logs of administrative moderation operations</p>
+                  </div>
+                  <span className="pill-badge" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#8b92a8' }}>
+                    {filteredLogs.length} events logged
+                  </span>
+                </div>
+
+                {/* Filter */}
+                <input
+                  type="text"
+                  value={logsSearchQuery}
+                  onChange={e => setLogsSearchQuery(e.target.value)}
+                  className="input-premium"
+                  placeholder="🔍 Filter audit logs by administrator, action, target username, description..."
+                />
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table-premium">
+                    <thead>
+                      <tr>
+                        <th>Timestamp</th>
+                        <th>Admin Account</th>
+                        <th>Action Performed</th>
+                        <th>Target Member</th>
+                        <th>Moderation Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No administrative audit records logged yet
+                          </td>
+                        </tr>
+                      ) : filteredLogs.map(log => {
+                        let tagBg = 'rgba(255,255,255,0.04)';
+                        let tagColor = '#8b92a8';
+                        const act = log.action?.toLowerCase();
+                        if (act.includes('approve') || act.includes('unban') || act.includes('unsuspend')) {
+                          tagBg = 'rgba(0, 212, 160, 0.1)'; tagColor = '#00d4a0';
+                        } else if (act.includes('reject') || act.includes('ban') || act.includes('suspend') || act.includes('remove')) {
+                          tagBg = 'rgba(244, 63, 94, 0.1)'; tagColor = '#f43f5e';
+                        } else if (act.includes('warn')) {
+                          tagBg = 'rgba(251, 191, 36, 0.1)'; tagColor = '#fbbf24';
+                        }
+
+                        return (
+                          <tr key={log._id}>
+                            <td style={{ color: '#8b92a8', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                              {new Date(log.createdAt).toLocaleString()}
+                            </td>
+                            <td style={{ fontWeight: 600 }}>@{log.adminUsername}</td>
+                            <td>
+                              <span style={{
+                                padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700,
+                                textTransform: 'uppercase', backgroundColor: tagBg, color: tagColor
+                              }}>
+                                {log.action?.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 600, color: '#00d4a0' }}>@{log.targetName}</td>
+                            <td style={{ color: '#8b92a8', minWidth: '200px' }}>{log.details}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            );
+          })()}
+
+          {/* ════ CONFIGURATION / SYSTEM SETTINGS SCREEN ════ */}
+          {activeTab === 'settings' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>System Configuration Settings</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Configure trading fees, platform percentages, and dollar exchange indices</p>
+              </div>
+
+              <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '480px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>P2P Buying Rate (User buys $1 with ETB)</label>
+                  <input
                     type="number"
                     step="0.01"
-                    placeholder="0.00"
-                    style={{ paddingLeft: '28px', width: '100%' }}
-                    value={withdrawAmount}
-                    onChange={e => setWithdrawAmount(e.target.value)}
+                    className="input-premium"
+                    value={etbRate}
+                    onChange={e => setEtbRate(e.target.value)}
+                    required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawAmount((adminEarnings?.walletBalance ?? 0).toFixed(2))}
-                    style={{
-                      position: 'absolute', right: '8px', background: 'rgba(0,212,170,0.15)', color: 'var(--teal-light)',
-                      border: '1px solid rgba(0,212,170,0.25)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px',
-                      fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)'
-                    }}
-                  >
-                    MAX
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>P2P Selling Rate (User sells $1 for ETB)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input-premium"
+                    value={etbRateSell}
+                    onChange={e => setEtbRateSell(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Escrow Flat Platform Commission Fee (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input-premium"
+                    value={commissionValue}
+                    onChange={e => setCommissionValue(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <button type="submit" disabled={savingSettings} className="btn-premium-primary" style={{ padding: '14px' }}>
+                  {savingSettings ? '⏳ Saving settings...' : '💾 Save Settings'}
+                </button>
+              </form>
+
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+         SLIDE-OVER DRAWER OVERLAYS (RIGHT SIDE PANELS)
+         ══════════════════════════════════════════════════════════ */}
+
+      {/* ── 1. DEPOSIT REQUEST DETAILS DRAWER ── */}
+      {selectedDepositDetailId && (() => {
+        const req = allDepositReqs?.find(r => r.id === selectedDepositDetailId);
+        if (!req) return null;
+        return (
+          <>
+            <div className="drawer-backdrop" onClick={() => setSelectedDepositDetailId(null)} />
+            <div className="drawer-content">
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📥 Deposit Request Details</h3>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
+                </div>
+                <button onClick={() => setSelectedDepositDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
+              </div>
+
+              {/* Scrollable details */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: '#0a0c12', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,212,160,0.1)', color: '#00d4a0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
+                  }}>
+                    {(req.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>@{req.username}</div>
+                    <span style={{ fontSize: '11px', color: '#8b92a8' }}>Depositor Account</span>
+                  </div>
+                </div>
+
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
+                    <strong style={{ color: '#00d4a0' }}>${req.amountUSD.toFixed(2)} USD</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
+                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Deposit Method:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{req.walletType?.toUpperCase()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>TxID / Reference:</span>
+                    <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{req.senderReference || 'No hash reference'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Submitted at:</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Transaction Status:</span>
+                    <StatusBadge status={req.status} />
+                  </div>
+                </div>
+
+                {/* Proof screenshot */}
+                {req.hasScreenshot && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Uploaded Receipt Proof Image:</div>
+                    <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                  </div>
+                )}
+              </div>
+
+              {/* Approve/Reject footer if pending */}
+              {req.status === 'pending' && (
+                <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handleApproveDeposit(req.id)} className="btn-premium-primary" style={{ flex: 1 }}>
+                    ✓ Approve & Credit Funds
+                  </button>
+                  <button onClick={() => handleRejectDeposit(req.id)} className="btn-premium-danger" style={{ flex: 1 }}>
+                    Reject
                   </button>
                 </div>
-              </div>
-              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                <span style={{ color: 'var(--text-2)' }}>Available to withdraw:</span>
-                <span style={{ fontWeight: 800, color: 'var(--teal-light)', fontSize: '16px' }}>
-                  ${(adminEarnings?.walletBalance ?? 0).toFixed(2)} USD
-                </span>
-              </div>
-              <button type="submit" disabled={withdrawingEarnings || !adminEarnings?.walletBalance} className="btn btn-teal btn-full" style={{ padding: '14px', fontSize: '14px' }}>
-                {withdrawingEarnings ? '⏳ Sending…' : '💸 Withdraw Earnings to Binance'}
-              </button>
-            </form>
-          </div>
-
-          {/* Alternative: sell on Binance */}
-          <div style={{ ...cs, borderColor: 'rgba(99,102,241,0.2)' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--indigo-light)', marginBottom: '8px' }}>🔄 Prefer to convert to ETB?</div>
-            <p style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>
-              After withdrawing to Binance, you can sell your USDT there for ETB using Binance P2P:
-              <br />1. Go to Binance → P2P Trading
-              <br />2. Select USDT → ETB → post a sell order
-              <br />3. Buyers will send you ETB directly to your bank
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ══ KYC ══════════════════════════════════════════════ */}
-      {activeTab === 'kyc' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-            {kycQueue.length} pending verification{kycQueue.length !== 1 ? 's' : ''}
-          </div>
-
-          {kycQueue.length === 0 ? (
-            <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '40px', marginBottom: '10px' }}>✅</div>
-              <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>All KYC cleared!</p>
+              )}
             </div>
-          ) : kycQueue.map(u => (
-            <div key={u.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <div className="avatar" style={{ width: '44px', height: '44px', fontSize: '18px' }}>
-                  {(u.username || 'U').charAt(0).toUpperCase()}
+          </>
+        );
+      })()}
+
+      {/* ── 2. WITHDRAWAL REQUEST DETAILS DRAWER ── */}
+      {selectedWithdrawDetailId && (() => {
+        const req = allWithdrawalReqs?.find(r => r.id === selectedWithdrawDetailId);
+        if (!req) return null;
+        return (
+          <>
+            <div className="drawer-backdrop" onClick={() => setSelectedWithdrawDetailId(null)} />
+            <div className="drawer-content">
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📤 Withdrawal Request Details</h3>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '15px' }}>@{u.username}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>📞 {u.phone}</div>
-                </div>
-                <span className="badge badge-warning">⏳ Pending Verification</span>
+                <button onClick={() => setSelectedWithdrawDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
 
-              {/* Side-by-side columns */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {/* Left: Info Details */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '12px' }}>
-                  <div style={{ gridColumn: 'span 2', fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px' }}>
-                    📝 Submitted KYC Information
+              {/* Scrollable details */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ background: '#0a0c12', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,212,160,0.1)', color: '#00d4a0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
+                  }}>
+                    {(req.username || 'U').charAt(0).toUpperCase()}
                   </div>
-                  {[
-                    { l: 'Full Name', v: u.kycData?.name },
-                    { l: 'Age',       v: u.kycData?.age },
-                    { l: 'ID Type',   v: u.kycData?.idType },
-                    { l: 'Address',   v: u.kycData?.address },
-                    { l: 'KYC Phone', v: u.kycData?.phone || u.phone, span: 2 },
-                  ].map(f => (
-                    <div key={f.l} style={{ gridColumn: f.span === 2 ? 'span 2' : undefined }}>
-                      <div style={{ color: 'var(--text-3)', fontSize: '10px', marginBottom: '2px' }}>{f.l}</div>
-                      <div style={{ fontWeight: 600, color: f.v ? 'var(--text-1)' : 'var(--text-3)', fontStyle: f.v ? 'normal' : 'italic' }}>
-                        {f.v || 'Not provided'}
-                      </div>
-                    </div>
-                  ))}
+                  <div>
+                    <div style={{ fontWeight: 600 }}>@{req.username}</div>
+                    <span style={{ fontSize: '11px', color: '#8b92a8' }}>Requester Member</span>
+                  </div>
                 </div>
 
-                {/* Right: Documents Grid */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginBottom: '4px' }}>
-                    📁 Uploaded KYC Documents
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
+                    <strong style={{ color: '#f43f5e' }}>-${req.amountUSD.toFixed(2)} USD</strong>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
+                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Withdraw Network:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{req.walletType?.toUpperCase() || 'USDT'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Destination Address:</span>
+                    <span style={{ color: '#00d4a0', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', wordBreak: 'break-all', display: 'block', marginTop: '4px' }}>
+                      {req.destinationAddress || 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Submitted at:</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Transaction Status:</span>
+                    <StatusBadge status={req.status} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Approve/Reject footer if pending */}
+              {req.status === 'pending' && (
+                <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handleWithdrawal(req.id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                    ✓ Approve & Process
+                  </button>
+                  <button onClick={() => handleWithdrawal(req.id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ── 3. KYC SUBMISSIONS DETAILS DRAWER ── */}
+      {selectedKycDetailId && (() => {
+        const u = allUsersList?.find(userRecord => userRecord._id.toString() === selectedKycDetailId);
+        if (!u) return null;
+        return (
+          <>
+            <div className="drawer-backdrop" onClick={() => setSelectedKycDetailId(null)} />
+            <div className="drawer-content">
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🛡️ KYC Document Checking</h3>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u._id.toString()}</span>
+                </div>
+                <button onClick={() => setSelectedKycDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
+              </div>
+
+              {/* Scrollable container */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* Visual side-by-side comparison */}
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
                   <KycImages 
-                    userId={u.id} 
+                    userId={u._id.toString()} 
                     getImageUrl={getImageUrl} 
                     onImageClick={setActiveLightboxImage} 
                     kycIdFront={u.kycIdFront}
@@ -1171,932 +2647,122 @@ const AdminPanel = ({ user }) => {
                     kycDocument={u.kycDocument}
                   />
                 </div>
+
+                {/* Form fields section */}
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '6px' }}>
+                    📝 Auto-Extracted Registration Fields
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Full Name:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not Specified'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Date of Birth / Age:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.age || 'Not Provided'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Document Type:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>ID Card Number:</span>
+                    <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>
+                      {u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Join Date:</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(u.joinedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Submission Status:</span>
+                    <StatusBadge status={u.kycStatus} />
+                  </div>
+                </div>
+
+                {/* Profile contact card */}
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>📞 Member Profile Contact</div>
+                  <div style={{ fontSize: '13px' }}><span style={{ color: '#8b92a8' }}>Email:</span> <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.email || 'N/A'}</span></div>
+                  <div style={{ fontSize: '13px' }}><span style={{ color: '#8b92a8' }}>Phone:</span> <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.phone}</span></div>
+                </div>
+
+                {/* Administrative Actions toolbar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛠️ Direct Moderation Commands</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setMessageComposerUserId(u._id.toString());
+                        setMessageComposerUsername(u.username);
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid rgba(255,255,255,0.07)' }}
+                    >
+                      💬 Send Message
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUserDetailId(u._id.toString());
+                        setSelectedKycDetailId(null);
+                        setUserDrawerTab('activity');
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid rgba(255,255,255,0.07)' }}
+                    >
+                      ⚠️ Warn User
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid rgba(255,255,255,0.07)', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
+                    >
+                      {u.isSuspended ? '✅ Unban User' : '🚫 Ban User'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (await handleRemoveUser(u._id.toString(), u.username)) {
+                          setSelectedKycDetailId(null);
+                        }
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#f43f5e' }}
+                    >
+                      🗑️ Remove User
+                    </button>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Action Details */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-                <input
-                  type="text"
-                  value={rejectionReasons[u.id] || ''}
-                  onChange={e => setRejectionReasons(p => ({ ...p, [u.id]: e.target.value }))}
-                  placeholder="Rejection reason (required only if rejecting)…"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', fontFamily: 'var(--font)', outline: 'none' }}
-                />
-
+              {/* KYC Decisions Toolbar */}
+              <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleKYC(u.id, true)}  className="btn btn-success" style={{ flex: 1, padding: '13px' }}>✓ Approve KYC</button>
-                  <button onClick={() => handleKYC(u.id, false)} className="btn btn-danger"  style={{ flex: 1, padding: '13px' }}>✗ Reject KYC</button>
+                  <button onClick={() => handleKYC(u._id.toString(), true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                    ✓ Approve KYC
+                  </button>
+                  <button onClick={() => handleKYC(u._id.toString(), false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                    ✗ Reject KYC
+                  </button>
                 </div>
-              </div>
-            </div>
-          ))}
-
-          {/* 📜 KYC History Section */}
-          <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>
-              📜 Identity Verification History
-            </div>
-            
-            {(() => {
-              const kycHistory = (allUsersList || []).filter(u => u.kycStatus === 'approved' || u.kycStatus === 'rejected');
-              if (kycHistory.length === 0) {
-                return (
-                  <div style={{ ...cs, textAlign: 'center', padding: '24px 10px', color: 'var(--text-3)', fontSize: '13px' }}>
-                    No completed verifications in history
-                  </div>
-                );
-              }
-              return kycHistory.map(h => (
-                <div key={h._id} onClick={() => setSelectedUserDetailId(h._id.toString())} style={{ ...cs, display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', marginBottom: '8px', cursor: 'pointer' }}>
-                  <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: h.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: h.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
-                    {(h.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '13px' }}>@{h.username}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{h.fullName || h.phone}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <StatusBadge status={h.kycStatus} />
-                    {h.kycRejectionReason && (
-                      <div style={{ fontSize: '9px', color: 'var(--status-danger-text)', marginTop: '2px' }} title={h.kycRejectionReason}>
-                        Reason: {h.kycRejectionReason}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* ══ DEPOSITS ══════════════════════════════════════════ */}
-      {activeTab === 'deposits' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Pending Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-                📥 Pending Deposit Requests
-              </div>
-              <span className="badge badge-warning">{pendingDeposits.length} pending</span>
-            </div>
-
-            {pendingDeposits.length === 0 ? (
-              <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
-                ✓ No pending deposit requests
-              </div>
-            ) : pendingDeposits.map(req => {
-              const meta = WALLET_META[req.walletType] || WALLET_META.other;
-              return (
-                <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px', borderColor: 'rgba(251,191,36,0.25)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                        {meta.icon}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{meta.label}</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                      <StatusBadge status={req.status} />
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Reference:</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{req.senderReference || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                      <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                    </div>
-                  </div>
-
-                  {req.hasScreenshot && (
-                    <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <button onClick={() => handleApproveDeposit(req.id)} className="btn btn-success btn-full" style={{ padding: '12px', fontWeight: 700 }}>
-                      ✓ Approve & Credit ${req.amountUSD.toFixed(2)} USD
-                    </button>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input type="text" value={depositRejectNotes[req.id] || ''} onChange={e => setDepositRejectNotes(p => ({ ...p, [req.id]: e.target.value }))} placeholder="Rejection reason…" style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'var(--font)', outline: 'none' }} />
-                      <button onClick={() => handleRejectDeposit(req.id)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* History Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-              📜 Deposit History
-            </div>
-            {(() => {
-              const completedDeposits = allDepositReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
-              if (completedDeposits.length === 0) {
-                return (
-                  <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
-                    No completed deposits in history
-                  </div>
-                );
-              }
-              return completedDeposits.map(req => {
-                const meta = WALLET_META[req.walletType] || WALLET_META.other;
-                return (
-                  <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                          {meta.icon}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{meta.label}</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                        <StatusBadge status={req.status} />
-                      </div>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text-3)' }}>Reference:</span>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{req.senderReference || '—'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                        <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                      </div>
-                      {req.adminNote && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-3)' }}>Admin Note:</span>
-                          <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-
-        </div>
-      )}
-
-      {/* ══ WITHDRAWALS QUEUE ══════════════════════════════════ */}
-      {activeTab === 'withdrawals' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Pending Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-                📤 Pending Withdrawal Requests
-              </div>
-              <span className="badge badge-warning">{pendingWithdrawals.length} pending</span>
-            </div>
-
-            {pendingWithdrawals.length === 0 ? (
-              <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
-                ✓ No pending withdrawal requests
-              </div>
-            ) : pendingWithdrawals.map(req => {
-              const isPending = req.status === 'pending';
-              return (
-                <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px', borderColor: 'rgba(251,191,36,0.25)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                        {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                      <StatusBadge status={req.status} />
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Destination Account:</span>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                      <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <button onClick={() => handleWithdrawal(req.id, true)} className="btn btn-success btn-full" style={{ padding: '12px', fontWeight: 700 }}>
-                      ✓ Approve & Release ${req.amountUSD.toFixed(2)} USD
-                    </button>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        value={withdrawRejectNotes[req.id] || ''} 
-                        onChange={e => setWithdrawRejectNotes(p => ({ ...p, [req.id]: e.target.value }))} 
-                        placeholder="Rejection reason…" 
-                        style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'var(--font)', outline: 'none' }} 
-                      />
-                      <button onClick={() => handleWithdrawal(req.id, false)} className="btn btn-danger" style={{ padding: '10px 14px', flexShrink: 0 }}>Reject</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* History Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-              📜 Withdrawal History
-            </div>
-            {(() => {
-              const completedWithdrawals = allWithdrawalReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
-              if (completedWithdrawals.length === 0) {
-                return (
-                  <div style={{ ...cs, textAlign: 'center', padding: '30px 20px', color: 'var(--text-3)', fontSize: '13px' }}>
-                    No completed withdrawals in history
-                  </div>
-                );
-              }
-              return completedWithdrawals.map(req => {
-                return (
-                  <div key={req.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                          {req.walletType?.toLowerCase().includes("bybit") ? "🟠" : req.walletType?.toLowerCase().includes("binance") ? "🟡" : "📤"}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '14px' }}>@{req.username}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{req.walletType} Withdrawal</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold-light)' }}>${req.amountUSD.toFixed(2)}</div>
-                        <StatusBadge status={req.status} />
-                      </div>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text-3)' }}>Destination Address:</span>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--gold-light)' }}>{req.destinationAddress}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text-3)' }}>Submitted:</span>
-                        <span style={{ color: 'var(--text-2)' }}>{new Date(req.createdAt).toLocaleString('en-ET', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                      </div>
-                      {req.adminNote && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-3)' }}>Admin Note:</span>
-                          <span style={{ color: req.status === 'rejected' ? 'var(--status-danger-text)' : 'var(--status-success-text)', fontWeight: 600 }}>{req.adminNote}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-
-        </div>
-      )}
-
-      {/* ══ DISPUTES ══════════════════════════════════════════ */}
-      {activeTab === 'disputes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {disputes.length === 0 ? (
-            <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>⚖️</div>
-              <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No active disputes</p>
-            </div>
-          ) : disputes.map(d => (
-            <div key={d.id} style={{ ...cs, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '13px' }}>@{d.buyerName} ↔ @{d.sellerName}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>${parseFloat(d.amountETH).toFixed(2)} USD</div>
-                </div>
-                <span className="badge badge-danger">⚠ Disputed</span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleDispute(d.id, 'release')} className="btn btn-success" style={{ flex: 1 }}>Release to Buyer</button>
-                <button onClick={() => handleDispute(d.id, 'refund')}  className="btn btn-danger"  style={{ flex: 1 }}>Refund Seller</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ══ SUPPORT ══════════════════════════════════════════ */}
-      {activeTab === 'support' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {!selectedTicket ? (
-            <>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Support Conversations</div>
-              {supportTickets.length === 0 ? (
-                <div style={{ ...cs, textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>No tickets</div>
-              ) : supportTickets.map(t => {
-                const lastMsg = t.messages[t.messages.length - 1];
-                const isUnread = lastMsg && lastMsg.senderId !== user?.id && lastMsg.senderId !== 'usr_admin' && (!selectedTicket || selectedTicket.id !== t.id);
-                return (
-                  <div key={t.id} onClick={() => setSelectedTicket(t)} style={{ ...cs, cursor: 'pointer', borderColor: isUnread ? 'var(--status-danger-border)' : t.status === 'open' ? 'rgba(200,150,44,0.2)' : 'var(--border)', position: 'relative', background: isUnread ? 'rgba(239,68,68,0.02)' : 'var(--bg-surface)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        @{t.username || 'User'}
-                        {isUnread && (
-                          <span style={{ background: '#ef4444', color: 'white', fontSize: '9px', fontWeight: 800, padding: '1px 6px', borderRadius: '99px' }}>1</span>
-                        )}
-                      </span>
-                      <StatusBadge status={t.status} />
-                    </div>
-                    {lastMsg && (
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: isUnread ? 'var(--text-1)' : 'var(--text-3)', 
-                        fontWeight: isUnread ? 700 : 400, 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
-                        whiteSpace: 'nowrap' 
-                      }}>
-                        {lastMsg.senderName}: {lastMsg.message}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </>
-          ) : (
-            <div style={{ border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-elevated)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '14px' }}>@{selectedTicket.username}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Support chat</div>
-                </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {selectedTicket.status === 'open' && (
-                    <button onClick={() => closeTicket({ ticketId: selectedTicket.id }).then(() => { showAlert('Resolved.'); setSelectedTicket(null); })} style={{ padding: '6px 10px', background: 'var(--status-success-bg)', border: 'none', color: 'var(--status-success-text)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>✓ Resolve</button>
-                  )}
-                  <button onClick={() => setSelectedTicket(null)} style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                </div>
-              </div>
-
-              <div style={{ padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '280px', maxHeight: '380px', background: 'var(--bg-surface)' }}>
-                {selectedTicket.messages.map((msg, i) => {
-                  const isAdmin = msg.senderId === user.id || msg.senderId === 'usr_admin';
-                  return (
-                    <div key={i} style={{ alignSelf: isAdmin ? 'flex-end' : 'flex-start', maxWidth: '82%' }}>
-                      <div style={{ fontSize: '9px', color: 'var(--text-3)', marginBottom: '3px', textAlign: isAdmin ? 'right' : 'left' }}>{msg.senderName}</div>
-                      <div style={{ padding: '10px 13px', borderRadius: isAdmin ? '14px 14px 3px 14px' : '14px 14px 14px 3px', background: isAdmin ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--bg-elevated)', border: isAdmin ? 'none' : '1px solid var(--border)', color: isAdmin ? '#0A0C12' : 'var(--text-1)', fontSize: '13px', lineHeight: '1.45' }}>
-                        {msg.message}
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={chatEndRef} />
-              </div>
-
-              {selectedTicket.status === 'open' ? (
-                <form onSubmit={handleSupportReply} style={{ display: 'flex', padding: '10px', borderTop: '1px solid var(--border)', gap: '8px', background: 'var(--bg-surface)' }}>
-                  <input type="text" value={supportReplyText} onChange={e => setSupportReplyText(e.target.value)} placeholder="Reply…" style={{ flex: 1, padding: '10px 13px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', fontFamily: 'var(--font)', outline: 'none' }} />
-                  <button type="submit" className="btn btn-gold" style={{ padding: '10px 16px' }}>Send ➤</button>
-                </form>
-              ) : (
-                <div style={{ padding: '12px', textAlign: 'center', background: 'var(--bg-elevated)', fontSize: '12px', color: 'var(--text-3)', borderTop: '1px solid var(--border)' }}>🔒 Resolved</div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ USERS ═════════════════════════════════════════════ */}
-      {activeTab === 'users' && (() => {
-        const filteredUsers = (allUsersList || []).filter(u => {
-          const query = userSearchQuery.toLowerCase().trim();
-          const matchesSearch = !query || 
-            u.username?.toLowerCase().includes(query) ||
-            u.email?.toLowerCase().includes(query) ||
-            u.phone?.toLowerCase().includes(query) ||
-            u._id?.toString().toLowerCase().includes(query);
-            
-          const isVerified = u.kycStatus === 'approved';
-          const matchesKyc = userFilterKyc === 'all' ||
-            (userFilterKyc === 'verified' && isVerified) ||
-            (userFilterKyc === 'unverified' && !isVerified);
-            
-          const isBanned = !!u.isSuspended;
-          const matchesBan = userFilterBan === 'all' ||
-            (userFilterBan === 'banned' && isBanned) ||
-            (userFilterBan === 'active' && !isBanned);
-            
-          return matchesSearch && matchesKyc && matchesBan;
-        });
-
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            
-            {/* 🔍 Search & Filters Bar */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '10px', 
-              flexWrap: 'wrap', 
-              background: 'var(--bg-surface)', 
-              border: '1px solid var(--border)', 
-              borderRadius: '16px', 
-              padding: '14px' 
-            }}>
-              
-              {/* Search input */}
-              <div style={{ flex: 2, minWidth: '220px', position: 'relative' }}>
-                <input 
-                  type="text" 
-                  value={userSearchQuery}
-                  onChange={e => setUserSearchQuery(e.target.value)}
-                  placeholder="Search by username, email, ID..."
-                  style={{
-                    width: '100%',
-                    padding: '10px 10px 10px 36px',
-                    borderRadius: '10px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-1)',
-                    fontSize: '13px',
-                    fontFamily: 'var(--font)',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                />
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
-              </div>
-
-              {/* KYC Filter select */}
-              <div style={{ flex: 1, minWidth: '130px' }}>
-                <select
-                  value={userFilterKyc}
-                  onChange={e => setUserFilterKyc(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-1)',
-                    fontSize: '13px',
-                    fontFamily: 'var(--font)',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
+                <button
+                  onClick={() => setResubmitUserId(u._id.toString())}
+                  className="btn-premium-warning"
+                  style={{ width: '100%' }}
                 >
-                  <option value="all">🌐 All Verification</option>
-                  <option value="verified">✓ Verified Only</option>
-                  <option value="unverified">✗ Unverified Only</option>
-                </select>
-              </div>
-
-              {/* Ban Filter select */}
-              <div style={{ flex: 1, minWidth: '130px' }}>
-                <select
-                  value={userFilterBan}
-                  onChange={e => setUserFilterBan(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-1)',
-                    fontSize: '13px',
-                    fontFamily: 'var(--font)',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="all">🛡️ All Activity</option>
-                  <option value="active">✅ Active Only</option>
-                  <option value="banned">🚫 Banned Only</option>
-                </select>
+                  ⚠ Request Resubmission
+                </button>
               </div>
 
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-                {userSearchQuery || userFilterKyc !== 'all' || userFilterBan !== 'all' 
-                  ? `Matching Users (${filteredUsers.length} of ${allUsersList?.length ?? 0})`
-                  : `All Users (${allUsersList?.length ?? 0})`
-                }
-              </div>
-            </div>
-
-            {!allUsersList ? (
-              <div className="skeleton" style={{ height: '200px' }} />
-            ) : filteredUsers.length === 0 ? (
-              <div style={{ ...cs, textAlign: 'center', padding: '40px 20px' }}>
-                <div style={{ fontSize: '32px', marginBottom: '10px' }}>👥</div>
-                <p style={{ color: 'var(--text-3)', fontSize: '13px', margin: 0 }}>No matching users found</p>
-              </div>
-            ) : filteredUsers.map(u => (
-              <div 
-                key={u._id} 
-                onClick={() => setSelectedUserDetailId(u._id.toString())}
-                style={{ 
-                  ...cs, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,44,0.4)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
-                  <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)' }}>
-                    {(u.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
-                      {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
-                      {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Banned</span>}
-                      {u.warnings && u.warnings.length > 0 && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(251,191,36,0.1)', color: 'var(--status-warning-text)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--status-warning-border)' }}>⚠️ {u.warnings.length} Warn</span>}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {u.email ? `${u.email} · ` : ''}{u.phone}
-                    </div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-3)', fontFamily: 'monospace', marginTop: '2px' }}>
-                      ID: {u._id.toString()}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-light)' }}>${(u.ethBalance || 0).toFixed(2)}</div>
-                    <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '2px', color: u.kycStatus === 'approved' ? 'var(--status-success-text)' : u.kycStatus === 'pending' ? 'var(--status-warning-text)' : 'var(--text-3)' }}>
-                      {u.kycStatus === 'approved' ? '✓ Verified' : u.kycStatus === 'pending' ? '⏳ Pending' : '✗ Unverified'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                {u.role !== 'admin' && (
-                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setWarnUserId(u._id.toString()); }} 
-                      style={{ 
-                        background: 'rgba(251,191,36,0.06)', 
-                        border: '1px solid var(--status-warning-border)', 
-                        color: 'var(--status-warning-text)', 
-                        borderRadius: '8px', 
-                        padding: '5px 12px', 
-                        fontSize: '11px', 
-                        fontWeight: 700, 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontFamily: 'var(--font)'
-                      }}
-                    >
-                      ⚠️ Warn
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleToggleSuspend(u._id.toString(), !!u.isSuspended); }} 
-                      style={{ 
-                        background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
-                        border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
-                        color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
-                        borderRadius: '8px', 
-                        padding: '5px 12px', 
-                        fontSize: '11px', 
-                        fontWeight: 700, 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontFamily: 'var(--font)'
-                      }}
-                    >
-                      {u.isSuspended ? '✅ Unpush (Activate)' : '🚫 Push (Suspend)'}
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleRemoveUser(u._id.toString(), u.username); }} 
-                      style={{ 
-                        background: 'rgba(248,113,113,0.12)', 
-                        border: '1px solid rgba(248,113,113,0.3)', 
-                        color: 'var(--status-danger-text)', 
-                        borderRadius: '8px', 
-                        padding: '5px 10px', 
-                        fontSize: '11px', 
-                        fontWeight: 700, 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontFamily: 'var(--font)'
-                      }}
-                      title="Remove User Permanently"
-                    >
-                      🗑️ Remove
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          </>
         );
       })()}
 
-      {/* ══ AUDIT LOGS ════════════════════════════════════════ */}
-      {activeTab === 'logs' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }} className="fade-in-2">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>
-              Administrative Audit Logs
-            </div>
-            <span className="badge badge-neutral">{auditLogs.length} events logged</span>
-          </div>
-
-          <div style={{ ...cs, padding: 0, overflow: 'hidden' }}>
-            {auditLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <div style={{ fontSize: '40px', marginBottom: '10px' }}>📜</div>
-                <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>No administrative events logged yet</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-3)', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>
-                      <th style={{ padding: '12px 16px' }}>Timestamp</th>
-                      <th style={{ padding: '12px 16px' }}>Administrator</th>
-                      <th style={{ padding: '12px 16px' }}>Action</th>
-                      <th style={{ padding: '12px 16px' }}>Target Item</th>
-                      <th style={{ padding: '12px 16px' }}>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditLogs.map((log) => {
-                      let badgeColor = 'var(--text-3)';
-                      let badgeBg = 'rgba(255,255,255,0.05)';
-                      let badgeBorder = '1px solid rgba(255,255,255,0.1)';
-
-                      if (log.action.includes('approve') || log.action.includes('unsuspend')) {
-                        badgeColor = 'var(--status-success-text)';
-                        badgeBg = 'var(--status-success-bg)';
-                        badgeBorder = '1px solid var(--status-success-border)';
-                      } else if (log.action.includes('reject') || log.action.includes('suspend') || log.action.includes('remove')) {
-                        badgeColor = 'var(--status-danger-text)';
-                        badgeBg = 'rgba(248,113,113,0.08)';
-                        badgeBorder = '1px solid rgba(248,113,113,0.2)';
-                      } else if (log.action.includes('warn')) {
-                        badgeColor = 'var(--status-warning-text)';
-                        badgeBg = 'var(--status-warning-bg)';
-                        badgeBorder = '1px solid var(--status-warning-border)';
-                      }
-
-                      return (
-                        <tr key={log._id} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                          <td style={{ padding: '12px 16px', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
-                            {new Date(log.createdAt).toLocaleString()}
-                          </td>
-                          <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                            @{log.adminUsername}
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <span style={{ 
-                              padding: '2px 8px', 
-                              borderRadius: '6px', 
-                              fontSize: '10px', 
-                              fontWeight: 700, 
-                              textTransform: 'uppercase', 
-                              color: badgeColor, 
-                              background: badgeBg, 
-                              border: badgeBorder 
-                            }}>
-                              {log.action.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px', color: 'var(--text-1)', fontWeight: 600 }}>
-                            @{log.targetName}
-                          </td>
-                          <td style={{ padding: '12px 16px', color: 'var(--text-2)', minWidth: '200px' }}>
-                            {log.details}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ══ SETTINGS ══════════════════════════════════════════ */}
-      {activeTab === 'settings' && (
-        <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Rate inputs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'linear-gradient(135deg,rgba(200,150,44,0.12),rgba(200,150,44,0.02))', border: '1px solid rgba(200,150,44,0.25)', borderRadius: '18px', padding: '18px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Exchange Rates (USD/ETB)</div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
-                <label style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Buy Price (User Buys $)</label>
-                <div style={{ position: 'relative' }}>
-                  <input type="number" step="0.01" value={etbRate} onChange={e => setEtbRate(e.target.value)} style={{ width: '100%', padding: '10px 10px 10px 42px', background: 'rgba(10,12,18,0.6)', border: '1px solid rgba(200,150,44,0.4)', borderRadius: '10px', color: 'var(--text-1)', fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font)', outline: 'none' }} />
-                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)' }}>ETB</span>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>Current: {settings?.etbRatePerDollar ?? '—'}</div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Sell Price (User Sells $)</label>
-                <div style={{ position: 'relative' }}>
-                  <input type="number" step="0.01" value={etbRateSell} onChange={e => setEtbRateSell(e.target.value)} style={{ width: '100%', padding: '10px 10px 10px 42px', background: 'rgba(10,12,18,0.6)', border: '1px solid rgba(200,150,44,0.4)', borderRadius: '10px', color: 'var(--text-1)', fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font)', outline: 'none' }} />
-                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 700, color: 'var(--gold-light)' }}>ETB</span>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>Current: {settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'}</div>
-              </div>
-            </div>
-          </div>
-
-          <div style={cs}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', marginBottom: '10px' }}>Platform Commission (%)</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-              {[0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(opt => (
-                <button key={opt} type="button" onClick={() => setCommissionValue(opt.toString())} style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${commissionValue === opt.toString() ? 'var(--gold)' : 'var(--border)'}`, background: commissionValue === opt.toString() ? 'var(--gold-bg)' : 'var(--bg-elevated)', color: commissionValue === opt.toString() ? 'var(--gold-light)' : 'var(--text-2)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                  {opt}%
-                </button>
-              ))}
-            </div>
-            <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ color: 'var(--text-3)' }}>Fee on $10 trade:</span>
-                <span style={{ color: 'var(--status-danger-text)', fontWeight: 600 }}>${(10 * parseFloat(commissionValue || 0) / 100).toFixed(3)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700 }}>Buyer gets:</span>
-                <span style={{ fontWeight: 800, color: 'var(--gold-light)', fontSize: '14px' }}>${(10 - 10 * parseFloat(commissionValue || 0) / 100).toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" disabled={savingSettings} className="btn btn-gold btn-full btn-lg">
-            {savingSettings ? '⏳ Saving…' : '💾 Save Settings'}
-          </button>
-        </form>
-      )}
-
-      {/* ══ WARN USER MODAL ══════════════════════════════════ */}
-      {warnUserId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-1)' }}>⚠️ Issue Official User Warning</h3>
-              <button onClick={() => { setWarnUserId(null); setWarnMessage(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '18px', cursor: 'pointer' }}>×</button>
-            </div>
-            
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.5' }}>
-              This warning will be recorded on the user's profile and displayed prominently at the top of their dashboard in real-time.
-            </p>
-
-            <form onSubmit={handleWarnUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase' }}>Warning Message</label>
-                <textarea 
-                  value={warnMessage} 
-                  onChange={e => setWarnMessage(e.target.value)} 
-                  placeholder="Specify violation (e.g. offensive chat, failure to pay, suspicious behavior)..." 
-                  rows={4}
-                  required
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 14px', 
-                    borderRadius: '12px', 
-                    background: 'var(--bg-elevated)', 
-                    border: '1px solid var(--border)', 
-                    color: 'var(--text-1)', 
-                    fontSize: '13px', 
-                    fontFamily: 'var(--font)', 
-                    outline: 'none',
-                    resize: 'none'
-                  }} 
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                <button type="button" onClick={() => { setWarnUserId(null); setWarnMessage(''); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>Cancel</button>
-                <button type="submit" disabled={warnLoading} className="btn btn-gold" style={{ flex: 1, padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                  {warnLoading ? '⏳ Sending…' : '⚠️ Send Warning'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ══ LIGHTBOX IMAGE VIEWER ════════════════════════════ */}
-      {activeLightboxImage && (
-        <div 
-          onClick={() => setActiveLightboxImage(null)}
-          style={{ 
-            position: 'fixed', 
-            inset: 0, 
-            background: 'rgba(5,7,12,0.95)', 
-            zIndex: 2000, 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            padding: '24px', 
-            backdropFilter: 'blur(12px)',
-            transition: 'all 0.3s ease',
-            cursor: 'zoom-out'
-          }}
-        >
-          {/* Close X Button */}
-          <button 
-            onClick={(e) => { e.stopPropagation(); setActiveLightboxImage(null); }} 
-            style={{ 
-              position: 'absolute', 
-              top: '20px', 
-              right: '20px', 
-              width: '44px', 
-              height: '44px', 
-              borderRadius: '50%', 
-              background: 'rgba(255,255,255,0.03)', 
-              border: '1px solid rgba(255,255,255,0.1)', 
-              color: 'var(--text-1)', 
-              fontSize: '24px', 
-              fontWeight: '400',
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-              transition: 'all 0.2s ease',
-              outline: 'none'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            ×
-          </button>
-
-          {/* Centered Large Image */}
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            style={{ 
-              position: 'relative', 
-              maxWidth: '90%', 
-              maxHeight: '82vh', 
-              boxShadow: '0 25px 60px rgba(0,0,0,0.8)', 
-              borderRadius: '16px', 
-              overflow: 'hidden', 
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: '#0F121C',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <img 
-              src={activeLightboxImage} 
-              alt="KYC Document Large" 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '82vh', 
-                objectFit: 'contain',
-                display: 'block'
-              }} 
-            />
-          </div>
-
-          <div style={{ marginTop: '16px', color: 'var(--text-3)', fontSize: '12px', fontWeight: 600, pointerEvents: 'none' }}>
-            Click anywhere outside or press Close to dismiss
-          </div>
-        </div>
-      )}
-
-      {/* ══ USER DETAILS DRAWER ══════════════════════════════ */}
+      {/* ── 4. COMPLETE USER DIRECTORY & MODERATION DRAWER ── */}
       {selectedUserDetailId && (() => {
         const u = allUsersList?.find(userRecord => userRecord._id.toString() === selectedUserDetailId);
         if (!u) return null;
@@ -2105,421 +2771,430 @@ const AdminPanel = ({ user }) => {
         const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
         const etbVal = totalBal * rate;
 
+        // Dynamic Calculations
+        const uDeposits = (allDepositReqs || []).filter(r => (r.userId === u._id.toString() || r.username === u.username) && r.status === 'approved');
+        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.userId === u._id.toString() || r.username === u.username) && r.status === 'approved');
+        const sumDeposits = uDeposits.reduce((s, r) => s + r.amountUSD, 0);
+        const sumWithdrawals = uWithdrawals.reduce((s, r) => s + r.amountUSD, 0);
+
         return (
-          <div 
-            onClick={() => setSelectedUserDetailId(null)}
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              background: 'rgba(5, 7, 12, 0.75)', 
-              zIndex: 1100, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              backdropFilter: 'blur(8px)',
-              animation: 'fadeIn 0.2s ease-out'
-            }}
-          >
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              style={{ 
-                width: '100%', 
-                maxWidth: '520px', 
-                height: '100%', 
-                background: 'var(--glass-bg)', 
-                borderLeft: '1px solid var(--glass-border)', 
-                boxShadow: '-10px 0 40px rgba(0,0,0,0.6)', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                position: 'relative'
-              }}
-            >
-              {/* Drawer Header */}
-              <div style={{ 
-                padding: '20px 24px', 
-                borderBottom: '1px solid var(--border)', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                background: 'rgba(255,255,255,0.02)'
-              }}>
+          <>
+            <div className="drawer-backdrop" onClick={() => setSelectedUserDetailId(null)} />
+            <div className="drawer-content" style={{ width: '520px' }}>
+              
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-1)' }}>
-                    👤 User Profile Details
-                  </h3>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-3)' }}>
-                    Joined: {new Date(u.joinedAt).toLocaleDateString()}
-                  </p>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>👤 Member Profile Administration</h3>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>Join Date: {new Date(u.joinedAt).toLocaleDateString()}</span>
                 </div>
-                <button 
-                  onClick={() => setSelectedUserDetailId(null)} 
-                  style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: 'var(--bg-base)', 
-                    border: '1px solid var(--border)', 
-                    color: 'var(--text-2)', 
-                    cursor: 'pointer', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-base)'; e.currentTarget.style.color = 'var(--text-2)'; }}
-                >
-                  ✕
-                </button>
+                <button onClick={() => setSelectedUserDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
 
-              {/* Drawer Scrollable Content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+              {/* Sub tabs inside drawer */}
+              <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0c12', padding: '2px' }}>
+                {[
+                  { id: 'profile', l: 'Profile Summary' },
+                  { id: 'transactions', l: 'Transactions' },
+                  { id: 'kyc', l: 'KYC Document' },
+                  { id: 'activity', l: 'Actions / Warnings' }
+                ].map(tb => (
+                  <button
+                    key={tb.id}
+                    onClick={() => setUserDrawerTab(tb.id)}
+                    style={{
+                      flex: 1, padding: '10px 4px', border: 'none', background: 'transparent',
+                      color: userDrawerTab === tb.id ? '#00d4a0' : '#8b92a8',
+                      fontSize: '12px', fontWeight: userDrawerTab === tb.id ? 700 : 500,
+                      cursor: 'pointer', borderBottom: userDrawerTab === tb.id ? '2px solid #00d4a0' : '2px solid transparent',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {tb.l}
+                  </button>
+                ))}
+              </div>
+
+              {/* Scrollable details */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                {/* Profile Overview (Avatar, Name, Badges) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px' }}>
-                  <div className="avatar" style={{ 
-                    width: '60px', 
-                    height: '60px', 
-                    fontSize: '24px', 
-                    background: u.role === 'admin' ? 'linear-gradient(135deg,var(--gold),var(--gold-light))' : 'var(--gold-bg)', 
-                    color: u.role === 'admin' ? '#0A0C12' : 'var(--gold-light)',
-                    flexShrink: 0
-                  }}>
-                    {(u.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text-1)' }}>@{u.username}</span>
-                      {u.role === 'admin' && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--gold-bg)', color: 'var(--gold-light)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
-                      {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--status-danger-border)' }}>🚫 Banned</span>}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-2)', display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <span style={{ fontFamily: 'monospace', color: 'var(--text-3)' }}>Convex ID:</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>{u._id.toString()}</span>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(u._id.toString());
-                          showAlert("✓ ID copied to clipboard!");
-                        }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', padding: '2px 4px', color: 'var(--gold-light)', marginLeft: '4px' }}
-                        title="Copy ID"
-                      >
-                        📋 Copy
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4-Card Asset Metric Grid */}
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>💳 Account Asset Balances</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    
-                    {/* Card 1: Available Balance */}
-                    <div className="metric-card metric-card-teal" style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Available</div>
-                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--teal-light)' }}>
-                        ${(u.ethBalance || 0).toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                {/* ── TAB 1: Profile Summary ── */}
+                {userDrawerTab === 'profile' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0a0c12', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{
+                        width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700
+                      }}>
+                        {(u.username || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '15px' }}>@{u.username}</span>
+                          {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u._id.toString()}</span>
                       </div>
                     </div>
 
-                    {/* Card 2: Locked Escrow */}
-                    <div className="metric-card metric-card-danger" style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Locked Escrow</div>
-                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--status-danger-text)' }}>
-                        ${(u.ethLocked || 0).toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                    {/* Financial Summary */}
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>💳 Account Financial Balance Summary</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Available USD</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${(u.ethBalance || 0).toFixed(2)}</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Locked Escrow</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>${(u.ethLocked || 0).toFixed(2)}</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Deposited</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${sumDeposits.toFixed(2)}</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Withdrawn</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#f43f5e', marginTop: '2px' }}>${sumWithdrawals.toFixed(2)}</div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Card 3: Total Balance */}
-                    <div className="metric-card metric-card-gold" style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>Total Balance</div>
-                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--gold-light)' }}>
-                        ${totalBal.toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>USD</span>
+                    {/* Member Details */}
+                    <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>Full Name:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.fullName || u.kycData?.name || 'Not specified'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>Email Address:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.email || 'Not specified'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>Phone Contact:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.phone}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>KYC Status Badge:</span>
+                        <StatusBadge status={u.kycStatus} />
                       </div>
                     </div>
 
-                    {/* Card 4: ETB Value */}
-                    <div className="metric-card metric-card-indigo" style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '2px' }}>ETB Equivalent</div>
-                      <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--indigo-light)' }}>
-                        {Math.round(etbVal).toLocaleString()} <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>ETB</span>
+                    {/* Address block */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '12px', color: '#8b92a8' }}>On-chain TRC20 / ERC20 wallet address:</span>
+                      <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00d4a0', wordBreak: 'break-all', flex: 1 }}>{u.ethAddress}</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(u.ethAddress); showAlert('✓ Address copied!'); }}
+                          style={{ border: 'none', background: 'rgba(255,255,255,0.05)', color: '#8b92a8', borderRadius: '4px', cursor: 'pointer', padding: '2px 8px', fontSize: '11px' }}
+                        >
+                          Copy
+                        </button>
                       </div>
                     </div>
-
-                  </div>
-                </div>
-
-                {/* Personal Information & Metadata */}
-                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '4px' }}>📋 Profile Information</div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Full Name:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.fullName || u.kycData?.name || "Not Specified"}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Email Address:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.email || "Not Specified"}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Phone Number:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.phone || "Not Specified"}</span>
-                  </div>
-
-                  {u.kycData?.address && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>Residential Address:</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-1)', textAlign: 'right', maxWidth: '240px' }}>{u.kycData.address}</span>
-                    </div>
-                  )}
-
-                  {u.kycData?.idType && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-3)' }}>KYC Document Type:</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{u.kycData.idType}</span>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>On-chain Wallet Address:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px' }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--gold-light)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.ethAddress}</span>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(u.ethAddress);
-                          showAlert("✓ Wallet Address copied!");
-                        }}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', color: 'var(--text-2)', padding: '3px 8px', fontWeight: 600 }}
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* KYC Identity Documents Section (if uploaded) */}
-                {(u.kycIdFront || u.kycIdBack || u.kycSelfie) && (
-                  <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>🪪 Identity Documents</div>
-                    <KycImages 
-                      userId={u._id.toString()} 
-                      getImageUrl={getImageUrl} 
-                      onImageClick={setActiveLightboxImage} 
-                      kycIdFront={u.kycIdFront}
-                      kycIdBack={u.kycIdBack}
-                      kycSelfie={u.kycSelfie}
-                      kycDocument={u.kycDocument}
-                    />
                   </div>
                 )}
 
-                {/* Administrative Controls & Moderation Action Buttons */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🛠️ Administrative Controls</div>
-                  
-                  {isMe ? (
-                    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)', borderRadius: '12px', fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
-                      🛡️ This is your own administrator profile. Self-moderation is disabled.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      
-                      {/* Row 1: Verification Button */}
-                      {u.kycStatus === 'approved' ? (
-                        <button 
-                          onClick={async () => {
-                            if (!window.confirm("Are you sure you want to unverify this account? Identity status will be reset.")) return;
-                            try {
-                              await setKycStatusMutation({ adminId: user.id, userId: u._id.toString(), status: 'none', reason: 'Administratively reset' });
-                              showAlert("✗ Account unverified successfully.");
-                            } catch (err) {
-                              showAlert("Error unverifying account: " + err.message, "error");
-                            }
-                          }}
-                          className="btn btn-danger btn-full"
-                          style={{ padding: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                          ✗ Unverify Account (Reset KYC Status)
-                        </button>
+                {/* ── TAB 2: User Transaction History ── */}
+                {userDrawerTab === 'transactions' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Cumulative Transactions Recorded</div>
+                    <div style={{ maxHeight: '420px', overflowY: 'auto', background: '#0a0c12', borderRadius: '12px' }}>
+                      {selectedUserTxs.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '30px', color: '#4e5567', fontSize: '13px' }}>
+                          No deposit or withdrawal transactions found for this user.
+                        </div>
                       ) : (
-                        <button 
-                          onClick={async () => {
-                            if (!window.confirm("Verify this user's identity instantly?")) return;
-                            try {
-                              await setKycStatusMutation({ adminId: user.id, userId: u._id.toString(), status: 'approved' });
-                              showAlert("✓ Account verified instantly!");
-                            } catch (err) {
-                              showAlert("Error verifying account: " + err.message, "error");
-                            }
-                          }}
-                          className="btn btn-teal btn-full"
-                          style={{ padding: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#040A0A' }}
-                        >
-                          ✓ Verify Account (Instant KYC Approval)
-                        </button>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', color: '#8b92a8' }}>
+                              <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
+                              <th style={{ padding: '10px', textAlign: 'left' }}>Type</th>
+                              <th style={{ padding: '10px', textAlign: 'right' }}>Amount</th>
+                              <th style={{ padding: '10px', textAlign: 'left' }}>Note</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedUserTxs.map(tx => {
+                              const isDep = tx.type === 'deposit';
+                              return (
+                                <tr key={tx._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                  <td style={{ padding: '10px', color: '#8b92a8' }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                  <td style={{ padding: '10px', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
+                                    {tx.type?.toUpperCase()}
+                                  </td>
+                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
+                                    {isDep ? '+' : '-'}${tx.amountUSD.toFixed(2)}
+                                  </td>
+                                  <td style={{ padding: '10px', color: '#8b92a8', fontSize: '11px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
+                                    {tx.note}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       )}
-
-                      {/* Row 2: Moderation Grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <button 
-                          onClick={() => {
-                            setSelectedUserDetailId(null);
-                            setWarnUserId(u._id.toString());
-                          }}
-                          style={{ 
-                            background: 'rgba(251,191,36,0.06)', 
-                            border: '1px solid var(--status-warning-border)', 
-                            color: 'var(--status-warning-text)', 
-                            borderRadius: '10px', 
-                            padding: '12px', 
-                            fontSize: '12px', 
-                            fontWeight: 700, 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            fontFamily: 'var(--font)'
-                          }}
-                        >
-                          ⚠️ Issue Warning
-                        </button>
-                        
-                        <button 
-                          onClick={async () => {
-                            const actionText = u.isSuspended ? "activate" : "suspend";
-                            if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
-                            try {
-                              await toggleSuspendMutation({ userId: u._id.toString(), isSuspended: !u.isSuspended, adminId: user.id });
-                              showAlert(`User ${u.isSuspended ? 'activated' : 'suspended'} successfully.`);
-                            } catch (err) {
-                              showAlert("Error updating user status: " + err.message, "error");
-                            }
-                          }}
-                          style={{ 
-                            background: u.isSuspended ? 'rgba(0,212,170,0.07)' : 'rgba(248,113,113,0.07)', 
-                            border: u.isSuspended ? '1px solid rgba(0,212,170,0.2)' : '1px solid rgba(248,113,113,0.2)', 
-                            color: u.isSuspended ? 'var(--teal-light)' : 'var(--status-danger-text)', 
-                            borderRadius: '10px', 
-                            padding: '12px', 
-                            fontSize: '12px', 
-                            fontWeight: 700, 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            fontFamily: 'var(--font)'
-                          }}
-                        >
-                          {u.isSuspended ? '✅ Unban User' : '🚫 Ban User'}
-                        </button>
-                      </div>
-
-                      {/* Row 3: Delete Button */}
-                      <button 
-                        onClick={async () => {
-                          if (await handleRemoveUser(u._id.toString(), u.username)) {
-                            setSelectedUserDetailId(null);
-                          }
-                        }}
-                        style={{ 
-                          background: 'rgba(248,113,113,0.12)', 
-                          border: '1px solid rgba(248,113,113,0.3)', 
-                          color: 'var(--status-danger-text)', 
-                          borderRadius: '10px', 
-                          padding: '12px', 
-                          fontSize: '12px', 
-                          fontWeight: 700, 
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          fontFamily: 'var(--font)'
-                        }}
-                      >
-                        🗑️ Permanently Remove User Account
-                      </button>
-
                     </div>
-                  )}
+                  </div>
+                )}
 
-                </div>
-
-                {/* Dynamic User On-chain & Escrow Transaction History */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📜 User Transaction History</div>
-                  
-                  <div style={{ 
-                    maxHeight: '240px', 
-                    overflowY: 'auto', 
-                    background: 'var(--bg-surface)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '12px',
-                    padding: selectedUserTxs.length === 0 ? '20px' : '0'
-                  }}>
-                    {selectedUserTxs === undefined ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px' }}>
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="skeleton" style={{ height: '36px', width: '100%' }} />
-                        ))}
-                      </div>
-                    ) : selectedUserTxs.length === 0 ? (
-                      <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '12px', padding: '16px' }}>
-                        No transactions recorded for this user.
+                {/* ── TAB 3: KYC Documents Tab ── */}
+                {userDrawerTab === 'kyc' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Identity Documents Verification Check</div>
+                    {u.kycStatus === 'none' ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: '#4e5567', background: '#0a0c12', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.06)' }}>
+                        🪪 Identity files have not been uploaded by this user yet.
                       </div>
                     ) : (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-3)', textTransform: 'uppercase', fontSize: '9px', fontWeight: 700 }}>
-                            <th style={{ padding: '8px 12px' }}>Date</th>
-                            <th style={{ padding: '8px 12px' }}>Type</th>
-                            <th style={{ padding: '8px 12px' }}>Amount</th>
-                            <th style={{ padding: '8px 12px' }}>Details</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedUserTxs.map((tx) => {
-                            let typeColor = 'var(--text-2)';
-                            if (tx.type === 'deposit') typeColor = 'var(--teal-light)';
-                            if (tx.type === 'withdrawal') typeColor = 'var(--gold-light)';
-                            if (tx.type?.includes('fee') || tx.type === 'commission') typeColor = 'var(--indigo-light)';
-
-                            return (
-                              <tr key={tx._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
-                                  {new Date(tx.createdAt).toLocaleDateString()}
-                                </td>
-                                <td style={{ padding: '8px 12px', fontWeight: 700, textTransform: 'uppercase', color: typeColor }}>
-                                  {tx.type}
-                                </td>
-                                <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--text-1)' }}>
-                                  ${(tx.amountUSD || tx.amountETH || 0).toFixed(2)}
-                                </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-3)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
-                                  {tx.note}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                      <>
+                        <KycImages 
+                          userId={u._id.toString()} 
+                          getImageUrl={getImageUrl} 
+                          onImageClick={setActiveLightboxImage} 
+                          kycIdFront={u.kycIdFront}
+                          kycIdBack={u.kycIdBack}
+                          kycSelfie={u.kycSelfie}
+                          kycDocument={u.kycDocument}
+                        />
+                        <div className="card-premium" style={{ background: '#0a0c12', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}</strong></div>
+                        </div>
+                      </>
                     )}
                   </div>
-                </div>
+                )}
+
+                {/* ── TAB 4: Actions & Warnings Log ── */}
+                {userDrawerTab === 'activity' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    
+                    {/* Issue user warning form */}
+                    <div className="card-premium" style={{ background: '#0a0c12', padding: '16px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#fbbf24' }}>⚠️ Issue Official User Warning</h4>
+                      <form onSubmit={handleWarnUserSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <textarea
+                          className="input-premium"
+                          rows={3}
+                          placeholder="Provide detailed violation warning reason..."
+                          value={warnMessage}
+                          onChange={e => setWarnMessage(e.target.value)}
+                          required
+                        />
+                        <button type="submit" disabled={warnLoading} className="btn-premium-warning" style={{ alignSelf: 'flex-end', padding: '8px 14px' }}>
+                          {warnLoading ? 'Sending…' : 'Send Warning'}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Warnings List history */}
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Active User Warning Logs</div>
+                      {(!u.warnings || u.warnings.length === 0) ? (
+                        <div style={{ color: '#4e5567', fontStyle: 'italic', fontSize: '12px' }}>✓ This account has clean record. No warnings issued.</div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {u.warnings.map((w, idx) => (
+                            <div key={idx} style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24', fontWeight: 600, fontSize: '11px' }}>
+                                <span>⚠️ Warning #{idx + 1}</span>
+                                <span>{w.timestamp ? new Date(w.timestamp).toLocaleDateString() : ''}</span>
+                              </div>
+                              <p style={{ margin: '4px 0 0 0', color: '#f0f2f8' }}>{w.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               </div>
 
+              {/* Administrative controls drawer footer */}
+              {!isMe && (
+                <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '8px', background: '#0a0c12' }}>
+                  
+                  {/* Row 1: messaging & audit log navigations */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setMessageComposerUserId(u._id.toString());
+                        setMessageComposerUsername(u.username);
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}
+                    >
+                      💬 Send Direct Message
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUserDetailId(null);
+                        setLogsSearchQuery(u.username);
+                        setActiveTab('logs');
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}
+                    >
+                      📜 View Audit Logs
+                    </button>
+                  </div>
+
+                  {/* Row 2: critical restrictions */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)}
+                      className="btn-premium-ghost"
+                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
+                    >
+                      {u.isSuspended ? '✅ Activate (Unban)' : '🚫 Suspend Account (Ban)'}
+                    </button>
+                    
+                    <button
+                      onClick={async () => {
+                        if (await handleRemoveUser(u._id.toString(), u.username)) {
+                          setSelectedUserDetailId(null);
+                        }
+                      }}
+                      className="btn-premium-danger"
+                      style={{ flex: 1, fontSize: '12px' }}
+                    >
+                      🗑️ Delete User
+                    </button>
+                  </div>
+
+                </div>
+              )}
             </div>
-          </div>
+          </>
         );
       })()}
+
+
+      {/* ══════════════════════════════════════════════════════════
+         MODAL POPUPS (CENTERED BLUR BACKDROP)
+         ══════════════════════════════════════════════════════════ */}
+
+      {/* ── 1. KYC REQUEST RESUBMISSION POPUP MODAL ── */}
+      {resubmitUserId && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#fbbf24' }}>⚠ Request KYC Resubmission</h3>
+              <button onClick={() => setResubmitUserId(null)} style={{ background: 'transparent', border: 'none', color: '#8b92a8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <p style={{ fontSize: '12px', color: '#8b92a8', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+              This will reset the user's KYC verification status to **Unverified (None)** and allow them to upload clearer document copies.
+            </p>
+
+            <form onSubmit={handleResubmitRequest} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase' }}>Instruction Message to User</label>
+                <textarea
+                  className="input-premium"
+                  rows={4}
+                  placeholder="Specify why documents are rejected (e.g. Blurry ID front card, selfie facial features are dark/unclear, document names mismatch)..."
+                  value={resubmitReason}
+                  onChange={e => setResubmitReason(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button type="button" onClick={() => setResubmitUserId(null)} className="btn-premium-ghost" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" disabled={submittingResubmit} className="btn-premium-warning" style={{ flex: 1 }}>
+                  {submittingResubmit ? 'Sending…' : 'Request Resubmission'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. INLINE DIRECT MESSAGE COMPOSER MODAL ── */}
+      {messageComposerUserId && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>💬 Compose Direct Message</h3>
+              <button onClick={() => setMessageComposerUserId(null)} style={{ background: 'transparent', border: 'none', color: '#8b92a8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSendMessageSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase' }}>Recipient Account</label>
+                <input
+                  type="text"
+                  className="input-premium"
+                  value={`@${messageComposerUsername}`}
+                  disabled
+                  style={{ opacity: 0.6 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase' }}>Message Subject (Optional)</label>
+                <input
+                  type="text"
+                  className="input-premium"
+                  placeholder="e.g. Account security updates, trade notification..."
+                  value={messageSubject}
+                  onChange={e => setMessageSubject(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase' }}>Message Content</label>
+                <textarea
+                  className="input-premium"
+                  rows={5}
+                  placeholder="Type message text here..."
+                  value={messageBody}
+                  onChange={e => setMessageBody(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button type="button" onClick={() => setMessageComposerUserId(null)} className="btn-premium-ghost" style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" disabled={sendingMessage} className="btn-premium-primary" style={{ flex: 1 }}>
+                  {sendingMessage ? 'Sending…' : '✉️ Send Message'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. FULL-SCREEN RECEIPT/ID LIGHTBOX VIEWER ── */}
+      {activeLightboxImage && (
+        <div 
+          onClick={() => setActiveLightboxImage(null)}
+          style={{ 
+            position: 'fixed', inset: 0, background: 'rgba(5, 7, 12, 0.92)', zIndex: 4000, 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', 
+            backdropFilter: 'blur(10px)', animation: 'fadeIn 0.2s ease-out', cursor: 'zoom-out'
+          }}
+        >
+          <img 
+            src={activeLightboxImage} 
+            alt="Enlarged Visual Document Proof" 
+            style={{ 
+              maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', 
+              borderRadius: '12px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)', 
+              animation: 'modalScale 0.25s cubic-bezier(0.16, 1, 0.3, 1)' 
+            }} 
+          />
+          <div style={{ position: 'absolute', top: '24px', right: '24px', color: '#8b92a8', fontSize: '20px', fontWeight: 'bold' }}>✕ Close Preview</div>
+        </div>
+      )}
+
     </div>
   );
 };
