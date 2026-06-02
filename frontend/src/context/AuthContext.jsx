@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -166,15 +166,36 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ── Auth Actions ─────────────────────────────────────
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     setLoading(true); setError(null);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!isSupabaseConfigured) {
+        throw new Error('Supabase is not configured. Please add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the .env.local file in the frontend folder.');
+      }
+
+      let loginEmail = identifier;
+
+      // If identifier doesn't look like an email, look up by username
+      if (!identifier.includes('@')) {
+        const { data: profile, error: lookupError } = await supabase.from('users').select('email').eq('username', identifier).single();
+        if (lookupError || !profile?.email) {
+          throw new Error('Username not found. Please check your username or try logging in with your email.');
+        }
+        loginEmail = profile.email;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) throw error;
       await fetchUserProfile(data.user.id);
       setSuccess(`Welcome back!`);
       return data.user;
-    } catch (err) { setError(err.message); return null; }
+    } catch (err) {
+      const msg = err.message?.includes('Failed to fetch')
+        ? 'Cannot connect to Supabase. Please check that your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are correct in .env.local'
+        : err.message;
+      setError(msg);
+      return null;
+    }
     finally { setLoading(false); }
   };
 
