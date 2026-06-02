@@ -55,6 +55,10 @@ export const AuthProvider = ({ children }) => {
       .eq('id', userId)
       .single();
     
+    if (error) {
+      console.error('fetchUserProfile error:', error.message);
+    }
+    
     if (data) {
       setUser(data);
       setWallet(data);
@@ -186,7 +190,30 @@ export const AuthProvider = ({ children }) => {
 
       const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) throw error;
+
+      // Fetch profile - create one if it doesn't exist
       await fetchUserProfile(data.user.id);
+
+      // If profile still missing, create a basic one
+      if (!user) {
+        const { data: existingProfile } = await supabase.from('users').select('id').eq('id', data.user.id).single();
+        if (!existingProfile) {
+          const meta = data.user.user_metadata || {};
+          await supabase.from('users').insert([{
+            id: data.user.id,
+            username: meta.username || loginEmail.split('@')[0],
+            phone: meta.phone || '',
+            email: loginEmail,
+            full_name: meta.username || loginEmail.split('@')[0],
+            eth_address: '',
+            eth_private_key: '',
+            display_name: meta.username || loginEmail.split('@')[0],
+            joined_at: new Date().toISOString()
+          }]);
+          await fetchUserProfile(data.user.id);
+        }
+      }
+
       setSuccess(`Welcome back!`);
       return data.user;
     } catch (err) {
@@ -220,9 +247,9 @@ export const AuthProvider = ({ children }) => {
         gender,
         selected_avatar: avatarId,
         referral_code: username.toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000),
-        referred_by: referralCode, // This would need to be resolved to a UUID if it's a code
-        eth_address: '0x' + Math.random().toString(16).slice(2, 42), // Mock
-        eth_private_key: '0x' + Math.random().toString(16).slice(2, 66), // Mock
+        referred_by: referralCode && referralCode.trim() ? referralCode.trim() : null,
+        eth_address: '0x' + Math.random().toString(16).slice(2, 42),
+        eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
         display_name: fullName || username,
         joined_at: new Date().toISOString()
       }]);
