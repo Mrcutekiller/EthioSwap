@@ -75,6 +75,73 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add missing columns to users table (safe if table already exists)
+DO $$
+DECLARE
+    col TEXT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+        FOR col IN SELECT unnest(ARRAY[
+            'password_hash', 'role', 'kyc_status', 'kyc_step', 'kyc_id_front', 'kyc_id_back',
+            'kyc_selfie', 'kyc_document', 'kyc_rejection_reason', 'kyc_data',
+            'full_name', 'age', 'eth_address', 'eth_private_key', 'eth_balance', 'eth_locked',
+            'etb_balance', 'binance_balance', 'bybit_balance', 'display_name', 'bio',
+            'reputation', 'total_trades', 'joined_at', 'last_active', 'payment_accounts',
+            'numeric_id', 'is_suspended', 'warnings', 'transaction_pin', 'badge_level',
+            'current_streak', 'longest_streak', 'last_trade_date', 'loyalty_points',
+            'referral_code', 'referred_by', 'total_invites', 'successful_invites',
+            'pending_invites', 'total_invite_earnings', 'invite_earnings_month',
+            'is_verified_active', 'profile_border', 'username_color', 'selected_avatar',
+            'unlocked_items', 'security_type', 'security_enabled', 'is_verified_trader',
+            'gender', 'avg_rating', 'total_ratings', 'total_trades_completed',
+            'preferred_language', 'theme_preference', 'onboarding_completed', 'seen_tooltips',
+            'two_fa_enabled', 'two_fa_method', 'trusted_devices', 'last_login_device',
+            'last_login_location', 'created_at', 'updated_at'
+        ]) LOOP
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = col AND table_schema = 'public') THEN
+                EXECUTE format('ALTER TABLE users ADD COLUMN %I TEXT DEFAULT ''''', col);
+            END IF;
+        END LOOP;
+        -- Fix column types that need to be non-text
+        BEGIN ALTER TABLE users ADD COLUMN age INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN reputation NUMERIC DEFAULT 100; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN total_trades INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN eth_balance NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN eth_locked NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN etb_balance NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN binance_balance NUMERIC; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN bybit_balance NUMERIC; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN is_suspended BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN security_enabled BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN is_verified_trader BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN is_verified_active BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN avg_rating NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN total_ratings INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN total_trades_completed INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN longest_streak INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN loyalty_points INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN total_invites INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN successful_invites INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN pending_invites INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN total_invite_earnings NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN invite_earnings_month NUMERIC DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN two_fa_enabled BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN last_trade_date TIMESTAMPTZ; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN joined_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN last_active TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN payment_accounts JSONB DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN warnings JSONB DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN unlocked_items JSONB DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN kyc_data JSONB; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN trusted_devices JSONB DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+        BEGIN ALTER TABLE users ADD COLUMN seen_tooltips JSONB DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END IF;
+END $$;
+
 -- 2. LISTINGS TABLE
 CREATE TABLE IF NOT EXISTS listings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,6 +156,12 @@ CREATE TABLE IF NOT EXISTS listings (
     type TEXT DEFAULT 'sell',
     payment_accounts JSONB DEFAULT '[]'
 );
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='custom_rate_etb') THEN ALTER TABLE listings ADD COLUMN custom_rate_etb NUMERIC; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='type') THEN ALTER TABLE listings ADD COLUMN type TEXT DEFAULT 'sell'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='listings' AND column_name='payment_accounts') THEN ALTER TABLE listings ADD COLUMN payment_accounts JSONB DEFAULT '[]'; END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- 3. TRADES TABLE
 CREATE TABLE IF NOT EXISTS trades (
@@ -110,6 +183,17 @@ CREATE TABLE IF NOT EXISTS trades (
     fee_eth NUMERIC,
     selected_payment_account JSONB
 );
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='timer_expires_at') THEN ALTER TABLE trades ADD COLUMN timer_expires_at TIMESTAMPTZ; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='chat') THEN ALTER TABLE trades ADD COLUMN chat JSONB DEFAULT '[]'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='proof_url') THEN ALTER TABLE trades ADD COLUMN proof_url TEXT; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='completed_at') THEN ALTER TABLE trades ADD COLUMN completed_at TIMESTAMPTZ; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='dispute_reason') THEN ALTER TABLE trades ADD COLUMN dispute_reason TEXT; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='disputed_by') THEN ALTER TABLE trades ADD COLUMN disputed_by UUID REFERENCES users(id); END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='fee_eth') THEN ALTER TABLE trades ADD COLUMN fee_eth NUMERIC; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='trades' AND column_name='selected_payment_account') THEN ALTER TABLE trades ADD COLUMN selected_payment_account JSONB; END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- 4. DEPOSIT REQUESTS
 CREATE TABLE IF NOT EXISTS deposit_requests (
@@ -202,6 +286,16 @@ CREATE TABLE IF NOT EXISTS system_settings (
     lockout_duration_seconds INTEGER DEFAULT 30,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='etb_rate_per_dollar_sell') THEN ALTER TABLE system_settings ADD COLUMN etb_rate_per_dollar_sell NUMERIC; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='invite_earn_status') THEN ALTER TABLE system_settings ADD COLUMN invite_earn_status TEXT DEFAULT 'locked'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='invite_unlock_target') THEN ALTER TABLE system_settings ADD COLUMN invite_unlock_target INTEGER DEFAULT 200; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='invite_reward_amount') THEN ALTER TABLE system_settings ADD COLUMN invite_reward_amount NUMERIC DEFAULT 0.5; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='p2p_commission') THEN ALTER TABLE system_settings ADD COLUMN p2p_commission NUMERIC DEFAULT 0; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='is_p2p_free_period') THEN ALTER TABLE system_settings ADD COLUMN is_p2p_free_period BOOLEAN DEFAULT TRUE; END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='system_settings' AND column_name='max_internal_transfer_daily') THEN ALTER TABLE system_settings ADD COLUMN max_internal_transfer_daily NUMERIC DEFAULT 500; END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- 8. INVITE REWARDS
 CREATE TABLE IF NOT EXISTS invite_rewards (
@@ -696,6 +790,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_rating_created ON trader_ratings;
 CREATE TRIGGER on_rating_created
     AFTER INSERT ON trader_ratings
     FOR EACH ROW
@@ -705,7 +800,7 @@ CREATE TRIGGER on_rating_created
 CREATE OR REPLACE FUNCTION update_trade_count()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+    IF NEW.status = 'completed' AND OLD.status IS DISTINCT FROM 'completed' THEN
         UPDATE users SET
             total_trades_completed = total_trades_completed + 1,
             total_trades = total_trades + 1,
@@ -721,6 +816,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_trade_status_change ON trades;
 CREATE TRIGGER on_trade_status_change
     AFTER UPDATE ON trades
     FOR EACH ROW
@@ -730,16 +826,17 @@ CREATE TRIGGER on_trade_status_change
 CREATE OR REPLACE FUNCTION close_chat_on_trade_end()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status IN ('completed', 'cancelled') AND OLD.status NOT IN ('completed', 'cancelled') THEN
+    IF NEW.status IN ('completed', 'cancelled') AND OLD.status IS DISTINCT FROM 'completed' AND OLD.status IS DISTINCT FROM 'cancelled' THEN
         UPDATE trade_chats SET status = 'closed' WHERE trade_id = NEW.id AND status = 'active';
     END IF;
-    IF NEW.status = 'disputed' AND OLD.status != 'disputed' THEN
+    IF NEW.status = 'disputed' AND OLD.status IS DISTINCT FROM 'disputed' THEN
         UPDATE trade_chats SET status = 'disputed' WHERE trade_id = NEW.id AND status = 'active';
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_trade_end ON trades;
 CREATE TRIGGER on_trade_end
     AFTER UPDATE ON trades
     FOR EACH ROW
@@ -770,6 +867,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_user_stats_change ON users;
 CREATE TRIGGER on_user_stats_change
     BEFORE UPDATE OF total_trades_completed, avg_rating ON users
     FOR EACH ROW
