@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
+import { supabase } from '../supabaseClient';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */
 const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
@@ -45,13 +44,29 @@ const WALLET_META = {
 /* ── Lazy KYC Images Viewer ─────────────────────────────────── */
 const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, kycSelfie, kycDocument }) => {
   const hasDirectDocs = kycIdFront || kycIdBack || kycSelfie || kycDocument;
-  const images = useQuery(api.admin.getUserKycImages, hasDirectDocs ? 'skip' : { userId });
+  const [images, setImages] = useState(null);
+  const [loading, setLoading] = useState(!hasDirectDocs);
+
+  useEffect(() => {
+    if (hasDirectDocs) return;
+    const fetchImages = async () => {
+      const { data } = await supabase.from('users').select('kyc_id_front, kyc_id_back, kyc_selfie, kyc_document').eq('id', userId).single();
+      if (data) setImages({
+        kycIdFront: data.kyc_id_front,
+        kycIdBack: data.kyc_id_back,
+        kycSelfie: data.kyc_selfie,
+        kycDocument: data.kyc_document
+      });
+      setLoading(false);
+    };
+    fetchImages();
+  }, [userId, hasDirectDocs]);
 
   const front = kycIdFront || images?.kycIdFront;
   const back = kycIdBack || images?.kycIdBack || kycDocument || images?.kycDocument;
   const selfie = kycSelfie || images?.kycSelfie;
 
-  if (!hasDirectDocs && images === undefined) {
+  if (loading) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {[1, 2].map((_, i) => (
@@ -61,11 +76,11 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
     );
   }
 
-  const items = [
-    { l: 'ID Front Document', src: front },
-    { l: 'ID Back Document / Doc', src: back },
-    { l: 'Live Selfie Photo', src: selfie },
-  ];
+  const handleImageClick = (src) => {
+    if (onImageClick && src) {
+      onImageClick(getImageUrl(src));
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -75,8 +90,9 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>ID Card (Front)</div>
           {front ? (
-            <div onClick={() => onImageClick && onImageClick(getImageUrl(front))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
-              <img src={getImageUrl(front)} alt="ID Front" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            <div onClick={() => handleImageClick(front)} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12', position: 'relative' }}>
+              <img src={getImageUrl(front)} alt="ID Front" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+              <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '4px', color: '#fff', fontSize: '10px' }}>🔍 Zoom</div>
             </div>
           ) : (
             <div style={{ height: '150px', background: '#0a0c12', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#4e5567' }}>Not Uploaded</div>
@@ -87,8 +103,9 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Live Selfie Photo</div>
           {selfie ? (
-            <div onClick={() => onImageClick && onImageClick(getImageUrl(selfie))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
-              <img src={getImageUrl(selfie)} alt="Live Selfie" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            <div onClick={() => handleImageClick(selfie)} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12', position: 'relative' }}>
+              <img src={getImageUrl(selfie)} alt="Live Selfie" style={{ width: '100%', height: '150px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+              <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '4px', color: '#fff', fontSize: '10px' }}>🔍 Zoom</div>
             </div>
           ) : (
             <div style={{ height: '150px', background: '#0a0c12', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#4e5567' }}>Not Uploaded</div>
@@ -100,8 +117,9 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
       {back && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>ID Card (Back / Supporting Doc)</div>
-          <div onClick={() => onImageClick && onImageClick(getImageUrl(back))} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12' }}>
-            <img src={getImageUrl(back)} alt="ID Back" style={{ width: '100%', height: '140px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+          <div onClick={() => handleImageClick(back)} style={{ cursor: 'pointer', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0a0c12', position: 'relative' }}>
+            <img src={getImageUrl(back)} alt="ID Back" style={{ width: '100%', height: '140px', objectFit: 'contain', display: 'block', transition: 'all 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+            <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '4px', borderRadius: '4px', color: '#fff', fontSize: '10px' }}>🔍 Zoom</div>
           </div>
         </div>
       )}
@@ -111,7 +129,15 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
 
 /* ── Lazy Deposit Screenshot Viewer ─────────────────────────── */
 const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
-  const screenshotUrl = useQuery(api.depositRequests.getDepositScreenshot, { requestId });
+  const [screenshotUrl, setScreenshotUrl] = useState(undefined);
+
+  useEffect(() => {
+    const fetchScreenshot = async () => {
+      const { data } = await supabase.from('deposit_requests').select('screenshot_url').eq('id', requestId).single();
+      setScreenshotUrl(data?.screenshot_url || null);
+    };
+    fetchScreenshot();
+  }, [requestId]);
 
   if (screenshotUrl === undefined) {
     return (
@@ -124,6 +150,197 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
   return (
     <div onClick={() => onImageClick && onImageClick(getImageUrl(screenshotUrl))} style={{ width: '100%', display: 'block', cursor: 'pointer' }}>
       <img src={getImageUrl(screenshotUrl)} alt="Proof of Deposit" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.07)', background: '#0a0c12', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+    </div>
+  );
+};
+
+/* ── Invite Helper Components ────────────────────────────── */
+const InviteStatusCard = ({ user, settings, showAlert }) => {
+  const manualUnlock = async () => {
+    if (window.confirm("Are you sure you want to manually unlock the Invite & Earn program for ALL users?")) {
+      try {
+        const { error } = await supabase.from('system_settings').update({ invite_earn_status: 'active' }).eq('id', settings.id);
+        if (error) throw error;
+        showAlert("✓ Program unlocked successfully!");
+      } catch (e) { showAlert(e.message, "error"); }
+    }
+  };
+  return (
+    <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Program Status</h3>
+        <span className="pill-badge" style={{ 
+          background: settings?.invite_earn_status === 'active' ? 'rgba(0, 212, 160, 0.1)' : 'rgba(244, 63, 94, 0.1)', 
+          color: settings?.invite_earn_status === 'active' ? '#00d4a0' : '#f43f5e' 
+        }}>
+          <span className="pill-badge-dot" style={{ background: settings?.invite_earn_status === 'active' ? '#00d4a0' : '#f43f5e' }} />
+          {settings?.invite_earn_status?.toUpperCase() || 'LOCKED'}
+        </span>
+      </div>
+
+      {settings?.invite_earn_status !== 'active' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+            <span style={{ color: '#8b92a8' }}>Progress to Auto-Unlock</span>
+            <span style={{ fontWeight: 700 }}>{settings?.current_verified_users || 0} / {settings?.invite_unlock_target || 200} users</span>
+          </div>
+          <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ 
+              width: `${Math.min(100, ((settings?.current_verified_users || 0) / (settings?.invite_unlock_target || 200)) * 100)}%`, 
+              height: '100%', 
+              background: '#00d4a0',
+              transition: 'width 0.5s ease'
+            }} />
+          </div>
+          <p style={{ fontSize: '12px', color: '#4e5567', fontStyle: 'italic' }}>
+            ⚠️ Auto-unlocks at {settings?.invite_unlock_target || 200} verified & active users.
+          </p>
+          <button 
+            onClick={manualUnlock}
+            className="btn-premium-danger" 
+            style={{ marginTop: '10px' }}
+          >
+            🔓 MANUALLY UNLOCK NOW
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InviteGlobalStatsCard = ({ user }) => {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const { data: invites } = await supabase.from('invite_rewards').select('*');
+      if (invites) {
+        setStats({
+          totalInvites: invites.length,
+          totalRewardsPaid: invites.filter(r => r.reward_status === 'paid').reduce((s, r) => s + r.reward_amount, 0),
+          totalActive: invites.filter(r => r.reward_status === 'paid').length,
+          totalPending: invites.filter(r => r.reward_status === 'pending').length
+        });
+      }
+    };
+    fetchStats();
+  }, [user.id]);
+
+  return (
+    <div className="card-premium">
+      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Global Stats</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Total Invites Made</div>
+          <div style={{ fontSize: '20px', fontWeight: 700 }}>{stats?.totalInvites || 0}</div>
+        </div>
+        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Total Rewards Paid</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#00d4a0' }}>${stats?.totalRewardsPaid?.toFixed(2) || '0.00'}</div>
+        </div>
+        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Active Referrals</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#00d4a0' }}>{stats?.totalActive || 0}</div>
+        </div>
+        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Pending Referrals</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fbbf24' }}>{stats?.totalPending || 0}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TopInvitersTable = ({ user }) => {
+  const [topInviters, setTopInviters] = useState([]);
+
+  useEffect(() => {
+    const fetchTopInviters = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('username, successful_invites, total_invite_earnings')
+        .gt('successful_invites', 0)
+        .order('successful_invites', { ascending: false })
+        .limit(5);
+      if (data) setTopInviters(data.map(u => ({
+        username: u.username,
+        invites: u.successful_invites,
+        earned: u.total_invite_earnings
+      })));
+    };
+    fetchTopInviters();
+  }, [user.id]);
+
+  return (
+    <div className="card-premium">
+      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Top Inviters This Month</h3>
+      <table className="table-premium">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>User</th>
+            <th>Invites</th>
+            <th>Earned</th>
+          </tr>
+        </thead>
+        <tbody>
+          {topInviters.map((inv, i) => (
+            <tr key={i}>
+              <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+              <td style={{ fontWeight: 600 }}>@{inv.username}</td>
+              <td>{inv.invites}</td>
+              <td style={{ color: '#00d4a0', fontWeight: 700 }}>${inv.earned.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const InviteSettingsCard = ({ settings, updateSettings }) => {
+  return (
+    <div className="card-premium">
+      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Reward Settings</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '12px', color: '#8b92a8' }}>Reward Per Invite (USD)</label>
+          <input 
+            type="number" 
+            step="0.01" 
+            className="input-premium" 
+            value={settings?.invite_reward_amount || 0.50} 
+            onChange={async (e) => await updateSettings({ invite_reward_amount: parseFloat(e.target.value) })}
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '12px', color: '#8b92a8' }}>Min Trade to Qualify (USD)</label>
+          <input 
+            type="number" 
+            className="input-premium" 
+            defaultValue="10.00"
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '12px', color: '#8b92a8' }}>P2P Commission (%)</label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input 
+              type="number" 
+              step="0.1" 
+              className="input-premium" 
+              value={settings?.p2p_commission || 0} 
+              onChange={async (e) => await updateSettings({ p2p_commission: parseFloat(e.target.value) })}
+            />
+            <button 
+              onClick={async () => await updateSettings({ is_p2p_free_period: !settings?.is_p2p_free_period })}
+              className={settings?.is_p2p_free_period ? "btn-premium-primary" : "btn-premium-ghost"}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {settings?.is_p2p_free_period ? "Free Period ON" : "Free Period OFF"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -142,6 +359,7 @@ const AdminPanel = ({ user }) => {
   } = useAuth();
 
   const [activeTab,   setActiveTab]   = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar toggle
   const [chartType,   setChartType]   = useState('volume'); // 'volume' | 'users'
   const [period,      setPeriod]      = useState('week');
   const [hoveredIdx,  setHoveredIdx]  = useState(null);
@@ -207,51 +425,100 @@ const AdminPanel = ({ user }) => {
     setTimeout(() => setAlertMsg(null), 3500);
   };
 
-  // ── Convex ─────────────────────────────────────────────────
-  const settings            = useQuery(api.settings.get);
-  const updateSettings      = useMutation(api.settings.update);
-  const allUsersList        = useQuery(api.users.listAll);
-  const revenue             = useQuery(api.admin.getRevenue, { period });
-  const adminEarnings       = useQuery(api.admin.getAdminEarnings, user ? { adminId: user.id } : 'skip');
-  const kycQueue            = useQuery(api.admin.getKycQueue)        ?? [];
-  const auditLogs           = useQuery(api.admin.getAuditLogs)       ?? [];
-  const disputes            = useQuery(api.admin.getDisputes)        ?? [];
-  const supportTickets      = useQuery(api.support.listAll)          ?? [];
-
-  const kycAction           = useMutation(api.users.kycAction);
-  const disputeRelease      = useMutation(api.trades.adminReleaseEscrow);
-  const disputeRefund       = useMutation(api.trades.adminRefundSeller);
-  const supportReply        = useMutation(api.support.replyTicket);
-  const createSupportTicket = useMutation(api.support.createOrGetTicket);
-  const closeTicket         = useMutation(api.support.closeTicket);
-  const convexWithdraw      = useMutation(api.users.withdrawETH);
-  const warnUserMutation      = useMutation(api.admin.warnUser);
-  const toggleSuspendMutation = useMutation(api.admin.toggleSuspendUser);
-  const removeUserMutation    = useMutation(api.admin.removeUser);
-  const setKycStatusMutation  = useMutation(api.admin.adminSetKycStatus);
-  const backfillNumericIds    = useMutation(api.admin.backfillNumericIds);
+  // ── Supabase Data Fetching ──────────────────────────────────
+  const [settings, setSettings] = useState(null);
+  const [allUsersList, setAllUsersList] = useState([]);
+  const [revenue, setRevenue] = useState(null);
+  const [adminEarnings, setAdminEarnings] = useState(null);
+  const [kycQueue, setKycQueue] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [disputes, setDisputes] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
-      backfillNumericIds({ adminId: user.id }).catch(console.error);
-    }
-  }, [user, backfillNumericIds]);
-  
-  const selectedUserTxs = useQuery(
-    api.admin.getUserTransactionsForAdmin,
-    selectedUserDetailId && user ? { adminId: user.id, userId: selectedUserDetailId } : 'skip'
-  ) ?? [];
+    if (!user || user.role !== 'admin') return;
 
+    const fetchAllData = async () => {
+      // Settings
+      const { data: settingsData } = await supabase.from('system_settings').select('*').limit(1).single();
+      setSettings(settingsData);
+
+      // Users
+      const { data: usersData } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+      setAllUsersList(usersData || []);
+
+      // KYC Queue
+      const { data: kycData } = await supabase.from('users').select('*').in('kyc_status', ['pending', 'submitted']).order('created_at', { ascending: false });
+      setKycQueue(kycData || []);
+
+      // Audit Logs
+      const { data: logsData } = await supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false });
+      setAuditLogs(logsData || []);
+
+      // Disputes
+      const { data: disputesData } = await supabase.from('trades').select('*, buyer:users!buyer_id(username), seller:users!seller_id(username)').eq('status', 'disputed').order('created_at', { ascending: false });
+      setDisputes(disputesData || []);
+
+      // Support
+      const { data: supportData } = await supabase.from('support_tickets').select('*').order('updated_at', { ascending: false });
+      setSupportTickets(supportData || []);
+
+      // Admin Earnings (Mock or calculated)
+      setAdminEarnings({ walletBalance: settingsData?.collected_fees_eth || 0 });
+    };
+
+    fetchAllData();
+
+    // Subscriptions
+    const usersSub = supabase.channel('admin-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchAllData).subscribe();
+    const tradesSub = supabase.channel('admin-trades').on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, fetchAllData).subscribe();
+    const supportSub = supabase.channel('admin-support').on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchAllData).subscribe();
+
+    return () => {
+      usersSub.unsubscribe();
+      tradesSub.unsubscribe();
+      supportSub.unsubscribe();
+    };
+  }, [user]);
+
+  const [selectedUserTxs, setSelectedUserTxs] = useState([]);
+  useEffect(() => {
+    if (selectedUserDetailId) {
+      const fetchUserTxs = async () => {
+        const { data } = await supabase.from('transactions').select('*').eq('user_id', selectedUserDetailId).order('created_at', { ascending: false });
+        setSelectedUserTxs(data || []);
+      };
+      fetchUserTxs();
+    }
+  }, [selectedUserDetailId]);
+
+  // ── Settings state ──────────────────────────────────────────
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
   const [etbRateSell,      setEtbRateSell]     = useState('');
   const [commissionValue,  setCommissionValue]  = useState('1.0');
+  const [depositFee,       setDepositFee]       = useState('1.0');
+  const [withdrawFee,      setWithdrawFee]      = useState('1.0');
+  const [minDeposit,       setMinDeposit]       = useState('5');
+  const [minWithdraw,      setMinWithdraw]      = useState('5');
+  const [maxDailyWithdraw, setMaxDailyWithdraw] = useState('1000');
+  const [pointsPerTrade,   setPointsPerTrade]   = useState('10');
+  const [referralPoints,   setReferralPoints]   = useState('50');
+  const [isLeaderboard,    setIsLeaderboard]    = useState(true);
 
   useEffect(() => {
     if (settings) {
       setEtbRate(settings.etbRatePerDollar);
       setEtbRateSell(settings.etbRatePerDollarSell ?? settings.etbRatePerDollar ?? 186.0);
       setCommissionValue(settings.commissionValue?.toString() || '1.0');
+      setDepositFee(settings.depositFeePercent?.toString() || '1.0');
+      setWithdrawFee(settings.withdrawalFeePercent?.toString() || '1.0');
+      setMinDeposit(settings.minDepositUSD?.toString() || '5');
+      setMinWithdraw(settings.minWithdrawalUSD?.toString() || '5');
+      setMaxDailyWithdraw(settings.maxDailyWithdrawalUSD?.toString() || '1000');
+      setPointsPerTrade(settings.pointsPerTrade?.toString() || '10');
+      setReferralPoints(settings.referralBonusPoints?.toString() || '50');
+      setIsLeaderboard(settings.isLeaderboardEnabled ?? true);
     }
   }, [settings]);
 
@@ -277,6 +544,7 @@ const AdminPanel = ({ user }) => {
     { id: 'withdrawals', em: '📤', title: 'Withdrawals', badge: pendingWithdrawals.length },
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
     { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
+    { id: 'invite',    em: '🤝', title: 'Invite & Earn', badge: 0 },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
     { id: 'logs',      em: '📜', title: 'Audit Logs',badge: 0 },
     { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
@@ -288,7 +556,25 @@ const AdminPanel = ({ user }) => {
     if (!selectedUserDetailId || !warnMessage.trim()) return;
     setWarnLoading(true);
     try {
-      await warnUserMutation({ userId: selectedUserDetailId, message: warnMessage, adminId: user.id });
+      const { data: userToWarn } = await supabase.from('users').select('warnings').eq('id', selectedUserDetailId).single();
+      const newWarning = {
+        id: Math.random().toString(36).substring(2, 9),
+        message: warnMessage,
+        createdAt: new Date().toISOString()
+      };
+      const updatedWarnings = [...(userToWarn?.warnings || []), newWarning];
+      
+      await supabase.from('users').update({ warnings: updatedWarnings }).eq('id', selectedUserDetailId);
+      
+      // Add audit log
+      await supabase.from('admin_audit_logs').insert([{
+        admin_id: user.id,
+        admin_username: user.username,
+        action: 'warn_user',
+        target_id: selectedUserDetailId,
+        details: `Issued warning: ${warnMessage}`
+      }]);
+
       showAlert("⚠️ User warning has been issued successfully.");
       setWarnMessage('');
     } catch (err) {
@@ -302,7 +588,16 @@ const AdminPanel = ({ user }) => {
     const actionText = currentSuspended ? "activate" : "suspend";
     if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
     try {
-      await toggleSuspendMutation({ userId, isSuspended: !currentSuspended, adminId: user.id });
+      await supabase.from('users').update({ is_suspended: !currentSuspended }).eq('id', userId);
+      
+      await supabase.from('admin_audit_logs').insert([{
+        admin_id: user.id,
+        admin_username: user.username,
+        action: currentSuspended ? 'unsuspend_user' : 'suspend_user',
+        target_id: userId,
+        details: `${currentSuspended ? 'Unsuspended' : 'Suspended'} user account`
+      }]);
+
       showAlert(`User account successfully ${currentSuspended ? 'activated' : 'suspended'}.`);
     } catch (err) {
       showAlert("Error updating user status: " + err.message, "error");
@@ -310,9 +605,21 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleRemoveUser = async (userId, username) => {
+    if (userId === user.id) {
+      showAlert("❌ Safety Guard: You cannot delete your own administrator account.", "error");
+      return false;
+    }
     if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return false;
     try {
-      await removeUserMutation({ userId, adminId: user.id });
+      await supabase.from('users').delete().eq('id', userId);
+      
+      await supabase.from('admin_audit_logs').insert([{
+        admin_id: user.id,
+        admin_username: user.username,
+        action: 'remove_user',
+        details: `Permanently removed user: @${username}`
+      }]);
+
       showAlert("User account permanently removed.");
       return true;
     } catch (err) {
@@ -324,13 +631,13 @@ const AdminPanel = ({ user }) => {
   const handleWithdrawal = async (requestId, approve) => {
     try {
       if (approve) {
-        await approveWithdrawalRequest(requestId, 'Approved by admin');
+        await supabase.from('withdraw_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', requestId);
         showAlert('✓ Withdrawal approved and processed!');
       } else {
         const note = prompt('Please specify a rejection reason:');
         if (note === null) return;
         if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        await rejectWithdrawalRequest(requestId, note);
+        await supabase.from('withdraw_requests').update({ status: 'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', requestId);
         showAlert('Withdrawal rejected and refunded.');
       }
       setSelectedWithdrawDetailId(null);
@@ -340,29 +647,25 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        await kycAction({ adminId: user.id, userId, approve: true, reason: 'Approved by admin' });
+        await supabase.from('users').update({ kyc_status: 'approved' }).eq('id', userId);
         showAlert('✓ KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
         if (reason === null) return;
         if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        await kycAction({ adminId: user.id, userId, approve: false, reason });
+        await supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
-  // ── Request Resubmission ────────────────────────────────────
   const handleResubmitRequest = async (e) => {
     e.preventDefault();
     if (!resubmitUserId || !resubmitReason.trim()) return;
     setSubmittingResubmit(true);
     try {
-      // Set KYC status back to none and log reason
-      await setKycStatusMutation({ adminId: user.id, userId: resubmitUserId, status: 'none', reason: resubmitReason });
-      // Send warning notification
-      await warnUserMutation({ userId: resubmitUserId, message: `KYC Resubmission Required: ${resubmitReason}`, adminId: user.id });
+      await supabase.from('users').update({ kyc_status: 'none', kyc_rejection_reason: resubmitReason }).eq('id', resubmitUserId);
       
       showAlert('⚠ Resubmission request processed successfully.');
       setResubmitUserId(null);
@@ -375,20 +678,35 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // ── Inline Message Composer ────────────────────────────────
   const handleSendMessageSubmit = async (e) => {
     e.preventDefault();
     if (!messageComposerUserId || !messageBody.trim()) return;
     setSendingMessage(true);
     try {
-      // 1. Get or create ticket
-      const ticketId = await createSupportTicket({ userId: messageComposerUserId, username: messageComposerUsername });
+      const { data: ticket } = await supabase.from('support_tickets').select('*').eq('user_id', messageComposerUserId).eq('status', 'open').single();
+      let ticketId = ticket?.id;
       
-      // 2. Post reply
-      const fullText = messageSubject.trim() 
-        ? `[Subject: ${messageSubject.trim()}]\n\n${messageBody}`
-        : messageBody;
-      await supportReply({ ticketId, adminId: user.id, message: fullText });
+      if (!ticketId) {
+        const { data: newTicket } = await supabase.from('support_tickets').insert([{
+          user_id: messageComposerUserId,
+          username: messageComposerUsername,
+          status: 'open',
+          messages: []
+        }]).select().single();
+        ticketId = newTicket.id;
+      }
+
+      const { data: currentTicket } = await supabase.from('support_tickets').select('messages').eq('id', ticketId).single();
+      const newMessage = {
+        senderId: user.id,
+        message: messageSubject.trim() ? `[Subject: ${messageSubject.trim()}]\n\n${messageBody}` : messageBody,
+        timestamp: new Date().toISOString()
+      };
+      
+      await supabase.from('support_tickets').update({ 
+        messages: [...(currentTicket?.messages || []), newMessage],
+        updated_at: new Date().toISOString()
+      }).eq('id', ticketId);
       
       showAlert('✓ Direct message sent to user!');
       setMessageComposerUserId(null);
@@ -404,8 +722,10 @@ const AdminPanel = ({ user }) => {
   const handleDispute = async (tradeId, action) => {
     if (!window.confirm(`Force ${action === 'release' ? 'RELEASE to Buyer' : 'REFUND to Seller'}? This is irreversible.`)) return;
     try {
-      if (action === 'release') await disputeRelease({ tradeId, adminId: user.id });
-      else                      await disputeRefund({ tradeId, adminId: user.id });
+      await supabase.from('trades').update({ 
+        status: action === 'release' ? 'completed' : 'refunded',
+        completed_at: new Date().toISOString()
+      }).eq('id', tradeId);
       showAlert(`Dispute resolved: ${action}`);
     } catch (e) { showAlert(e.message, 'error'); }
   };
@@ -413,12 +733,19 @@ const AdminPanel = ({ user }) => {
   const handleSaveSettings = async (e) => {
     e.preventDefault(); setSavingSettings(true);
     try {
-      await updateSettings({ 
-        etbRatePerDollar: parseFloat(etbRate), 
-        etbRatePerDollarSell: parseFloat(etbRateSell), 
-        commissionType: 'percentage', 
-        commissionValue: parseFloat(commissionValue) 
-      });
+      await supabase.from('system_settings').update({ 
+        etb_rate_per_dollar: parseFloat(etbRate), 
+        etb_rate_per_dollar_sell: parseFloat(etbRateSell), 
+        commission_value: parseFloat(commissionValue),
+        deposit_fee_percent: parseFloat(depositFee),
+        withdrawal_fee_percent: parseFloat(withdrawFee),
+        min_deposit_usd: parseFloat(minDeposit),
+        min_withdrawal_usd: parseFloat(minWithdraw),
+        max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw),
+        points_per_trade: parseInt(pointsPerTrade),
+        referral_bonus_points: parseInt(referralPoints),
+        is_leaderboard_enabled: isLeaderboard
+      }).eq('id', settings.id);
       showAlert('✓ Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
@@ -428,7 +755,16 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      await supportReply({ ticketId: selectedTicket.id, adminId: user.id, message: supportReplyText });
+      const { data: currentTicket } = await supabase.from('support_tickets').select('messages').eq('id', selectedTicket.id).single();
+      const newMessage = {
+        senderId: user.id,
+        message: supportReplyText,
+        timestamp: new Date().toISOString()
+      };
+      await supabase.from('support_tickets').update({ 
+        messages: [...(currentTicket?.messages || []), newMessage],
+        updated_at: new Date().toISOString()
+      }).eq('id', selectedTicket.id);
       setSupportReplyText('');
     } catch (e) { showAlert(e.message, 'error'); }
   };
@@ -436,7 +772,7 @@ const AdminPanel = ({ user }) => {
   const handleApproveDeposit = async (id) => {
     if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
     try {
-      await approveDepositRequest(id, 'Approved by admin');
+      await supabase.from('deposit_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
       showAlert('✓ Deposit approved and wallet credited!');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -447,7 +783,7 @@ const AdminPanel = ({ user }) => {
     if (reason === null) return;
     if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
     try {
-      await rejectDepositRequest(id, reason);
+      await supabase.from('deposit_requests').update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() }).eq('id', id);
       showAlert('Deposit request rejected.');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -465,8 +801,15 @@ const AdminPanel = ({ user }) => {
 
     setWithdrawingEarnings(true);
     try {
-      await convexWithdraw({ userId: user.id, amountETH: amt, destinationAddress: withdrawAddress });
-      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD completed successfully!`);
+      await supabase.from('withdraw_requests').insert([{
+        user_id: user.id,
+        username: user.username,
+        amount_usd: amt,
+        wallet_type: 'Admin Withdrawal',
+        destination_address: withdrawAddress,
+        status: 'pending'
+      }]);
+      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD requested!`);
       setWithdrawAddress('');
       setWithdrawAmount('');
     } catch (e) { showAlert(e.message, 'error'); }
@@ -788,6 +1131,35 @@ const AdminPanel = ({ user }) => {
           z-index: 1001;
           animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        @media (max-width: 768px) {
+          .admin-sidebar {
+            position: fixed !important;
+            left: -240px;
+            top: 0;
+            bottom: 0;
+            z-index: 1000 !important;
+            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+          .admin-sidebar.open {
+            left: 0 !important;
+          }
+          .drawer-content {
+            width: 100% !important;
+          }
+          .admin-main-content {
+            padding: 16px !important;
+          }
+          .mobile-header {
+            display: flex !important;
+          }
+          .sidebar-backdrop {
+            display: block !important;
+          }
+          .floating-bottom-bar {
+            left: 16px !important;
+            right: 16px !important;
+          }
+        }
         .modal-backdrop {
           position: fixed;
           inset: 0;
@@ -863,21 +1235,53 @@ const AdminPanel = ({ user }) => {
       )}
 
       {/* ── FIXED LEFT SIDEBAR ── */}
-      <div style={{
-        width: '240px',
-        flexShrink: 0,
-        background: '#0a0c12',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
-      }}>
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999,
+            display: 'none'
+          }} 
+        />
+      )}
+      <div 
+        className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}
+        style={{
+          width: '240px',
+          flexShrink: 0,
+          background: '#0a0c12',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100
+        }}
+      >
         {/* Logo area */}
         <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <Logo size={32} showText={true} />
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="mobile-header"
+            style={{ 
+              display: 'none', 
+              marginLeft: 'auto', 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#8b92a8', 
+              fontSize: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕
+          </button>
         </div>
 
         {/* Navigation list */}
@@ -891,6 +1295,8 @@ const AdminPanel = ({ user }) => {
                   setActiveTab(t.id);
                   // Reset subfilters if shifting logs
                   if (t.id !== 'logs') setLogsSearchQuery('');
+                  // Close sidebar on mobile after selection
+                  setIsSidebarOpen(false);
                 }}
                 className="sidebar-item"
                 style={{
@@ -941,8 +1347,38 @@ const AdminPanel = ({ user }) => {
       {/* ── MAIN WORKSPACE CONTAINER ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
+        {/* Mobile Header with Hamburger */}
+        <div 
+          className="mobile-header"
+          style={{ 
+            display: 'none', 
+            alignItems: 'center', 
+            padding: '12px 16px', 
+            background: '#0a0c12', 
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            gap: '12px'
+          }}
+        >
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#00d4a0', 
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            ☰
+          </button>
+          <Logo size={24} showText={true} />
+        </div>
+
         {/* ── CENTRAL SCROLLABLE WORKSPACE ── */}
-        <div style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>
+        <div className="admin-main-content" style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>
           
           {/* ════ OVERVIEW / STATS DASHBOARD PAGE ════ */}
           {activeTab === 'overview' && (
@@ -1275,7 +1711,7 @@ const AdminPanel = ({ user }) => {
               </div>
 
               {/* Floating Bottom Sticky Bar */}
-              <div style={{
+              <div className="floating-bottom-bar" style={{
                 position: 'fixed',
                 bottom: '24px',
                 left: '268px',
@@ -2093,6 +2529,28 @@ const AdminPanel = ({ user }) => {
             </div>
           )}
 
+          {/* ════ INVITE & EARN MANAGEMENT ════ */}
+          {activeTab === 'invite' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>🤝 Invite & Earn Control</h2>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#8b92a8' }}>Manage referral program and rewards</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+                <InviteStatusCard user={user} settings={settings} showAlert={showAlert} />
+                <InviteGlobalStatsCard user={user} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+                <TopInvitersTable user={user} />
+                <InviteSettingsCard settings={settings} updateSettings={updateSettings} />
+              </div>
+            </div>
+          )}
+
           {/* ════ MEMBERS DIRECTORY SCREEN (USERS) ════ */}
           {activeTab === 'users' && (() => {
             const filteredUsers = (allUsersList || []).filter(u => {
@@ -2226,7 +2684,7 @@ const AdminPanel = ({ user }) => {
                               </span>
                             )}
                           </td>
-                          <td onClick={e => e.stopPropagation()}>
+                          <td onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => {
                                 setSelectedUserDetailId(u._id.toString());
@@ -2237,6 +2695,20 @@ const AdminPanel = ({ user }) => {
                             >
                               Manage User →
                             </button>
+                            {!isMe && (
+                              <button
+                                onClick={async () => {
+                                  if (await handleRemoveUser(u._id.toString(), u.username)) {
+                                    // Refresh or update local state if needed
+                                  }
+                                }}
+                                className="btn-premium-danger"
+                                style={{ padding: '6px 10px', fontSize: '12px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)' }}
+                                title="Permanently Delete Account"
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -2343,48 +2815,68 @@ const AdminPanel = ({ user }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>System Configuration Settings</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Configure trading fees, platform percentages, and dollar exchange indices</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Configure trading fees, platform percentages, and reward systems</p>
               </div>
 
-              <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '480px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>P2P Buying Rate (User buys $1 with ETB)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input-premium"
-                    value={etbRate}
-                    onChange={e => setEtbRate(e.target.value)}
-                    required
-                  />
+              <form onSubmit={handleSaveSettings} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '900px' }}>
+                {/* Column 1: Exchange & Fees */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase' }}>💱 Exchange Rates & Commissions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Buying Rate ($1 ETB)</label>
+                    <input type="number" step="0.01" className="input-premium" value={etbRate} onChange={e => setEtbRate(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Selling Rate ($1 ETB)</label>
+                    <input type="number" step="0.01" className="input-premium" value={etbRateSell} onChange={e => setEtbRateSell(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Escrow Fee (%)</label>
+                    <input type="number" step="0.01" className="input-premium" value={commissionValue} onChange={e => setCommissionValue(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Deposit Fee (%)</label>
+                    <input type="number" step="0.01" className="input-premium" value={depositFee} onChange={e => setDepositFee(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Withdrawal Fee (%)</label>
+                    <input type="number" step="0.01" className="input-premium" value={withdrawFee} onChange={e => setWithdrawFee(e.target.value)} required />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>P2P Selling Rate (User sells $1 for ETB)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input-premium"
-                    value={etbRateSell}
-                    onChange={e => setEtbRateSell(e.target.value)}
-                    required
-                  />
+                {/* Column 2: Limits & Rewards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#f5c518', textTransform: 'uppercase' }}>🎁 Limits & Reward Settings</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Min Deposit ($)</label>
+                      <input type="number" className="input-premium" value={minDeposit} onChange={e => setMinDeposit(e.target.value)} required />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Min Withdraw ($)</label>
+                      <input type="number" className="input-premium" value={minWithdraw} onChange={e => setMinWithdraw(e.target.value)} required />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Max Daily Withdraw ($)</label>
+                    <input type="number" className="input-premium" value={maxDailyWithdraw} onChange={e => setMaxDailyWithdraw(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Points per Trade</label>
+                    <input type="number" className="input-premium" value={pointsPerTrade} onChange={e => setPointsPerTrade(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Referral Points</label>
+                    <input type="number" className="input-premium" value={referralPoints} onChange={e => setReferralPoints(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+                    <input type="checkbox" checked={isLeaderboard} onChange={e => setIsLeaderboard(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#00d4a0' }} />
+                    <label style={{ fontSize: '13px', fontWeight: 600 }}>Enable Monthly Leaderboard</label>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Escrow Flat Platform Commission Fee (%)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input-premium"
-                    value={commissionValue}
-                    onChange={e => setCommissionValue(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <button type="submit" disabled={savingSettings} className="btn-premium-primary" style={{ padding: '14px' }}>
-                  {savingSettings ? '⏳ Saving settings...' : '💾 Save Settings'}
+                <button type="submit" disabled={savingSettings} className="btn-premium-primary" style={{ gridColumn: 'span 2', padding: '16px', fontSize: '15px' }}>
+                  {savingSettings ? '⏳ Saving System Configuration...' : '💾 Commit System Changes'}
                 </button>
               </form>
 
@@ -2743,6 +3235,7 @@ const AdminPanel = ({ user }) => {
                   { id: 'profile', l: 'Profile Summary' },
                   { id: 'transactions', l: 'Transactions' },
                   { id: 'kyc', l: 'KYC Document' },
+                  { id: 'invites', l: 'Invites' },
                   { id: 'activity', l: 'Actions / Warnings' }
                 ].map(tb => (
                   <button
@@ -2770,13 +3263,18 @@ const AdminPanel = ({ user }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0a0c12', borderRadius: '12px', padding: '16px' }}>
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden'
                       }}>
-                        {(u.username || 'U').charAt(0).toUpperCase()}
+                        {u.kycSelfie && u.kycSelfie.startsWith('http') ? (
+                          <img src={u.kycSelfie} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          (u.username || 'U').charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontWeight: 700, fontSize: '15px' }}>@{u.username}</span>
+                          {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
                           {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
                         <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u._id.toString()}</span>
@@ -2910,11 +3408,82 @@ const AdminPanel = ({ user }) => {
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}</strong></div>
-                        </div>
-                      </>
                     )}
                   </div>
                 )}
+
+                {/* ── TAB: Invites ── */}
+                {userDrawerTab === 'invites' && (() => {
+                  const uStats = useQuery(api.users.getInviteStats, { userId: u._id.toString() });
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invite Stats</div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Invited</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#f0f2f8', marginTop: '2px' }}>{uStats?.totalInvited || 0} friends</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Active Friends</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>{uStats?.activeFriends || 0}</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Pending Friends</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>{uStats?.pendingFriends || 0}</div>
+                        </div>
+                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Earned</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${(uStats?.totalEarned || 0).toFixed(2)} 💰</div>
+                        </div>
+                      </div>
+
+                      <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#8b92a8' }}>Referral Code:</span>
+                          <strong style={{ color: '#f5c518', letterSpacing: '1px' }}>{u.referral_code || u.referralCode || '—'}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#8b92a8' }}>Referred By:</span>
+                          <strong style={{ color: '#f0f2f8' }}>{u.referred_by || 'Organic'}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#8b92a8' }}>This Month Earned:</span>
+                          <strong style={{ color: '#00d4a0' }}>${(uStats?.earningsMonth || 0).toFixed(2)}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '10px' }}>Referral List</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(!uStats?.referralList || uStats.referralList.length === 0) ? (
+                          <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No referrals yet</div>
+                        ) : uStats.referralList.map((ref, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>👤</div>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 600 }}>@{ref.username}</div>
+                                <div style={{ fontSize: '10px', color: '#4e5567' }}>{new Date(ref.date).toLocaleDateString()}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: ref.status === 'paid' ? '#00d4a0' : '#fbbf24' }}>
+                                {ref.status === 'paid' ? '✓ ACTIVE' : '⏳ PENDING'}
+                              </div>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: ref.status === 'paid' ? '#00d4a0' : '#8b92a8' }}>
+                                ${ref.earned.toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button className="btn-premium-ghost" style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}>Export CSV</button>
+                        <button className="btn-premium-danger" style={{ flex: 1, background: 'rgba(244,63,94,0.1)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)', fontSize: '12px' }}>Flag for Review</button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* ── TAB 4: Actions & Warnings Log ── */}
                 {userDrawerTab === 'activity' && (

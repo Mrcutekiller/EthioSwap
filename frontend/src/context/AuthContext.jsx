@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -9,260 +8,419 @@ export const ETH_USD_PRICE = 3000.0;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]         = useState(null);
+  const [session, setSession]   = useState(null);
   const [error, setErrorState]  = useState(null);
   const [success, setSuccess]   = useState(null);
   const [loading, setLoading]   = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  
+  const [trades, setTrades] = useState([]);
+  const [listings, setListings] = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [systemSettings, setSystemSettings] = useState({
+    etbRatePerDollar: 190.0,
+    flatFeePercent: 1.0,
+    maxFeeUSD: 0.5,
+    commissionType: 'percentage',
+    commissionValue: 1.0,
+  });
+  const [myDepositReqs, setMyDepositReqs] = useState([]);
+  const [allDepositReqs, setAllDepositReqs] = useState([]);
+  const [myTransactions, setMyTransactions] = useState([]);
+  const [myWithdrawalReqs, setMyWithdrawalReqs] = useState([]);
+  const [allWithdrawalReqs, setAllWithdrawalReqs] = useState([]);
+
   const idleTimer = useRef(null);
+
+  // ── Session & User Management ────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) fetchUserProfile(session.user.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) fetchUserProfile(session.user.id);
+      else setUser(null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (data) {
+      setUser(data);
+      setWallet(data);
+      localStorage.setItem('ethioswap_user', JSON.stringify(data));
+    }
+  };
+
+  // ── Real-time Subscriptions ──────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const tradesSub = supabase
+      .channel('trades-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, () => fetchTrades())
+      .subscribe();
+
+    const listingsSub = supabase
+      .channel('listings-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'listings' }, () => fetchListings())
+      .subscribe();
+
+    const notificationsSub = supabase
+      .channel('notifications-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        // Handle real-time notification
+      })
+      .subscribe();
+
+    fetchTrades();
+    fetchListings();
+    fetchSystemSettings();
+    if (user.role === 'admin') {
+      fetchAllDepositReqs();
+      fetchAllWithdrawalReqs();
+    } else {
+      fetchMyDepositReqs();
+      fetchMyWithdrawalReqs();
+    }
+    fetchMyTransactions();
+
+    return () => {
+      tradesSub.unsubscribe();
+      listingsSub.unsubscribe();
+      notificationsSub.unsubscribe();
+    };
+  }, [user]);
+
+  const fetchTrades = async () => {
+    const { data } = await supabase
+      .from('trades')
+      .select('*, buyer:users!buyer_id(username), seller:users!seller_id(username)')
+      .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
+    if (data) setTrades(data.map(t => ({
+      ...t,
+      buyerName: t.buyer?.username,
+      sellerName: t.seller?.username
+    })));
+  };
+
+  const fetchListings = async () => {
+    const { data } = await supabase
+      .from('listings')
+      .select('*, seller:users!seller_id(username, reputation, total_trades)')
+      .eq('status', 'active');
+    if (data) setListings(data.map(l => ({
+      ...l,
+      sellerName: l.seller?.username,
+      sellerReputation: l.seller?.reputation,
+      sellerTotalTrades: l.seller?.total_trades
+    })));
+  };
+
+  const fetchSystemSettings = async () => {
+    const { data } = await supabase.from('system_settings').select('*').limit(1).single();
+    if (data) setSystemSettings(data);
+  };
+
+  const fetchMyDepositReqs = async () => {
+    const { data } = await supabase.from('deposit_requests').select('*').eq('user_id', user.id);
+    if (data) setMyDepositReqs(data);
+  };
+
+  const fetchAllDepositReqs = async () => {
+    const { data } = await supabase.from('deposit_requests').select('*');
+    if (data) setAllDepositReqs(data);
+  };
+
+  const fetchMyWithdrawalReqs = async () => {
+    const { data } = await supabase.from('withdraw_requests').select('*').eq('user_id', user.id);
+    if (data) setMyWithdrawalReqs(data);
+  };
+
+  const fetchAllWithdrawalReqs = async () => {
+    const { data } = await supabase.from('withdraw_requests').select('*');
+    if (data) setAllWithdrawalReqs(data);
+  };
+
+  const fetchMyTransactions = async () => {
+    const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id);
+    if (data) setMyTransactions(data);
+  };
 
   const setError = (message) => {
     if (!message) {
       setErrorState(null);
       return;
     }
-    const msg = message.toLowerCase();
-    if (msg.includes('username is already taken') || msg.includes('username already taken')) {
-      setErrorState('This username is already taken. Please choose another one.');
-      return;
-    }
-    if (msg.includes('email is already registered') || msg.includes('email already registered')) {
-      setErrorState('This email address is already registered. Try signing in.');
-      return;
-    }
-    if (msg.includes('invalid password') || msg.includes('incorrect password') || msg.includes('password mismatch')) {
-      setErrorState('Incorrect username or password. Please try again.');
-      return;
-    }
-    if (msg.includes('user not found') || msg.includes('no user found')) {
-      setErrorState('No account found with this username.');
-      return;
-    }
-    if (msg.includes('invalid transaction security pin') || msg.includes('invalid security transaction pin')) {
-      setErrorState('Incorrect transaction security PIN. Please try again.');
-      return;
-    }
-    if (msg.includes('insufficient balance') || msg.includes('insufficient available usd balance')) {
-      setErrorState('Insufficient balance to complete this transfer.');
-      return;
-    }
-    if (msg.includes('kyc verification required') || msg.includes('kyc identity verification')) {
-      setErrorState('KYC identity verification is required to perform this action.');
-      return;
-    }
-    if (msg.includes('minimum withdrawal amount')) {
-      setErrorState('Minimum withdrawal amount is $5.00 USD.');
-      return;
-    }
-    if (msg.includes('minimum deposit amount')) {
-      setErrorState('Minimum deposit amount is $5.00 USD.');
-      return;
-    }
-    const cleanMsg = message
-      .replace(/^Uncaught\s+Error:\s*/i, '')
-      .replace(/^ConvexError:\s*/i, '')
-      .replace(/\[\w+\]\s*/, '');
-    setErrorState(cleanMsg);
+    setErrorState(message);
   };
 
-  // ── Convex mutations ──────────────────────────────────
-  const convexLogin                = useMutation(api.users.login);
-  const convexRegister             = useMutation(api.users.register);
-  const convexCreateListing        = useMutation(api.listings.create);
-  const convexPauseListing         = useMutation(api.listings.pause);
-  const convexInitiateTrade        = useMutation(api.trades.initiateTrade);
-  const convexWithdraw             = useMutation(api.users.withdrawETH);
-  const convexCreateDepositRequest = useMutation(api.depositRequests.create);
-  const convexApproveDeposit       = useMutation(api.depositRequests.approve);
-  const convexRejectDeposit        = useMutation(api.depositRequests.reject);
-  const convexSavePaymentAccounts  = useMutation(api.users.savePaymentAccounts);
-  const convexAcknowledgeWarning   = useMutation(api.users.acknowledgeWarning);
-  const convexSendById             = useMutation(api.users.sendById);
-  const convexApproveWithdrawal    = useMutation(api.admin.approveWithdrawal);
-  const convexRejectWithdrawal     = useMutation(api.admin.rejectWithdrawal);
-  const convexAutoApproveOnchain   = useMutation(api.depositRequests.autoApproveOnchain);
-
-  // ── Convex real-time queries ──────────────────────────
-  const trades         = useQuery(api.trades.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
-  const listings       = useQuery(api.listings.listAll)                                        ?? [];
-  const wallet         = useQuery(api.users.getById,     user?.id ? { id: user.id } : "skip");
-  const settings       = useQuery(api.settings.get);
-  const myDepositReqs  = useQuery(api.depositRequests.listByUser, user?.id ? { userId: user.id } : "skip") ?? [];
-  const allDepositReqs = useQuery(api.depositRequests.listAll, user?.role === 'admin' ? undefined : "skip") ?? [];
-  const myTransactions = useQuery(api.wallet.listTransactions, user?.id ? { userId: user.id } : "skip") ?? [];
-  const myWithdrawalReqs  = useQuery(api.users.listWithdrawalRequests, user?.id ? { userId: user.id } : "skip") ?? [];
-  const allWithdrawalReqs = useQuery(api.admin.listAllWithdrawalRequests, user?.role === 'admin' ? undefined : "skip") ?? [];
-
-  const systemSettings = settings ?? {
-    etbRatePerDollar: 190.0,
-    flatFeePercent: 1.0,
-    maxFeeUSD: 0.5,
-    commissionType: 'percentage',
-    commissionValue: 1.0,
-  };
-
-  // Auto-clear alerts
-  useEffect(() => { if (success) { const t = setTimeout(() => setSuccess(null), 4000); return () => clearTimeout(t); } }, [success]);
-  useEffect(() => { if (error)   { const t = setTimeout(() => setError(null),   4500); return () => clearTimeout(t); } }, [error]);
-
-  // Restore session from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('ethioswap_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUser(parsed);
-      } catch {}
-    }
-  }, []);
-
-  // Real-time synchronization of session from Convex database 'wallet' (user record)
-  useEffect(() => {
-    if (wallet) {
-      setUser(prev => {
-        if (!prev) return prev;
-
-        const needsUpdate =
-          wallet.kycStatus !== prev.kycStatus ||
-          wallet.kycStep !== prev.kycStep ||
-          wallet.role !== prev.role ||
-          wallet.displayName !== prev.displayName ||
-          wallet.ethBalance !== prev.ethBalance ||
-          wallet.ethLocked !== prev.ethLocked ||
-          wallet.isSuspended !== prev.isSuspended ||
-          JSON.stringify(wallet.warnings || []) !== JSON.stringify(prev.warnings || []) ||
-          JSON.stringify(wallet.paymentAccounts || []) !== JSON.stringify(prev.paymentAccounts || []);
-
-        if (needsUpdate) {
-          const merged = {
-            ...prev,
-            role: wallet.role,
-            kycStatus: wallet.kycStatus,
-            kycStep: wallet.kycStep,
-            displayName: wallet.displayName,
-            ethBalance: wallet.ethBalance,
-            ethLocked: wallet.ethLocked,
-            isSuspended: wallet.isSuspended,
-            warnings: wallet.warnings || [],
-            paymentAccounts: wallet.paymentAccounts || [],
-          };
-          localStorage.setItem('ethioswap_user', JSON.stringify(merged));
-          return merged;
-        }
-        return prev;
-      });
-    }
-  }, [wallet]);
-
-  // Idle lock timer (disabled)
-  const resetIdleTimer = useCallback(() => {
-    clearTimeout(idleTimer.current);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const events = ['mousedown', 'touchstart', 'keydown', 'scroll'];
-    events.forEach(e => window.addEventListener(e, resetIdleTimer, { passive: true }));
-    resetIdleTimer();
-    return () => {
-      events.forEach(e => window.removeEventListener(e, resetIdleTimer));
-      clearTimeout(idleTimer.current);
-    };
-  }, [user, resetIdleTimer]);
-
-  const persistUser = (u) => {
-    setUser(u);
-    localStorage.setItem('ethioswap_user', JSON.stringify(u));
-  };
-
-  const login = async (username, password) => {
+  // ── Auth Actions ─────────────────────────────────────
+  const login = async (email, password) => {
     setLoading(true); setError(null);
     try {
-      const data = await convexLogin({ username, password });
-      persistUser(data);
-      setSuccess(`Welcome back, ${data.username}!`);
-      return data;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await fetchUserProfile(data.user.id);
+      setSuccess(`Welcome back!`);
+      return data.user;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
   };
 
-  const register = async (username, password, phone, email, fullName, age) => {
+  const register = async (username, password, phone, email, fullName, age, gender, avatarId, referralCode) => {
     setLoading(true); setError(null);
     try {
-      const data = await convexRegister({ 
-        username, 
-        password, 
-        phone, 
-        email: email || undefined, 
-        fullName: fullName || undefined, 
-        age: age ? parseInt(age) : undefined 
+      const { data: { user: authUser }, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username, phone } }
       });
-      persistUser(data);
-      setSuccess('Account created! Complete KYC verification to start trading.');
-      return data;
+      if (authError) throw authError;
+
+      // Create profile record
+      const { error: profileError } = await supabase.from('users').insert([{
+        id: authUser.id,
+        username,
+        phone,
+        email,
+        full_name: fullName,
+        age: age ? parseInt(age) : null,
+        gender,
+        selected_avatar: avatarId,
+        referral_code: username.toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000),
+        referred_by: referralCode, // This would need to be resolved to a UUID if it's a code
+        eth_address: '0x' + Math.random().toString(16).slice(2, 42), // Mock
+        eth_private_key: '0x' + Math.random().toString(16).slice(2, 66), // Mock
+        display_name: fullName || username,
+        joined_at: new Date().toISOString()
+      }]);
+
+      if (profileError) throw profileError;
+
+      await fetchUserProfile(authUser.id);
+      setSuccess('Account created!');
+      return authUser;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
     localStorage.removeItem('ethioswap_user');
-    clearTimeout(idleTimer.current);
-    setIsLocked(false);
     setSuccess('Signed out successfully.');
   };
 
-  const unlock = () => {
-    setIsLocked(false);
-    resetIdleTimer();
-  };
-
+  // ── Business Actions ─────────────────────────────────
   const createListing = async (amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts, type) => {
     setLoading(true);
     try {
-      await convexCreateListing({ sellerId: user.id, amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts, type });
-      setSuccess('Listing published! Ad is now active.');
+      const { error } = await supabase.from('listings').insert([{
+        seller_id: user.id,
+        amount_eth: amountETH,
+        min_limit_etb: minLimitETB,
+        max_limit_etb: maxLimitETB,
+        payment_methods: paymentMethods,
+        custom_rate_etb: customRateETB,
+        payment_accounts: paymentAccounts,
+        type,
+        status: 'active'
+      }]);
+      if (error) throw error;
+      setSuccess('Listing published!');
+      fetchListings();
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
-  };
-
-  const pauseListing = async (listingId) => {
-    try {
-      await convexPauseListing({ listingId, sellerId: user.id });
-      setSuccess('Listing paused.');
-    } catch (err) { setError(err.message); }
   };
 
   const initiateTrade = async (listingId, amountETH, selectedPaymentAccount) => {
     setLoading(true);
     try {
-      const tradeId = await convexInitiateTrade({ 
-        buyerId: user.id, 
-        listingId, 
-        amountETH, 
-        selectedPaymentAccount 
-      });
-      setSuccess('Trade opened! Chat with the seller.');
-      return { id: tradeId?.toString() };
+      const { data: listing } = await supabase.from('listings').select('*').eq('id', listingId).single();
+      if (!listing) throw new Error('Listing not found');
+
+      // Create trade
+      const { data: trade, error } = await supabase.from('trades').insert([{
+        listing_id: listingId,
+        buyer_id: user.id,
+        seller_id: listing.seller_id,
+        amount_eth: amountETH,
+        amount_etb: Math.round(amountETH * (listing.custom_rate_etb || systemSettings.etb_rate_per_dollar)),
+        status: 'payment_pending',
+        selected_payment_account: selectedPaymentAccount,
+        timer_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+      }]).select().single();
+
+      if (error) throw error;
+
+      // Create escrow entry
+      await supabase.from('escrow_accounts').insert([{
+        trade_id: trade.id,
+        seller_id: listing.seller_id,
+        buyer_id: user.id,
+        amount_usdt: amountETH,
+        status: 'locked'
+      }]);
+
+      // Create chat
+      const { data: chat } = await supabase.from('trade_chats').insert([{ trade_id: trade.id }]).select().single();
+
+      // System message
+      await supabase.from('chat_messages').insert([{
+        chat_id: chat.id,
+        sender_id: user.id, // System messages can use a specific ID or just be marked as system
+        message_text: "Trade started",
+        message_type: 'system'
+      }]);
+
+      setSuccess('Trade opened!');
+      return trade;
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
   };
 
-  const withdrawETH = async (amountETH, destinationAddress, pin) => {
+  const markTradeAsPaid = async (tradeId, proofUrl) => {
     setLoading(true);
     try {
-      const data = await convexWithdraw({ userId: user.id, amountETH, destinationAddress, pin });
-      setSuccess(`Withdrawal request submitted successfully!`);
-      return data;
-    } catch (err) { setError(err.message); return null; }
+      const { error } = await supabase.from('trades').update({ status: 'paid', proof_url: proofUrl }).eq('id', tradeId);
+      if (error) throw error;
+
+      // Log system message in chat
+      const { data: chat } = await supabase.from('trade_chats').select('id').eq('trade_id', tradeId).single();
+      if (chat) {
+        await supabase.from('chat_messages').insert([{
+          chat_id: chat.id,
+          sender_id: user.id,
+          message_text: "Payment marked as sent",
+          message_type: 'system'
+        }]);
+      }
+
+      setSuccess('Payment marked as sent!');
+    } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
 
-  const confirmOnchainDeposit = async (amountUSD, senderReference) => {
+  const releaseEscrow = async (tradeId) => {
     setLoading(true);
     try {
-      const data = await convexAutoApproveOnchain({ userId: user.id, amountUSD, senderReference });
-      setSuccess(`Deposit confirmed instantly!`);
-      return data;
+      const { data: trade } = await supabase.from('trades').select('*').eq('id', tradeId).single();
+      if (!trade) throw new Error('Trade not found');
+
+      // 1. Update escrow status
+      const { error: escrowError } = await supabase.from('escrow_accounts').update({ 
+        status: 'released', 
+        released_at: new Date().toISOString() 
+      }).eq('trade_id', tradeId);
+      if (escrowError) throw escrowError;
+
+      // 2. Transfer funds to buyer
+      const { data: buyer } = await supabase.from('users').select('eth_balance').eq('id', trade.buyer_id).single();
+      const { data: seller } = await supabase.from('users').select('eth_balance').eq('id', trade.seller_id).single();
+      
+      await supabase.from('users').update({ eth_balance: buyer.eth_balance + trade.amount_eth }).eq('id', trade.buyer_id);
+      await supabase.from('users').update({ eth_balance: seller.eth_balance - trade.amount_eth }).eq('id', trade.seller_id);
+
+      // 3. Update trade status
+      await supabase.from('trades').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', tradeId);
+
+      // 4. Log system message
+      const { data: chat } = await supabase.from('trade_chats').select('id').eq('trade_id', tradeId).single();
+      if (chat) {
+        await supabase.from('chat_messages').insert([{
+          chat_id: chat.id,
+          sender_id: user.id,
+          message_text: "Trade completed",
+          message_type: 'system'
+        }]);
+      }
+
+      setSuccess('Funds released to buyer!');
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const openDispute = async (tradeId, reason) => {
+    setLoading(true);
+    try {
+      const { data: trade } = await supabase.from('trades').select('*').eq('id', tradeId).single();
+      if (!trade) throw new Error('Trade not found');
+
+      await supabase.from('disputes').insert([{
+        trade_id: tradeId,
+        opened_by: user.id,
+        against_user: user.id === trade.buyer_id ? trade.seller_id : trade.buyer_id,
+        reason,
+        status: 'open'
+      }]);
+
+      await supabase.from('trades').update({ status: 'disputed' }).eq('id', tradeId);
+      await supabase.from('escrow_accounts').update({ status: 'disputed' }).eq('id', tradeId);
+
+      const { data: chat } = await supabase.from('trade_chats').select('id').eq('trade_id', tradeId).single();
+      if (chat) {
+        await supabase.from('chat_messages').insert([{
+          chat_id: chat.id,
+          sender_id: user.id,
+          message_text: "Dispute opened",
+          message_type: 'system'
+        }]);
+      }
+
+      setSuccess('Dispute opened. Admin will review.');
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const submitRating = async (tradeId, ratedUserId, stars, reviewText) => {
+    try {
+      await supabase.from('trader_ratings').insert([{
+        trade_id: tradeId,
+        rater_id: user.id,
+        rated_user_id: ratedUserId,
+        stars,
+        review_text: reviewText
+      }]);
+      
+      // Update user rating (simple avg calculation for now, better to use DB function)
+      const { data: ratings } = await supabase.from('trader_ratings').select('stars').eq('rated_user_id', ratedUserId);
+      const avg = ratings.reduce((s, r) => s + r.stars, 0) / ratings.length;
+      
+      await supabase.from('users').update({ 
+        avg_rating: avg, 
+        total_ratings: ratings.length 
+      }).eq('id', ratedUserId);
+
+      setSuccess('Rating submitted!');
+    } catch (err) { setError(err.message); }
+  };
+
+  const withdrawETH = async (amountUSD, destinationAddress, pin) => {
+    setLoading(true);
+    try {
+      // Pin check and logic here
+      const { error } = await supabase.from('withdraw_requests').insert([{
+        user_id: user.id,
+        username: user.username,
+        amount_usd: amountUSD,
+        wallet_type: 'On-Chain',
+        destination_address: destinationAddress,
+        status: 'pending'
+      }]);
+      if (error) throw error;
+      setSuccess(`Withdrawal request submitted!`);
     } catch (err) { setError(err.message); return null; }
     finally { setLoading(false); }
   };
@@ -270,135 +428,43 @@ export const AuthProvider = ({ children }) => {
   const createDepositRequest = async (amountUSD, walletType, senderReference, screenshotUrl) => {
     setLoading(true);
     try {
-      await convexCreateDepositRequest({ userId: user.id, amountUSD, walletType, senderReference, screenshotUrl });
-      setSuccess('Deposit request submitted! Admin will review and credit your wallet within minutes.');
+      const { error } = await supabase.from('deposit_requests').insert([{
+        user_id: user.id,
+        username: user.username,
+        amount_usd: amountUSD,
+        wallet_type: walletType,
+        sender_reference: senderReference,
+        screenshot_url: screenshotUrl,
+        status: 'pending'
+      }]);
+      if (error) throw error;
+      setSuccess('Deposit request submitted!');
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
 
-  const approveDepositRequest = async (requestId, adminNote) => {
-    try {
-      await convexApproveDeposit({ requestId, adminId: user.id, adminNote });
-      setSuccess('Deposit approved and wallet credited!');
-    } catch (err) { setError(err.message); }
-  };
-
-  const rejectDepositRequest = async (requestId, adminNote) => {
-    try {
-      await convexRejectDeposit({ requestId, adminId: user.id, adminNote });
-      setSuccess('Deposit request rejected.');
-    } catch (err) { setError(err.message); }
-  };
-
-  const approveWithdrawalRequest = async (requestId, adminNote) => {
-    try {
-      await convexApproveWithdrawal({ requestId, adminId: user.id, adminNote });
-      setSuccess('Withdrawal approved and processed!');
-    } catch (err) { setError(err.message); }
-  };
-
-  const rejectWithdrawalRequest = async (requestId, adminNote) => {
-    try {
-      await convexRejectWithdrawal({ requestId, adminId: user.id, adminNote });
-      setSuccess('Withdrawal request rejected and refunded.');
-    } catch (err) { setError(err.message); }
-  };
-
-  const savePaymentAccounts = async (accountsOrObj) => {
+  const savePaymentAccounts = async (accounts) => {
     setLoading(true);
     try {
-      // Support both direct array and { userId, accounts } object (legacy)
-      const accounts = Array.isArray(accountsOrObj)
-        ? accountsOrObj
-        : (accountsOrObj?.accounts ?? accountsOrObj);
-      const updated = await convexSavePaymentAccounts({ userId: user.id, accounts });
-      updateUser(updated);
+      const { error } = await supabase
+        .from('users')
+        .update({ payment_accounts: accounts })
+        .eq('id', user.id);
+      if (error) throw error;
+      await fetchUserProfile(user.id);
       setSuccess('Payment profiles saved!');
-      return updated;
-    } catch (err) { setError(err.message); return null; }
-    finally { setLoading(false); }
-  };
-
-  const acknowledgeWarning = async (warningId) => {
-    try {
-      const updated = await convexAcknowledgeWarning({ userId: user.id, warningId });
-      updateUser(updated);
-      setSuccess('Warning acknowledged.');
-      return updated;
-    } catch (err) { setError(err.message); return null; }
-  };
-
-  const sendById = async (recipientNumericId, amount, pin) => {
-    setLoading(true);
-    try {
-      const data = await convexSendById({
-        senderId: user.id,
-        recipientNumericId: parseInt(recipientNumericId),
-        amount: parseFloat(amount),
-        pin: pin || undefined,
-      });
-      if (data?.success) {
-        updateUser({ ethBalance: data.newBalance });
-        setSuccess(`$${parseFloat(amount).toFixed(2)} USD sent to @${data.recipient.username} (ID: ${data.recipient.numericId})!`);
-      }
-      return data;
-    } catch (err) { setError(err.message); return null; }
+    } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
 
   const updateUser = (updatedUser) => {
     const merged = { ...user, ...updatedUser };
-    persistUser(merged);
+    setUser(merged);
+    localStorage.setItem('ethioswap_user', JSON.stringify(merged));
   };
 
-  const switchUser = async (target) => {
-    setLoading(true); setError(null);
-    try {
-      let username = target;
-      let password = 'password';
-      if (target === 'admin') {
-        username = 'ethioswap@gmail.com';
-        password = 'Et20sw26#';
-      }
-      const data = await convexLogin({ username, password });
-      persistUser(data);
-      setSuccess(`Switched context to @${data.username}!`);
-      return data;
-    } catch (err) {
-      // If user doesn't exist, register them
-      try {
-        let username = target;
-        let password = 'password';
-        let phone = '+251911223344';
-        let email = `${target}@ethioswap.com`;
-        let fullName = `${target.toUpperCase()} Test`;
-        let age = 25;
-        if (target === 'admin') {
-          username = 'ethioswap@gmail.com';
-          password = 'Et20sw26#';
-          phone = '+251000000000';
-          email = 'ethioswap@gmail.com';
-          fullName = 'System Admin';
-        }
-        const data = await convexRegister({
-          username,
-          password,
-          phone,
-          email,
-          fullName,
-          age
-        });
-        persistUser(data);
-        setSuccess(`Created and switched to test @${data.username}!`);
-        return data;
-      } catch (regErr) {
-        setError(regErr.message);
-        return null;
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const unlock = () => setIsLocked(false);
+  const switchUser = () => {}; // Not needed for production
 
   return (
     <AuthContext.Provider value={{
@@ -408,11 +474,8 @@ export const AuthProvider = ({ children }) => {
       myWithdrawalReqs, allWithdrawalReqs,
       setError, setSuccess,
       login, register, logout, unlock, updateUser, switchUser,
-      createListing, pauseListing, initiateTrade, withdrawETH,
-      createDepositRequest, approveDepositRequest, rejectDepositRequest, savePaymentAccounts,
-      confirmOnchainDeposit,
-      approveWithdrawalRequest, rejectWithdrawalRequest,
-      acknowledgeWarning, sendById,
+      createListing, initiateTrade, withdrawETH,
+      createDepositRequest, savePaymentAccounts,
       ethUsdPrice: ETH_USD_PRICE,
     }}>
       {children}

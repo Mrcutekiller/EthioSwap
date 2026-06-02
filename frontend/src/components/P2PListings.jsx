@@ -201,8 +201,26 @@ const P2PListings = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', margin: 0 }}>P2P Marketplace</h2>
-          <div style={{ fontSize: '14px', color: '#00d4a0', marginTop: '2px', fontWeight: 500 }}>
-            Rate: <strong style={{ color: '#00d4a0' }}>{rate} ETB / $1 USD</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: '#00d4a0', fontWeight: 600 }}>
+              Rate: <strong style={{ color: '#00d4a0' }}>{rate} ETB / $1 USD</strong>
+            </div>
+            {systemSettings?.is_p2p_free_period && (
+              <div style={{ 
+                background: 'rgba(0, 212, 160, 0.15)', 
+                color: '#00d4a0', 
+                fontSize: '10px', 
+                fontWeight: 800, 
+                padding: '2px 8px', 
+                borderRadius: '99px',
+                border: '1px solid rgba(0, 212, 160, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                FREE 🎉 <span style={{ fontSize: '9px', fontWeight: 500 }}>0% Fee</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -922,6 +940,10 @@ const P2PListings = () => {
                     <span style={{ color: 'var(--gold-light)' }}>
                       {Math.round(parseFloat(tradeAmountETH) * (selectedListing.customRateETB || rate)).toLocaleString()} ETB
                     </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00d4a0', fontWeight: 600 }}>
+                    <span>Platform Fee:</span>
+                    <span>{systemSettings?.is_p2p_free_period ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
                   </div>
                 </div>
               )}

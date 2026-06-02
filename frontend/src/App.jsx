@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
@@ -9,11 +7,15 @@ import P2PListings from './components/P2PListings.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import TradeRoom from './components/TradeRoom.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import Leaderboard from './components/Leaderboard.jsx';
+import InviteEarn from './components/InviteEarn.jsx';
+import TransactionHistory from './pages/TransactionHistory.jsx';
 import AppLockScreen from './components/AppLockScreen.jsx';
 import { NotificationCenter, useNotifCount } from './components/NotificationCenter.jsx';
 import SupportWidget from './components/SupportWidget.jsx';
 import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
+import { supabase } from './supabaseClient';
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
@@ -28,9 +30,12 @@ const Icons = {
   trades:   'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
   bell:     'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0',
   person:   'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
+  leaderboard: 'M12 20V10 M18 20V4 M6 20v-4',
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   admin:    'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   logout:   'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
+  gift:     'M20 12V8H4v4 M2 6h20v2H2z M12 22V12 M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z',
+  history:  'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
 };
 
 // ── Auth Form ──────────────────────────────────────────────────
@@ -42,24 +47,57 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [gender, setGender] = useState(''); // 'Male' | 'Female' | 'Other'
+  const [avatar, setAvatar] = useState('');
+  const [regStep, setRegStep] = useState(1); // 1: Basic Info, 2: Gender/Avatar
   const [localError, setLocalError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const avatars = {
+    Male: [
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile&top=shortHair',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&mouth=smile&top=shortFlat',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack&mouth=smile&top=shortCurly',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo&mouth=smile&top=shortWaved'
+    ],
+    Female: [
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Anya&mouth=smile&top=longHair',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&mouth=smile&top=longHairCurly',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe&mouth=smile&top=bob',
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia&mouth=smile&top=curly'
+    ],
+    Other: [
+      'https://api.dicebear.com/7.x/bottts/svg?seed=B1',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=B2',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=B3',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=B4'
+    ]
+  };
+
+  const allAvatars = [...avatars.Male, ...avatars.Female, ...avatars.Other];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
     if (!username || !password) { setLocalError('Please fill in all fields.'); return; }
+    
     if (mode === 'register') {
-      if (!phone || !email || !fullName || !age) {
-        setLocalError('Please fill in all registration fields.');
+      if (regStep === 1) {
+        if (!phone || !email || !fullName || !age) {
+          setLocalError('Please fill in all registration fields.');
+          return;
+        }
+        if (parseInt(age) < 18) {
+          setLocalError('You must be at least 18 years old to join.');
+          return;
+        }
+        setRegStep(2);
         return;
       }
-      if (parseInt(age) < 18) {
-        setLocalError('You must be at least 18 years old to join.');
-        return;
-      }
-      if (email.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        setLocalError('Please enter a valid email address.');
+      
+      if (!gender) {
+        setLocalError('Please select your gender.');
         return;
       }
     }
@@ -67,7 +105,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
     if (mode === 'login') {
       await login(username, password);
     } else {
-      await register(username, password, phone, email, fullName, age);
+      await register(username, password, phone, email, fullName, age, gender, avatar, referralCode);
     }
   };
 
@@ -117,40 +155,111 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="input-group" style={{ marginBottom: 0 }}>
-            <input className="input" type="text" placeholder={mode === 'login' ? "Username" : "Desired Username"} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" style={{ width: '100%' }} />
-          </div>
-          {mode === 'register' && (
-            <div className="input-group" style={{ marginBottom: 0 }}>
-              <input className="input" type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" style={{ width: '100%' }} />
-            </div>
-          )}
-          <div className="input-group" style={{ marginBottom: 0, position: 'relative' }}>
-            <input className="input" type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} style={{ width: '100%', paddingRight: '44px' }} />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px' }}>
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
-          {mode === 'register' && (
+          {mode === 'login' || (mode === 'register' && regStep === 1) ? (
             <>
               <div className="input-group" style={{ marginBottom: 0 }}>
-                <input className="input" type="text" placeholder="Full Legal Name" value={fullName} onChange={e => setFullName(e.target.value)} autoComplete="name" style={{ width: '100%' }} />
+                <input className="input" type="text" placeholder={mode === 'login' ? "Username" : "Desired Username"} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" style={{ width: '100%' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+              {mode === 'register' && (
                 <div className="input-group" style={{ marginBottom: 0 }}>
-                  <input className="input" type="tel" placeholder="Phone (+251...)" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: '100%' }} />
+                  <input className="input" type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" style={{ width: '100%' }} />
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <input className="input" type="number" min="18" placeholder="Age" value={age} onChange={e => setAge(e.target.value)} style={{ width: '100%' }} />
+              )}
+              <div className="input-group" style={{ marginBottom: 0, position: 'relative' }}>
+                <input className="input" type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} style={{ width: '100%', paddingRight: '44px' }} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px' }}>
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+              {mode === 'register' && (
+                <>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <input className="input" type="text" placeholder="Full Legal Name" value={fullName} onChange={e => setFullName(e.target.value)} autoComplete="name" style={{ width: '100%' }} />
+                  </div>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <input className="input" type="text" placeholder="Referral Code (e.g. ABEBE2024)" value={referralCode} onChange={e => setReferralCode(e.target.value.toUpperCase())} style={{ width: '100%' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <input className="input" type="tel" placeholder="Phone (+251...)" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <input className="input" type="number" min="18" placeholder="Age" value={age} onChange={e => setAge(e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Step 2: Gender & Avatar */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Select Gender</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  {['Male', 'Female', 'Other'].map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => {
+                        setGender(g);
+                        setAvatar(''); // Reset avatar when gender changes
+                      }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: `1px solid ${gender === g ? 'var(--gold-light)' : 'var(--border)'}`,
+                        background: gender === g ? 'rgba(212,175,55,0.1)' : 'transparent',
+                        color: gender === g ? 'var(--gold-light)' : 'var(--text-2)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {g === 'Other' ? 'Prefer not to say' : g}
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Choose Avatar</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                  {(gender ? avatars[gender] : allAvatars).map((av, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setAvatar(av)}
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '16px',
+                        border: `2px solid ${avatar === av ? 'var(--gold-light)' : 'transparent'}`,
+                        background: 'var(--bg-base)',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        transition: 'all 0.2s ease',
+                        boxShadow: avatar === av ? '0 0 15px rgba(212,175,55,0.3)' : 'none'
+                      }}
+                    >
+                      <img src={av} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '12px' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={() => setRegStep(1)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer', marginTop: '8px', textDecoration: 'underline' }}
+              >
+                ← Back to personal info
+              </button>
             </>
           )}
 
           {displayError && <p style={{ fontSize: '13px', color: 'var(--status-danger-text)', fontWeight: 500, padding: '10px 12px', background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', borderRadius: '10px' }}>⚠ {displayError}</p>}
 
           <button type="submit" disabled={loading} className="btn btn-gold btn-full btn-lg" style={{ marginTop: '8px', padding: '14px' }}>
-            {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : (regStep === 1 ? 'Next Step' : 'Create Account'))}
           </button>
         </form>
 
@@ -190,31 +299,29 @@ const AppShell = () => {
   const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
 
   const [prevNotifCount, setPrevNotifCount] = useState(0);
-  const notifications = useQuery(api.notifications.list, user?.id ? { userId: user.id } : "skip") ?? [];
+  const [notifications, setNotifications] = useState([]);
 
-  // Request browser Notification Permission on login
-  React.useEffect(() => {
-    if (user && isNotificationSupported()) {
-      requestPermission();
-    }
-  }, [user]);
-
-  // Real-time background HTML5 Notification trigger
   React.useEffect(() => {
     if (!user) return;
-    const unread = notifications.filter(n => !n.isRead);
-    // If a new unread notification arrives
-    if (unread.length > prevNotifCount) {
-      const latest = unread[0]; // sorted descending
-      if (latest) {
+    const fetchNotifications = async () => {
+      const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      if (data) setNotifications(data);
+    };
+    fetchNotifications();
+
+    const sub = supabase
+      .channel('notifs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        setNotifications(prev => [payload.new, ...prev]);
         showBrowserNotification("EthioSwap Alert", {
-          body: latest.message,
+          body: payload.new.message,
           icon: '/favicon.ico',
         });
-      }
-    }
-    setPrevNotifCount(unread.length);
-  }, [notifications, user, prevNotifCount]);
+      })
+      .subscribe();
+
+    return () => sub.unsubscribe();
+  }, [user]);
 
   const getInitials = (name) => (name || 'U').substring(0, 2).toUpperCase();
   const lockMethod = localStorage.getItem('ethioswap_lock_method') || 'pin';
@@ -373,8 +480,10 @@ const AppShell = () => {
         { id: 'home',     label: 'Trade',    icon: Icons.home },
         { id: 'wallet',   label: 'Wallet',   icon: Icons.wallet },
         { id: 'trades',   label: 'Trades',   icon: Icons.trades,   badge: activeTrades },
+        { id: 'history',  label: 'History',  icon: Icons.history },
+        { id: 'invite',   label: 'Invite',   icon: Icons.gift },
+        { id: 'leaderboard', label: 'Ranks', icon: Icons.leaderboard },
         { id: 'profile',  label: 'Profile',  icon: Icons.person },
-        { id: 'settings', label: 'Settings', icon: Icons.settings },
       ];
 
   if (user.role === 'admin' && tab !== 'admin') setTab('admin');
@@ -518,6 +627,9 @@ const AppShell = () => {
         {tab === 'home'     && <P2PListings />}
         {tab === 'wallet'   && <WalletCard />}
         {tab === 'trades'   && <TradeRoom />}
+        {tab === 'history'  && <TransactionHistory />}
+        {tab === 'invite'   && <InviteEarn user={user} systemSettings={systemSettings} />}
+        {tab === 'leaderboard' && <Leaderboard user={user} />}
         {tab === 'profile'  && <ProfilePage user={user} wallet={wallet} onUserUpdate={updateUser} systemSettings={systemSettings} />}
         {tab === 'settings' && <SettingsPage user={user} onLogout={logout} />}
         {tab === 'admin'    && <AdminPanel user={user} />}

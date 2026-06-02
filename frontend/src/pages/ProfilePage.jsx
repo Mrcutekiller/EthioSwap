@@ -207,19 +207,86 @@ const SUPPORTED_BANKS = [
   { id: 'M-Pesa',          label: 'M-Pesa Ethiopia',                  icon: '📲' },
 ];
 
+const SecurityLock = ({ onVerify, onClose }) => {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (pin === '1234') { // Mock PIN for now
+      onVerify();
+    } else {
+      setError('Incorrect PIN. Please try again.');
+      setPin('');
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(5, 7, 12, 0.98)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(12px)' }}>
+      <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', padding: '24px' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Lock size={32} />
+        </div>
+        <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Security Check</h3>
+        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '24px' }}>Enter your 4-digit security PIN to continue.</p>
+        
+        <form onSubmit={handleSubmit}>
+          <input 
+            type="password" 
+            maxLength={4} 
+            value={pin} 
+            onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', fontSize: '24px', textAlign: 'center', letterSpacing: '1em', color: '#fff', marginBottom: '16px', outline: 'none' }}
+            autoFocus
+          />
+          {error && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '16px' }}>{error}</p>}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" style={{ flex: 2, padding: '14px', borderRadius: '12px', background: '#f5c518', color: '#000', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Unlock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
   const { savePaymentAccounts } = useAuth();
+  const updateProfileMutation = useMutation(api.users.updateProfile);
+  const loyaltyInfo = useQuery(api.users.getLoyaltyInfo, { userId: user?.id || "" });
+  const referralStats = useQuery(api.users.getReferralStats, { userId: user?.id || "" });
+  
   const [showKYC, setShowKYC] = useState(false);
   const [showAddAcc, setShowAddAcc] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showSecurityLock, setShowSecurityLock] = useState(false);
+  const [securityAction, setSecurityAction] = useState(null); // 'view_docs' | 'withdraw'
+  const [showLoyaltyHistory, setShowLoyaltyHistory] = useState(false);
+  const [showReferralDash, setShowReferralDash] = useState(false);
+  
+  // Edit Profile Form State
+  const [editName, setEditName] = useState(user?.fullName || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editPassword, setEditPassword] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+
   const [newBank, setNewBank] = useState('CBE');
   const [newAccNum, setNewAccNum] = useState('');
   const [newHolder, setNewHolder] = useState('');
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
 
   const getTronAddress = (ethAddr) => {
     if (!ethAddr) return '';
     return 'T' + ethAddr.replace('0x', '').substring(0, 33);
+  };
+
+  const getImageUrl = (src) => {
+    if (!src) return '';
+    if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) return src;
+    return `http://localhost:5000${src}`;
   };
 
   const handleAddAccount = async (e) => {
@@ -244,6 +311,50 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     const currentList = user.paymentAccounts || [];
     const updatedList = currentList.filter(a => a.id !== id);
     await savePaymentAccounts(updatedList);
+  };
+
+  const handleEditProfile = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      await updateProfileMutation({
+        userId: user.id,
+        fullName: editName,
+        phone: editPhone,
+        email: editEmail,
+        password: editPassword || undefined
+      });
+      alert('✓ Profile updated successfully!');
+      setShowEditProfile(false);
+      if (onUserUpdate) {
+        onUserUpdate({
+          ...user,
+          fullName: editName,
+          phone: editPhone,
+          email: editEmail
+        });
+      }
+    } catch (err) {
+      alert('Error updating profile: ' + err.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleSecurityVerify = () => {
+    setShowSecurityLock(false);
+    if (securityAction === 'view_docs') {
+      setIsFlipped(true);
+      // In a real app, this would also decrypt/reveal the ID images
+    } else if (securityAction === 'withdraw') {
+      // Trigger withdrawal flow
+    }
+    setSecurityAction(null);
+  };
+
+  const triggerSecurity = (action) => {
+    setSecurityAction(action);
+    setShowSecurityLock(true);
   };
 
   if (!user) return null;
@@ -304,991 +415,319 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const lastName = nameParts.slice(1).join(' ') || 'SWAPPER';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
       {/* ─── STYLING INJECTIONS ─────────────────────────────────── */}
       <style>{`
-        /* Lanyard Holder Casing & Strap styles */
-        .lanyard-holder {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 4px auto 16px;
-          position: relative;
-          width: 328px;
-        }
-
-        .lanyard-connector {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          height: 38px;
-          width: 100%;
-          position: relative;
-          z-index: 10;
-        }
-
-        .lanyard-strap {
-          width: 16px;
-          height: 18px;
-          background: linear-gradient(to bottom, #111318, #1f2937);
-          border-radius: 3px 3px 0 0;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-bottom: none;
-        }
-
-        .lanyard-clip {
-          width: 24px;
-          height: 20px;
-          background: linear-gradient(135deg, #abb2bf 0%, #4b5563 100%);
-          border-radius: 4px;
-          border: 1.5px solid #2d3139;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 3px 5px rgba(0,0,0,0.4);
-          position: relative;
-          top: -2px;
-          z-index: 11;
-        }
-
-        .lanyard-clip::after {
-          content: '';
-          width: 6px;
-          height: 6px;
-          background: #111318;
+        .rainbow-ring {
+          padding: 4px;
           border-radius: 50%;
+          background: linear-gradient(45deg, #00d4a0, #f5c518, #3b82f6, #ec4899, #00d4a0);
+          background-size: 200% 200%;
+          animation: rainbow-rotate 4s linear infinite;
         }
-
-        .lanyard-frame {
-          background: linear-gradient(135deg, #1e222b 0%, #0d0f14 100%);
-          border: 4.5px solid #252a35;
-          border-radius: 26px;
-          padding: 8px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 3px rgba(255,255,255,0.05);
-          position: relative;
-          width: 100%;
-          display: flex;
-          justify-content: center;
-        }
-
-        .lanyard-slot {
-          width: 46px;
-          height: 8px;
-          background: #000000;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 99px;
-          position: absolute;
-          top: -14px;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 5;
-          box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
-        }
-
-        /* 3D Flip Mechanics */
-        .id-card-perspective {
-          perspective: 1500px;
-          width: 300px;
-          height: 460px;
-          cursor: pointer;
-        }
-
-        .id-card-inner {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-          transform-style: preserve-3d;
-        }
-
-        .id-card-inner.flipped {
-          transform: rotateY(180deg);
-        }
-
-        .id-card-front, .id-card-back {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          backface-visibility: hidden;
-          border-radius: 18px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          box-sizing: border-box;
-          padding: 20px;
-          transition: border-color 0.3s;
-        }
-
-        /* FRONT: Obsidian Dark Theme */
-        .id-card-front-obsidian {
-          background: linear-gradient(135deg, #07090d 0%, #12151c 100%);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: #ffffff;
-          box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
-        }
-
-        /* BACK: Prism Silver-White Theme */
-        .id-card-back-prism {
-          background: linear-gradient(135deg, #ffffff 0%, #f1f3f7 100%);
-          border: 1.5px solid rgba(0,0,0,0.08);
-          color: #0b0c10;
-          transform: rotateY(180deg);
-          box-shadow: inset 0 1px 2px rgba(255,255,255,0.9);
-        }
-
-        .id-card-sheen {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.02) 100%);
-          pointer-events: none;
-          z-index: 2;
-        }
-
-        .id-card-sheen-back {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0.03) 100%);
-          pointer-events: none;
-          z-index: 2;
-        }
-
-        /* Gold metallic chip styling */
-        .id-card-chip-gold {
-          width: 36px;
-          height: 27px;
-          border-radius: 6px;
-          position: relative;
-          background: linear-gradient(135deg, #f5c518 0%, #d4af37 50%, #b45309 100%);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.3);
-          border: 1px solid rgba(0,0,0,0.15);
-          overflow: hidden;
-        }
-
-        .id-card-chip-gold::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background-image: 
-            linear-gradient(90deg, transparent 50%, rgba(0,0,0,0.2) 50%),
-            linear-gradient(0deg, transparent 50%, rgba(0,0,0,0.2) 50%);
-          background-size: 8px 8px;
-        }
-
-        /* Keyframe for rotating rainbow ring */
         @keyframes rainbow-rotate {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-
-        /* Avatar selection grid dynamic styling */
-        .avatar-option:hover {
-          transform: scale(1.06) !important;
-          border-color: #f5c518 !important;
+        .stat-card {
+          background: var(--bg-surface);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          transition: all 0.2s ease;
         }
-
-        /* Minor staggers and shadows */
-        .fade-in {
-          animation: fade-in-anim 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        .stat-card:hover {
+          border-color: #f5c518;
+          transform: translateY(-2px);
         }
-        @keyframes fade-in-anim {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+        .action-btn {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 16px;
+          background: var(--bg-surface);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          color: var(--text-1);
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
-
-        .profile-btn-action:hover {
-          background: var(--bg-elevated) !important;
-          transform: translateX(2px);
+        .action-btn:hover {
+          background: rgba(245, 197, 24, 0.05);
+          border-color: #f5c518;
+          color: #f5c518;
+        }
+        .badge-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+          gap: 12px;
+        }
+        .badge-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          text-align: center;
+          opacity: 0.4;
+          filter: grayscale(1);
+        }
+        .badge-item.unlocked {
+          opacity: 1;
+          filter: grayscale(0);
         }
       `}</style>
 
-      {/* ─── DIGITAL MEMBER ID CARD SECTION ─────────────────────── */}
-      <div className="card" style={{ padding: '16px 14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <ShieldCheck size={16} style={{ color: '#f5c518' }} /> Verified Member ID Badge
-          </span>
-          
-          {/* Segmented Control Switcher Pill */}
-          <div style={{ display: 'flex', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '99px', padding: '3px', gap: '2px', position: 'relative', width: '124px', height: '28px' }}>
-            <div style={{
-              position: 'absolute',
-              top: '3px',
-              bottom: '3px',
-              left: isFlipped ? 'calc(50% + 1px)' : '3px',
-              width: 'calc(50% - 4px)',
-              background: '#f5c518',
-              borderRadius: '99px',
-              transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              zIndex: 0
-            }} />
-            {['Front', 'Back'].map((face, idx) => {
-              const isFaceActive = (idx === 0 && !isFlipped) || (idx === 1 && isFlipped);
-              return (
-                <button
-                  key={face}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setIsFlipped(idx === 1); }}
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font)',
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    color: isFaceActive ? '#07090d' : 'var(--text-2)',
-                    zIndex: 1,
-                    textAlign: 'center',
-                    transition: 'color 0.25s'
-                  }}
-                >
-                  {face}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <p style={{ fontSize: '11.5px', color: 'var(--text-3)', margin: '0 0 14px 0', lineHeight: 1.4 }}>
-          Flip your vertical physical-frame ID to access system scan codes, deposit addresses, or locked confidential KYC document records. Click the badge to flip.
-        </p>
-
-        {/* Lanyard Holder Frame Assembly */}
-        <div className="lanyard-holder">
-          
-          {/* Lanyard top straps */}
-          <div className="lanyard-connector">
-            <div className="lanyard-strap" />
-            <div className="lanyard-clip" />
-          </div>
-
-          {/* Physical casing border */}
-          <div className="lanyard-frame">
-            <div className="lanyard-slot" />
-
-            {/* Interactive 3D Perspective Card Container */}
-            <div className="id-card-perspective" onClick={() => setIsFlipped(!isFlipped)}>
-              <div className={`id-card-inner ${isFlipped ? 'flipped' : ''}`}>
-                
-                {/* ─── FRONT FACE (Obsidian Dark) ─── */}
-                <div className="id-card-front id-card-front-obsidian">
-                  <div className="id-card-sheen" />
-                  
-                  {/* Gray constellation network nodes background */}
-                  <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.12 }} xmlns="http://www.w3.org/2000/svg">
-                    <line x1="20" y1="40" x2="80" y2="120" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="80" y1="120" x2="220" y2="90" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="220" y1="90" x2="160" y2="220" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="160" y1="220" x2="40" y2="300" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="40" y1="300" x2="120" y2="380" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="120" y1="380" x2="250" y2="340" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="220" y1="90" x2="250" y2="210" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="250" y1="210" x2="160" y2="220" stroke="#ffffff" strokeWidth="0.5" />
-                    <line x1="160" y1="220" x2="250" y2="340" stroke="#ffffff" strokeWidth="0.5" />
-                    
-                    <circle cx="20" cy="40" r="3.5" fill="#f5c518" />
-                    <circle cx="80" cy="120" r="2.5" fill="#ffffff" />
-                    <circle cx="220" cy="90" r="3" fill="#ffffff" />
-                    <circle cx="160" cy="220" r="4" fill="#f5c518" />
-                    <circle cx="40" cy="300" r="2" fill="#ffffff" />
-                    <circle cx="120" cy="380" r="3" fill="#ffffff" />
-                    <circle cx="250" cy="340" r="4.5" fill="#00d4a0" />
-                    <circle cx="250" cy="210" r="2" fill="#ffffff" />
-                  </svg>
-
-                  {/* Top brand header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 3, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ fontSize: '26px', fontWeight: 900, color: '#f5c518', fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>E.</span>
-                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.12em', fontFamily: "'Inter', sans-serif" }}>ETHIOSWAP</span>
-                    </div>
-                    {user.kycStatus === 'approved' ? (
-                      <span style={{ fontSize: '8.5px', fontWeight: 900, color: '#00d4a0', background: 'rgba(0, 212, 160, 0.12)', border: '1px solid rgba(0, 212, 160, 0.25)', padding: '2px 8px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✓ VERIFIED</span>
-                    ) : (
-                      <span style={{ fontSize: '8.5px', fontWeight: 900, color: '#f5c518', background: 'rgba(245, 197, 24, 0.12)', border: '1px solid rgba(245, 197, 24, 0.25)', padding: '2px 8px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>PENDING</span>
-                    )}
-                  </div>
-
-                  {/* Core middle section */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', zIndex: 3, margin: '14px 0' }}>
-                    
-                    {/* Gold card chip on upper-left */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div className="id-card-chip-gold" />
-                        
-                        {/* QR Code in white rounded container */}
-                        <div style={{
-                          background: '#ffffff',
-                          padding: '6px',
-                          borderRadius: '12px',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                          display: 'inline-block',
-                          border: '1.5px solid rgba(255,255,255,0.1)'
-                        }}>
-                          <img src={qrCodeUrl} alt="QR" style={{ width: '84px', height: '84px', display: 'block', borderRadius: '4px' }} />
-                        </div>
-                      </div>
-
-                      {/* Grayscale Avatar on the Right side */}
-                      <div style={{
-                        width: '125px',
-                        height: '160px',
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                        background: 'linear-gradient(135deg, #111318 0%, #1e293b 100%)',
-                        border: '2px solid rgba(255,255,255,0.08)',
-                        boxShadow: '0 12px 28px rgba(0,0,0,0.4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative'
-                      }}>
-                        <img 
-                          src={userAvatar} 
-                          alt="ID Portrait" 
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover',
-                            filter: 'grayscale(100%) contrast(1.05)'
-                          }} 
-                        />
-                        {/* Overlay subtle diagonal lines */}
-                        <div style={{
-                          position: 'absolute',
-                          top: 0, left: 0, right: 0, bottom: 0,
-                          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 11px)',
-                          pointerEvents: 'none'
-                        }} />
-                      </div>
-                    </div>
-
-                    {/* Numeric ID overlay absolute */}
-                    <div style={{
-                      position: 'absolute',
-                      right: '12px',
-                      bottom: '-4px',
-                      fontFamily: 'monospace',
-                      fontSize: '11px',
-                      color: 'rgba(255,255,255,0.3)',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em'
-                    }}>
-                      NO. {user.numericId || '—'}
-                    </div>
-
-                  </div>
-
-                  {/* Lower section name and credentials */}
-                  <div style={{ zIndex: 3, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <div>
-                        {/* Stacked big name block */}
-                        <div style={{
-                          fontSize: '23px',
-                          fontWeight: 900,
-                          color: '#ffffff',
-                          lineHeight: '1.05',
-                          textTransform: 'uppercase',
-                          fontFamily: "'Inter', sans-serif",
-                          letterSpacing: '-0.02em',
-                          maxWidth: '180px',
-                          wordWrap: 'break-word'
-                        }}>
-                          {firstName}
-                          <br />
-                          {lastName}
-                        </div>
-                        {/* Gold Italic Role */}
-                        <div style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: '#f5c518',
-                          fontStyle: 'italic',
-                          marginTop: '4px',
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase'
-                        }}>
-                          P2P TRADER
-                        </div>
-                      </div>
-
-                      {/* Small text right */}
-                      <div style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: '8.5px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
-                        <div>ETHADDRESS</div>
-                        <div style={{ color: '#ffffff', fontWeight: 600 }}>{ethAddr.substring(0, 8)}...</div>
-                      </div>
-                    </div>
-
-                    {/* Footer web address */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', fontSize: '8px', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-                      <span>🛡️ SECURED CRYPTOGRAPHIC BADGE</span>
-                      <span style={{ color: '#f5c518' }}>WWW.ETHIOSWAP.COM</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ─── BACK FACE (Prism Silver-White) ─── */}
-                <div className="id-card-back id-card-back-prism">
-                  <div className="id-card-sheen-back" />
-                  
-                  {/* Top Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '8px', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '20px', fontWeight: 900, color: '#0b0c10', fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>E.</span>
-                      <span style={{ fontSize: '9px', fontWeight: 800, color: '#0b0c10', letterSpacing: '0.05em' }}>SECURE STORAGE</span>
-                    </div>
-                    <span style={{ fontSize: '8px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>KYC IDENTITY DATA</span>
-                  </div>
-
-                  {/* Body Details in white aesthetic */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '10px' }}>
-                    
-                    <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#6b7280' }}>Handle:</span>
-                          <strong style={{ color: '#0b0c10' }}>@{user.username}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#6b7280' }}>Joined:</span>
-                          <span style={{ color: '#0b0c10', fontWeight: 500 }}>{joinDate}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#6b7280' }}>User ID:</span>
-                          <span style={{ color: '#0b0c10', fontWeight: 500 }}>#{user.numericId || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address boxes in white */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.02em' }}>ERC20 USDT Receive Address</div>
-                      <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '6px', padding: '6px', fontFamily: 'monospace', fontSize: '9px', color: '#1f2937', wordBreak: 'break-all', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{ethAddr}</span>
-                      </div>
-
-                      <div style={{ fontSize: '8.5px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: '2px' }}>TRC20 USDT Receive Address</div>
-                      <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '6px', padding: '6px', fontFamily: 'monospace', fontSize: '9px', color: '#1f2937', wordBreak: 'break-all' }}>
-                        {tronAddr || '—'}
-                      </div>
-                    </div>
-
-                    {/* KYC Scans Container */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, justifyContent: 'center' }}>
-                      {user.kycIdFront || user.kycIdBack || user.kycDocument ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', height: '110px' }}>
-                          <div style={{ display: 'flex', gap: '6px', height: '100%' }}>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '8px', color: '#6b7280', fontWeight: 700, textAlign: 'center' }}>ID FRONT</span>
-                              {user.kycIdFront ? (
-                                <img src={user.kycIdFront} style={{ width: '100%', height: '80px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)' }} alt="Front Scan" />
-                              ) : (
-                                <div style={{ flex: 1, borderRadius: '6px', background: 'rgba(0,0,0,0.03)', border: '1px dashed rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#9ca3af' }}>None</div>
-                              )}
-                            </div>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '8px', color: '#6b7280', fontWeight: 700, textAlign: 'center' }}>ID BACK</span>
-                              {user.kycIdBack || user.kycDocument ? (
-                                <img src={user.kycIdBack || user.kycDocument} style={{ width: '100%', height: '80px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)' }} alt="Back Scan" />
-                              ) : (
-                                <div style={{ flex: 1, borderRadius: '6px', background: 'rgba(0,0,0,0.03)', border: '1px dashed rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#9ca3af' }}>None</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.02)',
-                          border: '1.5px dashed rgba(0,0,0,0.1)',
-                          borderRadius: '12px',
-                          padding: '12px',
-                          color: '#4b5563',
-                          textAlign: 'center',
-                          height: '92px'
-                        }}>
-                          <Lock size={16} style={{ color: '#6b7280', marginBottom: '4px' }} />
-                          <strong style={{ fontSize: '9.5px', color: '#0b0c10' }}>Confidential Records Locked</strong>
-                          <span style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>Scanned ID documents are hidden for security.</span>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                  {/* Footer Back */}
-                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '8px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8px', color: '#6b7280', fontFamily: 'monospace' }}>
-                    <span>🔐 CONFIDENTIAL DOCUMENT STORAGE</span>
-                    <span>TAP TO FLIP 🔄</span>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      {/* ─── REDESIGNED PROFILE HEADER (Noah Thompson Sky-Clouds layout) ─── */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+      {/* ─── TOP HEADER: AVATAR & BASIC INFO ──────────────────── */}
+      <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* Background Glow */}
+        <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 197, 24, 0.15) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
         
-        {/* Sky banner background */}
-        <div style={{
-          width: '100%',
-          height: '110px',
-          background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #c7d2fe 100%)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Action change avatar button floating */}
-          <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
-            <button
-              onClick={() => setShowAvatarPicker(true)}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                cursor: 'pointer',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s'
-              }}
-              className="avatar-option"
-              title="Change Avatar"
-            >
-              <Settings size={16} />
-            </button>
-          </div>
-          
-          {/* Abstract vector cloud details */}
-          <div style={{ position: 'absolute', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', top: '40px', left: '10%' }} />
-          <div style={{ position: 'absolute', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', top: '20px', left: '25%', filter: 'blur(6px)' }} />
-          <div style={{ position: 'absolute', width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)', top: '50px', right: '15%', filter: 'blur(4px)' }} />
-        </div>
-
-        {/* Overlapping Avatar wrapped in Rotating Rainbow Gradient border */}
-        <div style={{
-          position: 'relative',
-          marginTop: '-46px',
-          zIndex: 2,
-          display: 'flex',
-          justifyContent: 'center'
-        }}>
-          <div className="rainbow-ring" onClick={() => setShowAvatarPicker(true)} style={{
-            cursor: 'pointer',
-            padding: '3.5px',
-            borderRadius: '50%',
-            background: 'linear-gradient(45deg, #00d4a0, #f5c518, #3b82f6, #ec4899, #00d4a0)',
-            backgroundSize: '200% 200%',
-            animation: 'rainbow-rotate 4s linear infinite',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <img
-              src={userAvatar}
-              style={{
-                width: '84px',
-                height: '84px',
-                borderRadius: '50%',
-                background: 'var(--bg-surface)',
-                border: '2px solid var(--bg-surface)',
-                objectFit: 'cover'
-              }}
-              alt="Profile Avatar"
+        <div style={{ position: 'relative', marginBottom: '16px' }}>
+          <div className="rainbow-ring" style={{ width: '100px', height: '100px' }}>
+            <img 
+              src={userAvatar} 
+              alt="Avatar" 
+              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-surface)', border: '2px solid var(--bg-surface)' }} 
             />
-            {/* Tiny Edit Overlay Pencil Badge */}
-            <div style={{
-              position: 'absolute',
-              bottom: '0',
-              right: '2px',
-              background: '#f5c518',
-              border: '2px solid var(--bg-surface)',
-              borderRadius: '50%',
-              width: '20px',
-              height: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
-              color: '#07090d',
-              fontWeight: 800
-            }}>
-              +
+          </div>
+          {user.is_verified_trader && (
+            <div style={{ position: 'absolute', bottom: '2px', right: '2px', background: '#00d4a0', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-surface)', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
+              <Check size={14} strokeWidth={4} />
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Content text */}
-        <div style={{ textAlign: 'center', padding: '12px 18px 24px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '2px', color: '#ffffff', letterSpacing: '-0.02em' }}>
-            {fullName}
-          </h2>
-          <p style={{ fontSize: '13px', fontWeight: 700, color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', letterSpacing: '0.04em' }}>
-            @{user.username}
-            {user.kycStatus === 'approved' && <span style={{ color: '#00d4a0', fontSize: '13px', fontWeight: 900 }} title="Verified P2P Trader">✓</span>}
-          </p>
-          <p style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '4px' }}>
-            Joined {joinDate} · {user.role === 'admin' ? '👑 Admin' : '👤 Trader'}
-          </p>
-          <div style={{ marginTop: '12px' }}>
-            {kycStatusBadge()}
-          </div>
+        <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '4px', color: 'var(--text-1)' }}>
+          @{user.username} {user.is_verified_trader && <span style={{ color: '#00d4a0' }}>✅</span>}
+        </h2>
+        
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+          {user.badge_level && user.badge_level !== 'none' && (
+            <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', border: '1px solid rgba(245, 197, 24, 0.2)' }}>
+              {user.badge_level.toUpperCase()} TRADER
+            </span>
+          )}
+          <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+            🔥 {user.current_streak || 0} DAY STREAK
+          </span>
         </div>
 
+        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+          <button onClick={() => setShowEditProfile(true)} className="btn btn-ghost" style={{ flex: 1, padding: '10px' }}>
+            <User size={16} /> Edit Profile
+          </button>
+          <button onClick={() => setShowReferralDash(true)} className="btn btn-ghost" style={{ flex: 1, padding: '10px' }}>
+            <ExternalLink size={16} /> Share & Earn
+          </button>
+        </div>
       </div>
 
-      {/* ─── STYLISH STATS ROW CAPSULE (Noah Thompson Card style) ─── */}
-      <div style={{
-        display: 'flex',
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid var(--border)',
-        borderRadius: '16px',
-        padding: '12px 6px',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        marginTop: '-2px'
-      }}>
-        {[
-          { label: 'USD Balance', value: wallet ? `$${wallet.ethAvailable?.toFixed(2) || '0.00'}` : '—' },
-          { label: 'Total Trades', value: user.totalTrades ?? 0 },
-          { label: 'Reputation', value: `${user.reputation ?? 100}%` },
-        ].map((s, i, arr) => (
-          <div key={i} style={{
-            flex: 1,
-            textAlign: 'center',
-            borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none'
-          }}>
-            <div style={{ fontSize: '16px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.01em' }}>{s.value}</div>
-            <div style={{ fontSize: '9px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px', fontWeight: 700 }}>{s.label}</div>
+      {/* ─── BALANCE & POINTS ──────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="stat-card">
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Available Balance</span>
+          <div style={{ fontSize: '24px', fontWeight: 900, color: '#00d4a0' }}>${user.ethBalance.toFixed(2)}</div>
+          <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>USD Escrow Wallet</span>
+        </div>
+        <div className="stat-card" onClick={() => setShowLoyaltyHistory(true)} style={{ cursor: 'pointer' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Loyalty Points</span>
+          <div style={{ fontSize: '24px', fontWeight: 900, color: '#f5c518' }}>{user.loyalty_points || 0} pts</div>
+          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '6px' }}>
+            <div style={{ width: `${Math.min(100, ((user.loyalty_points || 0) % 1000) / 10)}%`, height: '100%', background: '#f5c518', borderRadius: '2px' }} />
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* ─── WALLET ADDRESS CARD ────────────────────────────────── */}
-      <div className="card" style={{ padding: '16px 14px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-1)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Wallet size={16} style={{ color: '#f5c518' }} /> P2P Receive Wallet Address
-        </div>
-        
-        <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-2)', wordBreak: 'break-all', letterSpacing: '0.02em', lineHeight: 1.4 }}>
-          {user.ethAddress || '—'}
-        </div>
-        
-        <button 
-          onClick={() => { 
-            navigator.clipboard.writeText(user.ethAddress || ''); 
-            alert('Address copied to clipboard!');
-          }} 
-          style={{ 
-            marginTop: '10px', 
-            background: 'rgba(245, 197, 24, 0.06)', 
-            border: '1px solid rgba(245, 197, 24, 0.15)', 
-            color: '#f5c518', 
-            fontSize: '11.5px', 
-            fontWeight: 700, 
-            cursor: 'pointer', 
-            borderRadius: '8px',
-            padding: '6px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s'
-          }}
-          className="avatar-option"
-        >
-          <Copy size={13} /> Copy Secure Address
+      {/* ─── QUICK ACTIONS ─────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <button className="action-btn" onClick={() => {/* handle deposit */}}>
+          <div style={{ background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', padding: '10px', borderRadius: '12px' }}>
+            <Plus size={24} />
+          </div>
+          <span>Deposit</span>
+        </button>
+        <button className="action-btn" onClick={() => triggerSecurity('withdraw')}>
+          <div style={{ background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', padding: '10px', borderRadius: '12px' }}>
+            <RefreshCw size={24} />
+          </div>
+          <span>Withdraw</span>
+        </button>
+        <button className="action-btn" onClick={() => {/* navigate to trades */}}>
+          <div style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '10px', borderRadius: '12px' }}>
+            <ChevronRight size={24} />
+          </div>
+          <span>Trade</span>
         </button>
       </div>
 
-      {/* ─── IDENTITY VERIFICATION TRACK ───────────────────────── */}
-      <div className="card" style={{ padding: '16px 14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Shield size={16} style={{ color: '#f5c518' }} /> Identity KYC Verification Track
+      {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Performance Stats</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Total Completed Trades</span>
+            <span style={{ fontWeight: 700 }}>{user.totalTrades || 0} trades</span>
           </div>
-          {kycStatusBadge()}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Trust Reputation</span>
+            <span style={{ fontWeight: 700, color: '#00d4a0' }}>{user.reputation || 100}% Rating</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Member Since</span>
+            <span style={{ fontWeight: 700 }}>{joinDate}</span>
+          </div>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {kycSteps.map((step, i) => (
-            <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: i < kycSteps.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ 
-                width: '28px', 
-                height: '28px', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '11px', 
-                fontWeight: 800, 
-                background: step.done ? 'var(--status-success-bg)' : 'var(--bg-elevated)', 
-                border: `1px solid ${step.done ? 'var(--status-success-border)' : 'var(--border)'}`, 
-                color: step.done ? 'var(--status-success-text)' : 'var(--text-3)', 
-                flexShrink: 0 
-              }}>
-                {step.done ? '✓' : i + 1}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '12.5px', fontWeight: step.done ? 700 : 500, color: step.done ? 'var(--text-1)' : 'var(--text-3)' }}>{step.label}</div>
-              </div>
-              {step.done ? (
-                <span style={{ fontSize: '9px', fontWeight: 700, color: '#00d4a0', background: 'rgba(0, 212, 160, 0.1)', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>Done</span>
-              ) : (
-                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>Locked</span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Verification Action / Alerts */}
-        {user.kycStatus !== 'approved' && (
-          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {user.kycStatus === 'rejected' && user.kycRejectionReason && (
-              <div className="fade-in" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#fca5a5', lineHeight: 1.4, display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <AlertTriangle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <span style={{ fontWeight: 800 }}>Verification Rejected:</span> {user.kycRejectionReason}
-                </div>
-              </div>
-            )}
-            
-            {user.kycStatus === 'pending' || user.kycStep === 'pending' ? (
-              <div style={{ background: 'rgba(245,197,24,0.06)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#fde68a', fontWeight: 500, display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <RefreshCw size={14} className="rainbow-ring" style={{ borderRadius: '50%', padding: '1px', animation: 'rainbow-rotate 2s linear infinite' }} />
-                <span>Your KYC files are currently under administrator review.</span>
-              </div>
-            ) : (
-              <button onClick={() => setShowKYC(true)} className="btn btn-gold btn-full btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px' }}>
-                <Shield size={14} /> {user.kycStatus === 'rejected' ? 'Restart Identity Verification' : 'Start Identity Verification'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {user.kycStatus === 'approved' && (
-          <div style={{ marginTop: '12px', background: 'rgba(0, 212, 160, 0.06)', border: '1px solid rgba(0, 212, 160, 0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#6ee7b7', fontWeight: 600, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <ShieldCheck size={14} /> Identity is fully authenticated. Ready to trade.
-          </div>
-        )}
       </div>
 
-      {/* ─── SAVED PAYMENT ACCOUNTS (Verified only) ─────────────── */}
-      {user.kycStatus === 'approved' && (
-        <div className="card" style={{ padding: '16px 14px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-1)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Landmark size={16} style={{ color: '#f5c518' }} /> Saved Local Payout Accounts
+      {/* ─── SECURITY SECTION: ID DOCUMENTS ──────────────────── */}
+      <div className="card" style={{ padding: '20px', border: '1px dashed var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Lock size={20} style={{ color: 'var(--text-3)' }} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-1)' }}>Confidential ID Data</h4>
+              <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>Protected by security lock</p>
+            </div>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '12px', lineHeight: 1.4 }}>
-            Link bank or wallet payout nodes to automatically collect local ETB when executing Buy requests.
-          </p>
+          <button 
+            onClick={() => triggerSecurity('view_docs')}
+            className="btn btn-sm btn-ghost"
+            style={{ padding: '8px 16px', borderRadius: '8px' }}
+          >
+            🪪 View Documents
+          </button>
+        </div>
+      </div>
 
-          {/* List of active payout channels */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-            {(user.paymentAccounts || []).length === 0 ? (
-              <div style={{ padding: '16px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-3)' }}>
-                No active payout accounts configured yet.
+      {/* ─── BADGES & ACHIEVEMENTS ───────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '20px', color: 'var(--text-1)' }}>Badges & Achievements</h3>
+        <div className="badge-grid">
+          {[
+            { id: 'bronze', icon: '🥉', label: 'Bronze' },
+            { id: 'silver', icon: '🥈', label: 'Silver' },
+            { id: 'gold', icon: '🥇', label: 'Gold' },
+            { id: 'diamond', icon: '💎', label: 'Diamond' },
+            { id: 'legend', icon: '👑', label: 'Legend' },
+            { id: 'verified', icon: '✅', label: 'Verified' },
+            { id: 'streak_7', icon: '🔥', label: '7 Day' },
+            { id: 'streak_30', icon: '⚡', label: '30 Day' },
+          ].map(b => {
+            const isUnlocked = 
+              (b.id === 'bronze' && (user.totalTrades || 0) >= 5) ||
+              (b.id === 'silver' && (user.totalTrades || 0) >= 20) ||
+              (b.id === 'gold' && (user.totalTrades || 0) >= 50) ||
+              (b.id === 'diamond' && (user.totalTrades || 0) >= 100) ||
+              (b.id === 'legend' && (user.totalTrades || 0) >= 500) ||
+              (b.id === 'verified' && user.is_verified_trader) ||
+              (b.id === 'streak_7' && (user.longest_streak || 0) >= 7) ||
+              (b.id === 'streak_30' && (user.longest_streak || 0) >= 30);
+            
+            return (
+              <div key={b.id} className={`badge-item ${isUnlocked ? 'unlocked' : ''}`}>
+                <div style={{ fontSize: '32px' }}>{b.icon}</div>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)' }}>{b.label}</span>
               </div>
-            ) : (
-              (user.paymentAccounts || []).map((acc) => {
-                const matched = SUPPORTED_BANKS.find(b => b.id === acc.bankName);
-                return (
-                  <div key={acc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', transition: 'all 0.2s' }} className="profile-btn-action">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                      <span style={{ fontSize: '16px' }}>{matched?.icon || '🏦'}</span>
-                      <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-1)' }}>
-                          {matched?.label || acc.bankName}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '2px', fontFamily: 'monospace' }}>
-                          Acc: <span style={{ color: '#ffffff', fontWeight: 700 }}>{acc.accountNumber}</span> · Holder: <span style={{ fontFamily: 'var(--font)' }}>{acc.holderName}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => handleDeleteAccount(acc.id)} 
-                      style={{ 
-                        padding: '6px 10px', 
-                        background: 'rgba(239, 68, 68, 0.08)', 
-                        color: '#fca5a5', 
-                        border: '1px solid rgba(239,68,68,0.2)', 
-                        borderRadius: '6px', 
-                        fontSize: '10.5px', 
-                        fontWeight: 700, 
-                        cursor: 'pointer' 
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
+            );
+          })}
+        </div>
+      </div>
 
-          {/* Add account panel toggler */}
-          {!showAddAcc ? (
-            <button 
-              onClick={() => setShowAddAcc(true)} 
-              className="btn btn-outline btn-full btn-sm"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px' }}
-            >
-              <Plus size={14} /> Link New Payout Channel
-            </button>
-          ) : (
-            <form onSubmit={handleAddAccount} style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.04em' }}>New Channel Configuration</span>
-                <button type="button" onClick={() => setShowAddAcc(false)} style={{ fontSize: '11.5px', color: 'var(--text-3)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              </div>
+      {/* ─── PROFILE CUSTOMIZATION ───────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Profile Customization</h3>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => setShowAvatarPicker(true)} className="btn btn-ghost" style={{ flex: 1, fontSize: '12px' }}>
+            🎨 Change Avatar
+          </button>
+          <button className="btn btn-ghost" style={{ flex: 1, fontSize: '12px' }}>
+            ✨ Unlock Borders
+          </button>
+        </div>
+      </div>
 
-              <div className="input-group">
-                <label className="input-label" style={{ fontSize: '9.5px', color: 'var(--text-3)' }}>Select Financial Node</label>
-                <select value={newBank} onChange={e => setNewBank(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12.5px' }}>
-                  {SUPPORTED_BANKS.map(b => (
-                    <option key={b.id} value={b.id}>{b.icon} {b.label}</option>
-                  ))}
-                </select>
-              </div>
+      {/* ─── SECURITY LOCK MODAL ───────────────────────────────── */}
+      {showSecurityLock && (
+        <SecurityLock 
+          onVerify={handleSecurityVerify} 
+          onClose={() => setShowSecurityLock(false)} 
+        />
+      )}
 
-              <div className="input-group">
-                <label className="input-label" style={{ fontSize: '9.5px', color: 'var(--text-3)' }}>Account Identifier / Wallet Phone</label>
-                <input type="text" required value={newAccNum} onChange={e => setNewAccNum(e.target.value)} placeholder="e.g. 100029384849 or 0912345678" style={{ width: '100%', padding: '9px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12.5px' }} />
-              </div>
-
-              <div className="input-group">
-                <label className="input-label" style={{ fontSize: '9.5px', color: 'var(--text-3)' }}>Holder Legitimate Name</label>
-                <input type="text" required value={newHolder} onChange={e => setNewHolder(e.target.value)} placeholder="e.g. Abebe Kebede" style={{ width: '100%', padding: '9px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12.5px' }} />
-              </div>
-
-              <button type="submit" className="btn btn-gold btn-full btn-sm" style={{ marginTop: '4px', padding: '9px' }}>
-                Securely Register Payout Channel
+      {/* ─── REFERRAL DASHBOARD MODAL ──────────────────────────── */}
+      {showReferralDash && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowReferralDash(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-1)' }}>Referral Dashboard</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Invite friends and earn points + free trades!</p>
+            
+            <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700 }}>Your Unique Code</span>
+              <div style={{ fontSize: '24px', fontWeight: 900, color: '#f5c518', margin: '4px 0' }}>{user.referral_code}</div>
+              <button 
+                onClick={() => { navigator.clipboard.writeText(user.referral_code); alert('Copied!'); }}
+                className="btn btn-sm btn-gold" style={{ marginTop: '8px' }}
+              >
+                <Copy size={14} /> Copy Code
               </button>
-            </form>
-          )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-base)', borderRadius: '12px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800 }}>{referralStats?.totalReferrals || 0}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Total Referrals</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-base)', borderRadius: '12px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#00d4a0' }}>{referralStats?.completedReferrals || 0}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Completed</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-full" style={{ background: '#25D366', color: '#fff', fontSize: '12px' }}>WhatsApp</button>
+              <button className="btn btn-full" style={{ background: '#0088cc', color: '#fff', fontSize: '12px' }}>Telegram</button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ─── SYSTEM ACCOUNT PARAMETERS ─────────────────────────── */}
-      <div className="card" style={{ padding: '16px 14px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-1)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <User size={16} style={{ color: '#f5c518' }} /> Account System Parameters
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {[
-            { label: 'Username', value: `@${user.username}` },
-            { label: 'Phone Registry', value: user.phone || '—' },
-            { label: 'Role Authority', value: user.role === 'admin' ? '👑 Admin Privileges' : '👤 Standard Trader' },
-            { label: 'Node Activity', value: user.lastActive ? new Date(user.lastActive).toLocaleString() : '—' },
-          ].map((row, i, arr) => (
-            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <span style={{ fontSize: '12.5px', color: 'var(--text-2)' }}>{row.label}</span>
-              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-1)' }}>{row.value}</span>
+      {/* ─── LOYALTY HISTORY MODAL ─────────────────────────────── */}
+      {showLoyaltyHistory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <button onClick={() => setShowLoyaltyHistory(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '4px', color: 'var(--text-1)' }}>Loyalty Points History</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Your earned and spent points log.</p>
+            
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {loyaltyInfo?.history?.length > 0 ? loyaltyInfo.history.map((h, i) => (
+                <div key={i} style={{ padding: '12px', background: 'var(--bg-base)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700 }}>{h.reason}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{new Date(h.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: h.points > 0 ? '#00d4a0' : '#ef4444' }}>
+                    {h.points > 0 ? '+' : ''}{h.points}
+                  </div>
+                </div>
+              )) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>No history yet.</div>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ─── INTERACTIVE ILLUSTRATED AVATAR SELECTOR MODAL ────── */}
-      {showAvatarPicker && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(7, 9, 13, 0.85)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }} className="fade-in">
-          <div className="card" style={{ width: '100%', maxWidth: '380px', padding: '20px', position: 'relative', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}>
-            
-            <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#ffffff', marginBottom: '4px', letterSpacing: '-0.01em' }}>Choose Trading Persona</h3>
-            <p style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '16px', lineHeight: 1.4 }}>
-              Select a premium illustrated custom character to represent your profile and physical ID badge.
-            </p>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
-              {AVATAR_TEMPLATES.map((avatar) => {
-                const dataUrl = getAvatarUrl(avatar.svg);
-                const isSelected = user.kycSelfie === avatar.svg;
-                return (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => {
-                      if (onUserUpdate) onUserUpdate({ kycSelfie: avatar.svg });
-                      setShowAvatarPicker(false);
-                    }}
-                    style={{
-                      background: 'var(--bg-base)',
-                      border: isSelected ? '2px solid #f5c518' : '1px solid var(--border)',
-                      borderRadius: '14px',
-                      padding: '8px 4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s',
-                      transform: isSelected ? 'scale(1.04)' : 'none',
-                      boxShadow: isSelected ? '0 0 10px rgba(245, 197, 24, 0.15)' : 'none'
-                    }}
-                    className="avatar-option"
-                  >
-                    <img src={dataUrl} style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--bg-surface)' }} alt={avatar.name} />
-                    <span style={{ 
-                      fontSize: '8.5px', 
-                      fontWeight: 800, 
-                      color: isSelected ? '#f5c518' : 'var(--text-2)', 
-                      textAlign: 'center', 
-                      whiteSpace: 'nowrap', 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      width: '100%',
-                      maxWidth: '68px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.01em'
-                    }}>
-                      {avatar.name.split(' ')[0]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => setShowAvatarPicker(false)}
-              className="btn btn-outline btn-full btn-sm"
-              style={{ width: '100%', padding: '8px' }}
-            >
-              Close System Console
+            <button onClick={() => {/* open rewards shop */}} className="btn btn-gold btn-full" style={{ marginTop: '20px' }}>
+              Redeem Points for Rewards
             </button>
           </div>
         </div>
@@ -1304,6 +743,98 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             if (onUserUpdate) onUserUpdate(updatedUser);
           }}
         />
+      )}
+
+      {/* ─── EDIT PROFILE MODAL ─────────────────────────────────── */}
+      {showEditProfile && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowEditProfile(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
+              ✕
+            </button>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px', color: 'var(--text-1)' }}>Edit Profile</h3>
+            
+            <form onSubmit={handleEditProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Full Name</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={editName} 
+                  onChange={e => setEditName(e.target.value)} 
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Phone Number</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={editPhone} 
+                  onChange={e => setEditPhone(e.target.value)} 
+                  placeholder="Enter phone number"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Email Address</label>
+                <input 
+                  type="email" 
+                  className="input" 
+                  value={editEmail} 
+                  onChange={e => setEditEmail(e.target.value)} 
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>New Password (leave blank to keep current)</label>
+                <input 
+                  type="password" 
+                  className="input" 
+                  value={editPassword} 
+                  onChange={e => setEditPassword(e.target.value)} 
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-gold btn-full" 
+                disabled={editLoading}
+                style={{ marginTop: '10px' }}
+              >
+                {editLoading ? 'Saving Changes...' : 'Save Profile Updates'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── LIGHTBOX MODAL ─────────────────────────────────────── */}
+      {activeLightboxImage && (
+        <div 
+          onClick={() => setActiveLightboxImage(null)}
+          style={{ 
+            position: 'fixed', inset: 0, background: 'rgba(5, 7, 12, 0.95)', zIndex: 4000, 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', 
+            backdropFilter: 'blur(10px)', animation: 'fadeIn 0.2s ease-out', cursor: 'zoom-out'
+          }}
+        >
+          <img 
+            src={activeLightboxImage} 
+            alt="Enlarged Document" 
+            style={{ 
+              maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', 
+              borderRadius: '12px', boxShadow: '0 20px 50px rgba(0,0,0,0.8)', 
+            }} 
+          />
+          <div style={{ position: 'absolute', top: '24px', right: '24px', color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>✕ Close</div>
+        </div>
       )}
 
     </div>

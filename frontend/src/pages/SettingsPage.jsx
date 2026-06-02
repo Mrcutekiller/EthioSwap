@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../supabaseClient';
+import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock } from 'lucide-react';
 
 /* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
 const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
@@ -201,8 +204,18 @@ const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
 };
 
 const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
+  const { t, i18n } = useTranslation();
   const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
   const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
+  const [lang, setLang] = useState(i18n.language || 'en');
+
+  const changeLanguage = async (newLang) => {
+    i18n.changeLanguage(newLang);
+    setLang(newLang);
+    if (user) {
+      await supabase.from('users').update({ preferred_language: newLang }).eq('id', user.id);
+    }
+  };
 
   const toggleLockEnabled = () => {
     const next = !lockEnabled;
@@ -343,11 +356,72 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
   const currentPin = localStorage.getItem('ethioswap_lock_pin') || '123456';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '4px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: 800 }}>Settings</h2>
+        <h2 style={{ fontSize: '22px', fontWeight: 800 }}>{t('Settings')}</h2>
+      </div>
+
+      {/* Language Selector */}
+      <div className="card">
+        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Globe size={16} /> Language / ቋንቋ
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={() => changeLanguage('en')}
+            className={`btn ${lang === 'en' ? 'btn-gold' : 'btn-ghost'}`}
+            style={{ flex: 1 }}
+          >
+            English
+          </button>
+          <button 
+            onClick={() => changeLanguage('am')}
+            className={`btn ${lang === 'am' ? 'btn-gold' : 'btn-ghost'}`}
+            style={{ flex: 1 }}
+          >
+            አማርኛ
+          </button>
+        </div>
+      </div>
+
+      {/* 2FA Settings */}
+      <div className="card">
+        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Shield size={16} /> Two-Factor Authentication
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Enable 2FA</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Extra security for withdrawals and login</div>
+            </div>
+            <div
+              onClick={async () => {
+                const newState = !user.two_fa_enabled;
+                await supabase.from('users').update({ two_fa_enabled: newState }).eq('id', user.id);
+              }}
+              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.two_fa_enabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.two_fa_enabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+            >
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.two_fa_enabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+            </div>
+          </div>
+          
+          {user.two_fa_enabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-3)' }}>Verification Method</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button className={`btn btn-sm ${user.two_fa_method === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => supabase.from('users').update({ two_fa_method: 'email' }).eq('id', user.id)}>
+                  <Mail size={14} /> Email
+                </button>
+                <button className={`btn btn-sm ${user.two_fa_method === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => supabase.from('users').update({ two_fa_method: 'sms' }).eq('id', user.id)}>
+                  <Smartphone size={14} /> SMS
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
 
