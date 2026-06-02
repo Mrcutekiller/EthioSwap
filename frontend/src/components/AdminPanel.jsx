@@ -2297,8 +2297,8 @@ const AdminPanel = ({ user }) => {
                         </tr>
                       ) : filteredKyc.map(u => (
                         <tr
-                          key={u._id}
-                          onClick={() => setSelectedKycDetailId(u._id.toString())}
+                          key={u.id}
+                          onClick={() => setSelectedKycDetailId(u.id.toString())}
                           className="table-row-clickable"
                         >
                           <td>
@@ -2319,14 +2319,14 @@ const AdminPanel = ({ user }) => {
                           <td style={{ color: '#8b92a8' }}>{u.kycData?.age || 'N/A'}</td>
                           <td>
                             <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
-                              {u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}
+                              {u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}
                             </span>
                           </td>
                           <td>
                             <StatusBadge status={u.kycStatus} />
                           </td>
                           <td onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setSelectedKycDetailId(u._id.toString())} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                            <button onClick={() => setSelectedKycDetailId(u.id.toString())} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
                               Visual Checking →
                             </button>
                           </td>
@@ -2354,10 +2354,10 @@ const AdminPanel = ({ user }) => {
                     ⚖️ All disputes cleared. Excellent platform compliance!
                   </div>
                 ) : disputes.map(trade => (
-                  <div key={trade._id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div key={trade.id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade._id.toString().substring(0, 8).toUpperCase()}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade.id.toString().substring(0, 8).toUpperCase()}</div>
                         <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
                           Seller: <strong>@{trade.sellerUsername}</strong> | Buyer: <strong>@{trade.buyerUsername}</strong>
                         </div>
@@ -2380,10 +2380,10 @@ const AdminPanel = ({ user }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={() => handleDispute(trade._id.toString(), 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
+                      <button onClick={() => handleDispute(trade.id.toString(), 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
                         ✓ Force Release to Buyer (@{trade.buyerUsername})
                       </button>
-                      <button onClick={() => handleDispute(trade._id.toString(), 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
+                      <button onClick={() => handleDispute(trade.id.toString(), 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
                         ✗ Force Refund to Seller (@{trade.sellerUsername})
                       </button>
                     </div>
@@ -2559,7 +2559,7 @@ const AdminPanel = ({ user }) => {
                 u.username?.toLowerCase().includes(query) ||
                 u.email?.toLowerCase().includes(query) ||
                 u.phone?.toLowerCase().includes(query) ||
-                u._id?.toString().toLowerCase().includes(query);
+                u.id?.toString().toLowerCase().includes(query);
                 
               const isVerified = u.kycStatus === 'approved';
               const matchesKyc = userFilterKyc === 'all' ||
@@ -2637,9 +2637,9 @@ const AdminPanel = ({ user }) => {
                         </tr>
                       ) : filteredUsers.map(u => (
                         <tr
-                          key={u._id}
+                          key={u.id}
                           onClick={() => {
-                            setSelectedUserDetailId(u._id.toString());
+                            setSelectedUserDetailId(u.id.toString());
                             setUserDrawerTab('profile'); // Reset drawer sub-tabs
                           }}
                           className="table-row-clickable"
@@ -2687,7 +2687,7 @@ const AdminPanel = ({ user }) => {
                           <td onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => {
-                                setSelectedUserDetailId(u._id.toString());
+                                setSelectedUserDetailId(u.id.toString());
                                 setUserDrawerTab('profile');
                               }}
                               className="btn-premium-ghost"
@@ -2698,7 +2698,7 @@ const AdminPanel = ({ user }) => {
                             {!isMe && (
                               <button
                                 onClick={async () => {
-                                  if (await handleRemoveUser(u._id.toString(), u.username)) {
+                                  if (await handleRemoveUser(u.id.toString(), u.username)) {
                                     // Refresh or update local state if needed
                                   }
                                 }}
@@ -2784,7 +2784,7 @@ const AdminPanel = ({ user }) => {
                         }
 
                         return (
-                          <tr key={log._id}>
+                          <tr key={log.id}>
                             <td style={{ color: '#8b92a8', fontSize: '13px', whiteSpace: 'nowrap' }}>
                               {new Date(log.createdAt).toLocaleString()}
                             </td>
@@ -3054,7 +3054,7 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 3. KYC SUBMISSIONS DETAILS DRAWER ── */}
       {selectedKycDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord._id.toString() === selectedKycDetailId);
+        const u = allUsersList?.find(userRecord => userRecord.id.toString() === selectedKycDetailId);
         if (!u) return null;
         return (
           <>
@@ -3064,7 +3064,7 @@ const AdminPanel = ({ user }) => {
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🛡️ KYC Document Checking</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u._id.toString()}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u.id.toString()}</span>
                 </div>
                 <button onClick={() => setSelectedKycDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -3076,7 +3076,7 @@ const AdminPanel = ({ user }) => {
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
                   <KycImages 
-                    userId={u._id.toString()} 
+                    userId={u.id.toString()} 
                     getImageUrl={getImageUrl} 
                     onImageClick={setActiveLightboxImage} 
                     kycIdFront={u.kycIdFront}
@@ -3106,7 +3106,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>ID Card Number:</span>
                     <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>
-                      {u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}
+                      {u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}
                     </strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
@@ -3132,7 +3132,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u._id.toString());
+                        setMessageComposerUserId(u.id.toString());
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -3142,7 +3142,7 @@ const AdminPanel = ({ user }) => {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedUserDetailId(u._id.toString());
+                        setSelectedUserDetailId(u.id.toString());
                         setSelectedKycDetailId(null);
                         setUserDrawerTab('activity');
                       }}
@@ -3154,7 +3154,7 @@ const AdminPanel = ({ user }) => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u.id.toString(), !!u.isSuspended)}
                       className="btn-premium-ghost"
                       style={{ border: '1px solid rgba(255,255,255,0.07)', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
                     >
@@ -3162,7 +3162,7 @@ const AdminPanel = ({ user }) => {
                     </button>
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u._id.toString(), u.username)) {
+                        if (await handleRemoveUser(u.id.toString(), u.username)) {
                           setSelectedKycDetailId(null);
                         }
                       }}
@@ -3179,15 +3179,15 @@ const AdminPanel = ({ user }) => {
               {/* KYC Decisions Toolbar */}
               <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleKYC(u._id.toString(), true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u.id.toString(), true)} className="btn-premium-primary" style={{ flex: 1 }}>
                     ✓ Approve KYC
                   </button>
-                  <button onClick={() => handleKYC(u._id.toString(), false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u.id.toString(), false)} className="btn-premium-danger" style={{ flex: 1 }}>
                     ✗ Reject KYC
                   </button>
                 </div>
                 <button
-                  onClick={() => setResubmitUserId(u._id.toString())}
+                  onClick={() => setResubmitUserId(u.id.toString())}
                   className="btn-premium-warning"
                   style={{ width: '100%' }}
                 >
@@ -3202,16 +3202,16 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 4. COMPLETE USER DIRECTORY & MODERATION DRAWER ── */}
       {selectedUserDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord._id.toString() === selectedUserDetailId);
+        const u = allUsersList?.find(userRecord => userRecord.id.toString() === selectedUserDetailId);
         if (!u) return null;
 
-        const isMe = u._id.toString() === user?.id;
+        const isMe = u.id.toString() === user?.id;
         const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
         const etbVal = totalBal * rate;
 
         // Dynamic Calculations
-        const uDeposits = (allDepositReqs || []).filter(r => (r.userId === u._id.toString() || r.username === u.username) && r.status === 'approved');
-        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.userId === u._id.toString() || r.username === u.username) && r.status === 'approved');
+        const uDeposits = (allDepositReqs || []).filter(r => (r.user_id === u.id.toString() || r.username === u.username) && r.status === 'approved');
+        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.user_id === u.id.toString() || r.username === u.username) && r.status === 'approved');
         const sumDeposits = uDeposits.reduce((s, r) => s + r.amountUSD, 0);
         const sumWithdrawals = uWithdrawals.reduce((s, r) => s + r.amountUSD, 0);
 
@@ -3277,7 +3277,7 @@ const AdminPanel = ({ user }) => {
                           {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
                           {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u._id.toString()}</span>
+                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u.id.toString()}</span>
                       </div>
                     </div>
 
@@ -3363,7 +3363,7 @@ const AdminPanel = ({ user }) => {
                             {selectedUserTxs.map(tx => {
                               const isDep = tx.type === 'deposit';
                               return (
-                                <tr key={tx._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <tr key={tx.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                                   <td style={{ padding: '10px', color: '#8b92a8' }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
                                   <td style={{ padding: '10px', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
                                     {tx.type?.toUpperCase()}
@@ -3395,7 +3395,7 @@ const AdminPanel = ({ user }) => {
                     ) : (
                       <>
                         <KycImages 
-                          userId={u._id.toString()} 
+                          userId={u.id.toString()} 
                           getImageUrl={getImageUrl} 
                           onImageClick={setActiveLightboxImage} 
                           kycIdFront={u.kycIdFront}
@@ -3407,14 +3407,30 @@ const AdminPanel = ({ user }) => {
                           <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.toString().substring(0, 8).toUpperCase()}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}</strong></div>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
 
                 {/* ── TAB: Invites ── */}
                 {userDrawerTab === 'invites' && (() => {
-                  const uStats = useQuery(api.users.getInviteStats, { userId: u._id.toString() });
+                  const [uStats, setUStats] = useState(null);
+                  React.useEffect(() => {
+                    if (u?.id) {
+                      supabase.from('referrals').select('*').eq('referrer_id', u.id).then(({ data }) => {
+                        const totalInvited = data?.length || 0;
+                        const activeFriends = data?.filter(r => r.status === 'active').length || 0;
+                        const pendingFriends = data?.filter(r => r.status === 'pending').length || 0;
+                        supabase.from('invite_rewards').select('*').eq('inviter_user_id', u.id).then(({ data: rewards }) => {
+                          const totalEarned = rewards?.reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
+                          const earningsMonth = rewards?.filter(r => new Date(r.created_at).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
+                          setUStats({ totalInvited, activeFriends, pendingFriends, totalEarned, earningsMonth, referralList: data?.map(r => ({ username: r.referred_user_id?.substring(0, 8) || 'User', date: r.created_at, status: r.status, earned: r.reward_amount || 0 })) || [] });
+                        });
+                      });
+                    }
+                  }, [u?.id]);
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                       <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invite Stats</div>
@@ -3539,7 +3555,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u._id.toString());
+                        setMessageComposerUserId(u.id.toString());
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -3563,7 +3579,7 @@ const AdminPanel = ({ user }) => {
                   {/* Row 2: critical restrictions */}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u._id.toString(), !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u.id.toString(), !!u.isSuspended)}
                       className="btn-premium-ghost"
                       style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
                     >
@@ -3572,7 +3588,7 @@ const AdminPanel = ({ user }) => {
                     
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u._id.toString(), u.username)) {
+                        if (await handleRemoveUser(u.id.toString(), u.username)) {
                           setSelectedUserDetailId(null);
                         }
                       }}

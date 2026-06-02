@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { supabase } from '../supabaseClient';
 
 const KYCWizard = ({ user, onComplete, onClose }) => {
   const [step, setStep] = useState(1); // 1=intro, 2=info, 3=id-front, 4=id-back, 5=face, 6=done
@@ -9,11 +8,6 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
   const [age, setAge] = useState('');
   const [idType, setIdType] = useState('National ID Card');
   const [address, setAddress] = useState('');
-
-  // Convex Mutations
-  const updateInfo = useMutation(api.users.updateKycInfo);
-  const updateDocs = useMutation(api.users.updateKycDocs);
-  const updateSelfie = useMutation(api.users.updateKycSelfie);
 
   const [idFront, setIdFront] = useState(null);
   const [idBack, setIdBack] = useState(null);
@@ -168,14 +162,13 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     setLoading(true);
     setError('');
     try {
-      await updateInfo({
-        userId: user.id,
-        name: fullName,
+      await supabase.from('users').update({
+        full_name: fullName,
         phone: kycPhone,
-        age,
-        idType,
-        address
-      });
+        kyc_status: 'pending',
+        kyc_step: 'info',
+        kyc_data: { name: fullName, phone: kycPhone, age, idType, address }
+      }).eq('id', user.id);
       setStep(3); // Go to ID Front upload
     } catch (err) {
       setError(err.message || 'Failed to save information. Try again.');
@@ -188,11 +181,11 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!idFront || !idBack) { setError('Please capture or upload both front and back of your ID.'); return; }
     setLoading(true); setError('');
     try {
-      await updateDocs({
-        userId: user.id,
-        idFront: idFront,
-        idBack: idBack,
-      });
+      await supabase.from('users').update({
+        kyc_id_front: idFront,
+        kyc_id_back: idBack,
+        kyc_step: 'docs'
+      }).eq('id', user.id);
 
       setStep(5); // Go to selfie step
     } catch (err) {
@@ -207,10 +200,11 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!selfieCapture) { setError('Please capture a selfie first.'); return; }
     setLoading(true); setError('');
     try {
-      const updatedUser = await updateSelfie({
-        userId: user.id,
-        selfie: selfieCapture
-      });
+      const { data: updatedUser } = await supabase.from('users').update({
+        kyc_selfie: selfieCapture,
+        kyc_status: 'pending',
+        kyc_step: 'selfie'
+      }).eq('id', user.id).select().single();
       setStep(6); // Done
       if (onComplete) onComplete(updatedUser);
     } catch (err) {

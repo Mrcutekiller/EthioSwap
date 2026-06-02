@@ -463,8 +463,139 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('ethioswap_user', JSON.stringify(merged));
   };
 
+  // ── Internal Transfer (Send/Receive between users) ──
+  const sendInternalTransfer = async (receiverUsername, amount, note) => {
+    setLoading(true);
+    try {
+      // Find receiver
+      const { data: receiver } = await supabase.from('users').select('id, username').eq('username', receiverUsername).single();
+      if (!receiver) throw new Error('User not found');
+      if (receiver.id === user.id) throw new Error('Cannot send to yourself');
+      if (amount < 1) throw new Error('Minimum transfer is $1');
+      if (amount > (user.eth_balance || 0)) throw new Error('Insufficient balance');
+
+      // Check daily limit
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayTransfers } = await supabase.from('internal_transfers')
+        .select('amount')
+        .eq('sender_id', user.id)
+        .gte('created_at', today);
+      const todayTotal = (todayTransfers || []).reduce((sum, t) => sum + t.amount, 0);
+      const dailyLimit = systemSettings?.max_internal_transfer_daily || 500;
+      if (todayTotal + amount > dailyLimit) throw new Error(`Daily limit of $${dailyLimit} exceeded`);
+
+      // Execute transfer
+      const { error } = await supabase.from('internal_transfers').insert([{
+        sender_id: user.id,
+        receiver_id: receiver.id,
+        amount,
+        note,
+        status: 'completed'
+      }]);
+      if (error) throw error;
+
+      // Update balances
+      await supabase.from('users').update({ eth_balance: (user.eth_balance || 0) - amount }).eq('id', user.id);
+      const { data: recv } = await supabase.from('users').select('eth_balance').eq('id', receiver.id).single();
+      await supabase.from('users').update({ eth_balance: (recv.eth_balance || 0) + amount }).eq('id', receiver.id);
+
+      // Log transactions
+      await supabase.from('transactions').insert([
+        { user_id: user.id, type: 'send', amount_usd: amount, net_amount: amount, currency: 'USDT', status: 'completed', note: `Sent to @${receiverUsername}`, related_user_id: receiver.id },
+        { user_id: receiver.id, type: 'receive', amount_usd: amount, net_amount: amount, currency: 'USDT', status: 'completed', note: `Received from @${user.username}`, related_user_id: user.id }
+      ]);
+
+      // Create notifications
+      await supabase.from('notifications').insert([
+        { user_id: user.id, type: 'transfer', message: `✅ Sent $${amount} to @${receiverUsername}` },
+        { user_id: receiver.id, type: 'transfer', message: `💰 You received $${amount} from @${user.username}!` }
+      ]);
+
+      await fetchUserProfile(user.id);
+      setSuccess(`$${amount} sent to @${receiverUsername}!`);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  // ── Price Alerts ──
+  const createPriceAlert = async (targetPrice, condition) => {
+    try {
+      const { error } = await supabase.from('price_alerts').insert([{
+        user_id: user.id,
+        target_price: targetPrice,
+        condition,
+        crypto: 'USDT',
+        currency: 'ETB'
+      }]);
+      if (error) throw error;
+      setSuccess(`Alert created: USDT ${condition} ${targetPrice} ETB`);
+    } catch (err) { setError(err.message); }
+  };
+
+  const deletePriceAlert = async (alertId) => {
+    try {
+      await supabase.from('price_alerts').delete().eq('id', alertId);
+    } catch (err) { setError(err.message); }
+  };
+
+  const togglePriceAlert = async (alertId, isActive) => {
+    try {
+      await supabase.from('price_alerts').update({ is_active: !isActive }).eq('id', alertId);
+    } catch (err) { setError(err.message); }
+  };
+
+  // ── Dispute Evidence ──
+  const uploadDisputeEvidence = async (disputeId, file, description) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${disputeId}/${Math.random()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('dispute-evidence').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('dispute-evidence').getPublicUrl(fileName);
+      await supabase.from('dispute_evidence').insert([{
+        dispute_id: disputeId,
+        uploaded_by: user.id,
+        file_url: publicUrl,
+        file_type: file.type.includes('pdf') ? 'pdf' : 'image',
+        description
+      }]);
+      setSuccess('Evidence uploaded!');
+    } catch (err) { setError(err.message); }
+  };
+
+  // ── Payment Requests ──
+  const createPaymentRequest = async (targetUsername, amount, note) => {
+    try {
+      const { data: target } = await supabase.from('users').select('id').eq('username', targetUsername).single();
+      if (!target) throw new Error('User not found');
+      const { error } = await supabase.from('payment_requests').insert([{
+        requester_id: user.id,
+        target_user_id: target.id,
+        target_username: targetUsername,
+        amount,
+        note,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      }]);
+      if (error) throw error;
+      await supabase.from('notifications').insert([{
+        user_id: target.id, type: 'payment_request',
+        message: `📩 @${user.username} requested $${amount} from you`
+      }]);
+      setSuccess(`Payment request sent to @${targetUsername}`);
+    } catch (err) { setError(err.message); }
+  };
+
+  // ── Warning Acknowledgement ──
+  const acknowledgeWarning = async (warnId) => {
+    try {
+      const updatedWarnings = (user.warnings || []).filter(w => w.id !== warnId);
+      await supabase.from('users').update({ warnings: updatedWarnings }).eq('id', user.id);
+      setUser({ ...user, warnings: updatedWarnings });
+    } catch (err) { setError(err.message); }
+  };
+
   const unlock = () => setIsLocked(false);
-  const switchUser = () => {}; // Not needed for production
+  const switchUser = () => {};
 
   return (
     <AuthContext.Provider value={{
@@ -476,6 +607,9 @@ export const AuthProvider = ({ children }) => {
       login, register, logout, unlock, updateUser, switchUser,
       createListing, initiateTrade, withdrawETH,
       createDepositRequest, savePaymentAccounts,
+      markTradeAsPaid, releaseEscrow, openDispute, submitRating,
+      sendInternalTransfer, createPriceAlert, deletePriceAlert, togglePriceAlert,
+      uploadDisputeEvidence, createPaymentRequest, acknowledgeWarning,
       ethUsdPrice: ETH_USD_PRICE,
     }}>
       {children}

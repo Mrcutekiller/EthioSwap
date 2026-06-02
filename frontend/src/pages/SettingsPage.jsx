@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../supabaseClient';
-import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock } from 'lucide-react';
+import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock, Moon, Sun, Monitor } from 'lucide-react';
 
 /* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
 const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
@@ -208,12 +208,22 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
   const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
   const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
   const [lang, setLang] = useState(i18n.language || 'en');
+  const [theme, setTheme] = useState(localStorage.getItem('ethioswap_theme') || 'system');
 
   const changeLanguage = async (newLang) => {
     i18n.changeLanguage(newLang);
     setLang(newLang);
+    localStorage.setItem('ethioswap_language', newLang);
     if (user) {
       await supabase.from('users').update({ preferred_language: newLang }).eq('id', user.id);
+    }
+  };
+
+  const changeTheme = async (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('ethioswap_theme', newTheme);
+    if (user) {
+      await supabase.from('users').update({ theme_preference: newTheme }).eq('id', user.id);
     }
   };
 
@@ -366,7 +376,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
       {/* Language Selector */}
       <div className="card">
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Globe size={16} /> Language / ቋንቋ
+          <Globe size={16} /> {t('Language')} / ቋንቋ
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button 
@@ -382,6 +392,24 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
             style={{ flex: 1 }}
           >
             አማርኛ
+          </button>
+        </div>
+      </div>
+
+      {/* Theme Selector */}
+      <div className="card">
+        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Moon size={16} /> Theme
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => changeTheme('dark')} className={`btn ${theme === 'dark' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Moon size={14} /> Dark
+          </button>
+          <button onClick={() => changeTheme('light')} className={`btn ${theme === 'light' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Sun size={14} /> Light
+          </button>
+          <button onClick={() => changeTheme('system')} className={`btn ${theme === 'system' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Monitor size={14} /> System
           </button>
         </div>
       </div>
