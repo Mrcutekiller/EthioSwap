@@ -32,9 +32,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const [stepsVisible, setStepsVisible] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  const [liveStats, setLiveStats] = useState({ users: 1247, volume: 2840000, rating: 4.8, scams: 0 });
+  const [liveStats, setLiveStats] = useState({ users: 0, volume: 0, rating: 0, scams: 0 });
   const [liveListings, setLiveListings] = useState([]);
-  const [inviteProgress, setInviteProgress] = useState(73);
+  const [inviteProgress, setInviteProgress] = useState(0);
   const [liveRate, setLiveRate] = useState(buyRate);
 
   useEffect(() => {
@@ -50,26 +50,57 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    const fetchStats = async () => {
+
+    const fetchAllStats = async () => {
       try {
-        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        if (count) setLiveStats(prev => ({ ...prev, users: count }));
+        // Fetch user count
+        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+
+        // Fetch total volume from trades
+        const { data: tradesData } = await supabase.from('trades').select('amount');
+        const totalVolume = tradesData ? tradesData.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0;
+
+        // Fetch average rating from reviews
+        const { data: reviewsData } = await supabase.from('reviews').select('rating');
+        let avgRating = 0;
+        if (reviewsData?.length) {
+          avgRating = reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length;
+        }
+
+        // Fetch scam count from disputes
+        const { count: scamCount } = await supabase.from('disputes').select('*', { count: 'exact', head: true }).eq('status', 'scam');
+
+        // Fetch invite progress (how many users have a referral_code set)
+        const { count: inviteCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).not('referred_by', 'is', null);
+        const targetUsers = 200;
+        const progress = Math.min(100, Math.round(((inviteCount || 0) / targetUsers) * 100));
+
+        setLiveStats({
+          users: userCount || 0,
+          volume: totalVolume,
+          rating: avgRating ? avgRating.toFixed(1) : 0,
+          scams: scamCount || 0
+        });
+        setInviteProgress(progress);
       } catch {}
     };
+
     const fetchListings = async () => {
       try {
         const { data } = await supabase.from('p2p_listings').select('*').eq('status', 'active').limit(10);
         if (data?.length) setLiveListings(data);
       } catch {}
     };
-    fetchStats();
-    fetchListings();
+
     const fetchReviews = async () => {
       try {
         const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(10);
         if (data) setReviews(data);
       } catch {}
     };
+
+    fetchAllStats();
+    fetchListings();
     fetchReviews();
   }, []);
 
@@ -482,8 +513,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px' }}>
           {[
             { label: 'Verified Traders', value: liveStats.users.toLocaleString(), icon: '👥' },
-            { label: 'Volume Traded', value: `$${(liveStats.volume / 1000000).toFixed(1)}M`, icon: '📊' },
-            { label: 'Average Rating', value: `${liveStats.rating}★`, icon: '⭐' },
+            { label: 'Volume Traded', value: liveStats.volume > 0 ? `$${liveStats.volume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '$0', icon: '📊' },
+            { label: 'Average Rating', value: liveStats.rating > 0 ? `${liveStats.rating}★` : '—', icon: '⭐' },
             { label: 'Scam Reports', value: `${liveStats.scams}`, icon: '🛡️' },
           ].map((stat, idx) => (
             <div key={idx} style={{ textAlign: 'center', minWidth: '140px' }}>
