@@ -7,7 +7,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
   const [openModal, setOpenModal] = useState(null);
-  const [activeMarketTab, setActiveMarketTab] = useState('buy');
+
+  // Calculator state
+  const [calcMode, setCalcMode] = useState('usd-to-etb');
+  const [calcInput, setCalcInput] = useState('');
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
 
   const buyRate = systemSettings?.etbRatePerDollar ?? 157.50;
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 155.80;
@@ -58,6 +64,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     };
     fetchStats();
     fetchListings();
+    const fetchReviews = async () => {
+      try {
+        const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(10);
+        if (data) setReviews(data);
+      } catch {}
+    };
+    fetchReviews();
   }, []);
 
   useEffect(() => {
@@ -120,13 +133,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     card.style.boxShadow = 'none';
   };
 
-  const mockOrders = [
-    { id: 1, name: 'Abebe_K', type: 'buy', amount: '500 USDT', rate: `${liveRate} ETB`, limits: '100 - 500 USDT', method: 'Telebirr' },
-    { id: 2, name: 'Makeda_S', type: 'sell', amount: '1,200 USDT', rate: `${(liveRate - 1.7).toFixed(2)} ETB`, limits: '500 - 1200 USDT', method: 'CBE Transfer' },
-    { id: 3, name: 'Biruk_G', type: 'buy', amount: '800 USDT', rate: `${liveRate} ETB`, limits: '200 - 800 USDT', method: 'Dashen Bank' },
-    { id: 4, name: 'Selam_A', type: 'sell', amount: '350 USDT', rate: `${(liveRate - 1.7).toFixed(2)} ETB`, limits: '100 - 350 USDT', method: 'Telebirr' },
-    { id: 5, name: 'Yohannes_T', type: 'buy', amount: '2,000 USDT', rate: `${liveRate} ETB`, limits: '500 - 2000 USDT', method: 'Awash Bank' },
-  ];
+  const calcResult = calcInput
+    ? calcMode === 'usd-to-etb'
+      ? (parseFloat(calcInput) * liveRate).toFixed(2)
+      : (parseFloat(calcInput) / liveRate).toFixed(4)
+    : '';
 
   const faqItems = [
     { q: "How does the escrow system protect my money?", a: "When a buyer starts a trade, the seller's USDT is immediately locked in our secure escrow. The seller cannot move those funds until the buyer confirms payment and the seller verifies receipt. If there's a dispute, our admin team in Addis Ababa reviews evidence and resolves it fairly." },
@@ -577,62 +588,100 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── LIVE RATES TABLE ── */}
+      {/* ── LIVE CALCULATOR ── */}
       <section id="market" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px', marginBottom: '40px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span className="badge-live-pulse" />
-                <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE P2P MARKET</span>
-              </div>
-              <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: 0, fontWeight: 400 }}>Best Available Rates</h2>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span className="badge-live-pulse" />
+              <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE EXCHANGE RATE</span>
             </div>
-            <div style={{ display: 'flex', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '30px', padding: '3px' }}>
-              <button onClick={() => setActiveMarketTab('buy')} className={`market-tab-btn ${activeMarketTab === 'buy' ? 'active' : ''}`}>Buy USD</button>
-              <button onClick={() => setActiveMarketTab('sell')} className={`market-tab-btn ${activeMarketTab === 'sell' ? 'active' : ''}`}>Sell USD</button>
-            </div>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>USDT ↔ ETB Calculator</h2>
+            <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
+              Convert between USDT and Ethiopian Birr at the live market rate. See how much you'll get instantly.
+            </p>
           </div>
-          {width < 768 && (
-            <div style={{ fontSize: '11px', color: '#f5c518', textAlign: 'right', marginBottom: '8px', fontWeight: 600, letterSpacing: '0.05em' }}>scroll ➔</div>
-          )}
-          <div className="card-premium" style={{ background: '#111318', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.07)', padding: '24px', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px' }}>Trader</th>
-                  <th style={{ padding: '12px 16px' }}>Available</th>
-                  <th style={{ padding: '12px 16px' }}>Rate</th>
-                  <th style={{ padding: '12px 16px' }}>Limits</th>
-                  <th style={{ padding: '12px 16px' }}>Payment</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockOrders.filter(o => o.type === activeMarketTab).map((order) => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '14px', transition: 'background-color 0.2s' }}>
-                    <td style={{ padding: '16px', fontWeight: 600, color: '#fff' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>👤</div>
-                        @{order.name}
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px', color: '#00d4a0', fontWeight: 700 }}>{order.amount}</td>
-                    <td style={{ padding: '16px', fontWeight: 600 }}>{order.rate}</td>
-                    <td style={{ padding: '16px', color: '#c8c8c8' }}>{order.limits}</td>
-                    <td style={{ padding: '16px' }}>
-                      <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px' }}>{order.method}</span>
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'right' }}>
-                      <button onClick={onSignIn} className="cta-btn-gold"
-                        style={{ height: '32px', fontSize: '12px', borderRadius: '6px', padding: '0 16px', background: order.type === 'buy' ? '#00d4a0' : '#f5c518', color: order.type === 'buy' ? '#0d1117' : '#0a0a0a' }}>
-                        {order.type === 'buy' ? 'Buy USD' : 'Sell USD'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
+            {/* Live Rate Display */}
+            <div style={{ textAlign: 'center', marginBottom: '28px', padding: '16px', background: 'rgba(0,212,160,0.05)', borderRadius: '12px', border: '1px solid rgba(0,212,160,0.15)' }}>
+              <span style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600 }}>Current Rate</span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', marginTop: '4px' }}>1 USDT = {liveRate} ETB</div>
+            </div>
+
+            {/* Mode Toggle */}
+            <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '12px', padding: '4px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <button onClick={() => { setCalcMode('usd-to-etb'); setCalcInput(''); }}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                  background: calcMode === 'usd-to-etb' ? '#f5c518' : 'transparent',
+                  color: calcMode === 'usd-to-etb' ? '#0a0a0a' : '#8b92a8' }}>
+                USDT → ETB
+              </button>
+              <button onClick={() => { setCalcMode('etb-to-usd'); setCalcInput(''); }}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
+                  background: calcMode === 'etb-to-usd' ? '#f5c518' : 'transparent',
+                  color: calcMode === 'etb-to-usd' ? '#0a0a0a' : '#8b92a8' }}>
+                ETB → USDT
+              </button>
+            </div>
+
+            {/* Input */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                You Send ({calcMode === 'usd-to-etb' ? 'USDT' : 'ETB'})
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number"
+                  value={calcInput}
+                  onChange={e => setCalcInput(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="any"
+                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px 60px 16px 16px', fontSize: '24px', fontWeight: 700, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 700, color: '#f5c518' }}>
+                  {calcMode === 'usd-to-etb' ? 'USDT' : 'ETB'}
+                </span>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div style={{ textAlign: 'center', margin: '8px 0' }}>
+              <div style={{ display: 'inline-flex', width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>↕</div>
+            </div>
+
+            {/* Output */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                You Receive ({calcMode === 'usd-to-etb' ? 'ETB' : 'USDT'})
+              </label>
+              <div style={{ background: '#0a0a0a', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '16px', minHeight: '56px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: '#00d4a0' }}>
+                  {calcResult || '0.00'}
+                </span>
+                <span style={{ marginLeft: '8px', fontSize: '14px', fontWeight: 700, color: '#8b92a8' }}>
+                  {calcMode === 'usd-to-etb' ? 'ETB' : 'USDT'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Amounts */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {(calcMode === 'usd-to-etb' ? [10, 50, 100, 500, 1000] : [1000, 5000, 10000, 50000, 100000]).map(amt => (
+                <button key={amt} onClick={() => setCalcInput(String(amt))}
+                  style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#c8c8c8', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#f5c518'; e.currentTarget.style.color = '#f5c518'; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#c8c8c8'; }}>
+                  {calcMode === 'usd-to-etb' ? '$' : 'Br'}{amt.toLocaleString()}
+                </button>
+              ))}
+            </div>
+
+            {/* Note */}
+            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#8b92a8' }}>
+              Rate updates every 5 seconds • 0.5% platform fee on trades
+            </div>
           </div>
         </div>
       </section>
@@ -642,8 +691,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
           <span style={{ fontSize: '11px', color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, background: 'rgba(245,197,24,0.1)', padding: '4px 12px', borderRadius: '20px' }}>COMING SOON</span>
           <h2 className="serif-title" style={{ fontSize: '36px', color: '#fff', margin: '16px 0 12px 0', fontWeight: 400 }}>Invite & Earn Program</h2>
-          <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '32px', maxWidth: '520px', margin: '0 auto 32px' }}>
-            Invite your friends to EthioSwap and earn rewards when they complete their first trade. The more you invite, the more you earn.
+          <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '8px', maxWidth: '560px', margin: '0 auto 8px' }}>
+            Invite your friends to EthioSwap and earn <span style={{ color: '#f5c518', fontWeight: 700 }}>$0.50 USDT</span> for every user who completes their first trade after signing up with your referral code.
+          </p>
+          <p style={{ fontSize: '13px', color: '#8b92a8', marginBottom: '32px' }}>
+            The more you invite, the more you earn. Start sharing your referral code today.
           </p>
           <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', maxWidth: '480px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#c8c8c8' }}>
@@ -684,32 +736,67 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ── */}
+      {/* ── TESTIMONIALS / REVIEWS ── */}
       <section style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TESTIMONIALS</span>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REVIEWS</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Trusted by Ethiopian Traders</h2>
+            <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
+              {reviews.length > 0 ? `See what ${reviews.length}+ traders are saying about EthioSwap.` : 'Be the first to share your experience with EthioSwap!'}
+            </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            {testimonials.map((t, idx) => (
-              <div key={idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
+            {reviews.length > 0 ? reviews.slice(0, 6).map((r, idx) => (
+              <div key={r.id || idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
-                  {Array.from({ length: t.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                  {Array.from({ length: r.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                  {Array.from({ length: 5 - r.rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
                 </div>
-                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{t.text}"</p>
+                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{r.content}"</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>
-                    {t.name.charAt(0)}
+                    {(r.username || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{t.name}</div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8' }}>{t.role}</div>
+                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>@{r.username}</div>
+                    <div style={{ fontSize: '11px', color: '#8b92a8' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}</div>
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <>
+                {[
+                  { name: 'Daniel M.', role: 'Freelance Designer', text: 'I receive USD from clients in the US and convert to birr through EthioSwap. The escrow makes me feel safe — I never worry about getting scammed. Completed over 50 trades with zero issues.', rating: 5 },
+                  { name: 'Hana T.', role: 'Small Business Owner', text: 'Best P2P platform in Ethiopia. The rates are better than any bank, and I can trade right from my phone. KYC verification was quick and easy. Highly recommend for anyone doing cross-border payments.', rating: 5 },
+                  { name: 'Yusuf A.', role: 'Diaspora — Dubai', text: 'I send money home to my family in Addis using EthioSwap. Much faster and cheaper than traditional remittance services. The escrow gives my family peace of mind too.', rating: 5 },
+                ].map((t, idx) => (
+                  <div key={idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+                      {Array.from({ length: t.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                    </div>
+                    <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{t.text}"</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>
+                        {t.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{t.name}</div>
+                        <div style={{ fontSize: '12px', color: '#8b92a8' }}>{t.role}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
+          {reviews.length > 0 && (
+            <div style={{ textAlign: 'center', marginTop: '32px' }}>
+              <p style={{ fontSize: '13px', color: '#8b92a8' }}>
+                Want to share your experience? <button onClick={onSignIn} style={{ background: 'none', border: 'none', color: '#f5c518', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>Sign in</button> and write a review from your profile.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

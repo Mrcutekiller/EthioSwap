@@ -828,6 +828,36 @@ CREATE POLICY "Anyone can view avatars" ON storage.objects
     FOR SELECT USING (bucket_id = 'avatars');
 
 -- ═══════════════════════════════════════════════════════════════
+-- 28. REVIEWS TABLE
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
+
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view reviews" ON reviews
+    FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert own reviews" ON reviews
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own reviews" ON reviews
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own reviews" ON reviews
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════
 -- SEED DATA
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO system_settings (

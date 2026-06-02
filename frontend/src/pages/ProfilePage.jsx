@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { supabase } from '../supabaseClient';
 import { 
   Copy, 
   Shield, 
@@ -251,7 +252,7 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts } = useAuth();
+  const { savePaymentAccounts, submitReview, updateReview, deleteReview } = useAuth();
   const updateProfileMutation = useMutation(api.users.updateProfile);
   const loyaltyInfo = useQuery(api.users.getLoyaltyInfo, { userId: user?.id || "" });
   const referralStats = useQuery(api.users.getReferralStats, { userId: user?.id || "" });
@@ -277,6 +278,50 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [activeLightboxImage, setActiveLightboxImage] = useState(null);
+
+  // Review state
+  const [myReview, setMyReview] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewEditing, setReviewEditing] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      supabase.from('reviews').select('*').eq('user_id', user.id).limit(1)
+        .then(({ data }) => {
+          if (data?.length) {
+            setMyReview(data[0]);
+            setReviewRating(data[0].rating);
+            setReviewContent(data[0].content);
+          }
+        });
+    }
+  }, [user?.id]);
+
+  const handleSubmitReview = async () => {
+    if (!reviewContent.trim()) return;
+    setReviewLoading(true);
+    try {
+      if (myReview) {
+        await updateReview(myReview.id, reviewRating, reviewContent);
+        setMyReview({ ...myReview, rating: reviewRating, content: reviewContent, updated_at: new Date().toISOString() });
+      } else {
+        await submitReview(reviewRating, reviewContent);
+        const { data } = await supabase.from('reviews').select('*').eq('user_id', user.id).limit(1);
+        if (data?.length) setMyReview(data[0]);
+      }
+      setReviewEditing(false);
+    } finally { setReviewLoading(false); }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!window.confirm('Delete your review?')) return;
+    await deleteReview(myReview.id);
+    setMyReview(null);
+    setReviewContent('');
+    setReviewRating(5);
+  };
 
   const getTronAddress = (ethAddr) => {
     if (!ethAddr) return '';
@@ -654,6 +699,57 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             ✨ Unlock Borders
           </button>
         </div>
+      </div>
+
+      {/* ─── WRITE A REVIEW ──────────────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Write a Review About Us</h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
+          Share your experience with EthioSwap. Your review will appear on our landing page.
+        </p>
+
+        {myReview && !reviewEditing ? (
+          <div>
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+              {Array.from({ length: myReview.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+              {Array.from({ length: 5 - myReview.rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic', margin: '0 0 16px 0', lineHeight: 1.6 }}>"{myReview.content}"</p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setReviewEditing(true)} className="btn btn-ghost" style={{ fontSize: '12px', flex: 1 }}>✏️ Edit Review</button>
+              <button onClick={handleDeleteReview} className="btn btn-ghost" style={{ fontSize: '12px', color: '#ef4444', flex: 1 }}>🗑️ Delete Review</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', display: 'block', marginBottom: '6px' }}>Your Rating</label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', padding: 0, color: star <= reviewRating ? '#f5c518' : '#3a3a3a' }}>★</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', display: 'block', marginBottom: '6px' }}>Your Review</label>
+              <textarea
+                value={reviewContent}
+                onChange={e => setReviewContent(e.target.value)}
+                placeholder="Tell others about your experience with EthioSwap..."
+                rows={4}
+                style={{ width: '100%', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', fontSize: '13px', color: 'var(--text-1)', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={handleSubmitReview} disabled={reviewLoading || !reviewContent.trim()} className="btn btn-gold" style={{ flex: 1 }}>
+                {reviewLoading ? 'Posting...' : (myReview ? 'Update Review' : 'Post Review')}
+              </button>
+              {reviewEditing && (
+                <button onClick={() => { setReviewEditing(false); setReviewContent(myReview.content); setReviewRating(myReview.rating); }} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── SECURITY LOCK MODAL ───────────────────────────────── */}

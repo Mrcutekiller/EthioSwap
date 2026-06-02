@@ -585,6 +585,42 @@ export const AuthProvider = ({ children }) => {
     } catch (err) { setError(err.message); }
   };
 
+  // ── Reviews ──
+  const submitReview = async (rating, content) => {
+    try {
+      if (!user) throw new Error('You must be logged in to write a review');
+      const { error } = await supabase.from('reviews').insert([{
+        user_id: user.id,
+        username: user.username,
+        rating,
+        content
+      }]);
+      if (error) throw error;
+      setSuccess('Review posted successfully!');
+    } catch (err) { setError(err.message); }
+  };
+
+  const updateReview = async (reviewId, rating, content) => {
+    try {
+      const { error } = await supabase.from('reviews').update({
+        rating,
+        content,
+        updated_at: new Date().toISOString()
+      }).eq('id', reviewId).eq('user_id', user.id);
+      if (error) throw error;
+      setSuccess('Review updated!');
+    } catch (err) { setError(err.message); }
+  };
+
+  const deleteReview = async (reviewId) => {
+    try {
+      const { error } = await supabase.from('reviews').delete()
+        .eq('id', reviewId).eq('user_id', user.id);
+      if (error) throw error;
+      setSuccess('Review deleted!');
+    } catch (err) { setError(err.message); }
+  };
+
   // ── Warning Acknowledgement ──
   const acknowledgeWarning = async (warnId) => {
     try {
@@ -610,6 +646,7 @@ export const AuthProvider = ({ children }) => {
       markTradeAsPaid, releaseEscrow, openDispute, submitRating,
       sendInternalTransfer, createPriceAlert, deletePriceAlert, togglePriceAlert,
       uploadDisputeEvidence, createPaymentRequest, acknowledgeWarning,
+      submitReview, updateReview, deleteReview,
       ethUsdPrice: ETH_USD_PRICE,
     }}>
       {children}
