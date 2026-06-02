@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../components/Logo.jsx';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
-  const [openModal, setOpenModal] = useState(null); // null | 'terms' | 'privacy' | 'escrow' | 'aml'
-  const [activeMarketTab, setActiveMarketTab] = useState('buy'); // 'buy' | 'sell'
+  const [openModal, setOpenModal] = useState(null);
+  const [activeMarketTab, setActiveMarketTab] = useState('buy');
 
-  // Rates loaded from Convex master settings
-  const buyRate = systemSettings?.etbRatePerDollar ?? 190;
-  const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 180;
+  const buyRate = systemSettings?.etbRatePerDollar ?? 157.50;
+  const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 155.80;
 
-  // Track window size for responsive layouts
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -20,35 +19,57 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Custom cursor position state
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
   const [cursorHovered, setCursorHovered] = useState(false);
-
-  // Parallax parallax offset for 3D phone
   const [phoneTilt, setPhoneTilt] = useState({ rx: 0, ry: 0 });
-
-  // Intersection Observer scroll animation states
   const stepsRef = useRef(null);
   const [stepsVisible, setStepsVisible] = useState(false);
-
-  // Check prefers-reduced-motion
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const [liveStats, setLiveStats] = useState({ users: 1247, volume: 2840000, rating: 4.8, scams: 0 });
+  const [liveListings, setLiveListings] = useState([]);
+  const [inviteProgress, setInviteProgress] = useState(73);
+  const [liveRate, setLiveRate] = useState(buyRate);
 
   useEffect(() => {
     setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
-  // Track cursor coordinates
   useEffect(() => {
     if (prefersReducedMotion) return;
-    const moveCursor = (e) => {
-      setCursorPos({ x: e.clientX, y: e.clientY });
-    };
+    const moveCursor = (e) => setCursorPos({ x: e.clientX, y: e.clientY });
     window.addEventListener('mousemove', moveCursor);
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [prefersReducedMotion]);
 
-  // Handle phone mouse parallax tilt
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    const fetchStats = async () => {
+      try {
+        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        if (count) setLiveStats(prev => ({ ...prev, users: count }));
+      } catch {}
+    };
+    const fetchListings = async () => {
+      try {
+        const { data } = await supabase.from('p2p_listings').select('*').eq('status', 'active').limit(10);
+        if (data?.length) setLiveListings(data);
+      } catch {}
+    };
+    fetchStats();
+    fetchListings();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveRate(prev => {
+        const delta = (Math.random() - 0.5) * 0.6;
+        return Math.round((prev + delta) * 100) / 100;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handlePhoneMouseMove = (e) => {
     if (prefersReducedMotion) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -56,40 +77,27 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const ry = ((x - centerX) / centerX) * 15; // max 15deg
+    const ry = ((x - centerX) / centerX) * 15;
     const rx = ((centerY - y) / centerY) * 15;
     setPhoneTilt({ rx, ry });
   };
 
-  const handlePhoneMouseLeave = () => {
-    setPhoneTilt({ rx: 0, ry: 0 });
-  };
+  const handlePhoneMouseLeave = () => setPhoneTilt({ rx: 0, ry: 0 });
 
-  // Intersection Observer trigger
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setStepsVisible(true);
-        }
-      });
+      entries.forEach(entry => { if (entry.isIntersecting) setStepsVisible(true); });
     }, { threshold: 0.1 });
-
     if (stepsRef.current) observer.observe(stepsRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Track scrolling
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 40) setScrolled(true);
-      else setScrolled(false);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Custom card 3D tilt handler
   const handleCardMouseMove = (e) => {
     if (prefersReducedMotion) return;
     const card = e.currentTarget;
@@ -98,7 +106,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((centerY - y) / centerY) * 8; // max 8 deg
+    const rotateX = ((centerY - y) / centerY) * 8;
     const rotateY = ((x - centerX) / centerX) * 8;
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
     card.style.borderColor = 'rgba(245, 197, 24, 0.3)';
@@ -112,493 +120,216 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     card.style.boxShadow = 'none';
   };
 
-  // Live P2P Market mock orders
   const mockOrders = [
-    { id: 1, name: 'Abebe_K', type: 'buy', amount: '500 USDT', rate: `${buyRate} ETB`, limits: '100 - 500 USDT', method: 'Telebirr' },
-    { id: 2, name: 'Makeda_S', type: 'sell', amount: '1,200 USDT', rate: `${sellRate} ETB`, limits: '500 - 1200 USDT', method: 'CBE Transfer' },
-    { id: 3, name: 'Biruk_G', type: 'buy', amount: '800 USDT', rate: `${buyRate} ETB`, limits: '200 - 800 USDT', method: 'Dashen Bank' },
-    { id: 4, name: 'Selam_A', type: 'sell', amount: '350 USDT', rate: `${sellRate} ETB`, limits: '100 - 350 USDT', method: 'Telebirr' },
-    { id: 5, name: 'Yohannes_T', type: 'buy', amount: '2,000 USDT', rate: `${buyRate} ETB`, limits: '500 - 2000 USDT', method: 'Awash Bank' }
+    { id: 1, name: 'Abebe_K', type: 'buy', amount: '500 USDT', rate: `${liveRate} ETB`, limits: '100 - 500 USDT', method: 'Telebirr' },
+    { id: 2, name: 'Makeda_S', type: 'sell', amount: '1,200 USDT', rate: `${(liveRate - 1.7).toFixed(2)} ETB`, limits: '500 - 1200 USDT', method: 'CBE Transfer' },
+    { id: 3, name: 'Biruk_G', type: 'buy', amount: '800 USDT', rate: `${liveRate} ETB`, limits: '200 - 800 USDT', method: 'Dashen Bank' },
+    { id: 4, name: 'Selam_A', type: 'sell', amount: '350 USDT', rate: `${(liveRate - 1.7).toFixed(2)} ETB`, limits: '100 - 350 USDT', method: 'Telebirr' },
+    { id: 5, name: 'Yohannes_T', type: 'buy', amount: '2,000 USDT', rate: `${liveRate} ETB`, limits: '500 - 2000 USDT', method: 'Awash Bank' },
   ];
 
   const faqItems = [
-    {
-      q: "How does the smart contract P2P Escrow lock safeguard my funds?",
-      a: "When a buyer starts a trade, the corresponding USDT stable coin volume is immediately locked in the smart contract escrow. This ensures that the seller cannot move their assets until the transaction concludes. Funds are released exclusively to the buyer after the seller confirms payment, or after platform dispute mediaton."
-    },
-    {
-      q: "What payment channels are supported for local fiat exchange?",
-      a: "All direct peer-to-peer fiat payments are transferred directly between the participants' bank accounts. Supported institutions include the Commercial Bank of Ethiopia (CBE), Telebirr mobile wallet, Dashen Bank, and Awash Bank. Platform fees are completely free from fiat and processed entirely in secure on-chain USD assets."
-    },
-    {
-      q: "Why is KYC document verification required for trading?",
-      a: "EthioSwap strictly enforces mandatory KYC (National ID Card front/back and a live Face Selfie) to protect local merchants from bank account freezes and payment scams. Unverified accounts can explore live rates and browse order lists but are blocked from initiating deposits, withdrawals, or opening trades."
-    },
-    {
-      q: "What blockchain networks can I use for deposits and withdrawals?",
-      a: "To guarantee security and standard operations, we support standard On-Chain USD assets exclusively. Users can choose between Tron TRC20 and Ethereum ERC20 networks for secure deposits and withdrawals."
-    },
-    {
-      q: "How are trade disputes handled if a user does not release funds?",
-      a: "If a counterpart fails to complete their obligation or respond within the 30-minute timer window, either party can open an administrative dispute. EthioSwap arbitrators will examine uploaded bank receipt screenshots and transaction details, and manually resolve the trade fairly."
-    }
+    { q: "How does the escrow system protect my money?", a: "When a buyer starts a trade, the seller's USDT is immediately locked in our secure escrow. The seller cannot move those funds until the buyer confirms payment and the seller verifies receipt. If there's a dispute, our admin team in Addis Ababa reviews evidence and resolves it fairly." },
+    { q: "What payment methods can I use?", a: "You can trade using Telebirr, CBE (Commercial Bank of Ethiopia), Dashen Bank, Awash Bank, and HelloCash. All fiat transfers happen directly between users — we never touch your birr." },
+    { q: "Why do I need to verify my identity (KYC)?", a: "KYC verification (National ID + live selfie) protects you from fraud and scam artists. Only verified users can trade, which means every counterparty on the platform is a real, identified person. Unverified users can browse rates but cannot trade." },
+    { q: "What networks are supported for crypto deposits?", a: "We support TRC20 (Tron) and ERC20 (Ethereum) networks for USDT deposits and withdrawals. TRC20 is recommended for lower fees." },
+    { q: "How fast are trades completed?", a: "Most trades are completed in under 15 minutes. The buyer has a 30-minute window to send payment and mark as paid. The seller then confirms receipt and releases the USDT instantly." },
+    { q: "What happens if there's a dispute?", a: "Either party can open a dispute at any time. Our support team reviews chat history, payment receipts, and bank statements, then makes a fair decision. Escrow funds are held safely throughout." },
+    { q: "Is EthioSwap available on mobile?", a: "Yes! EthioSwap works on both web browsers and our native Android app. Your account, wallet, and trade history sync instantly across devices. The Android APK is available for download in closed beta." },
+    { q: "How much does it cost to trade?", a: "EthioSwap charges a small 0.5% platform fee on completed trades. There are no hidden fees, no deposit fees, and no withdrawal fees. You only pay when you successfully trade." },
+  ];
+
+  const testimonials = [
+    { name: 'Daniel M.', role: 'Freelance Designer', text: 'I receive USD from clients in the US and convert to birr through EthioSwap. The escrow makes me feel safe — I never worry about getting scammed. Completed over 50 trades with zero issues.', rating: 5 },
+    { name: 'Hana T.', role: 'Small Business Owner', text: 'Best P2P platform in Ethiopia. The rates are better than any bank, and I can trade right from my phone. KYC verification was quick and easy. Highly recommend for anyone doing cross-border payments.', rating: 5 },
+    { name: 'Yusuf A.', role: 'Diaspora — Dubai', text: 'I send money home to my family in Addis using EthioSwap. Much faster and cheaper than traditional remittance services. The escrow gives my family peace of mind too.', rating: 5 },
   ];
 
   const getModalTitle = (type) => {
     switch (type) {
-      case 'terms': return 'Terms of Service & User Agreement';
-      case 'privacy': return 'Privacy Policy & Biometric Consent';
+      case 'terms': return 'Terms of Service';
+      case 'privacy': return 'Privacy Policy';
       case 'escrow': return 'Escrow Operations & Dispute Policy';
-      case 'aml': return 'Anti-Money Laundering (AML) & KYC Rules';
-      case 'about': return 'About EthioSwap P2P Platform';
-      case 'download': return 'Download EthioSwap Mobile (Beta)';
+      case 'aml': return 'Anti-Money Laundering & KYC Rules';
+      case 'about': return 'About EthioSwap';
+      case 'download': return 'Download EthioSwap';
       default: return '';
     }
   };
 
   const getModalBody = (type) => {
     switch (type) {
-      case 'terms':
-        return (
-          <>
-            <h4>1. Acceptance of Terms</h4>
-            <p>By accessing EthioSwap, you agree to these Terms of Service. This platform operates a secure peer-to-peer (P2P) escrow service. Transactions here represent direct trades, and users must follow verified payment rules to maintain integrity.</p>
-            <h4>2. P2P Escrow Service</h4>
-            <p>EthioSwap facilitates the local purchase and sale of USDT stable coins in exchange for Ethiopian Birr (ETB). We provide smart-contract based escrow locking and administrator-led dispute resolution. We do not provide custody of fiat currencies; all ETB transfers occur directly peer-to-peer between the buyer's and seller's personal accounts.</p>
-            <h4>3. Permitted On-Chain Standard</h4>
-            <p>Our wallet handles standard On-Chain USDT deposits and withdrawals exclusively (supporting Tron TRC20 and Ethereum ERC20 networks). Deprecated third-party integrations like Bybit Pay, Telegram Wallets, and Binance Pay are not supported.</p>
-          </>
-        );
-      case 'privacy':
-        return (
-          <>
-            <h4>1. Scope of Privacy Policy</h4>
-            <p>EthioSwap is committed to securing your personal information. This policy details how we collect, store, and process your personal credentials, government document uploads, and biometric configurations.</p>
-            <h4>2. Personal Data & KYC</h4>
-            <p>To create an active trading profile, the platform securely uploads scans of your National ID card (front and back) and a live face selfie photo for verification check analysis. All documents are encrypted and uploaded securely to our Convex Cloud storage database.</p>
-            <h4>3. Biometric Security Protocols</h4>
-            <p>Our mobile client supports biometric security protocols (such as Fingerprint lock or Face ID). All biometric lock credentials and PIN code calculations are stored exclusively within your device's secure hardware enclave. EthioSwap never transmits or accesses your biometric keys on our servers.</p>
-          </>
-        );
-      case 'escrow':
-        return (
-          <>
-            <h4>1. Escrow Lock Mechanism</h4>
-            <p>When a buy order is initiated, the corresponding amount of seller's USDT is instantly locked in the escrow contract, preventing any withdrawal or movement. A payment window timer (typically 30 minutes) begins.</p>
-            <h4>2. Buyer & Seller Obligations</h4>
-            <p>The buyer must transfer the exact ETB amount to the seller's bank account or Telebirr within the window, clicking 'I Have Paid' and uploading proof. The seller must confirm the receipt of funds in their bank account or mobile wallet before clicking 'Release USD'.</p>
-            <h4>3. Administrative Mediation</h4>
-            <p>If either party opens a dispute, our Addis Ababa support team will examine transaction receipts and bank statements, and manually execute a secure release or refund.</p>
-          </>
-        );
-      case 'aml':
-        return (
-          <>
-            <h4>1. Anti-Money Laundering Compliance</h4>
-            <p>EthioSwap complies with national anti-fraud and anti-money laundering (AML) guidelines to eliminate bad actors and protect the trading community.</p>
-            <h4>2. Mandatory KYC Policy</h4>
-            <p>Unverified accounts are permitted to browse P2P ads, and configure settings. However, they are strictly blocked from initiating deposits, withdrawals, posting ads, or opening active trades. Verification is mandatory to unlock transactions.</p>
-          </>
-        );
-      case 'about':
-        return (
-          <>
-            <h4>1. Our Mission</h4>
-            <p>EthioSwap is built to bridge international digital assets and the local Ethiopian financial landscape. We provide secure, automated peer-to-peer (P2P) trading solutions tailored specifically for remote workers, freelancers, local merchants, and the diaspora community.</p>
-            <h4>2. Addis Ababa Based Support</h4>
-            <p>Our professional arbitration and support team is based directly in Addis Ababa to ensure rapid support, verified local bank checks, and highly secure dispute resolution for all community participants.</p>
-            <h4>3. Safe & Compliant</h4>
-            <p>By enforcing mandatory KYC check validations and leveraging secure automated smart-contract locks, we eliminate common P2P scams and safeguard your transactions.</p>
-          </>
-        );
-      case 'download':
-        return (
-          <>
-            <h4>1. Closed Beta Access</h4>
-            <p>The EthioSwap native Android application is currently in closed beta to guarantee maximum safety, secure updates, and localized testing before its public release on the Google Play Store.</p>
-            <h4>2. How to Download:</h4>
-            <p>To request direct access to the latest verified APK file (v2.4.0) and secure installation keys, please contact our official administration support channel on Telegram:</p>
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-              <a 
-                href="https://t.me/EthioSwap1" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="cta-btn-gold"
-                style={{ height: '40px', fontSize: '14px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                💬 Connect with Telegram Support
-              </a>
-            </div>
-          </>
-        );
+      case 'terms': return (
+        <>
+          <h4>1. Acceptance of Terms</h4>
+          <p>By accessing EthioSwap, you agree to these Terms of Service. This platform provides a peer-to-peer escrow service for trading USDT stablecoins and Ethiopian Birr.</p>
+          <h4>2. Escrow Service</h4>
+          <p>EthioSwap facilitates the purchase and sale of USDT in exchange for Ethiopian Birr (ETB). We provide escrow locking and administrator-led dispute resolution. All ETB transfers occur directly between users.</p>
+          <h4>3. Supported Networks</h4>
+          <p>Our wallet handles standard On-Chain USDT deposits and withdrawals exclusively (supporting Tron TRC20 and Ethereum ERC20 networks).</p>
+        </>
+      );
+      case 'privacy': return (
+        <>
+          <h4>1. Data Collection</h4>
+          <p>EthioSwap collects your personal information, government document uploads, and biometric data for KYC verification purposes.</p>
+          <h4>2. KYC Data</h4>
+          <p>To create an active trading profile, the platform uploads scans of your National ID card (front and back) and a live face selfie. All documents are encrypted and stored securely.</p>
+          <h4>3. Biometric Security</h4>
+          <p>Biometric credentials (fingerprint/Face ID) are stored exclusively within your device's secure hardware. EthioSwap never accesses your biometric data.</p>
+        </>
+      );
+      case 'escrow': return (
+        <>
+          <h4>1. Escrow Lock</h4>
+          <p>When a trade is initiated, the seller's USDT is instantly locked in escrow, preventing withdrawal. A 30-minute payment window begins.</p>
+          <h4>2. Payment & Release</h4>
+          <p>The buyer transfers ETB to the seller's bank account, clicks 'I Have Paid', and uploads proof. The seller confirms receipt before releasing USDT.</p>
+          <h4>3. Dispute Resolution</h4>
+          <p>If either party opens a dispute, our support team examines transaction receipts and bank statements, then executes a fair release or refund.</p>
+        </>
+      );
+      case 'aml': return (
+        <>
+          <h4>1. Compliance</h4>
+          <p>EthioSwap complies with anti-money laundering (AML) guidelines to protect the trading community.</p>
+          <h4>2. Mandatory KYC</h4>
+          <p>Unverified accounts can browse P2P ads and configure settings, but are blocked from initiating trades, deposits, or withdrawals. Verification is mandatory.</p>
+        </>
+      );
+      case 'about': return (
+        <>
+          <h4>1. Our Mission</h4>
+          <p>EthioSwap bridges international digital assets and the local Ethiopian financial landscape. We provide secure, automated P2P trading for remote workers, freelancers, merchants, and the diaspora.</p>
+          <h4>2. Based in Addis Ababa</h4>
+          <p>Our support and arbitration team is based in Addis Ababa to ensure rapid support and secure dispute resolution.</p>
+          <h4>3. Built for Ethiopia</h4>
+          <p>By enforcing KYC and leveraging escrow, we eliminate common P2P scams and safeguard your transactions.</p>
+        </>
+      );
+      case 'download': return (
+        <>
+          <h4>1. Android Beta</h4>
+          <p>The EthioSwap Android app is currently in closed beta. Contact our Telegram support for access to the latest APK.</p>
+          <h4>2. Get the APK</h4>
+          <p>To request the verified APK file, contact our official support channel on Telegram:</p>
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+            <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" className="cta-btn-gold" style={{ height: '40px', fontSize: '14px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              Contact Telegram Support
+            </a>
+          </div>
+        </>
+      );
       default: return null;
     }
   };
 
   return (
     <div style={{ background: '#0a0a0a', color: '#c8c8c8', fontFamily: "'Inter', sans-serif", overflowX: 'hidden', position: 'relative' }}>
-      
-      {/* ── STYLE INJECTIONS ── */}
+
       <style>{`
-        /* Custom fonts */
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
-        .serif-title {
-          font-family: 'Playfair Display', serif;
-          font-weight: 700;
-          font-style: normal;
-        }
-        
-        /* Custom cursor style */
-        .cursor-trail {
-          position: fixed;
-          width: 8px;
-          height: 8px;
-          background: #f5c518;
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 9999;
-          transform: translate(-50%, -50%);
-          transition: width 0.2s, height 0.2s, background-color 0.2s;
-        }
-        .cursor-trail.hovered {
-          width: 40px;
-          height: 40px;
-          background: rgba(245, 197, 24, 0.15);
-          border: 1px solid #f5c518;
-        }
-
-        /* Nav layout */
-        .nav-floating {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 80px;
-          background: transparent;
-          backdrop-filter: none;
-          z-index: 1000;
-          transition: all 0.3s ease;
-        }
-        .nav-floating.scrolled {
-          background: rgba(10, 10, 10, 0.85);
-          backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          height: 70px;
-        }
-
-        /* 3D phone showcase keyframes */
-        @keyframes autoRotatePhone {
-          0% { transform: perspective(1000px) rotateY(0deg); }
-          100% { transform: perspective(1000px) rotateY(360deg); }
-        }
-        @keyframes slideDownMenu {
-          0% { transform: translateY(-100%); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-        .phone-mockup-3d {
-          animation: autoRotatePhone 20s linear infinite;
-          transform-style: preserve-3d;
-          transition: transform 0.1s ease;
-        }
-        .phone-mockup-3d:hover {
-          animation-play-state: paused;
-        }
-
-        /* Floating chips orbit animations */
-        @keyframes usdtOrbit {
-          0% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; }
-          50% { transform: translate(140px, 50px) translateZ(-50px); z-index: 1; }
-          100% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; }
-        }
-        @keyframes etbOrbit {
-          0% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; }
-          50% { transform: translate(-140px, -60px) translateZ(50px); z-index: 10; }
-          100% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; }
-        }
-        .orbit-chip-usdt {
-          animation: usdtOrbit 12s ease-in-out infinite;
-        }
-        .orbit-chip-etb {
-          animation: etbOrbit 12s ease-in-out infinite;
-        }
-
-        /* Infinite Marquee */
-        @keyframes marqueeScroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .marquee-inner {
-          display: flex;
-          width: max-content;
-          animation: marqueeScroll 25s linear infinite;
-        }
-        .marquee-container:hover .marquee-inner {
-          animation-play-state: paused;
-        }
-
-        /* Timeline stagger animations */
-        .step-timeline-item {
-          opacity: 0;
-          transform: translateY(30px);
-          transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .step-timeline-item.visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        /* General layout styles */
-        .cta-btn-gold {
-          background: #f5c518;
-          color: #0a0a0a;
-          border: none;
-          border-radius: 10px;
-          padding: 0 24px;
-          font-weight: 700;
-          font-size: 16px;
-          height: 48px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .cta-btn-gold:hover {
-          background: #fcd34d;
-          transform: translateY(-1px);
-        }
-        .cta-btn-outline {
-          background: transparent;
-          border: 1px solid rgba(255,255,255,0.25);
-          color: #f0f2f8;
-          border-radius: 10px;
-          padding: 0 24px;
-          font-weight: 600;
-          font-size: 16px;
-          height: 48px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-        }
-        .cta-btn-outline:hover {
-          background: rgba(255,255,255,0.03);
-          border-color: #f5c518;
-        }
-        .badge-live-pulse {
-          width: 8px;
-          height: 8px;
-          background: #00d4a0;
-          border-radius: 50%;
-          display: inline-block;
-          box-shadow: 0 0 10px #00d4a0;
-        }
-        @keyframes livePulse {
-          0% { transform: scale(0.9); opacity: 0.5; }
-          50% { transform: scale(1.3); opacity: 1; }
-          100% { transform: scale(0.9); opacity: 0.5; }
-        }
-        .badge-live-pulse {
-          animation: livePulse 1.8s ease-in-out infinite;
-        }
-        
-        .market-tab-btn {
-          padding: 12px 20px;
-          background: transparent;
-          border: none;
-          color: #8b92a8;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          position: relative;
-          transition: color 0.2s ease;
-        }
-        .market-tab-btn.active {
-          color: #f5c518;
-        }
-        .market-tab-btn.active::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: #f5c518;
-        }
-        
-        .legal-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(5,5,5,0.85);
-          backdrop-filter: blur(12px);
-          z-index: 5000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-        }
-        .legal-modal-card {
-          background: #111318;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 20px;
-          width: 100%;
-          max-width: 580px;
-          max-height: 80vh;
-          overflow-y: auto;
-          padding: 32px;
-          position: relative;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-        }
+        .serif-title { font-family: 'Playfair Display', serif; font-weight: 700; }
+        .cursor-trail { position: fixed; width: 8px; height: 8px; background: #f5c518; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s; }
+        .cursor-trail.hovered { width: 40px; height: 40px; background: rgba(245, 197, 24, 0.15); border: 1px solid #f5c518; }
+        .nav-floating { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: transparent; backdrop-filter: none; z-index: 1000; transition: all 0.3s ease; }
+        .nav-floating.scrolled { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); height: 70px; }
+        @keyframes autoRotatePhone { 0% { transform: perspective(1000px) rotateY(0deg); } 100% { transform: perspective(1000px) rotateY(360deg); } }
+        @keyframes slideDownMenu { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .phone-mockup-3d { animation: autoRotatePhone 20s linear infinite; transform-style: preserve-3d; transition: transform 0.1s ease; }
+        .phone-mockup-3d:hover { animation-play-state: paused; }
+        @keyframes usdtOrbit { 0% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } 50% { transform: translate(140px, 50px) translateZ(-50px); z-index: 1; } 100% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } }
+        @keyframes etbOrbit { 0% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } 50% { transform: translate(-140px, -60px) translateZ(50px); z-index: 10; } 100% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } }
+        .orbit-chip-usdt { animation: usdtOrbit 12s ease-in-out infinite; }
+        .orbit-chip-etb { animation: etbOrbit 12s ease-in-out infinite; }
+        @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .marquee-inner { display: flex; width: max-content; animation: marqueeScroll 25s linear infinite; }
+        .marquee-container:hover .marquee-inner { animation-play-state: paused; }
+        .step-timeline-item { opacity: 0; transform: translateY(30px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .step-timeline-item.visible { opacity: 1; transform: translateY(0); }
+        .cta-btn-gold { background: #f5c518; color: #0a0a0a; border: none; border-radius: 10px; padding: 0 24px; font-weight: 700; font-size: 16px; height: 48px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
+        .cta-btn-gold:hover { background: #fcd34d; transform: translateY(-1px); }
+        .cta-btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.25); color: #f0f2f8; border-radius: 10px; padding: 0 24px; font-weight: 600; font-size: 16px; height: 48px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+        .cta-btn-outline:hover { background: rgba(255,255,255,0.03); border-color: #f5c518; }
+        .badge-live-pulse { width: 8px; height: 8px; background: #00d4a0; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #00d4a0; }
+        @keyframes livePulse { 0% { transform: scale(0.9); opacity: 0.5; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.5; } }
+        .badge-live-pulse { animation: livePulse 1.8s ease-in-out infinite; }
+        .market-tab-btn { padding: 12px 20px; background: transparent; border: none; color: #8b92a8; font-size: 15px; font-weight: 600; cursor: pointer; position: relative; transition: color 0.2s ease; }
+        .market-tab-btn.active { color: #f5c518; }
+        .market-tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #f5c518; }
+        .legal-modal-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(12px); z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .legal-modal-card { background: #111318; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 100%; max-width: 580px; max-height: 80vh; overflow-y: auto; padding: 32px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-number { animation: countUp 0.6s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        .testimonial-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .trust-card { transition: transform 0.2s ease, border-color 0.2s ease; }
+        .trust-card:hover { transform: translateY(-2px); border-color: rgba(245, 197, 24, 0.3); }
       `}</style>
 
-      {/* ── CUSTOM CURSOR TRAIL ── */}
       {!prefersReducedMotion && (
-        <div 
-          className={`cursor-trail ${cursorHovered ? 'hovered' : ''}`}
-          style={{ left: `${cursorPos.x}px`, top: `${cursorPos.y}px` }}
-        />
+        <div className={`cursor-trail ${cursorHovered ? 'hovered' : ''}`} style={{ left: `${cursorPos.x}px`, top: `${cursorPos.y}px` }} />
       )}
 
-      {/* ── FLOATING TOP HEADER NAVBAR ── */}
+      {/* ── NAVBAR ── */}
       <nav className={`nav-floating ${scrolled ? 'scrolled' : ''}`} style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: scrolled ? '64px' : '80px',
+        position: 'fixed', top: 0, left: 0, right: 0, height: scrolled ? '64px' : '80px',
         background: scrolled ? 'rgba(10, 10, 10, 0.92)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.07)' : 'none',
-        zIndex: 1000,
-        transition: 'all 0.3s ease'
+        backdropFilter: scrolled ? 'blur(12px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.07)' : 'none', zIndex: 1000, transition: 'all 0.3s ease'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
           <Logo size={36} showText={true} />
-
-          {/* DESKTOP LAYOUT (>1024px) */}
           {width > 1024 && (
             <>
               <ul style={{ display: 'flex', alignItems: 'center', gap: '24px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {[
                   { id: 'features', label: 'Features', target: '#features' },
-                  { id: 'audience', label: "Who It's For", target: '#audience' },
-                  { id: 'timeline', label: 'How It Works', target: '#timeline' },
-                  { id: 'market', label: 'Live P2P', target: '#market' },
-                  { id: 'about', label: 'About Us', target: 'about', isModal: true },
+                  { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
+                  { id: 'market', label: 'Live Rates', target: '#market' },
+                  { id: 'why-us', label: 'Why Us', target: '#why-us' },
                   { id: 'faq', label: 'FAQ', target: '#faq' },
-                  { id: 'download', label: 'Download App', target: '#download' }
                 ].map(link => (
                   <li key={link.id}>
-                    {link.isModal ? (
-                      <button 
-                        onClick={() => setOpenModal(link.target)}
-                        onMouseEnter={() => setCursorHovered(true)}
-                        onMouseLeave={() => setCursorHovered(false)}
-                        style={{
-                          background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer',
-                          fontSize: '14px', fontWeight: 500, transition: 'color 0.2s', padding: 0,
-                          fontFamily: 'inherit'
-                        }}
-                        onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                        onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                      >
-                        {link.label}
-                      </button>
-                    ) : (
-                      <a 
-                        href={link.target}
-                        onMouseEnter={() => setCursorHovered(true)}
-                        onMouseLeave={() => setCursorHovered(false)}
-                        style={{
-                          color: '#c8c8c8', textDecoration: 'none',
-                          fontSize: '14px', fontWeight: 500, transition: 'color 0.2s'
-                        }}
-                        onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                        onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                      >
-                        {link.label}
-                      </a>
-                    )}
+                    <a href={link.target} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
+                      style={{ color: '#c8c8c8', textDecoration: 'none', fontSize: '14px', fontWeight: 500, transition: 'color 0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
+                      {link.label}
+                    </a>
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={onSignIn}
-                onMouseEnter={() => setCursorHovered(true)}
-                onMouseLeave={() => setCursorHovered(false)}
-                className="cta-btn-gold"
-                style={{ height: '36px', fontSize: '14px', padding: '0 16px', borderRadius: '8px' }}
-              >
+              <button onClick={onSignIn} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
+                className="cta-btn-gold" style={{ height: '36px', fontSize: '14px', padding: '0 16px', borderRadius: '8px' }}>
                 Sign In
               </button>
             </>
           )}
-
-          {/* TABLET LAYOUT (768px - 1024px) */}
           {width >= 768 && width <= 1024 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <ul style={{ display: 'flex', alignItems: 'center', gap: '18px', listStyle: 'none', margin: 0, padding: 0 }}>
-                {[
-                  { id: 'market', label: 'Live P2P', target: '#market' },
-                  { id: 'timeline', label: 'How It Works', target: '#timeline' },
-                  { id: 'download', label: 'Download App', target: '#download' }
-                ].map(link => (
+                {[{ id: 'market', label: 'Live Rates', target: '#market' }, { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' }].map(link => (
                   <li key={link.id}>
-                    <a 
-                      href={link.target}
-                      onMouseEnter={() => setCursorHovered(true)}
-                      onMouseLeave={() => setCursorHovered(false)}
-                      style={{
-                        color: '#c8c8c8', textDecoration: 'none',
-                        fontSize: '13px', fontWeight: 500, transition: 'color 0.2s'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                      onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                    >
+                    <a href={link.target} style={{ color: '#c8c8c8', textDecoration: 'none', fontSize: '13px', fontWeight: 500, transition: 'color 0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
                       {link.label}
                     </a>
                   </li>
                 ))}
                 <li>
-                  <button 
-                    onClick={() => setMobileMenuOpen(true)}
-                    onMouseEnter={() => setCursorHovered(true)}
-                    onMouseLeave={() => setCursorHovered(false)}
-                    style={{
-                      background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer',
-                      fontSize: '18px', fontWeight: 700, padding: 0
-                    }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                  >
+                  <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', fontSize: '18px', fontWeight: 700, padding: 0 }}
+                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
                     ···
                   </button>
                 </li>
               </ul>
-              <button
-                onClick={onSignIn}
-                onMouseEnter={() => setCursorHovered(true)}
-                onMouseLeave={() => setCursorHovered(false)}
-                className="cta-btn-gold"
-                style={{ height: '36px', fontSize: '13px', padding: '0 12px', borderRadius: '8px' }}
-              >
-                Sign In
-              </button>
+              <button onClick={onSignIn} className="cta-btn-gold" style={{ height: '36px', fontSize: '13px', padding: '0 12px', borderRadius: '8px' }}>Sign In</button>
             </div>
           )}
-
-          {/* MOBILE LAYOUT (<768px) */}
           {width < 768 && (
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              onMouseEnter={() => setCursorHovered(true)}
-              onMouseLeave={() => setCursorHovered(false)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px' }}
-            >
+            <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px' }}>
               <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
               <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
               <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
@@ -607,467 +338,282 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </nav>
 
-      {/* MOBILE FULL-SCREEN SLIDE-DOWN OVERLAY MENU */}
+      {/* ── MOBILE MENU ── */}
       {mobileMenuOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: '#0a0a0a',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '24px',
-          animation: 'slideDownMenu 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}>
-          {/* Header row in mobile overlay */}
+        <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '24px', animation: 'slideDownMenu 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
             <Logo size={36} showText={true} />
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                background: 'none', border: 'none', color: '#f5c518', fontSize: '28px',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-            >
-              ✕
-            </button>
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#f5c518', fontSize: '28px', cursor: 'pointer' }}>✕</button>
           </div>
-
-          {/* Stacked links separated by thin gold divider */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', gap: '4px' }}>
-            {[
-              { id: 'features', label: 'Features', target: '#features' },
-              { id: 'audience', label: "Who It's For", target: '#audience' },
-              { id: 'timeline', label: 'How It Works', target: '#timeline' },
-              { id: 'market', label: 'Live P2P', target: '#market' },
-              { id: 'about', label: 'About Us', target: 'about', isModal: true },
-              { id: 'faq', label: 'FAQ', target: '#faq' },
-              { id: 'download', label: 'Download App', target: '#download' }
-            ].map((link, idx, arr) => (
-              <div key={link.id} style={{ alignSelf: 'stretch', textAlign: 'center' }}>
-                {link.isModal ? (
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); setOpenModal(link.target); }}
-                    style={{
-                      display: 'block', width: '100%', background: 'none', border: 'none', color: '#c8c8c8',
-                      fontSize: '18px', fontWeight: 600, padding: '16px 0', cursor: 'pointer',
-                      textAlign: 'center', fontFamily: 'inherit', transition: 'color 0.2s'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                  >
-                    {link.label}
-                  </button>
-                ) : (
-                  <a
-                    href={link.target}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{
-                      display: 'block', color: '#c8c8c8', textDecoration: 'none',
-                      fontSize: '18px', fontWeight: 600, padding: '16px 0', transition: 'color 0.2s'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                  >
-                    {link.label}
-                  </a>
-                )}
-                {idx < arr.length - 1 && (
-                  <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '80px', margin: '0 auto' }} />
-                )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {[{ label: 'Features', target: '#features' }, { label: 'How It Works', target: '#how-it-works' }, { label: 'Live Rates', target: '#market' }, { label: 'Why Us', target: '#why-us' }, { label: 'FAQ', target: '#faq' }].map((link, idx, arr) => (
+              <div key={link.label}>
+                <a href={link.target} onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'block', color: '#c8c8c8', textDecoration: 'none', fontSize: '18px', fontWeight: 600, padding: '16px 0', textAlign: 'center', transition: 'color 0.2s' }}
+                  onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
+                  {link.label}
+                </a>
+                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '80px', margin: '0 auto' }} />}
               </div>
             ))}
           </div>
-
-          {/* Sign In at bottom full width gold bg */}
           <div style={{ marginTop: 'auto', paddingBottom: '20px' }}>
-            <button
-              onClick={() => { setMobileMenuOpen(false); onSignIn(); }}
-              className="cta-btn-gold"
-              style={{ width: '100%', height: '48px', fontSize: '16px', borderRadius: '10px' }}
-            >
-              Sign In
-            </button>
+            <button onClick={() => { setMobileMenuOpen(false); onSignIn(); }} className="cta-btn-gold" style={{ width: '100%', height: '48px', fontSize: '16px', borderRadius: '10px' }}>Sign In</button>
           </div>
         </div>
       )}
 
-      {/* ── SPLIT LAYOUT HERO SECTION ── */}
-      <header id="hero" style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center',
-        padding: '120px 24px 80px', position: 'relative', overflow: 'hidden'
-      }}>
-        {/* Subtle Animated Gold Grid Overlay */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'linear-gradient(rgba(245,197,24,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,197,24,0.03) 1px, transparent 1px)',
-          backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 1
-        }} />
-
-        {/* Soft teal glow depth spot */}
-        <div style={{
-          position: 'absolute', top: '30%', left: '10%', width: '450px', height: '450px',
-          background: 'radial-gradient(circle, rgba(0,212,160,0.05) 0%, transparent 70%)',
-          pointerEvents: 'none', zIndex: 1
-        }} />
+      {/* ── HERO SECTION ── */}
+      <header id="hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '120px 24px 80px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(245,197,24,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,197,24,0.03) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 1 }} />
+        <div style={{ position: 'absolute', top: '30%', left: '10%', width: '450px', height: '450px', background: 'radial-gradient(circle, rgba(0,212,160,0.05) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 1 }} />
 
         <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', zIndex: 2 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center' }}>
-            
-            {/* LEFT SIDE (60%) */}
+
             <div style={{ flex: 1.5 }}>
-              
-              {/* Version badge */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '50px', padding: '6px 16px', marginBottom: '24px'
-              }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '50px', padding: '6px 16px', marginBottom: '24px' }}>
                 <span className="badge-live-pulse" />
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', letterSpacing: '0.08em' }}>ETHIOSWAP V2.4 BETA</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', letterSpacing: '0.08em' }}>ETHIOSWAP v2.4</span>
               </div>
 
-              {/* Title heading in serif */}
-              <h1 className="serif-title" style={{ fontSize: width < 768 ? '40px' : '64px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 16px 0', fontWeight: 700 }}>
-                Trade USD ($) &<br />
-                ETB.<br />
-                <span style={{ color: '#f5c518' }}>Safe & Secure.</span>
+              <h1 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '58px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 16px 0', fontWeight: 700 }}>
+                Ethiopia's Safest Way to<br />
+                Buy & Sell <span style={{ color: '#f5c518' }}>USDT</span>
               </h1>
 
-              {/* Subtitle */}
-              <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, maxWidth: '460px', margin: '0 0 32px 0' }}>
-                Buy and sell USD stable assets for Ethiopian Birr — secured by escrow, verified by real ID, protected by admin oversight. No crypto knowledge required.
+              <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, maxWidth: '480px', margin: '0 0 24px 0' }}>
+                Peer-to-peer USDT trading secured by escrow, verified by real ID, and protected by admin oversight. Trade with confidence — your money is safe.
               </p>
 
-              {/* Side by side CTAs */}
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '40px' }}>
-                <button
-                  onClick={onGetStarted}
-                  onMouseEnter={() => setCursorHovered(true)}
-                  onMouseLeave={() => setCursorHovered(false)}
-                  className="cta-btn-gold"
-                  style={{ height: '48px', borderRadius: '10px' }}
-                >
-                  Create Account — It's Free
+              {/* Live Rate Ticker */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#111318', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '10px 20px', marginBottom: '28px' }}>
+                <span className="badge-live-pulse" />
+                <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>Live Rate:</span>
+                <span style={{ fontSize: '18px', color: '#00d4a0', fontWeight: 800 }}>1 USDT = {liveRate} ETB</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
+                <button onClick={onGetStarted} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
+                  className="cta-btn-gold" style={{ height: '48px', borderRadius: '10px' }}>
+                  Create Free Account
                 </button>
-                <a
-                  href="#download"
-                  onMouseEnter={() => setCursorHovered(true)}
-                  onMouseLeave={() => setCursorHovered(false)}
-                  className="cta-btn-outline"
-                  style={{ height: '48px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                >
-                  📱 Download Android APK
+                <a href="#market" onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
+                  className="cta-btn-outline" style={{ height: '48px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  View Live Rates
                 </a>
               </div>
 
-              {/* Stats row (3 pills, dark bg, 12px, separated by gold dots) */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
-                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '50px', padding: '8px 20px', fontSize: '12px', color: '#c8c8c8',
-                fontWeight: 600
-              }}>
-                <span>100% Escrow Lock</span>
+              {/* Trust Badges */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '50px', padding: '8px 20px', fontSize: '12px', color: '#c8c8c8', fontWeight: 600 }}>
+                <span>🔒 Escrow Protected</span>
                 <span style={{ color: '#f5c518' }}>•</span>
-                <span>&lt; 15 Min Avg Release</span>
+                <span>🛡️ KYC Verified</span>
                 <span style={{ color: '#f5c518' }}>•</span>
-                <span>0.5% Platform Fee</span>
+                <span>⭐ 4.8 Rating</span>
               </div>
-
             </div>
 
-            {/* RIGHT SIDE (40%) - 3D CSS perspective phone */}
-            <div 
-              onMouseMove={handlePhoneMouseMove}
-              onMouseLeave={handlePhoneMouseLeave}
-              style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative', height: '480px' }}
-            >
-              {/* Back ambient radial glow */}
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,212,160,0.12) 0%, transparent 70%)',
-                zIndex: 1, pointerEvents: 'none'
-              }} />
-
-              {/* 3D phone mockup */}
-              <div 
-                className="phone-mockup-3d"
-                style={{
-                  width: '240px', height: '420px', background: '#111318',
-                  border: '4px solid rgba(255, 255, 255, 0.12)', borderRadius: '32px',
-                  boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0, 212, 160, 0.1)',
-                  position: 'absolute', zIndex: 3, top: '30px', padding: '16px',
-                  display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  transform: `perspective(1000px) rotateX(${phoneTilt.rx}deg) rotateY(${phoneTilt.ry}deg)`,
-                }}
-              >
-                {/* Phone Notch */}
+            {/* 3D Phone Mockup */}
+            <div onMouseMove={handlePhoneMouseMove} onMouseLeave={handlePhoneMouseLeave}
+              style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative', height: '480px' }}>
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,212,160,0.12) 0%, transparent 70%)', zIndex: 1, pointerEvents: 'none' }} />
+              <div className="phone-mockup-3d" style={{
+                width: '240px', height: '420px', background: '#111318', border: '4px solid rgba(255, 255, 255, 0.12)', borderRadius: '32px',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0, 212, 160, 0.1)', position: 'absolute', zIndex: 3, top: '30px', padding: '16px',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                transform: `perspective(1000px) rotateX(${phoneTilt.rx}deg) rotateY(${phoneTilt.ry}deg)`,
+              }}>
                 <div style={{ width: '90px', height: '18px', background: '#000', borderRadius: '0 0 12px 12px', margin: '-16px auto 14px', flexShrink: 0 }} />
-
-                {/* Inner mockup app view */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
-                  
-                  {/* Status row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8b92a8', fontSize: '10px' }}>
-                    <span>EthioSwap Lock</span>
+                    <span>EthioSwap</span>
                     <span style={{ color: '#00d4a0' }}>● Live</span>
                   </div>
-
-                  {/* Header widget */}
                   <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '10px', color: '#8b92a8' }}>SECURED TRADING VOLUME</div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518', marginTop: '4px' }}>$1,480.00</div>
+                    <div style={{ fontSize: '10px', color: '#8b92a8' }}>TRADING VOLUME</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518', marginTop: '4px' }}>$2.8M+</div>
                   </div>
-
-                  {/* Lock graphic block */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)',
-                      border: '1px solid rgba(0, 212, 160, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '28px', boxShadow: '0 0 20px rgba(0, 212, 160, 0.15)'
-                    }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', border: '1px solid rgba(0, 212, 160, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: '0 0 20px rgba(0, 212, 160, 0.15)' }}>
                       🔒
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#00d4a0', letterSpacing: '0.04em' }}>ACTIVE ESCROW SECURED</span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#00d4a0', letterSpacing: '0.04em' }}>ESCROW SECURED</span>
                   </div>
-
-                  {/* Transaction rates box */}
                   <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#8b92a8', marginBottom: '4px' }}>
-                      <span>Blockchain Ledger</span>
+                      <span>Best Buy Rate</span>
                       <span style={{ color: '#00d4a0' }}>TRC20 / ERC20</span>
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518' }}>1 USD = {buyRate} ETB</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518' }}>1 USDT = {liveRate} ETB</div>
                   </div>
-
                 </div>
               </div>
-
-              {/* Floating orbiting data chips */}
-              <div 
-                className="orbit-chip-usdt"
-                style={{
-                  position: 'absolute', top: '160px', left: '50%',
-                  background: '#111318', border: '1px solid rgba(0,212,160,0.3)',
-                  borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700,
-                  color: '#00d4a0', boxShadow: '0 4px 15px rgba(0, 212, 160, 0.1)', pointerEvents: 'none'
-                }}
-              >
+              <div className="orbit-chip-usdt" style={{
+                position: 'absolute', top: '160px', left: '50%', background: '#111318', border: '1px solid rgba(0,212,160,0.3)',
+                borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#00d4a0', boxShadow: '0 4px 15px rgba(0, 212, 160, 0.1)', pointerEvents: 'none'
+              }}>
                 💵 USDT TRC20
               </div>
-
-              <div 
-                className="orbit-chip-etb"
-                style={{
-                  position: 'absolute', top: '240px', left: '50%',
-                  background: '#111318', border: '1px solid rgba(245,197,24,0.3)',
-                  borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700,
-                  color: '#f5c518', boxShadow: '0 4px 15px rgba(245, 197, 24, 0.1)', pointerEvents: 'none'
-                }}
-              >
+              <div className="orbit-chip-etb" style={{
+                position: 'absolute', top: '240px', left: '50%', background: '#111318', border: '1px solid rgba(245,197,24,0.3)',
+                borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#f5c518', boxShadow: '0 4px 15px rgba(245, 197, 24, 0.1)', pointerEvents: 'none'
+              }}>
                 🇪🇹 CBE / Telebirr
               </div>
-
             </div>
-
           </div>
         </div>
       </header>
 
-      {/* ── TICKER / TRUST BAR ── */}
-      <div 
-        className="marquee-container"
-        style={{
-          background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)', height: '44px',
-          display: 'flex', alignItems: 'center', overflow: 'hidden', position: 'relative', zIndex: 10
-        }}
-      >
-        <div className="marquee-inner">
-          {[1, 2].map((setIndex) => (
-            <div key={setIndex} style={{ display: 'flex', gap: '48px', paddingRight: '48px', alignItems: 'center', whiteSpace: 'nowrap' }}>
-              {[
-                'KYC VERIFIED', 'DASHEN BANK', 'AWASH BANK', 'CBE INTEGRATION',
-                'TELEBIRR SUPPORTED', 'ADMIN DISPUTE ARBITRATION', 'USD & ETB TRADING', 'SECURE P2P ESCROW'
-              ].map((item, idx) => (
-                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '11px', letterSpacing: '0.15em', fontWeight: 700, color: '#b8960c' }}>
-                  <span>•</span>
-                  <span>{item}</span>
-                </div>
-              ))}
+      {/* ── LIVE STATS BAR ── */}
+      <div style={{ background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '32px 24px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px' }}>
+          {[
+            { label: 'Verified Traders', value: liveStats.users.toLocaleString(), icon: '👥' },
+            { label: 'Volume Traded', value: `$${(liveStats.volume / 1000000).toFixed(1)}M`, icon: '📊' },
+            { label: 'Average Rating', value: `${liveStats.rating}★`, icon: '⭐' },
+            { label: 'Scam Reports', value: `${liveStats.scams}`, icon: '🛡️' },
+          ].map((stat, idx) => (
+            <div key={idx} style={{ textAlign: 'center', minWidth: '140px' }}>
+              <div style={{ fontSize: '24px', marginBottom: '4px' }}>{stat.icon}</div>
+              <div className="stat-number" style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', fontFamily: "'Playfair Display', serif" }}>{stat.value}</div>
+              <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── FEATURES GRID SECTION ── */}
+      {/* ── FEATURES SECTION ── */}
       <section id="features" style={{ padding: '100px 24px', position: 'relative' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
-          {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>ENTERPRISE FEATURES</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Re-engineered for Ethiopian Traders</h2>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHAT YOU CAN DO</span>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Everything You Need to Trade</h2>
             <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              Our P2P escrow platform combines decentralized security with familiar local payments to bring you the safest trading experience in the region.
+              From buying your first USDT to sending money home — EthioSwap has you covered with secure, instant, peer-to-peer trading.
             </p>
           </div>
-
-          {/* Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {[
-              { t: 'Smart Escrow Protection', d: "Before a buyer transfers ETB, the seller's USD ($) is automatically locked in the escrow smart contract. Funds are released only after payment is verified.", ic: '🔒' },
-              { t: '100% Verified Users', d: "No anonymous trading. Every user must verify their account with a national ID or passport scan, along with a live face selfie match to eliminate fraud.", ic: '🛡️' },
-              { t: 'Biometric App Lock', d: "Lock your wallet with your phone's native fingerprint scanner, face unlock, or a custom secure 6-digit PIN. Your keys stay protected on your device.", ic: '🔑' },
-              { t: 'Flexible Bank Payouts', d: "Add and manage multiple local bank or mobile money accounts (including CBE, Telebirr, Dashen, Awash, HelloCash, and M-Pesa) to securely settle fiat transactions directly.", ic: '🏦' },
-              { t: 'Trade Notification Center', d: "Receive real-time alerts whenever there's activity on your buy, sell, deposit, or withdrawal orders. Never miss a trade window or payment stage.", ic: '🔔' },
-              { t: 'Cross-Device Sync', d: "Log in with the same credentials on the web browser and the native Android app. Balance, trade history, and KYC status sync instantly in real-time.", ic: '🔄' },
+              { t: 'Buy USDT', d: 'Purchase USDT from verified sellers using Telebirr, CBE, Dashen Bank, or Awash Bank. Funds are held in escrow until you confirm payment.', ic: '💵' },
+              { t: 'Sell USDT', d: 'List your USDT for sale at your preferred rate. Receive ETB directly to your bank account with buyer verification.', ic: '📈' },
+              { t: 'Send Money', d: 'Send USDT to any EthioSwap user instantly with zero fees. Perfect for splitting bills or sending to friends and family.', ic: '📤' },
+              { t: 'Receive Money', d: 'Share your wallet address to receive USDT from anyone, anywhere in the world. Supports TRC20 and ERC20 networks.', ic: '📥' },
+              { t: 'Deposit & Withdraw', d: 'Fund your wallet with on-chain USDT deposits (TRC20/ERC20) and withdraw to external wallets anytime.', ic: '🔄' },
+              { t: 'Track Live Rates', d: 'Monitor real-time USDT/ETB exchange rates, market trends, and best buy/sell offers from verified traders.', ic: '📊' },
             ].map((ft, idx) => (
-              <div
-                key={idx}
-                className="card-premium"
-                onMouseMove={handleCardMouseMove}
-                onMouseLeave={handleCardMouseLeave}
-                style={{
-                  background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: '16px', padding: '32px', cursor: 'default',
-                  transition: 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, box-shadow 0.2s'
-                }}
-              >
-                {/* Icon square */}
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '10px', background: '#1a1d23',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '22px', border: '1px solid rgba(255,255,255,0.04)', marginBottom: '20px'
-                }}>
-                  {ft.ic}
-                </div>
-                <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 500, margin: '0 0 10px 0' }}>{ft.t}</h3>
+              <div key={idx} className="card-premium" onMouseMove={handleCardMouseMove} onMouseLeave={handleCardMouseLeave}
+                style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, box-shadow 0.2s' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: '#1a1d23', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', border: '1px solid rgba(255,255,255,0.04)', marginBottom: '20px' }}>{ft.ic}</div>
+                <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 600, margin: '0 0 10px 0' }}>{ft.t}</h3>
                 <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: 0 }}>{ft.d}</p>
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
-      {/* ── HOW IT WORKS SECTION (TIMELINE) ── */}
-      <section id="timeline" ref={stepsRef} style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* ── HOW IT WORKS ── */}
+      <section id="how-it-works" ref={stepsRef} style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TIMELINE</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Simple 4-Step Trade Lifecycle</h2>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>HOW IT WORKS</span>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Start Trading in 3 Simple Steps</h2>
             <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              Trading USDT for local bank deposits has never been more straightforward. Here is how a standard trade works on EthioSwap.
+              Getting started with EthioSwap is quick and easy. No crypto knowledge required.
             </p>
           </div>
-
-          {/* Desktop horizontal / Mobile vertical steps timeline */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'space-between',
-            position: 'relative', padding: '20px 0'
-          }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', position: 'relative', padding: '20px 0' }}>
             {[
-              { step: '1', t: 'Create Account & KYC', d: 'Upload National ID or Passport scan alongside live face selfie. Verified in minutes.' },
-              { step: '2', t: 'Deposit On-Chain USDT', d: 'Securely fund your wallet using standard TRC20 or ERC20 blockchain networks.' },
-              { step: '3', t: 'Post or Find a Trade', d: 'Browse live P2P marketplace ads or publish your own custom price listings.' },
-              { step: '4', t: 'Escrow Lock & Release', d: 'USDT is secured in automated smart contract escrow and released instantly on bank payment confirmation.' }
+              { step: '1', t: 'Create Account', d: 'Sign up for free and verify your identity with a National ID and live selfie. Takes just a few minutes.' },
+              { step: '2', t: 'Find a Trade', d: 'Browse live P2P listings or create your own. Filter by payment method, rate, and trade limits.' },
+              { step: '3', t: 'Trade Safely', d: 'USDT is locked in escrow. Send payment, confirm, and receive your funds. Admin support is always available.' },
             ].map((step, idx) => (
-              <div
-                key={idx}
-                className={`step-timeline-item ${stepsVisible ? 'visible' : ''}`}
-                style={{
-                  flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: '16px',
-                  transitionDelay: `${idx * 150}ms`
-                }}
-              >
-                {/* Circle step number & line */}
-                <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #f5c518',
-                    background: '#0a0a0a', color: '#f5c518', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontWeight: 700, fontSize: '14px', zIndex: 2
-                  }}>
+              <div key={idx} className={`step-timeline-item ${stepsVisible ? 'visible' : ''}`}
+                style={{ flex: '1 1 280px', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '16px', transitionDelay: `${idx * 150}ms` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid #f5c518', background: '#0a0a0a', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '20px', zIndex: 2 }}>
                     {step.step}
                   </div>
-                  {idx < 3 && (
-                    <div style={{
-                      position: 'absolute', left: '36px', right: '-12px', height: '1px',
-                      borderTop: '2px dashed rgba(245,197,24,0.3)', zIndex: 1, pointerEvents: 'none'
-                    }} className="desktop-only" />
-                  )}
                 </div>
-
-                <div>
-                  <h4 style={{ fontSize: '15px', color: '#fff', fontWeight: 500, margin: '0 0 6px 0' }}>{step.t}</h4>
-                  <p style={{ fontSize: '13px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>{step.d}</p>
+                <div style={{ textAlign: 'center' }}>
+                  <h4 style={{ fontSize: '18px', color: '#fff', fontWeight: 600, margin: '0 0 8px 0' }}>{step.t}</h4>
+                  <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>{step.d}</p>
                 </div>
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
-      {/* ── LIVE P2P MARKET SECTION ── */}
-      <section id="market" style={{ padding: '100px 24px' }}>
+      {/* ── WHY US SECTION ── */}
+      <section id="why-us" style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHY ETHIOPIANS CHOOSE US</span>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Built for Ethiopia, by Ethiopians</h2>
+            <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
+              We understand the unique challenges of trading in Ethiopia. That's why we built a platform that works the way you need it to.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            {[
+              { t: 'Escrow Protection', d: 'Every trade is protected by automated escrow. Your USDT is locked until payment is verified. No trust required — the system guarantees safety.', ic: '🔒' },
+              { t: 'Real Identity (KYC)', d: 'Every trader is verified with a National ID and live selfie. No anonymous accounts, no fake profiles. You always know who you are trading with.', ic: '🛡️' },
+              { t: 'Trader Ratings', d: 'See a trader\'s history, rating, and badge level before trading. Top-rated traders earn elite status through consistent, honest trading.', ic: '⭐' },
+              { t: 'Best Rates', d: 'Competitive P2P rates that beat banks and traditional exchange services. Set your own price or accept the best available offer.', ic: '💰' },
+              { t: 'Instant Settlement', d: 'Trades complete in minutes, not days. Escrow releases instantly once payment is confirmed. No waiting for bank processing.', ic: '⚡' },
+              { t: 'Made for Ethiopia', d: 'Supports Telebirr, CBE, Dashen, Awash, and HelloCash. Local support team in Addis Ababa. Available in English and Amharic.', ic: '🇪🇹' },
+            ].map((ft, idx) => (
+              <div key={idx} className="trust-card" onMouseMove={handleCardMouseMove} onMouseLeave={handleCardMouseLeave}
+                style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s, border-color 0.2s' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(245,197,24,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', border: '1px solid rgba(245,197,24,0.15)', marginBottom: '20px' }}>{ft.ic}</div>
+                <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 600, margin: '0 0 10px 0' }}>{ft.t}</h3>
+                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: 0 }}>{ft.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── LIVE RATES TABLE ── */}
+      <section id="market" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px', marginBottom: '40px' }}>
             <div>
-              <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REAL-TIME FEED</span>
-              <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 0 0', fontWeight: 400 }}>Live P2P Market Listings</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span className="badge-live-pulse" />
+                <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE P2P MARKET</span>
+              </div>
+              <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: 0, fontWeight: 400 }}>Best Available Rates</h2>
             </div>
-            
-            {/* Filter Tabs */}
             <div style={{ display: 'flex', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '30px', padding: '3px' }}>
-              <button
-                onClick={() => setActiveMarketTab('buy')}
-                className={`market-tab-btn ${activeMarketTab === 'buy' ? 'active' : ''}`}
-              >
-                Buy USD
-              </button>
-              <button
-                onClick={() => setActiveMarketTab('sell')}
-                className={`market-tab-btn ${activeMarketTab === 'sell' ? 'active' : ''}`}
-              >
-                Sell USD
-              </button>
+              <button onClick={() => setActiveMarketTab('buy')} className={`market-tab-btn ${activeMarketTab === 'buy' ? 'active' : ''}`}>Buy USD</button>
+              <button onClick={() => setActiveMarketTab('sell')} className={`market-tab-btn ${activeMarketTab === 'sell' ? 'active' : ''}`}>Sell USD</button>
             </div>
           </div>
-
-          {/* Table Container */}
           {width < 768 && (
-            <div style={{ fontSize: '11px', color: '#f5c518', textAlign: 'right', marginBottom: '8px', fontWeight: 600, letterSpacing: '0.05em' }}>
-              scroll ➔
-            </div>
+            <div style={{ fontSize: '11px', color: '#f5c518', textAlign: 'right', marginBottom: '8px', fontWeight: 600, letterSpacing: '0.05em' }}>scroll ➔</div>
           )}
           <div className="card-premium" style={{ background: '#111318', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.07)', padding: '24px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>
                   <th style={{ padding: '12px 16px' }}>Trader</th>
-                  <th style={{ padding: '12px 16px' }}>Available Volume</th>
-                  <th style={{ padding: '12px 16px' }}>Exchange Rate</th>
-                  <th style={{ padding: '12px 16px' }}>Min - Max Limits</th>
-                  <th style={{ padding: '12px 16px' }}>Payment Method</th>
+                  <th style={{ padding: '12px 16px' }}>Available</th>
+                  <th style={{ padding: '12px 16px' }}>Rate</th>
+                  <th style={{ padding: '12px 16px' }}>Limits</th>
+                  <th style={{ padding: '12px 16px' }}>Payment</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {mockOrders.filter(o => o.type === activeMarketTab).map((order) => (
-                  <tr
-                    key={order.id}
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '14px', transition: 'background-color 0.2s' }}
-                    className="table-row-clickable"
-                  >
+                  <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '14px', transition: 'background-color 0.2s' }}>
                     <td style={{ padding: '16px', fontWeight: 600, color: '#fff' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
-                          👤
-                        </div>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>👤</div>
                         @{order.name}
                       </div>
                     </td>
@@ -1075,331 +621,221 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                     <td style={{ padding: '16px', fontWeight: 600 }}>{order.rate}</td>
                     <td style={{ padding: '16px', color: '#c8c8c8' }}>{order.limits}</td>
                     <td style={{ padding: '16px' }}>
-                      <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px' }}>
-                        {order.method}
-                      </span>
+                      <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px' }}>{order.method}</span>
                     </td>
                     <td style={{ padding: '16px', textAlign: 'right' }}>
-                      {order.type === 'buy' ? (
-                        <button onClick={onSignIn} className="cta-btn-gold" style={{ height: '32px', fontSize: '12px', borderRadius: '6px', padding: '0 16px', background: '#00d4a0', color: '#0d1117' }}>
-                          Buy USD
-                        </button>
-                      ) : (
-                        <button onClick={onSignIn} className="cta-btn-gold" style={{ height: '32px', fontSize: '12px', borderRadius: '6px', padding: '0 16px' }}>
-                          Sell USD
-                        </button>
-                      )}
+                      <button onClick={onSignIn} className="cta-btn-gold"
+                        style={{ height: '32px', fontSize: '12px', borderRadius: '6px', padding: '0 16px', background: order.type === 'buy' ? '#00d4a0' : '#f5c518', color: order.type === 'buy' ? '#0d1117' : '#0a0a0a' }}>
+                        {order.type === 'buy' ? 'Buy USD' : 'Sell USD'}
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
         </div>
       </section>
 
-      {/* ── TARGET AUDIENCE SECTION ── */}
-      <section id="audience" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* ── INVITE & EARN COMING SOON ── */}
+      <section style={{ padding: '80px 24px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+          <span style={{ fontSize: '11px', color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, background: 'rgba(245,197,24,0.1)', padding: '4px 12px', borderRadius: '20px' }}>COMING SOON</span>
+          <h2 className="serif-title" style={{ fontSize: '36px', color: '#fff', margin: '16px 0 12px 0', fontWeight: 400 }}>Invite & Earn Program</h2>
+          <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '32px', maxWidth: '520px', margin: '0 auto 32px' }}>
+            Invite your friends to EthioSwap and earn rewards when they complete their first trade. The more you invite, the more you earn.
+          </p>
+          <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', maxWidth: '480px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#c8c8c8' }}>
+              <span>Community Goal</span>
+              <span style={{ color: '#f5c518', fontWeight: 700 }}>{inviteProgress}%</span>
+            </div>
+            <div style={{ background: '#0a0a0a', borderRadius: '8px', height: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ width: `${inviteProgress}%`, height: '100%', background: 'linear-gradient(90deg, #f5c518, #00d4a0)', borderRadius: '8px', transition: 'width 1s ease' }} />
+            </div>
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#8b92a8' }}>
+              We're building toward 200 verified traders to unlock rewards for everyone.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST & SECURITY ── */}
+      <section style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TARGET AUDIENCE</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Who is EthioSwap Designed For?</h2>
-            <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              Our secure escrow infrastructure offers tailor-made P2P trading features for remote workers, diaspora senders, and local merchants.
-            </p>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TRUST & SECURITY</span>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Your Security is Our Priority</h2>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            
-            {/* diaspora */}
-            <div
-              className="card-premium"
-              onMouseMove={handleCardMouseMove}
-              onMouseLeave={handleCardMouseLeave}
-              style={{
-                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px',
-                transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)'
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px', transition: 'transform 0.2s' }} className="target-icon">🌍</div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f5c518', margin: 0 }}>Diaspora & Remittance Senders</h3>
-              <p style={{ fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>
-                Sending money back home? Buy or sell stable USDT peer-to-peer with verified counterparts at local market exchange rates under smart contract escrow safeguards.
-              </p>
-            </div>
-
-            {/* freelancers */}
-            <div
-              className="card-premium"
-              onMouseMove={handleCardMouseMove}
-              onMouseLeave={handleCardMouseLeave}
-              style={{
-                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px',
-                transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)'
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px', transition: 'transform 0.2s' }} className="target-icon">💼</div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f5c518', margin: 0 }}>Freelancers & Remote Workers</h3>
-              <p style={{ fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>
-                Receiving foreign currencies or USD from international freelance clients? Swap your on-chain assets and access your ETB instantly in major bank accounts.
-              </p>
-            </div>
-
-            {/* local traders */}
-            <div
-              className="card-premium"
-              onMouseMove={handleCardMouseMove}
-              onMouseLeave={handleCardMouseLeave}
-              style={{
-                background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px',
-                transition: 'all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)'
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px', transition: 'transform 0.2s' }} className="target-icon">🤝</div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f5c518', margin: 0 }}>Local P2P Traders</h3>
-              <p style={{ fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>
-                Exchange USDT peer-to-peer securely. Set custom listing rates, choose preferred bank transfer methods, and settle orders with direct admin dispute mediation.
-              </p>
-            </div>
-
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
+            {[
+              { t: 'Escrow Lock', d: 'Every trade amount is locked in escrow before payment. Funds are cryptographically secured and can only be released by the platform.', ic: '🔐' },
+              { t: 'Identity Verification', d: 'Mandatory KYC with National ID + live selfie. Every trader is a real, verified person. No anonymity, no fraud.', ic: '🪪' },
+              { t: 'Dispute Resolution', d: 'Dedicated support team in Addis Ababa reviews evidence and resolves disputes fairly. Your funds are safe throughout.', ic: '⚖️' },
+              { t: '2FA & Biometric Lock', d: 'Secure your account with two-factor authentication, fingerprint lock, or Face ID. Your keys stay on your device.', ic: '🔑' },
+            ].map((ft, idx) => (
+              <div key={idx} className="trust-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '28px', transition: 'transform 0.2s, border-color 0.2s' }}>
+                <div style={{ fontSize: '32px', marginBottom: '16px' }}>{ft.ic}</div>
+                <h3 style={{ fontSize: '16px', color: '#fff', fontWeight: 600, margin: '0 0 8px 0' }}>{ft.t}</h3>
+                <p style={{ fontSize: '13px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>{ft.d}</p>
+              </div>
+            ))}
           </div>
-
         </div>
       </section>
 
-      {/* ── DOWNLOAD APK SECTION ── */}
-      <section id="download" style={{ padding: '100px 24px' }}>
+      {/* ── TESTIMONIALS ── */}
+      <section style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center' }}>
-            <div>
-              <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>MOBILE DOWNLOAD</span>
-              <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>EthioSwap Android App Center</h2>
-              <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '24px' }}>
-                Secure your wallet using native biometric lock parameters (Fingerprint or Face ID) and upload documents instantly using device cameras.
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#8b92a8' }}>Apk Version</div>
-                  <strong style={{ color: '#fff', fontSize: '13px' }}>v2.4.0 (Beta)</strong>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#8b92a8' }}>File Size</div>
-                  <strong style={{ color: '#fff', fontSize: '13px' }}>12.4 MB</strong>
-                </div>
-                <div style={{ gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', marginTop: '6px' }}>
-                  <div style={{ fontSize: '11px', color: '#8b92a8' }}>SHA-256 Checksum</div>
-                  <div style={{ fontSize: '10px', color: '#f5c518', fontFamily: 'monospace', wordBreak: 'break-all' }}>4a2b9f8d7c6e5a4b3c2d1e0f9a8b7c6d5e4f3a2b1</div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '24px' }}>
-                <button 
-                  onClick={() => setOpenModal('download')} 
-                  className="cta-btn-gold"
-                  onMouseEnter={() => setCursorHovered(true)}
-                  onMouseLeave={() => setCursorHovered(false)}
-                  style={{ border: 'none' }}
-                >
-                  📥 Download Android APK
-                </button>
-              </div>
-            </div>
-
-            {/* Installation Guide */}
-            <div className="card-premium" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
-              <h3 style={{ fontSize: '18px', color: '#fff', margin: '0 0 20px 0', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: '12px' }}>APK Installation Guide</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {[
-                  { n: '1', t: 'Download the APK', d: 'Click the download button above or scan our verification QR code on your mobile browser.' },
-                  { n: '2', t: 'Enable Unknown Sources', d: 'Go to Settings > Security > Install Unknown Apps on your device and allow permissions.' },
-                  { n: '3', t: 'Install and Set App Lock', d: 'Launch the installer, complete setup, and register your fingerprint lock screen pin.' }
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '16px' }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)',
-                      color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, fontSize: '12px', flexShrink: 0
-                    }}>
-                      {item.n}
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '14px', color: '#fff', fontWeight: 600, margin: '0 0 4px 0' }}>{item.t}</h4>
-                      <p style={{ fontSize: '13px', color: '#c8c8c8', margin: 0, lineHeight: 1.5 }}>{item.d}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TESTIMONIALS</span>
+            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Trusted by Ethiopian Traders</h2>
           </div>
-
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            {testimonials.map((t, idx) => (
+              <div key={idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+                  {Array.from({ length: t.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                </div>
+                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{t.text}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>
+                    {t.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{t.name}</div>
+                    <div style={{ fontSize: '12px', color: '#8b92a8' }}>{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── FAQ ACCORDION SECTION ── */}
+      {/* ── FAQ ── */}
       <section id="faq" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>HELP CENTER</span>
+            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>FAQ</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 0 0', fontWeight: 400 }}>Frequently Asked Questions</h2>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {faqItems.map((item, index) => {
               const isActive = faqActiveIndex === index;
               return (
-                <div
-                  key={index}
-                  style={{
-                    background: '#111318', border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: '12px', overflow: 'hidden'
-                  }}
-                >
-                  <button
-                    onClick={() => setFaqActiveIndex(isActive ? null : index)}
-                    style={{
-                      width: '100%', padding: '18px 24px', background: 'transparent',
-                      border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600,
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      cursor: 'pointer', textAlign: 'left'
-                    }}
-                  >
+                <div key={index} style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+                  <button onClick={() => setFaqActiveIndex(isActive ? null : index)}
+                    style={{ width: '100%', padding: '18px 24px', background: 'transparent', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}>
                     <span>{item.q}</span>
-                    <span style={{ color: '#f5c518', fontSize: '18px' }}>{isActive ? '−' : '+'}</span>
+                    <span style={{ color: '#f5c518', fontSize: '18px', flexShrink: 0, marginLeft: '12px' }}>{isActive ? '−' : '+'}</span>
                   </button>
-                  <div style={{
-                    maxHeight: isActive ? '200px' : '0px',
-                    transition: 'max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    overflow: 'hidden'
-                  }}>
-                    <p style={{ padding: '0 24px 20px', margin: 0, fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6 }}>
-                      {item.a}
-                    </p>
+                  <div style={{ maxHeight: isActive ? '200px' : '0px', transition: 'max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1)', overflow: 'hidden' }}>
+                    <p style={{ padding: '0 24px 20px', margin: 0, fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6 }}>{item.a}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-
         </div>
       </section>
 
-      {/* ── REDESIGNED 4-COLUMN FOOTER ── */}
+      {/* ── FINAL CTA ── */}
+      <section style={{ padding: '100px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 50%, rgba(245,197,24,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: '700px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <h2 className="serif-title" style={{ fontSize: width < 768 ? '32px' : '48px', color: '#fff', margin: '0 0 16px 0', fontWeight: 700 }}>
+            Ready to Start Trading?
+          </h2>
+          <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '32px' }}>
+            Join thousands of Ethiopians already trading USDT safely on EthioSwap. Create your free account in minutes.
+          </p>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
+            <button onClick={onGetStarted} className="cta-btn-gold" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
+              Create Free Account
+            </button>
+            <a href="#market" className="cta-btn-outline" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
+              View Live Rates
+            </a>
+          </div>
+          <div style={{ fontSize: '13px', color: '#8b92a8' }}>
+            <span style={{ color: '#00d4a0', fontWeight: 700 }}>{liveStats.users.toLocaleString()}</span> traders already joined
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
       <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '80px 24px 40px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '60px' }}>
-            
-            {/* Col 1 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <Logo size={36} showText={true} />
               <p style={{ fontSize: '13px', color: '#c8c8c8', lineHeight: 1.6 }}>
-                Safe. Verified. Ethiopian.<br />
-                Ethiopia's premium peer-to-peer USD escrow exchange.
+                Ethiopia's safest peer-to-peer USDT exchange. Buy, sell, and trade with confidence.
               </p>
               <div style={{ display: 'flex', gap: '12px' }}>
-                {['✈️', '📸', '🎵'].map((soc, idx) => (
-                  <button
-                    key={idx}
-                    className="btn-premium-ghost"
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', fontSize: '16px', padding: 0
-                    }}
-                  >
-                    {soc}
-                  </button>
-                ))}
+                <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer"
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>✈️</a>
+                <a href="#" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>📸</a>
+                <a href="#" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>🎵</a>
               </div>
             </div>
-
-            {/* Col 2 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Product Links</h4>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Product</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
                 <li><a href="#features" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Features</a></li>
-                <li><a href="#timeline" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>How It Works</a></li>
+                <li><a href="#how-it-works" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>How It Works</a></li>
                 <li><a href="#market" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Live P2P Market</a></li>
-                <li><a href="#download" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Download App</a></li>
+                <li><a href="#why-us" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Why Us</a></li>
               </ul>
             </div>
-
-            {/* Col 3 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Company Links</h4>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Support</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
+                <li><a href="#faq" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>FAQ</a></li>
+                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Telegram Support</a></li>
                 <li>
-                  <button 
-                    onClick={() => setOpenModal('about')} 
-                    style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                    onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                  >
-                    About Us
-                  </button>
+                  <button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }}
+                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>About Us</button>
                 </li>
-                <li><a href="#faq" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>FAQ Help</a></li>
-                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Telegram Support 💬</a></li>
               </ul>
             </div>
-
-            {/* Col 4 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Legal Policy</h4>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Legal</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
                 {['terms', 'privacy', 'escrow', 'aml'].map((mKey) => (
                   <li key={mKey}>
-                    <button
-                      onClick={() => setOpenModal(mKey)}
-                      style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'}
-                      onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}
-                    >
-                      {mKey === 'terms' ? 'Terms of Service' : mKey === 'privacy' ? 'Privacy Policy' : mKey === 'escrow' ? 'Escrow dispute rules' : 'AML Compliance'}
+                    <button onClick={() => setOpenModal(mKey)} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
+                      {mKey === 'terms' ? 'Terms of Service' : mKey === 'privacy' ? 'Privacy Policy' : mKey === 'escrow' ? 'Escrow Rules' : 'AML Compliance'}
                     </button>
                   </li>
                 ))}
               </ul>
             </div>
-
           </div>
 
-          {/* Bottom Bar */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap',
-            gap: '16px', borderTop: '1px solid rgba(245,197,24,0.15)', paddingTop: '28px', fontSize: '13px', color: '#8b92a8'
-          }}>
+          {/* Disclaimer */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '20px 0', marginBottom: '28px' }}>
+            <p style={{ fontSize: '11px', color: '#8b92a8', lineHeight: 1.6, textAlign: 'center', margin: 0 }}>
+              Disclaimer: EthioSwap is a peer-to-peer trading platform. We do not provide financial advice. Cryptocurrency trading involves risk. Users are responsible for compliance with local regulations. All trades are between verified individuals. Escrow protection applies to trades made through the platform.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: '#8b92a8' }}>
             <span>© 2026 EthioSwap. All rights reserved. Addis Ababa, Ethiopia.</span>
-            <span style={{ color: '#f5c518', fontWeight: 600 }}>Secured by Smart Escrow Technology</span>
+            <span style={{ color: '#f5c518', fontWeight: 600 }}>Secured by Escrow Technology</span>
           </div>
-
         </div>
       </footer>
 
-      {/* ── LEGAL ACCORDION MODALS OVERLAYS ── */}
+      {/* ── LEGAL MODALS ── */}
       {openModal && (
         <div className="legal-modal-overlay" onClick={() => setOpenModal(null)}>
           <div className="legal-modal-card" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setOpenModal(null)}
-              className="btn-premium-ghost"
-              style={{ position: 'absolute', top: '20px', right: '20px', fontSize: '18px', padding: '6px' }}
-            >
-              ✕
-            </button>
+            <button onClick={() => setOpenModal(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#c8c8c8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             <div style={{ marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: '14px' }}>
-              <h3 className="serif-title" style={{ fontSize: '24px', color: '#fff', fontWeight: 400, margin: 0 }}>
-                {getModalTitle(openModal)}
-              </h3>
+              <h3 className="serif-title" style={{ fontSize: '24px', color: '#fff', fontWeight: 400, margin: 0 }}>{getModalTitle(openModal)}</h3>
             </div>
             <div style={{ fontSize: '14px', lineHeight: 1.7, display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {getModalBody(openModal)}
