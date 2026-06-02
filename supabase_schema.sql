@@ -611,6 +611,7 @@ ALTER TABLE payment_requests ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
 CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Admins can view all users" ON users FOR SELECT USING (
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
@@ -618,6 +619,7 @@ CREATE POLICY "Admins can view all users" ON users FOR SELECT USING (
 CREATE POLICY "Admins can update all users" ON users FOR UPDATE USING (
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
 );
+CREATE POLICY "Anyone can view usernames for login" ON users FOR SELECT USING (true);
 
 -- Listings policies
 CREATE POLICY "Anyone can view active listings" ON listings FOR SELECT USING (status = 'active');
