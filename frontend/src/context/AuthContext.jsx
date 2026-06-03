@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setErrorState]  = useState(null);
   const [success, setSuccess]   = useState(null);
   const [loading, setLoading]   = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   
   const [trades, setTrades] = useState([]);
@@ -35,15 +36,28 @@ export const AuthProvider = ({ children }) => {
 
   // ── Session & User Management ────────────────────────
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) fetchUserProfile(session.user.id);
-    });
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        if (session) {
+          await fetchUserProfile(session.user.id);
+        }
+      } finally {
+        setInitializing(false);
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      if (session) fetchUserProfile(session.user.id);
-      else setUser(null);
+      if (session) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setInitializing(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -228,9 +242,9 @@ export const AuthProvider = ({ children }) => {
           
           // Hard redirect based on role
           if (profileData.role === 'admin') {
-            window.location.href = '/admin';
+            window.history.replaceState({}, '', '/admin');
           } else {
-            window.location.href = '/dashboard';
+            window.history.replaceState({}, '', '/dashboard');
           }
         } else {
           // Profile doesn't exist — create it now
@@ -255,7 +269,7 @@ export const AuthProvider = ({ children }) => {
             setUser(newProfile);
             setWallet(newProfile);
             localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
-            window.location.href = '/dashboard';
+            window.history.replaceState({}, '', '/dashboard');
           }
         }
       }
@@ -363,7 +377,7 @@ export const AuthProvider = ({ children }) => {
 
         await fetchUserProfile(data.user.id);
         setSuccess('Account created successfully!');
-        window.location.href = '/dashboard';
+        window.history.replaceState({}, '', '/dashboard');
       }
 
       return data.user;
@@ -837,7 +851,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user, wallet, listings, trades, systemSettings,
-      error, success, loading, isLocked,
+      error, success, loading, initializing, isLocked,
       myDepositReqs, allDepositReqs, myTransactions,
       myWithdrawalReqs, allWithdrawalReqs,
       setError, setSuccess,

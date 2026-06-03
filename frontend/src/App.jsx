@@ -425,7 +425,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
-  const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
+  const { user, wallet, trades, isLocked, initializing, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
   const [tab, setTabState] = useState(() => {
     const path = window.location.pathname;
     if (path === '/admin') return 'admin';
@@ -443,6 +443,7 @@ const AppShell = () => {
       window.history.replaceState({}, '', '/dashboard');
     }
   };
+
   const [authMode, setAuthMode] = useState(() => {
     const path = window.location.pathname;
     if (path === '/login') return 'login';
@@ -456,49 +457,29 @@ const AppShell = () => {
     
     return null;
   });
-  const [notifOpen, setNotifOpen] = useState(false);
-  const notifCount = useNotifCount(user?.id);
-  const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
 
-  const [prevNotifCount, setPrevNotifCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
   const [notifications, setNotifications] = useState([]);
 
-  React.useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth event:', event);
-      if (event === 'SIGNED_IN' && session) {
-        // Fetch fresh profile data to ensure role is correct
-        const { data: profile } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+  // Removed redundant onAuthStateChange listener as it's handled in AuthContext.jsx
 
-        if (profile?.role === 'admin') {
-          window.location.href = '/admin';
-        } else {
-          window.location.href = '/dashboard';
+  React.useEffect(() => {
+    if (user && !initializing) {
+      const path = window.location.pathname;
+      if (path === '/' || path === '/login' || path === '/register') {
+        // Use history.replaceState instead of location.href to avoid reload if already in app
+        const targetPath = user.role === 'admin' ? '/admin' : '/dashboard';
+        if (path !== targetPath) {
+          window.history.replaceState({}, '', targetPath);
+          setTabState(user.role === 'admin' ? 'admin' : 'home');
         }
       }
-
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/';
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  React.useEffect(() => {
-    if (user) {
-      const path = window.location.pathname;
-      if (path === '/') {
-        window.location.href = user.role === 'admin' ? '/admin' : '/dashboard';
-      }
     }
-  }, [user]);
+  }, [user, initializing]);
 
   const fetchNotifications = async () => {
+    if (!user) return;
     const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (data) setNotifications(data);
   };
@@ -527,6 +508,7 @@ const AppShell = () => {
 
   // Auto-detect login link from website
   React.useEffect(() => {
+    if (user) return; // Only relevant for non-logged in users
     const path = window.location.pathname;
     if (path === '/login') {
       setAuthMode('login');
@@ -542,7 +524,7 @@ const AppShell = () => {
       setAuthMode('register');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [user]);
 
   // Custom internal navigation handler
   React.useEffect(() => {
@@ -554,6 +536,18 @@ const AppShell = () => {
     window.addEventListener('ethioswap_navigate', handleNavigate);
     return () => window.removeEventListener('ethioswap_navigate', handleNavigate);
   }, []);
+
+  // Initialization splash screen
+  if (initializing) {
+    return (
+      <div style={{ minHeight: '100vh', width: '100%', background: '#0A0C12', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <Logo size={64} />
+        <div style={{ marginTop: '24px', color: '#f5c518', fontSize: '14px', fontWeight: 600, letterSpacing: '0.1em' }}>
+          LOADING ETHIOSWAP...
+        </div>
+      </div>
+    );
+  }
 
   // Not logged in → show landing or login/register
   if (!user) {
