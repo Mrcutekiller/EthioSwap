@@ -274,11 +274,7 @@ export const AuthProvider = ({ children }) => {
 
         if (profileData) {
           console.log('[Auth] Profile verified. Role:', profileData.role);
-          if (profileData.role === 'admin') {
-            window.history.replaceState({}, '', '/admin');
-          } else {
-            window.history.replaceState({}, '', '/dashboard');
-          }
+          // Redirection will be handled by AppShell when 'user' state updates
         } else {
           console.log('[Auth] Profile missing. Creating record for:', loginEmail);
           const meta = data.user.user_metadata || {};
@@ -315,12 +311,7 @@ export const AuthProvider = ({ children }) => {
             setUser(newProfile);
             setWallet(newProfile);
             localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
-            
-            if (newProfile.role === 'admin') {
-              window.history.replaceState({}, '', '/admin');
-            } else {
-              window.history.replaceState({}, '', '/dashboard');
-            }
+            // Redirection will be handled by AppShell
           }
         }
       }
@@ -433,7 +424,7 @@ export const AuthProvider = ({ children }) => {
         console.log('Fetching newly created user profile...');
         await fetchUserProfile(data.user.id);
         setSuccess('Account created successfully!');
-        window.history.replaceState({}, '', '/dashboard');
+        // Redirection handled by AppShell
       }
 
       return data.user;

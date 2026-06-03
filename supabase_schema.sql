@@ -614,10 +614,10 @@ CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid()
 CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Admins can view all users" ON users FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
 );
 CREATE POLICY "Admins can update all users" ON users FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
 );
 CREATE POLICY "Anyone can view usernames for login" ON users FOR SELECT USING (true);
 
@@ -629,13 +629,11 @@ CREATE POLICY "Users can delete own listings" ON listings FOR DELETE USING (auth
 
 -- Trades policies
 CREATE POLICY "Users can view own trades" ON trades FOR SELECT USING (
-    auth.uid() = buyer_id OR auth.uid() = seller_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = buyer_id OR auth.uid() = seller_id OR is_admin()
 );
 CREATE POLICY "Users can create trades" ON trades FOR INSERT WITH CHECK (auth.uid() = buyer_id);
 CREATE POLICY "Users can update own trades" ON trades FOR UPDATE USING (
-    auth.uid() = buyer_id OR auth.uid() = seller_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = buyer_id OR auth.uid() = seller_id OR is_admin()
 );
 
 -- Notifications policies
@@ -645,8 +643,7 @@ CREATE POLICY "System can insert notifications" ON notifications FOR INSERT WITH
 
 -- Transactions policies
 CREATE POLICY "Users can view own transactions" ON transactions FOR SELECT USING (
-    auth.uid() = user_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = user_id OR is_admin()
 );
 
 -- Trade chats policies
@@ -654,7 +651,7 @@ CREATE POLICY "Trade participants can view chats" ON trade_chats FOR SELECT USIN
     EXISTS (
         SELECT 1 FROM trades t
         WHERE t.id = trade_id AND (t.buyer_id = auth.uid() OR t.seller_id = auth.uid())
-    ) OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    ) OR is_admin()
 );
 CREATE POLICY "System can create chats" ON trade_chats FOR INSERT WITH CHECK (true);
 
@@ -664,7 +661,7 @@ CREATE POLICY "Chat participants can view messages" ON chat_messages FOR SELECT 
         SELECT 1 FROM trade_chats tc
         JOIN trades t ON t.id = tc.trade_id
         WHERE tc.id = chat_id AND (t.buyer_id = auth.uid() OR t.seller_id = auth.uid())
-    ) OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    ) OR is_admin()
 );
 CREATE POLICY "Chat participants can send messages" ON chat_messages FOR INSERT WITH CHECK (
     auth.uid() = sender_id AND EXISTS (
@@ -683,20 +680,17 @@ CREATE POLICY "Users can update own message read status" ON chat_messages FOR UP
 
 -- Escrow policies
 CREATE POLICY "Trade participants can view escrow" ON escrow_accounts FOR SELECT USING (
-    auth.uid() = seller_id OR auth.uid() = buyer_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = seller_id OR auth.uid() = buyer_id OR is_admin()
 );
 CREATE POLICY "System can create escrow" ON escrow_accounts FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admin can update escrow" ON escrow_accounts FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admin can update escrow" ON escrow_accounts FOR UPDATE USING (is_admin());
 
 -- Escrow logs policies
 CREATE POLICY "Trade participants can view escrow logs" ON escrow_logs FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM escrow_accounts ea
         WHERE ea.id = escrow_id AND (ea.seller_id = auth.uid() OR ea.buyer_id = auth.uid())
-    ) OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    ) OR is_admin()
 );
 
 -- Trader ratings policies
@@ -708,9 +702,7 @@ CREATE POLICY "Users can manage own alerts" ON price_alerts FOR ALL USING (auth.
 
 -- Announcements policies
 CREATE POLICY "Anyone can view published announcements" ON announcements FOR SELECT USING (is_published = true);
-CREATE POLICY "Admins can manage announcements" ON announcements FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admins can manage announcements" ON announcements FOR ALL USING (is_admin());
 
 -- Announcement reads policies
 CREATE POLICY "Users can view own reads" ON announcement_reads FOR SELECT USING (auth.uid() = user_id);
@@ -724,20 +716,17 @@ CREATE POLICY "Users can create transfers" ON internal_transfers FOR INSERT WITH
 
 -- Disputes policies
 CREATE POLICY "Trade participants can view disputes" ON disputes FOR SELECT USING (
-    auth.uid() = opened_by OR auth.uid() = against_user OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = opened_by OR auth.uid() = against_user OR is_admin()
 );
 CREATE POLICY "Users can create disputes" ON disputes FOR INSERT WITH CHECK (auth.uid() = opened_by);
-CREATE POLICY "Admin can update disputes" ON disputes FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-);
+CREATE POLICY "Admin can update disputes" ON disputes FOR UPDATE USING (is_admin());
 
 -- Dispute evidence policies
 CREATE POLICY "Dispute participants can view evidence" ON dispute_evidence FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM disputes d
         WHERE d.id = dispute_id AND (d.opened_by = auth.uid() OR d.against_user = auth.uid())
-    ) OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    ) OR is_admin()
 );
 CREATE POLICY "Dispute participants can upload evidence" ON dispute_evidence FOR INSERT WITH CHECK (
     auth.uid() = uploaded_by
@@ -758,22 +747,19 @@ CREATE POLICY "Target user can update payment request" ON payment_requests FOR U
 
 -- Deposit requests policies
 CREATE POLICY "Users can view own deposit requests" ON deposit_requests FOR SELECT USING (
-    auth.uid() = user_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = user_id OR is_admin()
 );
 CREATE POLICY "Users can create deposit requests" ON deposit_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Withdraw requests policies
 CREATE POLICY "Users can view own withdraw requests" ON withdraw_requests FOR SELECT USING (
-    auth.uid() = user_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = user_id OR is_admin()
 );
 CREATE POLICY "Users can create withdraw requests" ON withdraw_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Support tickets policies
 CREATE POLICY "Users can view own tickets" ON support_tickets FOR SELECT USING (
-    auth.uid() = user_id OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = user_id OR is_admin()
 );
 
 -- ═══════════════════════════════════════════════════════════════
@@ -948,10 +934,52 @@ CREATE INDEX IF NOT EXISTS idx_reviews_is_approved ON reviews(is_approved);
 
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
+-- ═══════════════════════════════════════════════════════════════
+-- 27. USERS TABLE RLS & FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+-- Function to check if the current user is an admin without recursion
+CREATE OR REPLACE FUNCTION is_admin() 
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT EXISTS (
+      SELECT 1 FROM public.users 
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "users read own" ON users FOR SELECT USING (auth.uid()=id);
-CREATE POLICY "users update own" ON users FOR UPDATE USING (auth.uid()=id);
+-- Remove old policies to prevent duplicates and recursion
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Admins can view all users" ON users;
+DROP POLICY IF EXISTS "Admins can update all users" ON users;
+DROP POLICY IF EXISTS "Anyone can view usernames for login" ON users;
+DROP POLICY IF EXISTS "users read own" ON users;
+DROP POLICY IF EXISTS "users update own" ON users;
+DROP POLICY IF EXISTS "Admins have full access" ON users;
+
+-- New non-recursive policies
+CREATE POLICY "Users can view own profile" ON users 
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON users 
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON users 
+    FOR UPDATE USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Admins have full access" ON users
+    FOR ALL USING (is_admin());
+
+CREATE POLICY "Anyone can view usernames for public display" ON users
+    FOR SELECT USING (true);
+
 
 -- ═══════════════════════════════════════════════════════════════
 -- 29. NOTIFICATIONS TABLE
