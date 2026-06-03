@@ -27,3 +27,24 @@ export const create = mutation({
     });
   },
 });
+
+export const update = mutation({
+  args: {
+    id: v.id("reviews"),
+    rating: v.number(),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      rating: args.rating,
+      content: args.content,
+    });
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("reviews") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
