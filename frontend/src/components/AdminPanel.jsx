@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex-api";
 import { notify } from '../lib/notify';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */

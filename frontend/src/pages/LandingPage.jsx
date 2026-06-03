@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../components/Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex-api";
 
 // Animated Count-Up component using Intersection Observer
 const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isDecimal = false }) => {
