@@ -822,7 +822,9 @@ const AdminPanel = ({ user }) => {
   const getImageUrl = (src) => {
     if (!src) return '';
     if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) return src;
-    return `http://localhost:5000${src}`;
+    // Fallback for local development or missing base URL
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    return `${baseUrl}${src}`;
   };
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;

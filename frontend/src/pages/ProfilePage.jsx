@@ -331,7 +331,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const getImageUrl = (src) => {
     if (!src) return '';
     if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) return src;
-    return `http://localhost:5000${src}`;
+    // Fallback for local development or missing base URL
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    return `${baseUrl}${src}`;
   };
 
   const handleAddAccount = async (e) => {
