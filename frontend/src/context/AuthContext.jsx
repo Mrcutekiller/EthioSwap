@@ -17,12 +17,15 @@ export const AuthProvider = ({ children }) => {
   const [isLocked, setIsLocked] = useState(false);
 
   // Convex Queries
-  const systemSettings = useQuery(api.systemSettings.get) || {
+  const settingsFromQuery = useQuery(api.systemSettings.get);
+  const systemSettings = settingsFromQuery || {
     etbRatePerDollar: 190.0,
+    etbRatePerDollarSell: 186.0,
     flatFeePercent: 1.0,
     maxFeeUSD: 0.5,
     commissionType: 'percentage',
     commissionValue: 1.0,
+    isP2pFreePeriod: false
   };
   
   const listingsFromQuery = useQuery(api.listings.listActive) || [];
@@ -39,17 +42,6 @@ export const AuthProvider = ({ children }) => {
   const myWithdrawalReqs = user ? allWithdrawalReqs.filter(r => r.userId === user._id).map(r => ({ ...r, id: r._id })) : [];
   const myTransactions = trades; 
 
-  // System Settings with safe defaults
-  const settingsFromQuery = useQuery(api.systemSettings.get);
-  const systemSettings = settingsFromQuery || {
-    etbRatePerDollar: 190.0,
-    etbRatePerDollarSell: 186.0,
-    flatFeePercent: 1.0,
-    maxFeeUSD: 0.5,
-    commissionType: 'percentage',
-    commissionValue: 1.0,
-    isP2pFreePeriod: false
-  };
   const createUser = useMutation(api.users.create);
   const createListingMutation = useMutation(api.listings.create);
   const createTradeMutation = useMutation(api.trades.create);
