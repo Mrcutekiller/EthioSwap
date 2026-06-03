@@ -310,18 +310,6 @@ const P2PListings = () => {
         >
           Sell USD
         </button>
-            background: p2pTab === 'sell' ? '#f5c518' : 'transparent',
-            color: p2pTab === 'sell' ? '#0a0a0a' : '#6b7280',
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '8px',
-            transition: 'all 0.2s ease',
-            boxShadow: p2pTab === 'sell' ? '0 4px 12px rgba(245,197,24,0.2)' : 'none'
-          }}
-        >
-          Sell USD
-        </button>
       </div>
 
       {/* ── Filter Row 1: Payment Method ── */}
