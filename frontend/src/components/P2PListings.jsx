@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import EmptyState from './EmptyState.jsx';
 
 // ─── All Ethiopian payment methods ───────────────────────────
 const ALL_PAYMENT_METHODS = [
@@ -282,16 +283,9 @@ const P2PListings = () => {
             justifyContent: 'center', 
             gap: '8px',
             transition: 'all 0.2s ease',
+            boxShadow: p2pTab === 'buy' ? '0 4px 12px rgba(0,212,160,0.2)' : 'none'
           }}
         >
-          <span style={{ 
-            width: '8px', 
-            height: '8px', 
-            borderRadius: '50%', 
-            background: p2pTab === 'buy' ? '#0a0a0a' : '#ef4444', 
-            display: 'inline-block',
-            animation: p2pTab === 'buy' ? 'livePulse 1.8s ease-in-out infinite' : 'none'
-          }} />
           Buy USD
         </button>
         <button
@@ -311,84 +305,103 @@ const P2PListings = () => {
             justifyContent: 'center', 
             gap: '8px',
             transition: 'all 0.2s ease',
+            boxShadow: p2pTab === 'sell' ? '0 4px 12px rgba(245,197,24,0.2)' : 'none'
           }}
         >
-          <span style={{ 
-            width: '8px', 
-            height: '8px', 
-            borderRadius: '50%', 
-            background: p2pTab === 'sell' ? '#0a0a0a' : '#f5c518', 
-            display: 'inline-block',
-            animation: p2pTab === 'sell' ? 'livePulse 1.8s ease-in-out infinite' : 'none'
-          }} />
+          Sell USD
+        </button>
+            background: p2pTab === 'sell' ? '#f5c518' : 'transparent',
+            color: p2pTab === 'sell' ? '#0a0a0a' : '#6b7280',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px',
+            transition: 'all 0.2s ease',
+            boxShadow: p2pTab === 'sell' ? '0 4px 12px rgba(245,197,24,0.2)' : 'none'
+          }}
+        >
           Sell USD
         </button>
       </div>
 
       {/* ── Filter Row 1: Payment Method ── */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        {['All', ...ALL_PAYMENT_METHODS.map(m => m.id)].map(p => {
-          const isSelected = filterPayment === p;
-          const method = ALL_PAYMENT_METHODS.find(m => m.id === p);
-          return (
-            <button 
-              key={p} 
-              onClick={() => setFilterPayment(p)} 
-              style={{
-                flexShrink: 0, 
-                padding: '8px 16px', 
-                borderRadius: '99px', 
-                border: '1px solid', 
-                cursor: 'pointer',
-                fontFamily: 'var(--font)', 
-                fontSize: '11px', 
-                fontWeight: 700, 
-                transition: 'all 0.2s ease',
-                background: isSelected ? '#f5c518' : '#111318',
-                color: isSelected ? '#0a0a0a' : '#c8c8c8',
-                borderColor: isSelected ? '#f5c518' : 'rgba(255,255,255,0.07)',
-                boxShadow: isSelected ? '0 4px 12px rgba(245,197,24,0.15)' : 'none',
-              }}
-            >
-              {p === 'All' ? '🌐 All Methods' : `${method?.icon} ${method?.label || p}`}
-            </button>
-          );
-        })}
+      <div style={{ position: 'relative', width: '100%' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+          {['All', ...ALL_PAYMENT_METHODS.map(m => m.id)].map(p => {
+            const isSelected = filterPayment === p;
+            const method = ALL_PAYMENT_METHODS.find(m => m.id === p);
+            return (
+              <button 
+                key={p} 
+                onClick={() => setFilterPayment(p)} 
+                style={{
+                  flexShrink: 0, 
+                  padding: '8px 16px', 
+                  borderRadius: '99px', 
+                  border: '1px solid', 
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)', 
+                  fontSize: '11px', 
+                  fontWeight: 700, 
+                  transition: 'all 0.2s ease',
+                  background: isSelected ? '#f5c518' : '#111318',
+                  color: isSelected ? '#0a0a0a' : '#c8c8c8',
+                  borderColor: isSelected ? '#f5c518' : 'rgba(255,255,255,0.07)',
+                  boxShadow: isSelected ? '0 4px 12px rgba(245,197,24,0.15)' : 'none',
+                }}
+              >
+                {p === 'All' ? '🌐 All Methods' : `${method?.icon} ${method?.label || p}`}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, bottom: '6px', width: '40px',
+          background: 'linear-gradient(to right, transparent, var(--bg-base, #0a0c12))',
+          pointerEvents: 'none', zIndex: 5
+        }} />
       </div>
 
       {/* ── Filter Row 2: Amount ── */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-        {[
-          { id: 'All', label: '💰 All Amounts' },
-          { id: 'under50', label: 'Under $50' },
-          { id: '50to200', label: '$50–$200' },
-          { id: 'over200', label: '$200+' },
-        ].map(b => {
-          const isSelected = filterAmountRange === b.id;
-          return (
-            <button 
-              key={b.id} 
-              type="button" 
-              onClick={() => setFilterAmountRange(b.id)} 
-              style={{
-                flexShrink: 0, 
-                padding: '7px 14px', 
-                borderRadius: '99px', 
-                border: isSelected ? '1.5px solid #00d4a0' : '1px solid rgba(255,255,255,0.07)', 
-                cursor: 'pointer',
-                fontFamily: 'var(--font)', 
-                fontSize: '11px', 
-                fontWeight: 700, 
-                transition: 'all 0.2s ease',
-                background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#111318',
-                color: isSelected ? '#00d4a0' : '#c8c8c8',
-                boxShadow: isSelected ? '0 0 10px rgba(0, 212, 160, 0.1)' : 'none',
-              }}
-            >
-              {b.label}
-            </button>
-          );
-        })}
+      <div style={{ position: 'relative', width: '100%' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+          {[
+            { id: 'All', label: '💰 All Amounts' },
+            { id: 'under50', label: 'Under $50' },
+            { id: '50to200', label: '$50–$200' },
+            { id: 'over200', label: '$200+' },
+          ].map(b => {
+            const isSelected = filterAmountRange === b.id;
+            return (
+              <button 
+                key={b.id} 
+                type="button" 
+                onClick={() => setFilterAmountRange(b.id)} 
+                style={{
+                  flexShrink: 0, 
+                  padding: '7px 14px', 
+                  borderRadius: '99px', 
+                  border: isSelected ? '1.5px solid #00d4a0' : '1px solid rgba(255,255,255,0.07)', 
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font)', 
+                  fontSize: '11px', 
+                  fontWeight: 700, 
+                  transition: 'all 0.2s ease',
+                  background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#111318',
+                  color: isSelected ? '#00d4a0' : '#c8c8c8',
+                  boxShadow: isSelected ? '0 0 10px rgba(0, 212, 160, 0.1)' : 'none',
+                }}
+              >
+                {b.label}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{
+          position: 'absolute', top: 0, right: 0, bottom: '6px', width: '40px',
+          background: 'linear-gradient(to right, transparent, var(--bg-base, #0a0c12))',
+          pointerEvents: 'none', zIndex: 5
+        }} />
       </div>
 
       {/* ── KYC WARNING BANNER ── */}
@@ -437,40 +450,13 @@ const P2PListings = () => {
 
       {/* ── P2P LISTING CARDS ── */}
       {filtered.length === 0 ? (
-        <div style={{ 
-          background: '#111318', 
-          border: '1px dashed rgba(255,255,255,0.07)', 
-          borderRadius: '16px', 
-          padding: '60px 24px', 
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <div style={{ fontSize: '48px' }}>📋</div>
-          <div style={{ fontWeight: 800, fontSize: '18px', color: '#ffffff' }}>No active offers found</div>
-          <p style={{ fontSize: '14px', color: '#c8c8c8', margin: '0 auto', lineHeight: 1.5, maxWidth: '280px' }}>
-            Be the first to post a sell offer in Addis Ababa!
-          </p>
-          <button 
-            onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }}
-            style={{
-              marginTop: '8px',
-              background: 'transparent',
-              border: '1.5px solid #f5c518',
-              borderRadius: '24px',
-              height: '40px',
-              padding: '0 20px',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: '#f5c518',
-              cursor: 'pointer'
-            }}
-          >
-            Post a Listing
-          </button>
-        </div>
+        <EmptyState 
+          icon="📋"
+          title="No Active Offers Found"
+          subtitle="Be the first to post an offer in Addis Ababa!"
+          ctaText="Post a Listing"
+          ctaAction={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }}
+        />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filtered.map((listing, index) => {
@@ -548,13 +534,13 @@ const P2PListings = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '14px', borderRadius: '10px' }}>
                   <div>
                     <div style={{ fontSize: '10px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>AD VOLUME</div>
-                    <div style={{ fontSize: '24px', fontWeight: 900, color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', marginTop: '2px' }}>
+                    <div className="money-usd" style={{ fontSize: '24px', marginTop: '2px', color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
                       ${listing.amountETH.toFixed(2)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '10px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>EXCHANGE RATE</div>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace', marginTop: '2px' }}>
+                    <div className="money-etb" style={{ fontSize: '16px', marginTop: '2px', color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
                       {effectiveRate} ETB/$
                     </div>
                   </div>
@@ -562,7 +548,7 @@ const P2PListings = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#c8c8c8' }}>
                   <span>Transaction Limits:</span>
-                  <strong style={{ color: '#ffffff' }}>
+                  <strong className="money-etb" style={{ color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace' }}>
                     {listing.minLimitETB.toLocaleString()} – {listing.maxLimitETB.toLocaleString()} ETB
                   </strong>
                 </div>

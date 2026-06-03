@@ -1,8 +1,121 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../components/Logo.jsx';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { useAuth } from '../context/AuthContext.jsx';
+
+// Animated Count-Up component using Intersection Observer
+const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isDecimal = false }) => {
+  const [count, setCount] = useState(0);
+  const elementRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    if (elementRef.current) observer.observe(elementRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      setCount(value);
+      return;
+    }
+
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const currentVal = progress * numValue;
+      setCount(isDecimal ? currentVal.toFixed(1) : Math.floor(currentVal));
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        setCount(value); // Ensure exact final value
+      }
+    };
+    window.requestAnimationFrame(step);
+  }, [visible, value, duration, isDecimal]);
+
+  return (
+    <span ref={elementRef}>
+      {prefix}
+      {typeof count === 'number' ? count.toLocaleString() : count}
+      {suffix}
+    </span>
+  );
+};
+
+// Helper for relative time string
+function getRelativeTime(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
+// Gold SVG icons for features
+const FeatureIcons = {
+  buy: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <path d="M12 14v2M12 11v1" />
+    </svg>
+  ),
+  sell: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+      <path d="M12 4l6 6M12 4L6 10" />
+    </svg>
+  ),
+  send: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  ),
+  receive: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="8 17 12 21 16 17" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
+    </svg>
+  ),
+  exchange: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 3 21 3 21 8" />
+      <line x1="4" y1="20" x2="21" y2="3" />
+      <polyline points="8 21 3 21 3 16" />
+      <line x1="3" y1="21" x2="20" y2="4" />
+    </svg>
+  ),
+  rates: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
+    </svg>
+  ),
+};
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
@@ -14,9 +127,18 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
-  const buyRate = systemSettings?.etbRatePerDollar ?? 157.50;
-  const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 155.80;
+  // Stats State
+  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '—', scams: 0 });
+
+  const buyRate = systemSettings?.etbRatePerDollar ?? 190.00;
+  const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 186.00;
 
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -27,15 +149,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
   const [cursorHovered, setCursorHovered] = useState(false);
-  const [phoneTilt, setPhoneTilt] = useState({ rx: 0, ry: 0 });
   const stepsRef = useRef(null);
   const [stepsVisible, setStepsVisible] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  const [liveStats, setLiveStats] = useState({ users: 0, volume: 0, rating: 0, scams: 0 });
-  const [liveListings, setLiveListings] = useState([]);
-  const [inviteProgress, setInviteProgress] = useState(0);
   const [liveRate, setLiveRate] = useState(buyRate);
+  const [rateTimestamp, setRateTimestamp] = useState(new Date().toLocaleTimeString());
 
   useEffect(() => {
     setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -48,86 +166,59 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [prefersReducedMotion]);
 
-  useEffect(() => {
+  // Fetch live stats from Supabase
+  const fetchStats = async () => {
     if (!isSupabaseConfigured) return;
+    try {
+      const [{ count: traders }, tradesRes, reviewsRes, { count: scams }] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }).eq('kyc_status', 'approved'),
+        supabase.from('trades').select('amount_usd').eq('status', 'completed'),
+        supabase.from('reviews').select('rating').eq('is_approved', true),
+        supabase.from('disputes').select('id', { count: 'exact', head: true }).eq('outcome', 'fraud')
+      ]);
 
-    const fetchAllStats = async () => {
-      try {
-        // Fetch user count
-        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const volume = tradesRes.data?.reduce((s, t) => s + (t.amount_usd || 0), 0) || 0;
+      const avg = reviewsRes.data?.length
+        ? (reviewsRes.data.reduce((s, r) => s + r.rating, 0) / reviewsRes.data.length).toFixed(1)
+        : '—';
 
-        // Fetch total volume from trades
-        const { data: tradesData } = await supabase.from('trades').select('amount');
-        const totalVolume = tradesData ? tradesData.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0;
+      setStats({ traders: traders || 0, volume, avg, scams: scams || 0 });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-        // Fetch average rating from reviews
-        const { data: reviewsData } = await supabase.from('reviews').select('rating');
-        let avgRating = 0;
-        if (reviewsData?.length) {
-          avgRating = reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length;
-        }
+  const fetchReviews = async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data } = await supabase.from('reviews')
+        .select('*')
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false })
+        .limit(6);
+      if (data) setReviews(data);
+    } catch {}
+  };
 
-        // Fetch scam count from disputes
-        const { count: scamCount } = await supabase.from('disputes').select('*', { count: 'exact', head: true }).eq('status', 'scam');
-
-        // Fetch invite progress (how many users have a referral_code set)
-        const { count: inviteCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).not('referred_by', 'is', null);
-        const targetUsers = 200;
-        const progress = Math.min(100, Math.round(((inviteCount || 0) / targetUsers) * 100));
-
-        setLiveStats({
-          users: userCount || 0,
-          volume: totalVolume,
-          rating: avgRating ? avgRating.toFixed(1) : 0,
-          scams: scamCount || 0
-        });
-        setInviteProgress(progress);
-      } catch {}
-    };
-
-    const fetchListings = async () => {
-      try {
-        const { data } = await supabase.from('p2p_listings').select('*').eq('status', 'active').limit(10);
-        if (data?.length) setLiveListings(data);
-      } catch {}
-    };
-
-    const fetchReviews = async () => {
-      try {
-        const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(10);
-        if (data) setReviews(data);
-      } catch {}
-    };
-
-    fetchAllStats();
-    fetchListings();
+  useEffect(() => {
+    fetchStats();
     fetchReviews();
   }, []);
 
+  // Update live rates
   useEffect(() => {
     const interval = setInterval(() => {
       setLiveRate(prev => {
-        const delta = (Math.random() - 0.5) * 0.6;
-        return Math.round((prev + delta) * 100) / 100;
+        const delta = (Math.random() - 0.5) * 0.4;
+        const newRate = Math.round((prev + delta) * 100) / 100;
+        setRateTimestamp(new Date().toLocaleTimeString());
+        return newRate;
       });
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const handlePhoneMouseMove = (e) => {
-    if (prefersReducedMotion) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const ry = ((x - centerX) / centerX) * 15;
-    const rx = ((centerY - y) / centerY) * 15;
-    setPhoneTilt({ rx, ry });
-  };
-
-  const handlePhoneMouseLeave = () => setPhoneTilt({ rx: 0, ry: 0 });
-
+  // Intersection Observer for steps timeline
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => { if (entry.isIntersecting) setStepsVisible(true); });
@@ -136,8 +227,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => observer.disconnect();
   }, []);
 
+  // Scroll listener for sticky header bottom border
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
+    const handleScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -150,11 +242,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((centerY - y) / centerY) * 8;
-    const rotateY = ((x - centerX) / centerX) * 8;
+    const rotateX = ((centerY - y) / centerY) * 6; // max 6deg
+    const rotateY = ((x - centerX) / centerX) * 6; // max 6deg
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
     card.style.borderColor = 'rgba(245, 197, 24, 0.3)';
-    card.style.boxShadow = '0 10px 30px rgba(245, 197, 24, 0.05)';
+    card.style.boxShadow = '0 0 0 1px rgba(245,197,24,0.3)';
   };
 
   const handleCardMouseLeave = (e) => {
@@ -170,21 +262,43 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       : (parseFloat(calcInput) / liveRate).toFixed(4)
     : '';
 
-  const faqItems = [
-    { q: "How does the escrow system protect my money?", a: "When a buyer starts a trade, the seller's USDT is immediately locked in our secure escrow. The seller cannot move those funds until the buyer confirms payment and the seller verifies receipt. If there's a dispute, our admin team in Addis Ababa reviews evidence and resolves it fairly." },
-    { q: "What payment methods can I use?", a: "You can trade using Telebirr, CBE (Commercial Bank of Ethiopia), Dashen Bank, Awash Bank, and HelloCash. All fiat transfers happen directly between users — we never touch your birr." },
-    { q: "Why do I need to verify my identity (KYC)?", a: "KYC verification (National ID + live selfie) protects you from fraud and scam artists. Only verified users can trade, which means every counterparty on the platform is a real, identified person. Unverified users can browse rates but cannot trade." },
-    { q: "What networks are supported for crypto deposits?", a: "We support TRC20 (Tron) and ERC20 (Ethereum) networks for USDT deposits and withdrawals. TRC20 is recommended for lower fees." },
-    { q: "How fast are trades completed?", a: "Most trades are completed in under 15 minutes. The buyer has a 30-minute window to send payment and mark as paid. The seller then confirms receipt and releases the USDT instantly." },
-    { q: "What happens if there's a dispute?", a: "Either party can open a dispute at any time. Our support team reviews chat history, payment receipts, and bank statements, then makes a fair decision. Escrow funds are held safely throughout." },
-    { q: "Is EthioSwap available on mobile?", a: "Yes! EthioSwap works on both web browsers and our native Android app. Your account, wallet, and trade history sync instantly across devices. The Android APK is available for download in closed beta." },
-    { q: "How much does it cost to trade?", a: "EthioSwap charges a small 0.5% platform fee on completed trades. There are no hidden fees, no deposit fees, and no withdrawal fees. You only pay when you successfully trade." },
-  ];
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewError('');
+    if (reviewContent.trim().length < 20) {
+      setReviewError('Review content must be at least 20 characters.');
+      return;
+    }
+    if (reviewContent.trim().length > 300) {
+      setReviewError('Review content must be under 300 characters.');
+      return;
+    }
+    setSubmitLoading(true);
+    try {
+      const { error } = await supabase.from('reviews').insert([{
+        user_id: user.id,
+        username: user.username,
+        rating: reviewRating,
+        content: reviewContent.trim()
+      }]);
+      if (error) throw error;
+      setReviewSuccess(true);
+      setReviewContent('');
+      setReviewRating(5);
+    } catch (err) {
+      setReviewError(err.message);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
-  const testimonials = [
-    { name: 'Daniel M.', role: 'Freelance Designer', text: 'I receive USD from clients in the US and convert to birr through EthioSwap. The escrow makes me feel safe — I never worry about getting scammed. Completed over 50 trades with zero issues.', rating: 5 },
-    { name: 'Hana T.', role: 'Small Business Owner', text: 'Best P2P platform in Ethiopia. The rates are better than any bank, and I can trade right from my phone. KYC verification was quick and easy. Highly recommend for anyone doing cross-border payments.', rating: 5 },
-    { name: 'Yusuf A.', role: 'Diaspora — Dubai', text: 'I send money home to my family in Addis using EthioSwap. Much faster and cheaper than traditional remittance services. The escrow gives my family peace of mind too.', rating: 5 },
+  const faqItems = [
+    { q: "How does the escrow system protect my money?", a: "When a buyer starts a trade, the seller's USDT is immediately locked in our secure escrow. The seller cannot move those funds until the buyer confirms payment and the seller verifies receipt. If there's a dispute, our admin team reviews evidence and resolves it fairly." },
+    { q: "What payment methods can I use?", a: "You can trade using Telebirr, CBE (Commercial Bank of Ethiopia), Dashen Bank, Awash Bank, and HelloCash. All fiat transfers happen directly between users — we never touch your Birr." },
+    { q: "Why do I need to verify my identity (KYC)?", a: "KYC verification (National ID + live selfie) protects you from fraud. Only verified users can trade, which means every counterparty on the platform is a real, identified person. Unverified users cannot trade." },
+    { q: "What networks are supported for crypto deposits?", a: "We support TRC20 (Tron) and ERC20 (Ethereum) networks for USDT deposits and withdrawals. TRC20 is recommended for lower fees." },
+    { q: "How fast are trades completed?", a: "Most trades are completed in under 15 minutes. The buyer has a 30-minute window to send payment. The seller then confirms receipt and releases the USDT instantly." },
+    { q: "What happens if there's a dispute?", a: "Either party can open a dispute at any time. Our support team reviews chat history, payment receipts, and bank statements, then makes a fair decision." },
   ];
 
   const getModalTitle = (type) => {
@@ -194,7 +308,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       case 'escrow': return 'Escrow Operations & Dispute Policy';
       case 'aml': return 'Anti-Money Laundering & KYC Rules';
       case 'about': return 'About EthioSwap';
-      case 'download': return 'Download EthioSwap';
       default: return '';
     }
   };
@@ -207,8 +320,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <p>By accessing EthioSwap, you agree to these Terms of Service. This platform provides a peer-to-peer escrow service for trading USDT stablecoins and Ethiopian Birr.</p>
           <h4>2. Escrow Service</h4>
           <p>EthioSwap facilitates the purchase and sale of USDT in exchange for Ethiopian Birr (ETB). We provide escrow locking and administrator-led dispute resolution. All ETB transfers occur directly between users.</p>
-          <h4>3. Supported Networks</h4>
-          <p>Our wallet handles standard On-Chain USDT deposits and withdrawals exclusively (supporting Tron TRC20 and Ethereum ERC20 networks).</p>
         </>
       );
       case 'privacy': return (
@@ -217,17 +328,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <p>EthioSwap collects your personal information, government document uploads, and biometric data for KYC verification purposes.</p>
           <h4>2. KYC Data</h4>
           <p>To create an active trading profile, the platform uploads scans of your National ID card (front and back) and a live face selfie. All documents are encrypted and stored securely.</p>
-          <h4>3. Biometric Security</h4>
-          <p>Biometric credentials (fingerprint/Face ID) are stored exclusively within your device's secure hardware. EthioSwap never accesses your biometric data.</p>
         </>
       );
       case 'escrow': return (
         <>
           <h4>1. Escrow Lock</h4>
           <p>When a trade is initiated, the seller's USDT is instantly locked in escrow, preventing withdrawal. A 30-minute payment window begins.</p>
-          <h4>2. Payment & Release</h4>
-          <p>The buyer transfers ETB to the seller's bank account, clicks 'I Have Paid', and uploads proof. The seller confirms receipt before releasing USDT.</p>
-          <h4>3. Dispute Resolution</h4>
+          <h4>2. Dispute Resolution</h4>
           <p>If either party opens a dispute, our support team examines transaction receipts and bank statements, then executes a fair release or refund.</p>
         </>
       );
@@ -236,58 +343,49 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <h4>1. Compliance</h4>
           <p>EthioSwap complies with anti-money laundering (AML) guidelines to protect the trading community.</p>
           <h4>2. Mandatory KYC</h4>
-          <p>Unverified accounts can browse P2P ads and configure settings, but are blocked from initiating trades, deposits, or withdrawals. Verification is mandatory.</p>
+          <p>Verification is mandatory. Unverified accounts are blocked from initiating trades, deposits, or withdrawals.</p>
         </>
       );
       case 'about': return (
         <>
           <h4>1. Our Mission</h4>
           <p>EthioSwap bridges international digital assets and the local Ethiopian financial landscape. We provide secure, automated P2P trading for remote workers, freelancers, merchants, and the diaspora.</p>
-          <h4>2. Based in Addis Ababa</h4>
-          <p>Our support and arbitration team is based in Addis Ababa to ensure rapid support and secure dispute resolution.</p>
-          <h4>3. Built for Ethiopia</h4>
+          <h4>2. Built for Ethiopia</h4>
           <p>By enforcing KYC and leveraging escrow, we eliminate common P2P scams and safeguard your transactions.</p>
-        </>
-      );
-      case 'download': return (
-        <>
-          <h4>1. Android Beta</h4>
-          <p>The EthioSwap Android app is currently in closed beta. Contact our Telegram support for access to the latest APK.</p>
-          <h4>2. Get the APK</h4>
-          <p>To request the verified APK file, contact our official support channel on Telegram:</p>
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-            <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" className="cta-btn-gold" style={{ height: '40px', fontSize: '14px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-              Contact Telegram Support
-            </a>
-          </div>
         </>
       );
       default: return null;
     }
   };
 
+  const goalProgress = stats.traders ? Math.min((stats.traders / 200) * 100, 100) : 0;
+
   return (
     <div style={{ background: '#0a0a0a', color: '#c8c8c8', fontFamily: "'Inter', sans-serif", overflowX: 'hidden', position: 'relative' }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
         .serif-title { font-family: 'Playfair Display', serif; font-weight: 700; }
-        .cursor-trail { position: fixed; width: 8px; height: 8px; background: #f5c518; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s; }
-        .cursor-trail.hovered { width: 40px; height: 40px; background: rgba(245, 197, 24, 0.15); border: 1px solid #f5c518; }
-        .nav-floating { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: transparent; backdrop-filter: none; z-index: 1000; transition: all 0.3s ease; }
-        .nav-floating.scrolled { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); height: 70px; }
-        @keyframes autoRotatePhone { 0% { transform: perspective(1000px) rotateY(0deg); } 100% { transform: perspective(1000px) rotateY(360deg); } }
+        .cursor-trail { position: fixed; width: 12px; height: 12px; background: #f5c518; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: width 0.15s, height 0.15s, background-color 0.15s; }
+        .cursor-trail.hovered { width: 36px; height: 36px; background: rgba(245, 197, 24, 0.15); border: 1px solid #f5c518; }
+        
+        /* 3D tilt floating phone */
+        @keyframes float { 
+          0%,100%{transform:perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(0)} 
+          50% {transform:perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(-12px)} 
+        }
+        .phone-mockup-3d { 
+          animation: float 4s ease-in-out infinite; 
+          transform-style: preserve-3d; 
+          transition: transform 0.3s ease; 
+        }
+        
         @keyframes slideDownMenu { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        .phone-mockup-3d { animation: autoRotatePhone 20s linear infinite; transform-style: preserve-3d; transition: transform 0.1s ease; }
-        .phone-mockup-3d:hover { animation-play-state: paused; }
         @keyframes usdtOrbit { 0% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } 50% { transform: translate(140px, 50px) translateZ(-50px); z-index: 1; } 100% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } }
         @keyframes etbOrbit { 0% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } 50% { transform: translate(-140px, -60px) translateZ(50px); z-index: 10; } 100% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } }
         .orbit-chip-usdt { animation: usdtOrbit 12s ease-in-out infinite; }
         .orbit-chip-etb { animation: etbOrbit 12s ease-in-out infinite; }
-        @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .marquee-inner { display: flex; width: max-content; animation: marqueeScroll 25s linear infinite; }
-        .marquee-container:hover .marquee-inner { animation-play-state: paused; }
-        .step-timeline-item { opacity: 0; transform: translateY(30px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .step-timeline-item { opacity: 0; transform: translateY(20px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
         .step-timeline-item.visible { opacity: 1; transform: translateY(0); }
         .cta-btn-gold { background: #f5c518; color: #0a0a0a; border: none; border-radius: 10px; padding: 0 24px; font-weight: 700; font-size: 16px; height: 48px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
         .cta-btn-gold:hover { background: #fcd34d; transform: translateY(-1px); }
@@ -296,19 +394,18 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         .badge-live-pulse { width: 8px; height: 8px; background: #00d4a0; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #00d4a0; }
         @keyframes livePulse { 0% { transform: scale(0.9); opacity: 0.5; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.5; } }
         .badge-live-pulse { animation: livePulse 1.8s ease-in-out infinite; }
-        .market-tab-btn { padding: 12px 20px; background: transparent; border: none; color: #8b92a8; font-size: 15px; font-weight: 600; cursor: pointer; position: relative; transition: color 0.2s ease; }
-        .market-tab-btn.active { color: #f5c518; }
-        .market-tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #f5c518; }
         .legal-modal-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(12px); z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 24px; }
         .legal-modal-card { background: #111318; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 100%; max-width: 580px; max-height: 80vh; overflow-y: auto; padding: 32px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .stat-number { animation: countUp 0.6s ease-out; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
         .testimonial-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
         .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
         .trust-card { transition: transform 0.2s ease, border-color 0.2s ease; }
         .trust-card:hover { transform: translateY(-2px); border-color: rgba(245, 197, 24, 0.3); }
+        
+        .card-premium:hover {
+          transform: translateY(-4px) !important;
+          border-color: rgba(245, 197, 24, 0.3) !important;
+          box-shadow: 0 0 0 1px rgba(245,197,24,0.3) !important;
+        }
       `}</style>
 
       {!prefersReducedMotion && (
@@ -316,15 +413,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       )}
 
       {/* ── NAVBAR ── */}
-      <nav className={`nav-floating ${scrolled ? 'scrolled' : ''}`} style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: scrolled ? '64px' : '80px',
+      <nav className="nav-floating scrolled" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: scrolled ? '70px' : '80px',
         background: scrolled ? 'rgba(10, 10, 10, 0.92)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none', WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.07)' : 'none', zIndex: 1000, transition: 'all 0.3s ease'
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: scrolled ? '1px solid #f5c518' : 'none', zIndex: 1000, transition: 'all 0.3s ease'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
           <Logo size={36} showText={true} />
-          {width > 1024 && (
+          {width > 1024 ? (
             <>
               <ul style={{ display: 'flex', alignItems: 'center', gap: '24px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {[
@@ -348,8 +445,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 Sign In
               </button>
             </>
-          )}
-          {width >= 768 && width <= 1024 && (
+          ) : width >= 768 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <ul style={{ display: 'flex', alignItems: 'center', gap: '18px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {[{ id: 'market', label: 'Live Rates', target: '#market' }, { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' }].map(link => (
@@ -369,33 +465,47 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </ul>
               <button onClick={onSignIn} className="cta-btn-gold" style={{ height: '36px', fontSize: '13px', padding: '0 12px', borderRadius: '8px' }}>Sign In</button>
             </div>
-          )}
-          {width < 768 && (
+          ) : (
             <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px' }}>
-              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '2px', background: '#f5c518', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
             </button>
           )}
         </div>
       </nav>
 
-      {/* ── MOBILE MENU ── */}
+      {/* ── MOBILE MENU OVERLAY (Item 16) ── */}
       {mobileMenuOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: '#0a0a0a', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '24px', animation: 'slideDownMenu 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+        <div style={{ 
+          position: 'fixed', 
+          inset: 0, 
+          background: '#0a0a0a', 
+          zIndex: 9999, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          padding: '24px', 
+          animation: 'slideDownMenu 250ms ease-out' 
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
             <Logo size={36} showText={true} />
             <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#f5c518', fontSize: '28px', cursor: 'pointer' }}>✕</button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {[{ label: 'Features', target: '#features' }, { label: 'How It Works', target: '#how-it-works' }, { label: 'Live Rates', target: '#market' }, { label: 'Why Us', target: '#why-us' }, { label: 'FAQ', target: '#faq' }].map((link, idx, arr) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, justifyContent: 'center' }}>
+            {[
+              { label: 'Features', target: '#features' }, 
+              { label: 'How It Works', target: '#how-it-works' }, 
+              { label: 'Live Rates', target: '#market' }, 
+              { label: 'Why Us', target: '#why-us' }, 
+              { label: 'FAQ', target: '#faq' }
+            ].map((link, idx, arr) => (
               <div key={link.label}>
                 <a href={link.target} onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'block', color: '#c8c8c8', textDecoration: 'none', fontSize: '18px', fontWeight: 600, padding: '16px 0', textAlign: 'center', transition: 'color 0.2s' }}
+                  style={{ display: 'block', color: '#c8c8c8', textDecoration: 'none', fontSize: '20px', fontWeight: 600, padding: '20px 0', textAlign: 'center', transition: 'color 0.2s' }}
                   onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
                   {link.label}
                 </a>
-                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '80px', margin: '0 auto' }} />}
+                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '100%' }} />}
               </div>
             ))}
           </div>
@@ -432,7 +542,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#111318', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '10px 20px', marginBottom: '28px' }}>
                 <span className="badge-live-pulse" />
                 <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>Live Rate:</span>
-                <span style={{ fontSize: '18px', color: '#00d4a0', fontWeight: 800 }}>1 USDT = {liveRate} ETB</span>
+                <span style={{ fontSize: '18px', color: '#00d4a0', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</span>
+                <span style={{ fontSize: '10px', color: '#6b7280' }}>Updated: {rateTimestamp}</span>
               </div>
 
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
@@ -456,15 +567,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* 3D Phone Mockup */}
-            <div onMouseMove={handlePhoneMouseMove} onMouseLeave={handlePhoneMouseLeave}
-              style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative', height: '480px' }}>
+            {/* 3D Phone Mockup (Item 1) */}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative', height: '480px' }}>
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,212,160,0.12) 0%, transparent 70%)', zIndex: 1, pointerEvents: 'none' }} />
               <div className="phone-mockup-3d" style={{
                 width: '240px', height: '420px', background: '#111318', border: '4px solid rgba(255, 255, 255, 0.12)', borderRadius: '32px',
                 boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0, 212, 160, 0.1)', position: 'absolute', zIndex: 3, top: '30px', padding: '16px',
                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                transform: `perspective(1000px) rotateX(${phoneTilt.rx}deg) rotateY(${phoneTilt.ry}deg)`,
               }}>
                 <div style={{ width: '90px', height: '18px', background: '#000', borderRadius: '0 0 12px 12px', margin: '-16px auto 14px', flexShrink: 0 }} />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
@@ -474,7 +583,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   </div>
                   <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: '10px', color: '#8b92a8' }}>TRADING VOLUME</div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518', marginTop: '4px' }}>$2.8M+</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>$2.8M+</div>
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', border: '1px solid rgba(0, 212, 160, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: '0 0 20px rgba(0, 212, 160, 0.15)' }}>
@@ -485,9 +594,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#8b92a8', marginBottom: '4px' }}>
                       <span>Best Buy Rate</span>
-                      <span style={{ color: '#00d4a0' }}>TRC20 / ERC20</span>
+                      <span style={{ color: '#00d4a0' }}>TRC20 / BEP20</span>
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518' }}>1 USDT = {liveRate} ETB</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518', fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</div>
                   </div>
                 </div>
               </div>
@@ -508,26 +617,28 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </header>
 
-      {/* ── LIVE STATS BAR ── */}
-      <div style={{ background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '32px 24px' }}>
+      {/* ── LIVE STATS BAR (Item 2) ── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0d0d0d', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '32px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px' }}>
           {[
-            { label: 'Verified Traders', value: liveStats.users.toLocaleString(), icon: '👥' },
-            { label: 'Volume Traded', value: liveStats.volume > 0 ? `$${liveStats.volume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '$0', icon: '📊' },
-            { label: 'Average Rating', value: liveStats.rating > 0 ? `${liveStats.rating}★` : '—', icon: '⭐' },
-            { label: 'Scam Reports', value: `${liveStats.scams}`, icon: '🛡️' },
+            { label: 'Verified Traders', value: stats.traders, icon: '👥' },
+            { label: 'Volume Traded', value: stats.volume, prefix: "$", icon: '📊' },
+            { label: 'Average Rating', value: stats.avg, suffix: "★", icon: '⭐', isDecimal: true },
+            { label: 'Scam Reports', value: stats.scams, icon: '🛡️' },
           ].map((stat, idx) => (
             <div key={idx} style={{ textAlign: 'center', minWidth: '140px' }}>
               <div style={{ fontSize: '24px', marginBottom: '4px' }}>{stat.icon}</div>
-              <div className="stat-number" style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', fontFamily: "'Playfair Display', serif" }}>{stat.value}</div>
+              <div className="stat-number" style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', fontFamily: "JetBrains Mono, monospace" }}>
+                <AnimatedCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} isDecimal={stat.isDecimal} />
+              </div>
               <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── FEATURES SECTION ── */}
-      <section id="features" style={{ padding: '100px 24px', position: 'relative' }}>
+      {/* ── FEATURES SECTION (Item 4) ── */}
+      <section id="features" style={{ padding: '80px 24px', position: 'relative', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHAT YOU CAN DO</span>
@@ -538,16 +649,18 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {[
-              { t: 'Buy USDT', d: 'Purchase USDT from verified sellers using Telebirr, CBE, Dashen Bank, or Awash Bank. Funds are held in escrow until you confirm payment.', ic: '💵' },
-              { t: 'Sell USDT', d: 'List your USDT for sale at your preferred rate. Receive ETB directly to your bank account with buyer verification.', ic: '📈' },
-              { t: 'Send Money', d: 'Send USDT to any EthioSwap user instantly with zero fees. Perfect for splitting bills or sending to friends and family.', ic: '📤' },
-              { t: 'Receive Money', d: 'Share your wallet address to receive USDT from anyone, anywhere in the world. Supports TRC20 and ERC20 networks.', ic: '📥' },
-              { t: 'Deposit & Withdraw', d: 'Fund your wallet with on-chain USDT deposits (TRC20/ERC20) and withdraw to external wallets anytime.', ic: '🔄' },
-              { t: 'Track Live Rates', d: 'Monitor real-time USDT/ETB exchange rates, market trends, and best buy/sell offers from verified traders.', ic: '📊' },
+              { t: 'Buy USDT', d: 'Purchase USDT from verified sellers using Telebirr, CBE, Dashen Bank, or Awash Bank. Funds are held in escrow until you confirm payment.', code: 'buy' },
+              { t: 'Sell USDT', d: 'List your USDT for sale at your preferred rate. Receive ETB directly to your bank account with buyer verification.', code: 'sell' },
+              { t: 'Send Money', d: 'Send USDT to any EthioSwap user instantly with zero fees. Perfect for splitting bills or sending to friends and family.', code: 'send' },
+              { t: 'Receive Money', d: 'Share your wallet address to receive USDT from anyone, anywhere in the world. Supports TRC20 and ERC20 networks.', code: 'receive' },
+              { t: 'Deposit & Withdraw', d: 'Fund your wallet with on-chain USDT deposits (TRC20/ERC20) and withdraw to external wallets anytime.', code: 'exchange' },
+              { t: 'Track Live Rates', d: 'Monitor real-time USDT/ETB exchange rates, market trends, and best buy/sell offers from verified traders.', code: 'rates' },
             ].map((ft, idx) => (
               <div key={idx} className="card-premium" onMouseMove={handleCardMouseMove} onMouseLeave={handleCardMouseLeave}
-                style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, box-shadow 0.2s' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: '#1a1d23', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', border: '1px solid rgba(255,255,255,0.04)', marginBottom: '20px' }}>{ft.ic}</div>
+                style={{ background: '#161b22', border: '1px solid rgba(245, 197, 24, 0.15)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, box-shadow 0.2s' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                  {FeatureIcons[ft.code]}
+                </div>
                 <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 600, margin: '0 0 10px 0' }}>{ft.t}</h3>
                 <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: 0 }}>{ft.d}</p>
               </div>
@@ -556,9 +669,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" ref={stepsRef} style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      {/* ── HOW IT WORKS (Item 4) ── */}
+      <section id="how-it-works" ref={stepsRef} style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>HOW IT WORKS</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Start Trading in 3 Simple Steps</h2>
@@ -566,17 +679,32 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               Getting started with EthioSwap is quick and easy. No crypto knowledge required.
             </p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', position: 'relative', padding: '20px 0' }}>
+          
+          {/* Dashed connector line between the steps (desktop only) */}
+          {width > 768 && (
+            <div style={{
+              position: 'absolute',
+              top: '196px',
+              left: '12%',
+              right: '12%',
+              height: '0px',
+              borderTop: '2px dashed rgba(245, 197, 24, 0.3)',
+              zIndex: 1,
+              pointerEvents: 'none'
+            }} />
+          )}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', position: 'relative', padding: '20px 0', zIndex: 2 }}>
             {[
-              { step: '1', t: 'Create Account', d: 'Sign up for free and verify your identity with a National ID and live selfie. Takes just a few minutes.' },
-              { step: '2', t: 'Find a Trade', d: 'Browse live P2P listings or create your own. Filter by payment method, rate, and trade limits.' },
-              { step: '3', t: 'Trade Safely', d: 'USDT is locked in escrow. Send payment, confirm, and receive your funds. Admin support is always available.' },
+              { icon: '👤', t: 'Create Account', d: 'Sign up for free and verify your identity with a National ID and live selfie. Takes just a few minutes.' },
+              { icon: '🔍', t: 'Find a Trade', d: 'Browse live P2P listings or create your own. Filter by payment method, rate, and trade limits.' },
+              { icon: '🛡️', t: 'Trade Safely', d: 'USDT is locked in escrow. Send payment, confirm, and receive your funds. Admin support is always available.' },
             ].map((step, idx) => (
               <div key={idx} className={`step-timeline-item ${stepsVisible ? 'visible' : ''}`}
                 style={{ flex: '1 1 280px', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '16px', transitionDelay: `${idx * 150}ms` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid #f5c518', background: '#0a0a0a', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '20px', zIndex: 2 }}>
-                    {step.step}
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid #f5c518', background: '#0d0d0d', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '22px', zIndex: 3 }}>
+                    {step.icon}
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
@@ -590,7 +718,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* ── WHY US SECTION ── */}
-      <section id="why-us" style={{ padding: '100px 24px' }}>
+      <section id="why-us" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHY ETHIOPIANS CHOOSE US</span>
@@ -619,8 +747,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── LIVE CALCULATOR ── */}
-      <section id="market" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* ── LIVE CALCULATOR SECTION ── */}
+      <section id="market" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -637,7 +765,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             {/* Live Rate Display */}
             <div style={{ textAlign: 'center', marginBottom: '28px', padding: '16px', background: 'rgba(0,212,160,0.05)', borderRadius: '12px', border: '1px solid rgba(0,212,160,0.15)' }}>
               <span style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600 }}>Current Rate</span>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', marginTop: '4px' }}>1 USDT = {liveRate} ETB</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</div>
+              <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>Last updated: {rateTimestamp}</div>
             </div>
 
             {/* Mode Toggle */}
@@ -669,7 +798,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   placeholder="0.00"
                   min="0"
                   step="any"
-                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px 60px 16px 16px', fontSize: '24px', fontWeight: 700, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px 60px 16px 16px', fontSize: '24px', fontWeight: 700, color: '#fff', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono, monospace' }}
                 />
                 <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 700, color: '#f5c518' }}>
                   {calcMode === 'usd-to-etb' ? 'USDT' : 'ETB'}
@@ -679,7 +808,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
             {/* Arrow */}
             <div style={{ textAlign: 'center', margin: '8px 0' }}>
-              <div style={{ display: 'inline-flex', width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>↕</div>
+              <div style={{ display: 'inline-flex', width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#f5c518' }}>↕</div>
             </div>
 
             {/* Output */}
@@ -688,7 +817,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 You Receive ({calcMode === 'usd-to-etb' ? 'ETB' : 'USDT'})
               </label>
               <div style={{ background: '#0a0a0a', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '16px', minHeight: '56px', display: 'flex', alignItems: 'center' }}>
-                <span style={{ fontSize: '24px', fontWeight: 700, color: '#00d4a0' }}>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace' }}>
                   {calcResult || '0.00'}
                 </span>
                 <span style={{ marginLeft: '8px', fontSize: '14px', fontWeight: 700, color: '#8b92a8' }}>
@@ -698,10 +827,10 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </div>
 
             {/* Quick Amounts */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '24px' }}>
               {(calcMode === 'usd-to-etb' ? [10, 50, 100, 500, 1000] : [1000, 5000, 10000, 50000, 100000]).map(amt => (
                 <button key={amt} onClick={() => setCalcInput(String(amt))}
-                  style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#c8c8c8', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#c8c8c8', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'JetBrains Mono, monospace' }}
                   onMouseOver={e => { e.currentTarget.style.borderColor = '#f5c518'; e.currentTarget.style.color = '#f5c518'; }}
                   onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#c8c8c8'; }}>
                   {calcMode === 'usd-to-etb' ? '$' : 'Br'}{amt.toLocaleString()}
@@ -709,16 +838,37 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               ))}
             </div>
 
+            {/* Start Trading button (Item 4) */}
+            <button onClick={onGetStarted} style={{
+              width: '100%',
+              height: '50px',
+              background: '#f5c518',
+              color: '#0a0a0a',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: 800,
+              fontSize: '15px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 15px rgba(245, 197, 24, 0.25)'
+            }}>
+              Start Trading at This Rate →
+            </button>
+
             {/* Note */}
             <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#8b92a8' }}>
-              Rate updates every 5 seconds • 0.5% platform fee on trades
+              Rate updates every 5 seconds • No hidden fees • 0.5% platform fee on trades
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── INVITE & EARN COMING SOON ── */}
-      <section style={{ padding: '80px 24px' }}>
+      {/* ── INVITE & EARN PROGRAM ── */}
+      <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
           <span style={{ fontSize: '11px', color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, background: 'rgba(245,197,24,0.1)', padding: '4px 12px', borderRadius: '20px' }}>COMING SOON</span>
           <h2 className="serif-title" style={{ fontSize: '36px', color: '#fff', margin: '16px 0 12px 0', fontWeight: 400 }}>Invite & Earn Program</h2>
@@ -731,30 +881,32 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', maxWidth: '480px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#c8c8c8' }}>
               <span>Community Goal</span>
-              <span style={{ color: '#f5c518', fontWeight: 700 }}>{inviteProgress}%</span>
+              <span style={{ color: '#f5c518', fontWeight: 700 }}>{goalProgress.toFixed(0)}%</span>
             </div>
             <div style={{ background: '#0a0a0a', borderRadius: '8px', height: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ width: `${inviteProgress}%`, height: '100%', background: 'linear-gradient(90deg, #f5c518, #00d4a0)', borderRadius: '8px', transition: 'width 1s ease' }} />
+              <div style={{ width: `${goalProgress}%`, height: '100%', background: 'linear-gradient(90deg, #f5c518, #00d4a0)', borderRadius: '8px', transition: 'width 1s ease' }} />
             </div>
-            <div style={{ marginTop: '12px', fontSize: '12px', color: '#8b92a8' }}>
-              We're building toward 200 verified traders to unlock rewards for everyone.
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#8b92a8', fontWeight: 600 }}>
+              {stats.traders} / 200 verified traders
             </div>
           </div>
         </div>
       </section>
 
       {/* ── TRUST & SECURITY ── */}
-      <section style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <section style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TRUST & SECURITY</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Your Security is Our Priority</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
+          
+          {/* 2x2 grid (Item 4) */}
+          <div style={{ display: 'grid', gridTemplateColumns: width > 768 ? '1fr 1fr' : '1fr', gap: '20px' }}>
             {[
               { t: 'Escrow Lock', d: 'Every trade amount is locked in escrow before payment. Funds are cryptographically secured and can only be released by the platform.', ic: '🔐' },
               { t: 'Identity Verification', d: 'Mandatory KYC with National ID + live selfie. Every trader is a real, verified person. No anonymity, no fraud.', ic: '🪪' },
-              { t: 'Dispute Resolution', d: 'Dedicated support team in Addis Ababa reviews evidence and resolves disputes fairly. Your funds are safe throughout.', ic: '⚖️' },
+              { t: 'Dispute Resolution', d: 'Dedicated support team reviews evidence and resolves disputes fairly. Your funds are safe throughout.', ic: '⚖️' },
               { t: '2FA & Biometric Lock', d: 'Secure your account with two-factor authentication, fingerprint lock, or Face ID. Your keys stay on your device.', ic: '🔑' },
             ].map((ft, idx) => (
               <div key={idx} className="trust-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '28px', transition: 'transform 0.2s, border-color 0.2s' }}>
@@ -767,18 +919,32 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS / REVIEWS ── */}
-      <section style={{ padding: '100px 24px' }}>
+      {/* ── TESTIMONIALS / REVIEWS (Item 3) ── */}
+      <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REVIEWS</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Trusted by Ethiopian Traders</h2>
             <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              {reviews.length > 0 ? `See what ${reviews.length}+ traders are saying about EthioSwap.` : 'Be the first to share your experience with EthioSwap!'}
+              All reviews are posted by verified EthioSwap traders after completing real trades.
             </p>
           </div>
+
+          {/* Leave a review button */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
+            {user ? (
+              <button onClick={() => setShowReviewModal(true)} className="cta-btn-outline" style={{ border: '2px solid #f5c518', color: '#f5c518', fontWeight: 700 }}>
+                Write a Review
+              </button>
+            ) : (
+              <button onClick={onSignIn} className="cta-btn-outline" style={{ border: '1px solid rgba(255,255,255,0.2)' }}>
+                Sign in to leave a review
+              </button>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            {reviews.length > 0 ? reviews.slice(0, 6).map((r, idx) => (
+            {reviews.map((r, idx) => (
               <div key={r.id || idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
                   {Array.from({ length: r.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
@@ -791,48 +957,24 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   </div>
                   <div>
                     <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>@{r.username}</div>
-                    <div style={{ fontSize: '11px', color: '#8b92a8' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}</div>
+                    <div style={{ fontSize: '11px', color: '#8b92a8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <span>Trader</span>
+                      {r.trade_count >= 1 && (
+                        <span style={{ color: '#00d4a0', fontWeight: 700, fontSize: '10px' }}>✓ Verified Trader</span>
+                      )}
+                      <span>•</span>
+                      <span>{getRelativeTime(r.created_at)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            )) : (
-              <>
-                {[
-                  { name: 'Daniel M.', role: 'Freelance Designer', text: 'I receive USD from clients in the US and convert to birr through EthioSwap. The escrow makes me feel safe — I never worry about getting scammed. Completed over 50 trades with zero issues.', rating: 5 },
-                  { name: 'Hana T.', role: 'Small Business Owner', text: 'Best P2P platform in Ethiopia. The rates are better than any bank, and I can trade right from my phone. KYC verification was quick and easy. Highly recommend for anyone doing cross-border payments.', rating: 5 },
-                  { name: 'Yusuf A.', role: 'Diaspora — Dubai', text: 'I send money home to my family in Addis using EthioSwap. Much faster and cheaper than traditional remittance services. The escrow gives my family peace of mind too.', rating: 5 },
-                ].map((t, idx) => (
-                  <div key={idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
-                    <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
-                      {Array.from({ length: t.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
-                    </div>
-                    <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{t.text}"</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>
-                        {t.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{t.name}</div>
-                        <div style={{ fontSize: '12px', color: '#8b92a8' }}>{t.role}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
+            ))}
           </div>
-          {reviews.length > 0 && (
-            <div style={{ textAlign: 'center', marginTop: '32px' }}>
-              <p style={{ fontSize: '13px', color: '#8b92a8' }}>
-                Want to share your experience? <button onClick={onSignIn} style={{ background: 'none', border: 'none', color: '#f5c518', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>Sign in</button> and write a review from your profile.
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* ── FAQ ── */}
-      <section id="faq" style={{ padding: '100px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* ── FAQ SECTION (Item 4) ── */}
+      <section id="faq" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>FAQ</span>
@@ -842,11 +984,28 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             {faqItems.map((item, index) => {
               const isActive = faqActiveIndex === index;
               return (
-                <div key={index} style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+                <div key={index} style={{ 
+                  background: isActive ? 'rgba(245,197,24,0.03)' : '#111318', 
+                  border: '1px solid rgba(255,255,255,0.07)', 
+                  borderLeft: isActive ? '3px solid #f5c518' : '3px solid transparent',
+                  borderRadius: '12px', 
+                  overflow: 'hidden',
+                  transition: 'all 200ms ease'
+                }}>
                   <button onClick={() => setFaqActiveIndex(isActive ? null : index)}
-                    style={{ width: '100%', padding: '18px 24px', background: 'transparent', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}>
+                    style={{ width: '100%', padding: '18px 24px', background: 'transparent', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseOver={e => e.currentTarget.style.background = 'rgba(245,197,24,0.01)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                     <span>{item.q}</span>
-                    <span style={{ color: '#f5c518', fontSize: '18px', flexShrink: 0, marginLeft: '12px' }}>{isActive ? '−' : '+'}</span>
+                    <span style={{ 
+                      color: '#f5c518', 
+                      fontSize: '20px', 
+                      flexShrink: 0, 
+                      marginLeft: '12px',
+                      transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
+                      transition: 'transform 200ms ease',
+                      display: 'inline-block'
+                    }}>+</span>
                   </button>
                   <div style={{ maxHeight: isActive ? '200px' : '0px', transition: 'max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1)', overflow: 'hidden' }}>
                     <p style={{ padding: '0 24px 20px', margin: 0, fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6 }}>{item.a}</p>
@@ -859,7 +1018,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section style={{ padding: '100px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ padding: '80px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 50%, rgba(245,197,24,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: '700px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <h2 className="serif-title" style={{ fontSize: width < 768 ? '32px' : '48px', color: '#fff', margin: '0 0 16px 0', fontWeight: 700 }}>
@@ -877,21 +1036,26 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </a>
           </div>
           <div style={{ fontSize: '13px', color: '#8b92a8' }}>
-            <span style={{ color: '#00d4a0', fontWeight: 700 }}>{liveStats.users.toLocaleString()}</span> traders already joined
+            <span style={{ color: '#00d4a0', fontWeight: 700 }}>{stats.traders}</span> traders already joined
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* ── FOOTER (Item 5) ── */}
       <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '80px 24px 40px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px', marginBottom: '60px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '48px', marginBottom: '60px' }}>
+            
+            {/* Column 1 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Logo size={36} showText={true} />
-              <p style={{ fontSize: '13px', color: '#c8c8c8', lineHeight: 1.6 }}>
-                Ethiopia's safest peer-to-peer USDT exchange. Buy, sell, and trade with confidence.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '24px' }}>🛡️</span>
+                <span style={{ fontWeight: 800, fontSize: '20px', color: '#fff' }}>EthioSwap</span>
+              </div>
+              <p style={{ fontSize: '13.5px', color: '#8b92a8', lineHeight: 1.6 }}>
+                Safe. Verified. Ethiopian.
               </p>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer"
                   style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>✈️</a>
                 <a href="#" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>📸</a>
@@ -899,38 +1063,57 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>🎵</a>
               </div>
             </div>
+
+            {/* Column 2 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Product</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
-                <li><a href="#features" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Features</a></li>
-                <li><a href="#how-it-works" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>How It Works</a></li>
-                <li><a href="#market" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Live P2P Market</a></li>
-                <li><a href="#why-us" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Why Us</a></li>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Product</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
+                <li><a href="#features" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Features</a></li>
+                <li><a href="#how-it-works" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>How It Works</a></li>
+                <li><a href="#market" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Live Rates</a></li>
+                <li><button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Download App</button></li>
               </ul>
             </div>
+
+            {/* Column 3 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Support</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
-                <li><a href="#faq" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>FAQ</a></li>
-                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" style={{ color: '#c8c8c8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>Telegram Support</a></li>
-                <li>
-                  <button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>About Us</button>
-                </li>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Company</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
+                <li><button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>About Us</button></li>
+                <li><a href="#faq" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>FAQ</a></li>
+                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Contact Support</a></li>
+                <li><button onClick={() => setOpenModal('privacy')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Privacy Policy</button></li>
+                <li><button onClick={() => setOpenModal('terms')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Terms of Service</button></li>
               </ul>
             </div>
-            <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Legal</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
-                {['terms', 'privacy', 'escrow', 'aml'].map((mKey) => (
-                  <li key={mKey}>
-                    <button onClick={() => setOpenModal(mKey)} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
-                      {mKey === 'terms' ? 'Terms of Service' : mKey === 'privacy' ? 'Privacy Policy' : mKey === 'escrow' ? 'Escrow Rules' : 'AML Compliance'}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+
+            {/* Column 4 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Download App</h4>
+              <p style={{ fontSize: '13px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
+                Get the native Android app for faster trading on the go.
+              </p>
+              <button onClick={() => setOpenModal('about')} style={{
+                background: '#111318',
+                border: '1.5px solid #f5c518',
+                borderRadius: '10px',
+                height: '46px',
+                color: '#f5c518',
+                fontWeight: 700,
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: 'fit-content',
+                padding: '0 20px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f5c518'; e.currentTarget.style.color = '#0a0a0a'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#111318'; e.currentTarget.style.color = '#f5c518'; }}>
+                <span>🤖</span> Download Android APK
+              </button>
             </div>
           </div>
 
@@ -947,6 +1130,66 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           </div>
         </div>
       </footer>
+
+      {/* ── WRITE A REVIEW MODAL (Item 3) ── */}
+      {showReviewModal && (
+        <div className="legal-modal-overlay" onClick={() => setShowReviewModal(false)}>
+          <div className="legal-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <button onClick={() => setShowReviewModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#c8c8c8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: '14px' }}>
+              <h3 className="serif-title" style={{ fontSize: '22px', color: '#fff', margin: 0 }}>Write a Review</h3>
+            </div>
+            
+            {reviewSuccess ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <span style={{ fontSize: '48px' }}>🎉</span>
+                <p style={{ fontSize: '15px', color: '#00d4a0', fontWeight: 700, marginTop: '16px' }}>
+                  Your review is pending approval. Thank you!
+                </p>
+                <button onClick={() => { setShowReviewModal(false); setReviewSuccess(false); }} className="cta-btn-gold" style={{ marginTop: '24px', height: '40px', fontSize: '14px', borderRadius: '8px' }}>
+                  Close Window
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '8px' }}>Rating</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button key={star} type="button" onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '32px', padding: 0, color: star <= reviewRating ? '#f5c518' : '#3a3a3a' }}>★</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '8px' }}>Review Message (min 20 characters)</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={reviewContent}
+                    onChange={e => setReviewContent(e.target.value)}
+                    placeholder="Tell others about your trading experience on EthioSwap..."
+                    style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#fff', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                    <span>Must be 20-300 characters</span>
+                    <span>{reviewContent.length} / 300</span>
+                  </div>
+                </div>
+
+                {reviewError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '10px 12px', borderRadius: '8px', color: '#f87171', fontSize: '12px' }}>
+                    ⚠️ {reviewError}
+                  </div>
+                )}
+
+                <button type="submit" disabled={submitLoading} className="cta-btn-gold" style={{ width: '100%', height: '44px', fontSize: '15px', borderRadius: '8px' }}>
+                  {submitLoading ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── LEGAL MODALS ── */}
       {openModal && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
 import { supabase } from '../supabaseClient';
+import { notify } from '../lib/notify';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */
 const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
@@ -434,6 +435,8 @@ const AdminPanel = ({ user }) => {
   const [auditLogs, setAuditLogs] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
+  const [reviewFilterStatus, setReviewFilterStatus] = useState('all');
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -462,6 +465,10 @@ const AdminPanel = ({ user }) => {
       // Support
       const { data: supportData } = await supabase.from('support_tickets').select('*').order('updated_at', { ascending: false });
       setSupportTickets(supportData || []);
+
+      // Reviews
+      const { data: reviewsData } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+      setAllReviews(reviewsData || []);
 
       // Admin Earnings (Mock or calculated)
       setAdminEarnings({ walletBalance: settingsData?.collected_fees_eth || 0 });
@@ -544,6 +551,7 @@ const AdminPanel = ({ user }) => {
     { id: 'withdrawals', em: '📤', title: 'Withdrawals', badge: pendingWithdrawals.length },
     { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
     { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
+    { id: 'reviews',   em: '⭐', title: 'Reviews',  badge: 0 }, // New Reviews tab
     { id: 'invite',    em: '🤝', title: 'Invite & Earn', badge: 0 },
     { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
     { id: 'logs',      em: '📜', title: 'Audit Logs',badge: 0 },
@@ -717,6 +725,40 @@ const AdminPanel = ({ user }) => {
     } finally {
       setSendingMessage(false);
     }
+  };
+
+  const handleApproveReview = async (reviewId) => {
+    try {
+      const { data: review } = await supabase.from('reviews').select('*').eq('id', reviewId).single();
+      const { error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', reviewId);
+      if (error) throw error;
+      
+      // Notify user
+      const { data: userData } = await supabase.from('users').select('email, username').eq('id', review.user_id).single();
+      if (userData) {
+        notify({
+          userId: review.user_id,
+          userEmail: userData.email,
+          userName: userData.username,
+          type: 'review_approved',
+          title: 'Review Approved!',
+          body: 'Your review has been approved and is now live on EthioSwap!'
+        });
+      }
+
+      showAlert('✓ Review approved successfully!');
+      setAllReviews(prev => prev.map(r => r.id === reviewId ? { ...r, is_approved: true } : r));
+    } catch (e) { showAlert(e.message, 'error'); }
+  };
+
+  const handleRejectReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to reject and delete this review?')) return;
+    try {
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+      if (error) throw error;
+      showAlert('Review rejected and deleted.');
+      setAllReviews(prev => prev.filter(r => r.id !== reviewId));
+    } catch (e) { showAlert(e.message, 'error'); }
   };
 
   const handleDispute = async (tradeId, action) => {
@@ -1308,15 +1350,15 @@ const AdminPanel = ({ user }) => {
                   padding: '12px 16px',
                   borderRadius: '10px',
                   border: 'none',
-                  background: isActive ? 'rgba(0, 212, 160, 0.08)' : 'transparent',
-                  color: isActive ? '#00d4a0' : '#8b92a8',
+                  background: isActive ? 'rgba(245, 197, 24, 0.08)' : 'transparent',
+                  color: isActive ? '#f5c518' : '#8b92a8',
                   fontSize: '14px',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                   textAlign: 'left',
                   width: '100%',
                   position: 'relative',
-                  borderLeft: isActive ? '3px solid #00d4a0' : '3px solid transparent'
+                  borderLeft: isActive ? '3px solid #f5c518' : '3px solid transparent'
                 }}
               >
                 <span style={{ fontSize: '18px' }}>{t.em}</span>
@@ -1349,6 +1391,47 @@ const AdminPanel = ({ user }) => {
       {/* ── MAIN WORKSPACE CONTAINER ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
+        {/* Top Bar: page title left, admin email + verified badge + bell + logout right */}
+        <div 
+          className="desktop-only"
+          style={{
+            height: '64px',
+            background: '#0a0c12',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 28px',
+            position: 'sticky',
+            top: 0,
+            zIndex: 90
+          }}
+        >
+          <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#f0f2f8' }}>
+            {navTabs.find(t => t.id === activeTab)?.title || 'Admin Panel'}
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b92a8' }}>{user.email}</span>
+              <span style={{ 
+                background: 'rgba(0, 212, 160, 0.12)', 
+                color: '#00d4a0', 
+                fontSize: '10px', 
+                fontWeight: 700, 
+                padding: '2px 8px', 
+                borderRadius: '99px'
+              }}>✓ Admin</span>
+            </div>
+            {/* Notification bell would go here if needed, but for now just email/logout */}
+            <button 
+              onClick={() => { if(window.confirm('Sign out of admin?')) window.location.href='/'; }} 
+              style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}
+            >
+              Logout ✕
+            </button>
+          </div>
+        </div>
+
         {/* Mobile Header with Hamburger */}
         <div 
           className="mobile-header"
@@ -2808,6 +2891,120 @@ const AdminPanel = ({ user }) => {
                   </table>
                 </div>
 
+              </div>
+            );
+          })()}
+
+          {/* ════ REVIEWS MANAGEMENT PAGE per Item #12 ════ */}
+          {activeTab === 'reviews' && (() => {
+            const filteredReviews = allReviews.filter(r => {
+              if (reviewFilterStatus === 'pending') return !r.is_approved;
+              if (reviewFilterStatus === 'approved') return r.is_approved;
+              return true;
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>⭐ Review Management</h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#8b92a8' }}>Moderate verified trader reviews for the landing page</p>
+                  </div>
+                </div>
+
+                <div className="card-premium">
+                  <div style={{ display: 'flex', background: '#0a0c12', borderRadius: '12px', padding: '4px', width: 'fit-content', gap: '4px', marginBottom: '24px' }}>
+                    {[{id:'all',l:'All'},{id:'pending',l:'Pending'},{id:'approved',l:'Approved'}].map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setReviewFilterStatus(s.id)}
+                        style={{
+                          padding: '8px 20px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          background: reviewFilterStatus === s.id ? 'var(--gold)' : 'transparent',
+                          color: reviewFilterStatus === s.id ? '#0d1117' : '#8b92a8',
+                          minWidth: '100px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {s.l}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table-premium">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>User</th>
+                          <th>Rating</th>
+                          <th>Review Text</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredReviews.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No reviews found</td>
+                          </tr>
+                        ) : filteredReviews.map((rev, idx) => (
+                          <tr key={rev.id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.user_id)}>
+                            <td style={{ fontWeight: 600 }}>{idx + 1}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'var(--gold)', color: '#000',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800
+                                }}>
+                                  {(rev.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ fontWeight: 600 }}>@{rev.username}</span>
+                              </div>
+                            </td>
+                            <td style={{ color: 'var(--gold)', letterSpacing: '2px' }}>
+                              {'★'.repeat(rev.rating)}{'☆'.repeat(5-rev.rating)}
+                            </td>
+                            <td style={{ maxWidth: '300px', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
+                              "{rev.content}"
+                            </td>
+                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>{new Date(rev.created_at).toLocaleDateString()}</td>
+                            <td>
+                              <StatusBadge status={rev.is_approved ? 'approved' : 'pending'} />
+                            </td>
+                            <td onClick={e => e.stopPropagation()}>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {!rev.is_approved && (
+                                  <button 
+                                    onClick={() => handleApproveReview(rev.id)} 
+                                    className="btn-premium-primary" 
+                                    style={{ padding: '6px 12px', fontSize: '11px', background: '#00d4a0', color: '#000' }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => handleRejectReview(rev.id)} 
+                                  className="btn-premium-danger" 
+                                  style={{ padding: '6px 12px', fontSize: '11px' }}
+                                >
+                                  ✗ Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             );
           })()}

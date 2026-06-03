@@ -119,8 +119,22 @@ const WalletCard = () => {
   };
 
   if (!wallet) return (
-    <div className="card" style={{ height: '120px' }}>
-      <div className="skeleton" style={{ height: '100%', borderRadius: '8px' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        .shimmer-card {
+          background: linear-gradient(90deg, #1a1d28 25%, #22263a 50%, #1a1d28 75%);
+          background-size: 400px 100%;
+          animation: shimmer 1.5s ease-in-out infinite;
+          border-radius: 22px;
+        }
+      `}</style>
+      <div className="shimmer-card" style={{ height: '180px' }} />
+      <div className="shimmer-card" style={{ height: '60px', borderRadius: '14px' }} />
+      <div className="shimmer-card" style={{ height: '120px', borderRadius: '16px' }} />
     </div>
   );
 
@@ -170,6 +184,17 @@ const WalletCard = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        .network-chip { cursor: pointer; padding: 5px 12px; border-radius: 99px; font-size: 11px; font-weight: 700; border: 1px solid; transition: all 0.2s ease; font-family: var(--font); }
+        .network-chip.active-trc { background: rgba(232,53,100,0.12); color: #e83564; border-color: rgba(232,53,100,0.3); }
+        .network-chip.active-erc { background: rgba(98,126,234,0.12); color: #627eea; border-color: rgba(98,126,234,0.3); }
+        .network-chip.active-bep { background: rgba(240,185,11,0.12); color: #f0b90b; border-color: rgba(240,185,11,0.3); }
+        .network-chip.inactive { background: rgba(255,255,255,0.03); color: #6b7280; border-color: rgba(255,255,255,0.07); }
+      `}</style>
 
       {/* ── Balance Hero ──────────────────────────────────────── */}
       <div className="fade-in-1" style={{
@@ -192,11 +217,11 @@ const WalletCard = () => {
             </span>
           )}
         </div>
-        <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px' }}>
+        <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px', fontFamily: 'JetBrains Mono, monospace' }}>
           <span style={{ color: '#f5c518' }}>${wallet.eth_balance.toFixed(2)}</span>
-          <span style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: 500, marginLeft: '6px' }}>USD</span>
+          <span style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: 500, marginLeft: '6px', fontFamily: 'var(--font)' }}>USD</span>
         </div>
-        <div style={{ fontSize: '16px', color: '#00d4a0', fontWeight: 600, marginBottom: '18px' }}>
+        <div style={{ fontSize: '16px', color: '#00d4a0', fontWeight: 600, marginBottom: '18px', fontFamily: 'JetBrains Mono, monospace' }}>
           ≈ {Math.round(etbTotal).toLocaleString()} ETB
         </div>
 
@@ -241,13 +266,29 @@ const WalletCard = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="card glass" style={{ padding: '20px' }}>
             <div className="section-title">Your Deposit Address</div>
+            {/* Network Selector Chips */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'trc20', label: 'TRC-20', hint: 'USDT' },
+                { id: 'erc20', label: 'ERC-20', hint: 'USDT' },
+                { id: 'bep20', label: 'BEP-20', hint: 'BSC' },
+              ].map(net => (
+                <button
+                  key={net.id}
+                  onClick={() => setQrNetwork(net.id)}
+                  className={`network-chip ${qrNetwork === net.id ? `active-${net.id.replace('20','')}` : 'inactive'}`}
+                >
+                  {net.label} <span style={{ opacity: 0.6, fontWeight: 500 }}>{net.hint}</span>
+                </button>
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '12px' }}>
+              <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0 }}>
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100&data=${wallet.eth_address}`} alt="QR" style={{ width: '80px', height: '80px' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Send USD here</div>
-                <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px', fontFamily: 'monospace', fontSize: '10.5px', wordBreak: 'break-all' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>Send {qrNetwork.toUpperCase()} USDT here</div>
+                <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '10.5px', wordBreak: 'break-all', color: '#f5c518' }}>
                   {wallet.eth_address}
                 </div>
                 <button onClick={() => handleCopy(wallet.eth_address)} className="btn btn-ghost" style={{ marginTop: '8px', padding: '6px 12px', fontSize: '11px' }}>

@@ -530,50 +530,151 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
           opacity: 1;
           filter: grayscale(0);
         }
+        
+        /* Digital ID Card 3D Flip per Item #10 */
+        .id-card-container {
+          perspective: 1000px;
+          width: 100%;
+          aspect-ratio: 1.58 / 1;
+          cursor: pointer;
+        }
+        .id-card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          transform-style: preserve-3d;
+        }
+        .id-card-container.flipped .id-card-inner {
+          transform: rotateY(180deg);
+        }
+        .id-card-front, .id-card-back {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+        .id-card-back {
+          transform: rotateY(180deg);
+          background: #111318;
+        }
       `}</style>
 
-      {/* ─── TOP HEADER: AVATAR & BASIC INFO ──────────────────── */}
-      <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        {/* Background Glow */}
-        <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 197, 24, 0.15) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-        
-        <div style={{ position: 'relative', marginBottom: '16px' }}>
-          <div className="rainbow-ring" style={{ width: '100px', height: '100px' }}>
-            <img 
-              src={userAvatar} 
-              alt="Avatar" 
-              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-surface)', border: '2px solid var(--bg-surface)' }} 
-            />
+      {/* ─── DIGITAL ID CARD & CONTROL per Item #10 ─── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>Digital Identity Card</h3>
+          <div style={{ 
+            display: 'flex', 
+            background: 'rgba(255,255,255,0.05)', 
+            borderRadius: '10px', 
+            padding: '3px',
+            border: '1px solid var(--border)'
+          }}>
+            <button 
+              onClick={() => setIsFlipped(false)}
+              style={{ 
+                padding: '6px 12px', 
+                borderRadius: '7px', 
+                border: 'none', 
+                fontSize: '11px', 
+                fontWeight: 700,
+                background: !isFlipped ? 'var(--gold)' : 'transparent',
+                color: !isFlipped ? '#000' : 'var(--text-3)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              White Card
+            </button>
+            <button 
+              onClick={() => setIsFlipped(true)}
+              style={{ 
+                padding: '6px 12px', 
+                borderRadius: '7px', 
+                border: 'none', 
+                fontSize: '11px', 
+                fontWeight: 700,
+                background: isFlipped ? 'var(--gold)' : 'transparent',
+                color: isFlipped ? '#000' : 'var(--text-3)',
+                cursor: 'pointer',
+                transition: 'all 0.2'
+              }}
+            >
+              Flip Card
+            </button>
           </div>
-          {user.is_verified_trader && (
-            <div style={{ position: 'absolute', bottom: '2px', right: '2px', background: '#00d4a0', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-surface)', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
-              <Check size={14} strokeWidth={4} />
+        </div>
+
+        <div className={`id-card-container ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
+          <div className="id-card-inner">
+            {/* FRONT SIDE */}
+            <div className="id-card-front" style={{ 
+              background: 'linear-gradient(135deg, #1a1d24 0%, #0a0c12 100%)',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 900, fontSize: '14px' }}>ES</div>
+                  <span style={{ fontWeight: 800, fontSize: '16px', letterSpacing: '0.5px' }}>EthioSwap <span style={{ color: 'var(--gold)', fontSize: '10px' }}>ID</span></span>
+                </div>
+                {kycStatusBadge()}
+              </div>
+
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '2px solid var(--gold)' }}>
+                  <img src={userAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>{fullName}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 600 }}>@{user.username}</div>
+                  
+                  {/* Stats Row per Item #10 */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Trades</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>{user.totalTrades || 0}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Volume</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>${(user.totalVolume || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 700, marginTop: '4px' }}>MEMBER SINCE {joinDate.split(' ')[1]?.toUpperCase() || '2026'}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Trading ID</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '2px', color: '#fff' }}>#{user.numericId || '0000'}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Status</span>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: user.kycStatus === 'approved' ? '#00d4a0' : '#f5c518' }}>{user.kycStatus?.toUpperCase() || 'NEW'}</div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '4px', color: 'var(--text-1)' }}>
-          @{user.username} {user.is_verified_trader && <span style={{ color: '#00d4a0' }}>✅</span>}
-        </h2>
-        
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
-          {user.badge_level && user.badge_level !== 'none' && (
-            <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', border: '1px solid rgba(245, 197, 24, 0.2)' }}>
-              {user.badge_level.toUpperCase()} TRADER
-            </span>
-          )}
-          <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-            🔥 {user.current_streak || 0} DAY STREAK
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-          <button onClick={() => setShowEditProfile(true)} className="btn btn-ghost" style={{ flex: 1, padding: '10px' }}>
-            <User size={16} /> Edit Profile
-          </button>
-          <button onClick={() => setShowReferralDash(true)} className="btn btn-ghost" style={{ flex: 1, padding: '10px' }}>
-            <ExternalLink size={16} /> Share & Earn
-          </button>
+            {/* BACK SIDE */}
+            <div className="id-card-back" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ background: '#fff', padding: '10px', borderRadius: '12px', marginBottom: '16px' }}>
+                <img src={qrCodeUrl} alt="QR Code" style={{ width: '120px', height: '120px' }} />
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)', maxWidth: '200px', lineHeight: 1.5 }}>
+                This is a verified EthioSwap digital identity. Scan to verify trader reputation and security status.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

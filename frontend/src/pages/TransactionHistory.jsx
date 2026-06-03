@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownLeft, ArrowUpRight, Repeat, Send, Download, Search, Filter, Calendar, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
+import EmptyState from '../components/EmptyState.jsx';
 
 const TransactionHistory = () => {
   const { user } = useAuth();
@@ -164,7 +165,11 @@ const TransactionHistory = () => {
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>Loading history...</div>
         ) : filteredTxs.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-3)' }}>No transactions found.</div>
+          <EmptyState 
+            icon="💸"
+            title="No Transactions Found"
+            subtitle="It looks like you haven't made any transactions yet or none match your filters."
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {filteredTxs.map(tx => (

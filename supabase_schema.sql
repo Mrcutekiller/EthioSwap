@@ -932,30 +932,85 @@ CREATE POLICY "Anyone can view avatars" ON storage.objects
 -- ═══════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     username TEXT NOT NULL,
+    trade_count INTEGER DEFAULT 0,
     rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    content TEXT NOT NULL,
+    content TEXT NOT NULL CHECK (char_length(content) BETWEEN 20 AND 300),
+    is_approved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_is_approved ON reviews(is_approved);
 
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can view reviews" ON reviews
-    FOR SELECT USING (true);
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can insert own reviews" ON reviews
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "users read own" ON users FOR SELECT USING (auth.uid()=id);
+CREATE POLICY "users update own" ON users FOR UPDATE USING (auth.uid()=id);
 
+-- ═══════════════════════════════════════════════════════════════
+-- 29. NOTIFICATIONS TABLE
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    type TEXT, -- 'deposit', 'withdrawal', 'trade', 'kyc', 'security'
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can see their own notifications" ON notifications
+    FOR SELECT TO authenticated
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own notifications" ON notifications
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own notifications" ON notifications
+    FOR DELETE TO authenticated
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can insert notifications" ON notifications
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid() AND users.role = 'admin'
+        )
+    );
+
+DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
+CREATE POLICY "read approved" ON reviews FOR SELECT USING (is_approved = TRUE);
+
+DROP POLICY IF EXISTS "Users can insert own reviews" ON reviews;
+CREATE POLICY "insert own" ON reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own reviews" ON reviews;
 CREATE POLICY "Users can update own reviews" ON reviews
     FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own reviews" ON reviews;
 CREATE POLICY "Users can delete own reviews" ON reviews
     FOR DELETE USING (auth.uid() = user_id);
+
+-- Admin policy for reviews
+CREATE POLICY "Admins can manage all reviews" ON reviews FOR ALL USING (
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ═══════════════════════════════════════════════════════════════
 -- SEED DATA

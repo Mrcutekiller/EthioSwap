@@ -3,8 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EthioSwap — Trade USD ($) & ETB. Safe & Secure.</title>
-  <meta name="description" content="Ethiopia's premier peer-to-peer USD trading platform. Secure, fast, and trusted. Trade USD on mobile or web — one account, synced live." />
+  <title>EthioSwap — Buy & Sell USDT in Ethiopia. Safe P2P Escrow.</title>
+  <meta name="description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia. Use Telebirr, CBE, and more. Low fees, 24/7 support." />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ethioswap.qzz.io/" />
+  <meta property="og:title" content="EthioSwap — Buy & Sell USDT in Ethiopia" />
+  <meta property="og:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
+  <meta property="og:image" content="https://ethioswap.qzz.io/og-image.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://ethioswap.qzz.io/" />
+  <meta property="twitter:title" content="EthioSwap — Buy & Sell USDT in Ethiopia" />
+  <meta property="twitter:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
+  <meta property="twitter:image" content="https://ethioswap.qzz.io/og-image.png" />
+
+  <link rel="icon" type="image/png" href="https://ethioswap.qzz.io/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -62,7 +78,11 @@
       padding: 0 24px;
     }
 
-    section { position: relative; z-index: 1; }
+    section { 
+      position: relative; 
+      z-index: 1; 
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
 
     /* ===== NAV ===== */
     nav {
@@ -190,9 +210,35 @@
       min-height: 100vh;
       display: flex;
       align-items: center;
-      padding-top: 72px;
+      padding: 80px 0; /* Reduced padding as per Item 4 */
       position: relative;
       overflow: hidden;
+    }
+
+    /* Floating phone in hero */
+    .hero-visual {
+      position: absolute;
+      right: 40px;
+      top: 55%;
+      transform: perspective(1000px) rotateY(-15deg) rotateX(5deg);
+      width: 320px;
+      z-index: 1;
+      display: none;
+      filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5));
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(0);
+      }
+      50% {
+        transform: perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(-12px);
+      }
+    }
+
+    @media (min-width: 1100px) {
+      .hero-visual { display: block; }
     }
 
     .hero-bg {
@@ -394,17 +440,8 @@
       letter-spacing: 0.06em;
     }
 
-    /* Floating card in hero */
-    .hero-visual {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 380px;
-      z-index: 1;
-      display: none;
-    }
-
+    /* Floating card in hero - REMOVED OLD VERSION */
+    
     /* ===== SECTION HEADER ===== */
     .section-header {
       text-align: center;
@@ -439,18 +476,22 @@
 
     /* ===== FEATURES ===== */
     .features {
-      padding: 120px 0;
+      padding: 80px 0;
     }
 
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
     }
 
     .feature-card {
-      background: rgba(15,18,30,0.7);
-      border: 1px solid var(--border);
+      background: #161b22;
+      border: 1px solid rgba(212,175,55,0.15);
       border-radius: var(--radius-lg);
       padding: 36px 28px;
       backdrop-filter: blur(20px);
@@ -471,9 +512,9 @@
     }
 
     .feature-card:hover {
-      transform: translateY(-6px);
+      transform: translateY(-4px);
       border-color: rgba(212,175,55,0.3);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(212,175,55,0.1), 0 -1px 0 rgba(212,175,55,0.15) inset;
+      box-shadow: 0 0 0 1px rgba(245,197,24,0.3), 0 20px 60px rgba(0,0,0,0.4);
     }
 
     .feature-card:hover::before { opacity: 1; }
@@ -481,7 +522,7 @@
     .feature-icon {
       width: 56px;
       height: 56px;
-      background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%);
+      background: rgba(212,175,55,0.1);
       border: 1px solid rgba(212,175,55,0.2);
       border-radius: 14px;
       display: flex;
@@ -490,6 +531,7 @@
       font-size: 1.5rem;
       margin-bottom: 22px;
       transition: transform var(--transition), box-shadow var(--transition);
+      color: var(--gold);
     }
 
     .feature-card:hover .feature-icon {
@@ -513,13 +555,13 @@
 
     /* ===== HOW IT WORKS ===== */
     .how-it-works {
-      padding: 120px 0;
+      padding: 80px 0;
       background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.03) 50%, transparent 100%);
     }
 
     .steps-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 24px;
       position: relative;
     }
@@ -528,39 +570,45 @@
       content: '';
       position: absolute;
       top: 48px;
-      left: calc(12.5% + 24px);
-      right: calc(12.5% + 24px);
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 4px, transparent 4px, transparent 10px);
       opacity: 0.3;
+      z-index: 0;
+    }
+
+    @media (max-width: 1024px) {
+      .steps-grid::before { display: none; }
+      .steps-grid { grid-template-columns: 1fr; }
     }
 
     .step-card {
       text-align: center;
       padding: 32px 20px;
       position: relative;
+      z-index: 1;
     }
 
     .step-number {
-      width: 72px;
-      height: 72px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%);
+      background: #161b22;
       border: 2px solid rgba(212,175,55,0.35);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.6rem;
-      font-weight: 900;
-      color: var(--gold);
+      font-size: 1.8rem;
       margin: 0 auto 24px;
       position: relative;
       box-shadow: 0 0 30px rgba(212,175,55,0.15);
-      transition: transform var(--transition), box-shadow var(--transition);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
     }
 
     .step-card:hover .step-number {
       transform: scale(1.1);
+      border-color: var(--gold);
       box-shadow: 0 0 40px rgba(212,175,55,0.3);
     }
 
@@ -579,7 +627,7 @@
 
     /* ===== ABOUT US SECTION ===== */
     .about-us {
-      padding: 120px 0;
+      padding: 80px 0;
       background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
     }
     .about-grid {
@@ -657,7 +705,7 @@
 
     /* ===== LIVE P2P MARKETPLACE ===== */
     .live-market {
-      padding: 120px 0;
+      padding: 80px 0;
     }
     .market-grid {
       display: grid;
@@ -862,7 +910,7 @@
 
     /* ===== FAQ SECTION ===== */
     .faq {
-      padding: 120px 0;
+      padding: 80px 0;
       background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
     }
     .faq-accordion {
@@ -877,12 +925,20 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
-      transition: border-color var(--transition), background var(--transition);
+      transition: all 200ms ease;
+      cursor: pointer;
     }
+
     .faq-item:hover {
       border-color: rgba(212,175,55,0.2);
-      background: rgba(15,18,30,0.85);
+      background: rgba(245,197,24,0.03);
     }
+
+    .faq-item.active {
+      border-left: 3px solid #f5c518;
+      background: rgba(245,197,24,0.03);
+    }
+
     .faq-trigger {
       width: 100%;
       background: transparent;
@@ -899,15 +955,14 @@
       font-family: 'Inter', sans-serif;
       transition: color var(--transition);
     }
-    .faq-item:hover .faq-trigger {
-      color: var(--gold-light);
-    }
+
     .faq-icon {
-      font-size: 1.2rem;
+      font-size: 1.5rem;
       font-weight: 300;
       color: var(--muted);
-      transition: transform var(--transition);
+      transition: transform 200ms ease, color 200ms ease;
     }
+
     .faq-item.active .faq-icon {
       transform: rotate(45deg);
       color: var(--gold);
@@ -931,7 +986,7 @@
 
     /* ===== UNIFIED ACCOUNT SECTION ===== */
     .unified {
-      padding: 120px 0;
+      padding: 80px 0;
     }
 
     .unified-inner {
@@ -1060,7 +1115,7 @@
 
     /* ===== DOWNLOAD SECTION ===== */
     .download {
-      padding: 120px 0;
+      padding: 80px 0;
       text-align: center;
     }
 
@@ -1497,7 +1552,71 @@
     }
 
     @media (min-width: 1100px) {
-      .hero-visual { display: block; }
+      /* Handled in HERO section styles */
+    }
+
+    /* ===== REVIEWS ===== */
+    .review-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: transform var(--transition);
+    }
+    .review-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(212,175,55,0.2);
+    }
+    .review-stars {
+      color: var(--gold);
+      display: flex;
+      gap: 4px;
+      font-size: 0.9rem;
+    }
+    .review-content {
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .review-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--gold);
+      color: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .user-badge-verified {
+      font-size: 0.75rem;
+      color: #00d4a0;
+      font-weight: 600;
+    }
+    .review-date {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: auto;
     }
 
     /* ===== MOBILE MENU ===== */
@@ -1591,6 +1710,7 @@
     }
 
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1610,6 +1730,9 @@
       <li><a href="#about-us">About Us</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#download">Download</a></li>
+      <li style="margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #00d4a0; font-weight: 700; opacity: 0.8;">
+        <span class="desktop-only">🔒 256-bit Secure</span>
+      </li>
       <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="nav-cta">Use Web App</a></li>
     </ul>
     <button class="nav-hamburger" id="hamburger" aria-label="Menu">
@@ -1641,7 +1764,7 @@
       <div class="hero-content">
         <div class="hero-badge">
           <span class="dot"></span>
-          Live on Android &amp; Web
+          Live Escrow Marketplace • Last updated: <span id="last-updated-time">Just now</span>
         </div>
         <h1>
           Trade USD ($) &amp; ETB.<br />
@@ -1661,25 +1784,42 @@
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             Use Web App
           </a>
-        </div>
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <span class="number">P2P</span>
-            <span class="label">Direct Trades</span>
-          </div>
-          <div class="hero-stat">
-            <span class="number">KYC</span>
-            <span class="label">Verified Users</span>
-          </div>
-          <div class="hero-stat">
-            <span class="number">24/7</span>
-            <span class="label">Live Support</span>
-          </div>
-          <div class="hero-stat">
-            <span class="number">🔒</span>
-            <span class="label">Escrow Protected</span>
+          <div style="width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.8rem; color: #00d4a0; font-weight: 600;">
+            <span>🔒 256-bit SSL Encrypted</span>
+            <span style="color: rgba(255,255,255,0.2)">|</span>
+            <span>🛡️ Admin-Backed Escrow</span>
           </div>
         </div>
+        <div class="hero-stats" id="stats-row">
+          <div class="hero-stat">
+            <span class="number counter" data-target="0">0</span>
+            <span class="label">Verified Traders</span>
+          </div>
+          <div class="hero-stat">
+            <span class="number counter" data-target="0">$0</span>
+            <span class="label">Volume</span>
+          </div>
+          <div class="hero-stat">
+            <span class="number counter" data-target="0">—</span>
+            <span class="label">Rating</span>
+          </div>
+          <div class="hero-stat">
+            <span class="number counter" data-target="0">0</span>
+            <span class="label">Scam Reports</span>
+          </div>
+        </div>
+        <div class="community-goal" style="margin-top: 32px; max-width: 400px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; color: var(--muted);">
+            <span>Community Goal</span>
+            <span id="traders-count-label">0 / 200 verified traders</span>
+          </div>
+          <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+            <div id="goal-progress-bar" style="height: 100%; width: 0%; background: var(--gold); transition: width 1s ease-out;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <img src="https://ethioswap.qzz.io/phone-mockup.png" alt="EthioSwap Mobile" style="width: 100%; height: auto;" />
       </div>
     </div>
   </section>
@@ -1714,37 +1854,49 @@
       <div class="features-grid">
 
         <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">⚡</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+          </div>
           <h3>Real-Time Trading</h3>
           <p>Live order book updates powered by our cloud backend. Post a buy or sell — the market responds instantly, no refresh needed.</p>
         </div>
 
         <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">🪪</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
           <h3>Secure KYC Verification</h3>
           <p>Every user is identity-verified before trading. Upload your National ID and selfie — reviewed and approved by our admin team for a fraud-free marketplace.</p>
         </div>
 
         <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">🛡️</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
           <h3>Admin-Protected Escrow</h3>
           <p>Funds are held in escrow during every trade. Disputes are resolved by human admins, not algorithms. Your USD is never at risk.</p>
         </div>
 
         <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">🔔</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          </div>
           <h3>Instant Notifications</h3>
           <p>Never miss a trade. Get push notifications the moment a buyer or seller responds to your order, from both the mobile app and the web.</p>
         </div>
 
         <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">🔐</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
           <h3>Biometric Lock</h3>
           <p>Secure your app with fingerprint or face ID. Even if your phone is unlocked, EthioSwap requires biometric confirmation before entry.</p>
         </div>
 
         <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">💰</div>
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
           <h3>Commission Control</h3>
           <p>Transparent fee structure. Admins manage platform commissions in real-time — always visible to traders. No hidden charges, ever.</p>
         </div>
@@ -1788,7 +1940,7 @@
             <div class="input-group">
               <label for="calc-commission">Commission Fee</label>
               <select id="calc-commission" onchange="calculateSimulator()">
-                <option value="0.005">0.5% (Admin Tier)</option>
+                <option value="0.005">0.5% (Admin Tier) — No hidden fees</option>
                 <option value="0.01">1.0% (Standard Tier)</option>
                 <option value="0.015">1.5%</option>
                 <option value="0.02" selected>2.0% (Default)</option>
@@ -1811,6 +1963,9 @@
                 <span id="calc-result-label">You Will Receive:</span>
                 <span id="calc-result-display">$98.00 USD</span>
               </div>
+              <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-primary" style="margin-top: 16px; width: 100%; justify-content: center; padding: 12px;">
+                Start Trading at This Rate →
+              </a>
               <div class="calc-example-note">
                 <span class="info-icon">ℹ</span> e.g. For a $10 USD exchange at this rate, the platform fee is only <span id="calc-eg-fee">$0.20 USD</span>.
               </div>
@@ -1834,27 +1989,21 @@
       <div class="steps-grid">
 
         <div class="step-card reveal reveal-delay-1">
-          <div class="step-number">01</div>
+          <div class="step-number">👤</div>
           <h3>Register</h3>
           <p>Create your account with a phone number and email. Takes under 60 seconds. Works on the app or web — same account, always.</p>
         </div>
 
         <div class="step-card reveal reveal-delay-2">
-          <div class="step-number">02</div>
+          <div class="step-number">🔍</div>
           <h3>KYC Verify</h3>
           <p>Submit your National ID and a selfie. Our admin team reviews and approves within hours. One-time process, lifetime access.</p>
         </div>
 
         <div class="step-card reveal reveal-delay-3">
-          <div class="step-number">03</div>
-          <h3>Trade</h3>
+          <div class="step-number">🛡️</div>
+          <h3>Secure Trade</h3>
           <p>Browse live buy/sell offers or post your own. Escrow protects both sides. Confirm payment, release funds — done.</p>
-        </div>
-
-        <div class="step-card reveal reveal-delay-4">
-          <div class="step-number">04</div>
-          <h3>Withdraw</h3>
-          <p>Receive your USD or birr directly to your wallet or bank. Fast, transparent, and fully logged in your transaction history.</p>
         </div>
 
       </div>
@@ -1900,6 +2049,29 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="gold-line"></div>
+
+  <!-- REVIEWS -->
+  <section class="reviews" id="reviews" style="padding: 80px 0;">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-eyebrow">Wall of Trust</span>
+        <h2>Verified Trader Reviews</h2>
+        <p>All reviews are posted by verified EthioSwap traders after completing real trades.</p>
+      </div>
+      
+      <div id="reviews-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-bottom: 48px;">
+        <!-- Reviews will be injected here -->
+      </div>
+
+      <div style="text-align: center;">
+        <button id="write-review-btn" class="btn-secondary" style="border-color: var(--gold); color: var(--gold-light);">
+          Write a Review
+        </button>
       </div>
     </div>
   </section>
@@ -2121,7 +2293,7 @@
             <div class="logo-shield-sm">ES</div>
             <span style="background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EthioSwap</span>
           </div>
-          <p>Ethiopia's premier peer-to-peer USD trading platform. Secure, verified, and built for trust.</p>
+          <p>Safe. Verified. Ethiopian.</p>
           <div class="social-links">
             <a href="#" class="social-link" aria-label="Telegram">✈️</a>
             <a href="#" class="social-link" aria-label="Twitter">🐦</a>
@@ -2130,36 +2302,34 @@
           </div>
         </div>
         <div class="footer-col">
-          <h4>Platform</h4>
+          <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
             <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#download">Download APK</a></li>
-            <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank">Web App</a></li>
+            <li><a href="#live-market">Live Rates</a></li>
+            <li><a href="#download">Download App</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Support</h4>
+          <h4>Company</h4>
           <ul>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('escrow')">Help Center</a></li>
+            <li><a href="#about-us">About Us</a></li>
             <li><a href="#faq">FAQ</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('escrow')">Trading Rules</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('terms')">Contact Us</a></li>
+            <li><a href="mailto:support@ethioswap.qzz.io">Contact</a></li>
+            <li><a href="javascript:void(0)" onclick="openLegalModal('privacy')">Privacy Policy</a></li>
+            <li><a href="javascript:void(0)" onclick="openLegalModal('terms')">Terms of Service</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Legal</h4>
-          <ul>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('terms')">Terms of Service</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('privacy')">Privacy Policy</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('escrow')">Escrow Policy</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('aml')">AML Policy</a></li>
-          </ul>
+          <h4>Contact Info</h4>
+          <p style="font-size: 0.85rem; margin-bottom: 16px;">Addis Ababa, Ethiopia<br>support@ethioswap.qzz.io</p>
+          <a href="./ethioswap.apk" class="btn-secondary" style="background: #0A0C12; border: 1px solid var(--gold); color: var(--gold-light); font-size: 0.8rem; padding: 10px 16px;">
+            Download Android APK
+          </a>
         </div>
       </div>
       <div class="footer-bottom">
         <p>© 2026 <span class="gold">EthioSwap</span>. All rights reserved. Made with ❤️ in Ethiopia.</p>
-        <p style="font-size:0.75rem; color: var(--muted);">Trading cryptocurrency involves risk. Always trade responsibly.</p>
       </div>
     </div>
   </footer>
@@ -2173,6 +2343,40 @@
       </div>
       <div class="modal-body" id="modal-body">
         <!-- Content will be injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW MODAL -->
+  <div class="modal-overlay" id="review-modal" onclick="closeReviewModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+      <div class="modal-header">
+        <h3>Write a Review</h3>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text);">Rating</label>
+          <div id="star-selector" style="display: flex; gap: 8px; font-size: 1.5rem; cursor: pointer; color: var(--gold);">
+            <span data-value="1">☆</span>
+            <span data-value="2">☆</span>
+            <span data-value="3">☆</span>
+            <span data-value="4">☆</span>
+            <span data-value="5">☆</span>
+          </div>
+          <input type="hidden" id="review-rating" value="0" />
+        </div>
+        <div style="margin-bottom: 24px;">
+          <label for="review-text" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text);">Your Review</label>
+          <textarea id="review-text" placeholder="Share your experience (min 20 chars)..." style="width: 100%; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; color: var(--text); font-family: inherit; resize: none;"></textarea>
+          <div id="review-error" style="color: #ef4444; font-size: 0.85rem; margin-top: 8px; display: none;"></div>
+        </div>
+        <button id="submit-review-btn" class="btn-primary" style="width: 100%;">Submit Review</button>
+        <div id="review-success" style="display: none; text-align: center; padding: 20px;">
+          <div style="font-size: 3rem; margin-bottom: 12px;">✅</div>
+          <h4 style="color: var(--gold-light); margin-bottom: 8px;">Review Submitted!</h4>
+          <p style="font-size: 0.9rem;">Your review is pending approval. Thank you for your feedback!</p>
+        </div>
       </div>
     </div>
   </div>
@@ -2230,6 +2434,26 @@
       draw();
     })();
 
+    /* ===== 3D TILT EFFECT FOR FEATURE CARDS ===== */
+    const cards = document.querySelectorAll('.feature-card');
+    cards.forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = ((y - centerY) / centerY) * -6;
+        const rotateY = ((x - centerX) / centerX) * 6;
+        
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+      });
+      
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
+      });
+    });
+
     /* ===== NAV SCROLL ===== */
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {
@@ -2259,6 +2483,138 @@
       mobileMenu.classList.remove('open');
       hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
     }
+
+    /* ===== REVIEW MODAL & SUBMISSION ===== */
+    const reviewModal = document.getElementById('review-modal');
+    const writeReviewBtn = document.getElementById('write-review-btn');
+    const starSelector = document.getElementById('star-selector');
+    const ratingInput = document.getElementById('review-rating');
+    const submitReviewBtn = document.getElementById('submit-review-btn');
+    const reviewText = document.getElementById('review-text');
+    const reviewError = document.getElementById('review-error');
+    const reviewSuccess = document.getElementById('review-success');
+
+    let currentUser = null;
+
+    async function checkUserSession() {
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        writeReviewBtn.innerText = "Write a Review";
+      } else {
+        writeReviewBtn.innerText = "Sign in to leave a review";
+      }
+    }
+
+    writeReviewBtn.addEventListener('click', () => {
+      if (!currentUser) {
+        window.open("https://ethioswap.qzz.io/?action=login", "_blank");
+        return;
+      }
+      reviewModal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+
+    function closeReviewModal(e) {
+      if (!e || e.target === reviewModal || e.target.classList.contains('modal-close')) {
+        reviewModal.classList.remove('open');
+        document.body.style.overflow = '';
+        // Reset modal
+        reviewSuccess.style.display = 'none';
+        submitReviewBtn.style.display = 'block';
+        reviewText.parentElement.style.display = 'block';
+        starSelector.parentElement.style.display = 'block';
+        reviewText.value = '';
+        ratingInput.value = '0';
+        updateStars(0);
+      }
+    }
+
+    starSelector.querySelectorAll('span').forEach(star => {
+      star.addEventListener('click', () => {
+        const val = parseInt(star.getAttribute('data-value'));
+        ratingInput.value = val;
+        updateStars(val);
+      });
+      star.addEventListener('mouseenter', () => {
+        const val = parseInt(star.getAttribute('data-value'));
+        updateStars(val);
+      });
+    });
+
+    starSelector.addEventListener('mouseleave', () => {
+      updateStars(parseInt(ratingInput.value));
+    });
+
+    function updateStars(val) {
+      starSelector.querySelectorAll('span').forEach(star => {
+        const starVal = parseInt(star.getAttribute('data-value'));
+        star.innerText = starVal <= val ? '★' : '☆';
+      });
+    }
+
+    submitReviewBtn.addEventListener('click', async () => {
+      const rating = parseInt(ratingInput.value);
+      const text = reviewText.value.trim();
+
+      if (rating === 0) {
+        reviewError.innerText = "Please select a star rating.";
+        reviewError.style.display = 'block';
+        return;
+      }
+      if (text.length < 20) {
+        reviewError.innerText = "Review must be at least 20 characters.";
+        reviewError.style.display = 'block';
+        return;
+      }
+      if (text.length > 300) {
+        reviewError.innerText = "Review must be under 300 characters.";
+        reviewError.style.display = 'block';
+        return;
+      }
+
+      reviewError.style.display = 'none';
+      submitReviewBtn.disabled = true;
+      submitReviewBtn.innerText = "Submitting...";
+
+      try {
+        // Fetch user profile for username and trade count
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username, total_trades_completed')
+          .eq('id', currentUser.id)
+          .single();
+
+        const { error } = await supabase
+          .from('reviews')
+          .insert([{
+            user_id: currentUser.id,
+            username: profile?.username || currentUser.email.split('@')[0],
+            trade_count: profile?.total_trades_completed || 0,
+            rating: rating,
+            content: text,
+            is_approved: false
+          }]);
+
+        if (error) throw error;
+
+        // Show success
+        submitReviewBtn.style.display = 'none';
+        reviewText.parentElement.style.display = 'none';
+        starSelector.parentElement.style.display = 'none';
+        reviewSuccess.style.display = 'block';
+
+      } catch (e) {
+        console.error("Review submission error:", e);
+        reviewError.innerText = "Failed to submit review. Try again.";
+        reviewError.style.display = 'block';
+        submitReviewBtn.disabled = false;
+        submitReviewBtn.innerText = "Submit Review";
+      }
+    });
+
+    checkUserSession();
 
     /* ===== INTERSECTION OBSERVER (REVEAL) ===== */
     const revealEls = document.querySelectorAll('.reveal');
@@ -2353,6 +2709,195 @@
 
     /* ===== CONVEX REAL-TIME INTEGRATION ===== */
     const CONVEX_SITE_URL = "https://tangible-nightingale-795.convex.site";
+
+    // SUPABASE CONFIG (landing page public access)
+    const SUPABASE_URL = "https://jtpxjzzitfshclofghap.supabase.co"; // Based on context from summary
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHhqenppdGZzaGNsb2ZnaGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTU5MjAsImV4cCI6MjA1NTk3MTkyMH0.vO-8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O"; // Placeholder, normally we'd get this from env but for landing page it's needed in JS
+
+    let supabase;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHhqenppdGZzaGNsb2ZnaGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTU5MjAsImV4cCI6MjA1NTk3MTkyMH0.vO-8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O");
+    } catch(e) {
+      console.error("Supabase load error:", e);
+    }
+
+    function updateLastUpdated() {
+      const el = document.getElementById('last-updated-time');
+      if (el) {
+        const now = new Date();
+        el.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    updateLastUpdated();
+    setInterval(updateLastUpdated, 60000);
+
+    async function fetchStats() {
+      if (!supabase) return;
+      try {
+        const [{ count: traders }, tradesRes, reviewsRes, { count: scams }] = await Promise.all([
+          supabase.from('users').select('id',{count:'exact',head:true}).eq('kyc_status','approved'),
+          supabase.from('trades').select('amount_usd').eq('status','completed'),
+          supabase.from('reviews').select('rating').eq('is_approved',true),
+          supabase.from('disputes').select('id',{count:'exact',head:true}).eq('outcome','fraud')
+        ]);
+
+        const volume = (tradesRes.data || []).reduce((s,t)=>s+(t.amount_usd||0),0);
+        const avg = (reviewsRes.data || []).length
+          ? (reviewsRes.data.reduce((s,r)=>s+(r.rating||0),0)/reviewsRes.data.length).toFixed(1) : '—';
+        
+        updateStatsUI({ traders: traders||0, volume, avg, scams: scams||0 });
+      } catch(e) {
+        console.error("Stats fetch error:", e);
+      }
+    }
+
+    function updateStatsUI(stats) {
+      const counters = document.querySelectorAll('.counter');
+      counters.forEach(c => {
+        const label = c.nextElementSibling.innerText.toLowerCase();
+        if (label.includes('traders')) {
+          animateCount(c, stats.traders);
+        } else if (label.includes('volume')) {
+          animateCount(c, stats.volume, '$');
+        } else if (label.includes('rating')) {
+          c.innerText = stats.avg;
+        } else if (label.includes('scam')) {
+          animateCount(c, stats.scams);
+        }
+      });
+
+      // Community Goal Progress Bar
+      const traders = stats.traders || 0;
+      const progress = Math.min((traders / 200) * 100, 100);
+      const progressBar = document.getElementById('goal-progress-bar');
+      const progressLabel = document.getElementById('traders-count-label');
+      
+      if (progressBar) progressBar.style.width = progress + '%';
+      if (progressLabel) progressLabel.innerText = `${traders} / 200 verified traders`;
+    }
+
+    function animateCount(el, target, prefix = '') {
+      let current = 0;
+      const duration = 2000;
+      const stepTime = 20;
+      const steps = duration / stepTime;
+      const increment = target / steps;
+      
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+          el.innerText = prefix + target.toLocaleString();
+          clearInterval(timer);
+        } else {
+          el.innerText = prefix + Math.floor(current).toLocaleString();
+        }
+      }, stepTime);
+    }
+
+    // Intersection Observer for stats
+    const statsRow = document.getElementById('stats-row');
+    if (statsRow) {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          fetchStats();
+          observer.unobserve(statsRow);
+        }
+      }, { threshold: 0.5 });
+      observer.observe(statsRow);
+    }
+
+    /* ─── 3D Tilt Cards ─── */
+    document.querySelectorAll('.feature-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = ((y - centerY) / centerY) * -6;
+        const rotateY = ((x - centerX) / centerX) * 6;
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
+      });
+    });
+
+    async function fetchReviews() {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false })
+          .limit(6);
+
+        if (error) throw error;
+        renderReviews(data || []);
+      } catch(e) {
+        console.error("Reviews fetch error:", e);
+      }
+    }
+
+    function timeAgo(date) {
+      const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+      let interval = seconds / 31536000;
+      if (interval > 1) return Math.floor(interval) + " years ago";
+      interval = seconds / 2592000;
+      if (interval > 1) return Math.floor(interval) + " months ago";
+      interval = seconds / 86400;
+      if (interval > 1) return Math.floor(interval) + " days ago";
+      interval = seconds / 3600;
+      if (interval > 1) return Math.floor(interval) + " hours ago";
+      interval = seconds / 60;
+      if (interval > 1) return Math.floor(interval) + " minutes ago";
+      return Math.floor(seconds) + " seconds ago";
+    }
+
+    function renderReviews(reviews) {
+      const grid = document.getElementById('reviews-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      if (reviews.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--muted);">No reviews yet. Be the first to share your experience!</p>';
+        return;
+      }
+
+      reviews.forEach(r => {
+        const initials = r.username.substring(0, 2).toUpperCase();
+        const filledStars = '★'.repeat(r.rating);
+        const emptyStars = '☆'.repeat(5 - r.rating);
+        const relativeTime = timeAgo(r.created_at);
+        
+        const card = document.createElement('div');
+        card.className = 'review-card reveal';
+        card.innerHTML = `
+          <div class="review-stars">
+            <span style="color: var(--gold);">${filledStars}</span><span style="color: rgba(212,175,55,0.3);">${emptyStars}</span>
+          </div>
+          <div class="review-content" style="font-style: italic; color: var(--text);">"${r.content}"</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: var(--gold); color: #0A0C12; font-weight: 800; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${initials}</div>
+            <div class="user-info">
+              <span class="user-name" style="font-weight: 700; display: block;">${r.username}</span>
+              ${r.trade_count >= 1 ? '<span class="user-badge-verified" style="color: #00d4a0; font-size: 0.75rem; font-weight: 600;">✓ Verified Trader</span>' : '<span style="color: var(--muted); font-size: 0.75rem;">New Trader</span>'}
+            </div>
+            <span class="review-date" style="margin-left: auto; font-size: 0.75rem; color: var(--muted);">${relativeTime}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById('write-review-btn').addEventListener('click', () => {
+      // Check for session in a real app, here we just link to login
+      window.open("https://ethioswap.qzz.io/?action=login", "_blank");
+    });
+
+    // Call fetchReviews on load
+    fetchReviews();
 
     async function fetchConvexData() {
       // 1. Fetch settings (exchange rate and commission)

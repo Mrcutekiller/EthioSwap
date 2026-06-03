@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Wallet, Shield, Key, LogOut, MessageSquare, ListCollapse, ArrowLeftRight } from 'lucide-react';
+import NotificationBell from './NotificationBell.jsx';
 
 const Navbar = () => {
   const { user, wallet, activeTab, setActiveTab, logout, switchUser, trades, systemSettings } = useAuth();
@@ -146,6 +147,8 @@ const Navbar = () => {
             <button onClick={() => switchUser('seller')} className="btn btn-secondary" style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', background: user.username === 'seller' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: user.username === 'seller' ? '#080A10' : 'white' }}>Seller</button>
             <button onClick={() => switchUser('admin')} className="btn btn-secondary" style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', background: user.username === 'admin' ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: user.username === 'admin' ? '#080A10' : 'white' }}>Admin</button>
           </div>
+
+          <NotificationBell user={user} />
 
           <button onClick={logout} className="btn btn-secondary" style={{ padding: '0.5rem', color: 'var(--accent)' }} title="Logout">
             <LogOut size={16} />

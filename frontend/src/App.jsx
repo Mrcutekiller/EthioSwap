@@ -96,6 +96,14 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .input:focus { border-color: var(--gold-light) !important; box-shadow: 0 0 0 2px rgba(212,175,55,0.2) !important; }
+        .input:-webkit-autofill,
+        .input:-webkit-autofill:hover, 
+        .input:-webkit-autofill:focus, 
+        .input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #111318 inset !important;
+          -webkit-text-fill-color: #ffffff !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
       `}</style>
       
       {/* Background decoration */}
@@ -129,7 +137,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
           </button>
         )}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
-          <Logo size={44} />
+          {/* Logo removed per Item #8 */}
         </div>
 
         <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', textAlign: 'center', color: '#FFFFFF' }}>
@@ -150,7 +158,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   value={username} 
                   onChange={e => setUsername(e.target.value)} 
                   autoComplete="username" 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
             </>
@@ -164,7 +180,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   value={fullName} 
                   onChange={e => setFullName(e.target.value)} 
                   autoComplete="name" 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
               <div className="input-group" style={{ marginBottom: 0 }}>
@@ -175,7 +199,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   value={username} 
                   onChange={e => setUsername(e.target.value)} 
                   autoComplete="username" 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
               <div className="input-group" style={{ marginBottom: 0 }}>
@@ -186,7 +218,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   autoComplete="email" 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
             </>
@@ -203,7 +243,16 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
               spellCheck="false" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
-              style={{ width: '100%', paddingRight: '44px', background: 'rgba(0,0,0,0.2)' }} 
+              style={{ 
+                width: '100%', 
+                paddingRight: '44px', 
+                background: '#111318', 
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '10px',
+                color: '#ffffff',
+                padding: '14px 16px',
+                fontSize: '15px'
+              }} 
             />
             <button 
               type="button" 
@@ -227,7 +276,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   spellCheck="false" 
                   value={confirmPassword} 
                   onChange={e => setConfirmPassword(e.target.value)} 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
@@ -238,7 +295,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                     placeholder="Phone (+251...)" 
                     value={phone} 
                     onChange={e => setPhone(e.target.value)} 
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                    style={{ 
+                      width: '100%', 
+                      background: '#111318', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '10px',
+                      color: '#ffffff',
+                      padding: '14px 16px',
+                      fontSize: '15px'
+                    }} 
                   />
                 </div>
                 <div className="input-group" style={{ marginBottom: 0 }}>
@@ -249,7 +314,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                     placeholder="Age" 
                     value={age} 
                     onChange={e => setAge(e.target.value)} 
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                    style={{ 
+                      width: '100%', 
+                      background: '#111318', 
+                      border: '1px solid rgba(255,255,255,0.1)', 
+                      borderRadius: '10px',
+                      color: '#ffffff',
+                      padding: '14px 16px',
+                      fontSize: '15px'
+                    }} 
                   />
                 </div>
               </div>
@@ -260,7 +333,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   placeholder="Referral Code (Optional)" 
                   value={referralCode} 
                   onChange={e => setReferralCode(e.target.value.toUpperCase())} 
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  style={{ 
+                    width: '100%', 
+                    background: '#111318', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    padding: '14px 16px',
+                    fontSize: '15px'
+                  }} 
                 />
               </div>
             </>
@@ -295,7 +376,9 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              color: '#0A0C12'
+              color: '#0A0C12',
+              pointerEvents: loading ? 'none' : 'auto',
+              opacity: loading ? 0.8 : 1
             }}
           >
             {loading ? (
@@ -334,9 +417,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}
         </button>
 
-        <div style={{ marginTop: '24px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.6', textAlign: 'center' }}>
-          🔒 Secure End-to-End Escrow Exchange System
-        </div>
+        {/* Secure card removed per Item #8 */}
       </div>
     </div>
   );
@@ -346,6 +427,9 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
 const AppShell = () => {
   const { user, wallet, trades, isLocked, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
   const [tab, setTabState] = useState(() => {
+    const path = window.location.pathname;
+    if (path === '/admin') return 'admin';
+    if (path === '/dashboard') return 'home';
     if (user?.role === 'admin') return 'admin';
     return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
   });
@@ -353,8 +437,22 @@ const AppShell = () => {
   const setTab = (newTab) => {
     setTabState(newTab);
     localStorage.setItem(`ethioswap_active_tab_${user?.id}`, newTab);
+    if (newTab === 'admin') {
+      window.history.pushState({}, '', '/admin');
+    } else if (newTab === 'home') {
+      window.history.pushState({}, '', '/dashboard');
+    }
   };
-  const [authMode, setAuthMode] = useState(null); // default to null (show landing)
+  const [authMode, setAuthMode] = useState(() => {
+    const path = window.location.pathname;
+    if (path === '/login') return 'login';
+    if (path === '/register') return 'register';
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('action') === 'login' || hash === '#login') return 'login';
+    if (params.get('action') === 'register' || hash === '#register') return 'register';
+    return null;
+  });
   const [notifOpen, setNotifOpen] = useState(false);
   const notifCount = useNotifCount(user?.id);
   const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
@@ -363,7 +461,6 @@ const AppShell = () => {
   const [notifications, setNotifications] = useState([]);
 
   React.useEffect(() => {
-    if (!user) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event);
       if (event === 'SIGNED_IN' && session) {
@@ -374,9 +471,9 @@ const AppShell = () => {
           .single();
 
         if (profile?.role === 'admin') {
-          window.location.href = '/?tab=admin';
+          window.location.href = '/admin';
         } else {
-          window.location.href = '/?tab=home';
+          window.location.href = '/dashboard';
         }
       }
 
@@ -386,6 +483,15 @@ const AppShell = () => {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      const path = window.location.pathname;
+      if (path === '/') {
+        window.location.href = user.role === 'admin' ? '/admin' : '/dashboard';
+      }
+    }
   }, [user]);
 
   const fetchNotifications = async () => {
@@ -417,6 +523,12 @@ const AppShell = () => {
 
   // Auto-detect login link from website
   React.useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/login') {
+      setAuthMode('login');
+    } else if (path === '/register') {
+      setAuthMode('register');
+    }
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     if (params.get('action') === 'login' || hash === '#login') {

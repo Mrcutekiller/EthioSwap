@@ -225,9 +225,9 @@ export const AuthProvider = ({ children }) => {
           
           // Hard redirect based on role
           if (profileData.role === 'admin') {
-            window.location.href = '/?tab=admin'; // Since App.jsx uses tabs
+            window.location.href = '/admin';
           } else {
-            window.location.href = '/?tab=home';
+            window.location.href = '/dashboard';
           }
         } else {
           // Profile doesn't exist — create it now
@@ -252,7 +252,7 @@ export const AuthProvider = ({ children }) => {
             setUser(newProfile);
             setWallet(newProfile);
             localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
-            window.location.href = '/?tab=home';
+            window.location.href = '/dashboard';
           }
         }
       }
@@ -360,7 +360,7 @@ export const AuthProvider = ({ children }) => {
 
         await fetchUserProfile(data.user.id);
         setSuccess('Account created successfully!');
-        window.location.href = '/?tab=home';
+        window.location.href = '/dashboard';
       }
 
       return data.user;

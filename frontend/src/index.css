@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;0,400italic;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;0,400italic;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 :root {
@@ -11,74 +11,46 @@
   /* Borders */
   --border:          rgba(255, 255, 255, 0.06);
   --border-hover:    rgba(255, 255, 255, 0.12);
-  --border-active:   rgba(201, 168, 44, 0.4);
+  --border-active:   rgba(245, 197, 24, 0.4);
 
-  /* Gold Accent (only accent color) */
-  --gold:            #C8962C;
-  --gold-light:      #E8B84B;
+  /* Gold Accent */
+  --gold:            #f5c518;
+  --gold-light:      #ffdc5e;
   --gold-dim:        #8A6520;
-  --gold-glow:       rgba(200, 150, 44, 0.14);
-  --gold-bg:         rgba(200, 150, 44, 0.08);
+  --gold-glow:       rgba(245, 197, 24, 0.14);
+  --gold-bg:         rgba(245, 197, 24, 0.08);
+
+  /* Teal Accent */
+  --teal:            #00d4a0;
+  --teal-light:      #5dfccb;
+
+  /* Red Accent */
+  --red:             #ef4444;
 
   /* Text */
   --text-1:          #F0F2F8;
   --text-2:          #8B92A8;
   --text-3:          #4E5567;
 
-  /* Status (subtle, not colorful) */
-  --status-success-bg:   rgba(52, 211, 153, 0.07);
-  --status-success-text: #6EE7B7;
-  --status-success-border: rgba(52, 211, 153, 0.15);
-
-  --status-warning-bg:   rgba(251, 191, 36, 0.07);
-  --status-warning-text: #FDE68A;
-  --status-warning-border: rgba(251, 191, 36, 0.15);
-
-  --status-danger-bg:    rgba(248, 113, 113, 0.07);
-  --status-danger-text:  #FCA5A5;
-  --status-danger-border: rgba(248, 113, 113, 0.15);
-
-  --status-info-bg:      rgba(147, 197, 253, 0.07);
-  --status-info-text:    #BAE6FD;
-  --status-info-border:  rgba(147, 197, 253, 0.15);
-
-  /* Layout */
-  --bottom-nav-h:    68px;
-  --top-bar-h:       60px;
-  --content-max:     480px;   /* Mobile-first max width */
-
-  /* Spacing */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
-  --space-10: 40px;
-
-  /* Radii */
-  --r-sm:  8px;
-  --r-md:  14px;
-  --r-lg:  20px;
-  --r-xl:  28px;
-  --r-full: 9999px;
-
-  /* Shadows */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
-  --shadow-gold: 0 0 20px rgba(200, 150, 44, 0.18);
-
-  /* Transitions */
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --t-fast:   0.15s var(--ease);
-  --t-normal: 0.25s var(--ease);
-  --t-slow:   0.4s  var(--ease);
-
   /* Typography */
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+.money-usd { font-family: var(--font-mono); color: var(--gold); font-weight: 600; }
+.money-etb { font-family: var(--font-mono); color: var(--teal); font-weight: 600; }
+.money-debit { font-family: var(--font-mono); color: var(--red); font-weight: 600; }
+
+@keyframes shimmer {
+  0% { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #111318 25%, #1a1d24 50%, #111318 75%);
+  background-size: 800px 100%;
+  animation: shimmer 2s infinite linear;
 }
 
 /* ─── RESET ──────────────────────────────────────────────────── */
@@ -215,7 +187,7 @@ p { line-height: 1.6; color: var(--text-2); }
   justify-content: center;
   gap: 4px;
   padding: var(--space-2) 0;
-  color: var(--text-3);
+  color: #4b5563;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -225,7 +197,7 @@ p { line-height: 1.6; color: var(--text-2); }
 }
 
 .nav-item.active {
-  color: var(--gold-light);
+  color: var(--gold);
 }
 
 @keyframes bounceTab {
@@ -351,13 +323,20 @@ p { line-height: 1.6; color: var(--text-2); }
 }
 
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(245, 197, 24, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0); }
 }
 
 .btn-gold {
   background: linear-gradient(135deg, var(--gold), var(--gold-light));
   color: #0A0C12;
   box-shadow: 0 2px 12px var(--gold-glow);
+  animation: pulse-glow 3s infinite;
 }
 .btn-gold:hover  { filter: brightness(1.08); box-shadow: 0 4px 20px rgba(200,150,44,0.3); transform: translateY(-1px); }
 .btn-gold:active { transform: translateY(0); filter: brightness(0.96); }
