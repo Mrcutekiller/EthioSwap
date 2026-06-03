@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { notify } from '../lib/notify';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -467,8 +468,8 @@ export const AuthProvider = ({ children }) => {
       if (escrowError) throw escrowError;
 
       // 2. Transfer funds to buyer
-      const { data: buyer } = await supabase.from('users').select('eth_balance').eq('id', trade.buyer_id).single();
-      const { data: seller } = await supabase.from('users').select('eth_balance').eq('id', trade.seller_id).single();
+      const { data: buyer } = await supabase.from('users').select('id, email, full_name, eth_balance').eq('id', trade.buyer_id).single();
+      const { data: seller } = await supabase.from('users').select('id, email, full_name, eth_balance').eq('id', trade.seller_id).single();
       
       await supabase.from('users').update({ eth_balance: buyer.eth_balance + trade.amount_eth }).eq('id', trade.buyer_id);
       await supabase.from('users').update({ eth_balance: seller.eth_balance - trade.amount_eth }).eq('id', trade.seller_id);
@@ -486,6 +487,29 @@ export const AuthProvider = ({ children }) => {
           message_type: 'system'
         }]);
       }
+
+      // 5. Send notifications
+      await notify({
+        userId: buyer.id,
+        userEmail: buyer.email,
+        userName: buyer.full_name,
+        type: 'p2p_completed',
+        title: 'Trade Completed',
+        body: `You have received $${trade.amount_eth} USD from @${seller.username}.`,
+        amountUsd: trade.amount_eth,
+        transactionId: tradeId
+      });
+
+      await notify({
+        userId: seller.id,
+        userEmail: seller.email,
+        userName: seller.full_name,
+        type: 'p2p_completed',
+        title: 'Trade Completed',
+        body: `Your trade with @${buyer.username} for $${trade.amount_eth} USD is complete.`,
+        amountUsd: trade.amount_eth,
+        transactionId: tradeId
+      });
 
       setSuccess('Funds released to buyer!');
     } catch (err) { setError(err.message); }
@@ -646,10 +670,27 @@ export const AuthProvider = ({ children }) => {
       ]);
 
       // Create notifications
-      await supabase.from('notifications').insert([
-        { user_id: user.id, type: 'transfer', message: `✅ Sent $${amount} to @${receiverUsername}` },
-        { user_id: receiver.id, type: 'transfer', message: `💰 You received $${amount} from @${user.username}!` }
-      ]);
+      await notify({
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.full_name,
+        type: 'send_sent',
+        title: 'Funds Sent',
+        body: `✅ Sent $${amount} to @${receiverUsername}`,
+        amountUsd: amount,
+        counterpartyUsername: receiverUsername
+      });
+
+      await notify({
+        userId: receiver.id,
+        userEmail: receiver.email,
+        userName: receiver.full_name,
+        type: 'send_received',
+        title: 'Funds Received',
+        body: `💰 You received $${amount} from @${user.username}!`,
+        amountUsd: amount,
+        counterpartyUsername: user.username
+      });
 
       await fetchUserProfile(user.id);
       setSuccess(`$${amount} sent to @${receiverUsername}!`);

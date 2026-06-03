@@ -365,10 +365,10 @@ const AppShell = () => {
       .channel('notifs')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
         setNotifications(prev => [payload.new, ...prev]);
-        showBrowserNotification("EthioSwap Alert", {
-          body: payload.new.message,
-          icon: '/favicon.ico',
-        });
+        // Use browser notification or alert if supported
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(payload.new.title, { body: payload.new.body });
+        }
       })
       .subscribe();
 
@@ -604,7 +604,11 @@ const AppShell = () => {
           {/* Notification bell */}
           <button onClick={() => setNotifOpen(!notifOpen)} style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', cursor: 'pointer' }}>
             <Icon d={Icons.bell} size={18} />
-            {notifCount > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', borderRadius: '99px', minWidth: '16px', height: '16px', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid var(--bg-base)' }}>{notifCount}</span>}
+            {notifications.filter(n => !n.is_read).length > 0 && (
+              <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', borderRadius: '99px', minWidth: '16px', height: '16px', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid var(--bg-base)' }}>
+                {notifications.filter(n => !n.is_read).length}
+              </span>
+            )}
           </button>
 
           {/* Quick Logout (Always visible on mobile/desktop right side) */}
@@ -613,6 +617,33 @@ const AppShell = () => {
           </button>
         </div>
       </header>
+
+      {/* Notifications Panel */}
+      {notifOpen && (
+        <div style={{ position: 'fixed', top: '70px', right: '20px', width: '320px', maxHeight: '450px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)', zIndex: 1000, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 800, fontSize: '14px' }}>Notifications</span>
+            <button onClick={async () => {
+              await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+              setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            }} style={{ background: 'transparent', border: 'none', color: 'var(--gold)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Mark all read</button>
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>No notifications yet</div>
+            ) : (
+              notifications.map(n => (
+                <div key={n.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: n.is_read ? 'transparent' : 'rgba(212,175,55,0.03)', position: 'relative' }}>
+                  {!n.is_read && <div style={{ position: 'absolute', left: '6px', top: '18px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)' }} />}
+                  <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '2px', color: n.is_read ? 'var(--text-2)' : 'var(--text-1)' }}>{n.title}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.4' }}>{n.body}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>{new Date(n.created_at).toLocaleString()}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Warnings Alert Banner */}
       {user?.warnings && user.warnings.length > 0 && (
