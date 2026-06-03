@@ -466,13 +466,20 @@ const AppShell = () => {
 
   React.useEffect(() => {
     if (user && !initializing) {
+      console.log('AppShell: User detected, checking redirection...', user.role);
       const path = window.location.pathname;
+      const targetTab = user.role === 'admin' ? 'admin' : 'home';
+      const targetPath = user.role === 'admin' ? '/admin' : '/dashboard';
+
       if (path === '/' || path === '/login' || path === '/register') {
-        // Use history.replaceState instead of location.href to avoid reload if already in app
-        const targetPath = user.role === 'admin' ? '/admin' : '/dashboard';
-        if (path !== targetPath) {
-          window.history.replaceState({}, '', targetPath);
-          setTabState(user.role === 'admin' ? 'admin' : 'home');
+        console.log('AppShell: Redirecting from', path, 'to', targetPath);
+        window.history.replaceState({}, '', targetPath);
+        setTabState(targetTab);
+        setAuthMode(null); // Clear auth mode to ensure LandingPage isn't shown if user becomes null later
+      } else {
+        // Even if path is already correct, ensure tab state matches role if it's the first load
+        if (user.role === 'admin' && tab !== 'admin') {
+          setTabState('admin');
         }
       }
     }

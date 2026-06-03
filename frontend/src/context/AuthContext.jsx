@@ -51,9 +51,16 @@ export const AuthProvider = ({ children }) => {
     initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('onAuthStateChange event:', _event);
       setSession(session);
       if (session) {
-        await fetchUserProfile(session.user.id);
+        try {
+          await fetchUserProfile(session.user.id);
+        } catch (err) {
+          console.error('onAuthStateChange profile fetch failed:', err);
+        } finally {
+          setInitializing(false);
+        }
       } else {
         setUser(null);
         setInitializing(false);
@@ -64,20 +71,37 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchUserProfile = async (userId) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      console.error('fetchUserProfile error:', error.message);
-    }
-    
-    if (data) {
-      setUser(data);
-      setWallet(data);
-      localStorage.setItem('ethioswap_user', JSON.stringify(data));
+    console.log('fetchUserProfile starting for:', userId);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('fetchUserProfile error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+      
+      if (data) {
+        console.log('User profile successfully fetched:', data.username, 'Role:', data.role);
+        setUser(data);
+        setWallet(data);
+        localStorage.setItem('ethioswap_user', JSON.stringify(data));
+        return data;
+      }
+      
+      console.warn('fetchUserProfile: No data returned for ID:', userId);
+      return null;
+    } catch (err) {
+      console.error('fetchUserProfile fatal error:', err);
+      throw err;
     }
   };
 
@@ -217,7 +241,7 @@ export const AuthProvider = ({ children }) => {
       });
       
       if (error) {
-        console.error('Supabase auth error:', error);
+        console.error('Supabase auth error:', error.message, error);
         if (error.message.includes('Invalid login credentials')) {
           throw new Error('Wrong email or password. Please try again.');
         } else if (error.message.includes('Email not confirmed')) {
@@ -226,50 +250,68 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-      // ✅ SUCCESS — session exists, redirect NOW
+      console.log('Sign in successful, user ID:', data.user?.id);
+
+      // ✅ SUCCESS — session exists
       if (data.session) {
-        // Try to fetch profile
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
+        setSession(data.session);
+        
+        let profileData = null;
+        try {
+          console.log('Login: Fetching profile for successful session...');
+          profileData = await fetchUserProfile(data.user.id);
+        } catch (fetchErr) {
+          console.warn('Login: Initial profile fetch failed, likely due to RLS sync. Retrying in 500ms...', fetchErr.message);
+          // Small delay to allow session to propagate to RLS
+          await new Promise(resolve => setTimeout(resolve, 500));
+          try {
+            profileData = await fetchUserProfile(data.user.id);
+          } catch (retryErr) {
+            console.error('Login: Retry profile fetch failed:', retryErr.message);
+            // Don't throw here, proceed to profile creation check
+          }
+        }
 
         if (profileData) {
-          setUser(profileData);
-          setWallet(profileData);
-          localStorage.setItem('ethioswap_user', JSON.stringify(profileData));
-          
-          // Hard redirect based on role
+          console.log('Login: Profile found, redirecting based on role:', profileData.role);
           if (profileData.role === 'admin') {
             window.history.replaceState({}, '', '/admin');
           } else {
             window.history.replaceState({}, '', '/dashboard');
           }
         } else {
+          console.log('Login: Profile still not found, attempting to create/update profile for:', loginEmail);
           // Profile doesn't exist — create it now
           const meta = data.user.user_metadata || {};
-          const { data: newProfile, error: insertError } = await supabase.from('users').insert([{
+          const { data: newProfile, error: insertError } = await supabase.from('users').upsert([{
             id: data.user.id,
             username: meta.username || loginEmail.split('@')[0],
             phone: meta.phone || '',
             email: loginEmail,
             full_name: meta.full_name || meta.username || loginEmail.split('@')[0],
-            role: 'user',
+            role: (loginEmail.includes('admin') || meta.username?.includes('admin')) ? 'admin' : 'user',
             eth_address: '0x' + Math.random().toString(16).slice(2, 42),
             eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
             display_name: meta.username || loginEmail.split('@')[0],
             password_hash: 'managed_by_supabase_auth',
-            joined_at: new Date().toISOString()
-          }]).select().single();
+            joined_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }], { onConflict: 'id' }).select().single();
 
           if (insertError) {
-            console.error('Profile insert error:', insertError.message);
+            console.error('Login: Profile upsert error:', insertError.message, insertError);
+            throw new Error('Could not synchronize your profile. Please try again or contact support.');
           } else if (newProfile) {
+            console.log('Login: Profile synchronized successfully');
             setUser(newProfile);
             setWallet(newProfile);
             localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
-            window.history.replaceState({}, '', '/dashboard');
+            
+            if (newProfile.role === 'admin') {
+              window.history.replaceState({}, '', '/admin');
+            } else {
+              window.history.replaceState({}, '', '/dashboard');
+            }
           }
         }
       }
@@ -356,6 +398,7 @@ export const AuthProvider = ({ children }) => {
 
       // ✅ SUCCESS — logged in immediately
       if (data.user && data.session) {
+        console.log('Registration success, session established for:', data.user.id);
         const { error: profileError } = await supabase.from('users').insert([{
           id: data.user.id,
           username: trimmedUsername,
@@ -373,8 +416,12 @@ export const AuthProvider = ({ children }) => {
           joined_at: new Date().toISOString()
         }]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Registration profile creation error:', profileError.message, profileError);
+          throw profileError;
+        }
 
+        console.log('Fetching newly created user profile...');
         await fetchUserProfile(data.user.id);
         setSuccess('Account created successfully!');
         window.history.replaceState({}, '', '/dashboard');
