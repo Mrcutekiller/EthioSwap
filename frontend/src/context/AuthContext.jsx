@@ -25,17 +25,31 @@ export const AuthProvider = ({ children }) => {
     commissionValue: 1.0,
   };
   
-  const listings = useQuery(api.listings.listActive) || [];
-  const trades = useQuery(api.trades.listForUser, user ? { userId: user._id } : "skip") || [];
+  const listingsFromQuery = useQuery(api.listings.listActive) || [];
+  const tradesFromQuery = useQuery(api.trades.listForUser, user ? { userId: user._id } : "skip") || [];
   
   const allDepositReqs = useQuery(api.depositRequests.listAll) || [];
   const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll) || [];
 
-  const myDepositReqs = user ? allDepositReqs.filter(r => r.userId === user._id) : [];
-  const myWithdrawalReqs = user ? allWithdrawalReqs.filter(r => r.userId === user._id) : [];
-  const myTransactions = trades; // Using trades as transactions for now
+  // Add id alias for compatibility across all arrays
+  const listings = listingsFromQuery.map(l => ({ ...l, id: l._id }));
+  const trades = tradesFromQuery.map(t => ({ ...t, id: t._id }));
 
-  // Mutations
+  const myDepositReqs = user ? allDepositReqs.filter(r => r.userId === user._id).map(r => ({ ...r, id: r._id })) : [];
+  const myWithdrawalReqs = user ? allWithdrawalReqs.filter(r => r.userId === user._id).map(r => ({ ...r, id: r._id })) : [];
+  const myTransactions = trades; 
+
+  // System Settings with safe defaults
+  const settingsFromQuery = useQuery(api.systemSettings.get);
+  const systemSettings = settingsFromQuery || {
+    etbRatePerDollar: 190.0,
+    etbRatePerDollarSell: 186.0,
+    flatFeePercent: 1.0,
+    maxFeeUSD: 0.5,
+    commissionType: 'percentage',
+    commissionValue: 1.0,
+    isP2pFreePeriod: false
+  };
   const createUser = useMutation(api.users.create);
   const createListingMutation = useMutation(api.listings.create);
   const createTradeMutation = useMutation(api.trades.create);
@@ -136,18 +150,18 @@ export const AuthProvider = ({ children }) => {
     setSuccess('Signed out successfully.');
   };
 
-  const createListing = async (amountETH, minLimitETB, maxLimitETB, paymentMethods, customRateETB, paymentAccounts, type) => {
+  const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type) => {
     if (!user) return;
     setLoading(true);
     try {
       await createListingMutation({
         sellerId: user._id,
-        amountEth: amountETH,
-        minLimitEtb: minLimitETB,
-        maxLimitEtb: maxLimitETB,
+        amountEth: amountEth,
+        minLimitEtb: minLimitEtb,
+        maxLimitEtb: maxLimitEtb,
         paymentMethods,
         type,
-        customRateEtb: customRateETB,
+        customRateEtb: customRateEtb,
         paymentAccounts,
       });
       setSuccess('Listing published!');
@@ -158,7 +172,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const initiateTrade = async (listingId, amountETH, selectedPaymentAccount) => {
+  const initiateTrade = async (listingId, amountEth, selectedPaymentAccount) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -169,9 +183,9 @@ export const AuthProvider = ({ children }) => {
         buyerId: user._id,
         sellerId: listing.sellerId,
         listingId: listingId,
-        amountEth: amountETH,
-        amountEtb: Math.round(amountETH * (listing.customRateEtb || systemSettings.etbRatePerDollar)),
-        feeEth: amountETH * (systemSettings.flatFeePercent / 100),
+        amountEth: amountEth,
+        amountEtb: Math.round(amountEth * (listing.customRateEtb || systemSettings.etbRatePerDollar)),
+        feeEth: amountEth * (systemSettings.flatFeePercent / 100),
       });
       setSuccess('Trade initiated!');
     } catch (err) {
@@ -199,13 +213,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const withdrawETH = async (amountETH, address) => {
+  const withdrawETH = async (amountEth, address) => {
     if (!user) return;
     setLoading(true);
     try {
       await createWithdrawMutation({
         userId: user._id,
-        amountEth: amountETH,
+        amountEth: amountEth,
         address,
       });
       setSuccess('Withdrawal request submitted!');

@@ -36,7 +36,7 @@ const P2PListings = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBuyModal, setShowBuyModal]    = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
-  const [tradeAmountETH, setTradeAmountETH]   = useState('');
+  const [tradeamountEth, setTradeamountEth]   = useState('');
   const [tradeError, setTradeError]           = useState('');
   const [chosenPaymentAccount, setChosenPaymentAccount] = useState(null);
   const [kycDismissed, setKycDismissed] = useState(false);
@@ -66,7 +66,7 @@ const P2PListings = () => {
 
   // Create form state
   const [createType,      setCreateType]      = useState('sell'); // 'sell' | 'buy'
-  const [amountETH,       setAmountETH]       = useState('');
+  const [amountEth,       setamountEth]       = useState('');
   const [minLimit,        setMinLimit]         = useState('');
   const [maxLimit,        setMaxLimit]         = useState('');
   const [linkedAccounts,  setLinkedAccounts]  = useState([]);
@@ -93,11 +93,11 @@ const P2PListings = () => {
       alert('Please link at least one of your saved payment accounts.');
       return;
     }
-    if (!amountETH || !minLimit || !maxLimit) {
+    if (!amountEth || !minLimit || !maxLimit) {
       alert('Please fill in all fields.');
       return;
     }
-    if (parseFloat(amountETH) < 1) {
+    if (parseFloat(amountEth) < 1) {
       alert('Minimum ad amount is $1.00 USD.');
       return;
     }
@@ -113,7 +113,7 @@ const P2PListings = () => {
       : ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
       
     await createListing(
-      parseFloat(amountETH), 
+      parseFloat(amountEth), 
       parseFloat(minLimit), 
       parseFloat(maxLimit), 
       selectedPayments, 
@@ -122,7 +122,7 @@ const P2PListings = () => {
       createType
     );
     
-    setAmountETH(''); setMinLimit(''); setMaxLimit('');
+    setamountEth(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
     setShowCreateModal(false);
   };
@@ -131,16 +131,16 @@ const P2PListings = () => {
   const handleOpenTrade = async (e) => {
     e.preventDefault();
     setTradeError('');
-    const amt = parseFloat(tradeAmountETH);
+    const amt = parseFloat(tradeamountEth);
     if (isNaN(amt) || amt < 1) { setTradeError('Minimum transaction amount is $1.00 USD.'); return; }
-    if (amt > selectedListing.amountETH) {
-      setTradeError(`Maximum available is $${selectedListing.amountETH.toFixed(2)} USD.`);
+    if (amt > selectedListing.amountEth) {
+      setTradeError(`Maximum available is $${selectedListing.amountEth.toFixed(2)} USD.`);
       return;
     }
-    const effectiveRate = selectedListing.customRateETB || rate;
-    const totalETB = amt * effectiveRate;
-    if (totalETB < selectedListing.minLimitETB || totalETB > selectedListing.maxLimitETB) {
-      setTradeError(`Total (${Math.round(totalETB).toLocaleString()} ETB) must be between ${selectedListing.minLimitETB.toLocaleString()} – ${selectedListing.maxLimitETB.toLocaleString()} ETB.`);
+    const effectiveRate = selectedListing.customRateEtb || rate;
+    const totalEtb = amt * effectiveRate;
+    if (totalEtb < selectedListing.minLimitEtb || totalEtb > selectedListing.maxLimitEtb) {
+      setTradeError(`Total (${Math.round(totalEtb).toLocaleString()} ETB) must be between ${selectedListing.minLimitEtb.toLocaleString()} – ${selectedListing.maxLimitEtb.toLocaleString()} ETB.`);
       return;
     }
     
@@ -156,8 +156,8 @@ const P2PListings = () => {
       }
     }
     
-    const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
-    if (trade) { setSelectedListing(null); setTradeAmountETH(''); setShowBuyModal(false); }
+    const trade = await initiateTrade(selectedListing._id, amt, chosenPaymentAccount);
+    if (trade) { setSelectedListing(null); setTradeamountEth(''); setShowBuyModal(false); }
   };
 
   // ── Filter listings ───────────────────────────────────────
@@ -167,11 +167,11 @@ const P2PListings = () => {
     
     let matchesAmount = true;
     if (filterAmountRange === 'under50') {
-      matchesAmount = l.amountETH < 50;
+      matchesAmount = l.amountEth < 50;
     } else if (filterAmountRange === '50to200') {
-      matchesAmount = l.amountETH >= 50 && l.amountETH <= 200;
+      matchesAmount = l.amountEth >= 50 && l.amountEth <= 200;
     } else if (filterAmountRange === 'over200') {
-      matchesAmount = l.amountETH > 200;
+      matchesAmount = l.amountEth > 200;
     }
 
     return matchesType && matchesPayment && matchesAmount;
@@ -206,7 +206,7 @@ const P2PListings = () => {
             <div style={{ fontSize: '13px', color: '#00d4a0', fontWeight: 600 }}>
               Rate: <strong style={{ color: '#00d4a0' }}>{rate} ETB / $1 USD</strong>
             </div>
-            {systemSettings?.is_p2p_free_period && (
+            {systemSettings?.isP2pFreePeriod && (
               <div style={{ 
                 background: 'rgba(0, 212, 160, 0.15)', 
                 color: '#00d4a0', 
@@ -448,7 +448,7 @@ const P2PListings = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filtered.map((listing, index) => {
-            const effectiveRate = listing.customRateETB || rate;
+            const effectiveRate = listing.customRateEtb || rate;
             const isOwnListing = listing.sellerId === user.id;
             const isBuyType = listing.type === 'buy';
             return (
@@ -523,7 +523,7 @@ const P2PListings = () => {
                   <div>
                     <div style={{ fontSize: '10px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>AD VOLUME</div>
                     <div className="money-usd" style={{ fontSize: '24px', marginTop: '2px', color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-                      ${listing.amountETH.toFixed(2)}
+                      ${listing.amountEth.toFixed(2)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -537,7 +537,7 @@ const P2PListings = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#c8c8c8' }}>
                   <span>Transaction Limits:</span>
                   <strong className="money-etb" style={{ color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace' }}>
-                    {listing.minLimitETB.toLocaleString()} – {listing.maxLimitETB.toLocaleString()} ETB
+                    {listing.minLimitEtb.toLocaleString()} – {listing.maxLimitEtb.toLocaleString()} ETB
                   </strong>
                 </div>
 
@@ -580,7 +580,7 @@ const P2PListings = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setSelectedListing(listing); setShowBuyModal(true); setTradeAmountETH(''); setTradeError(''); }}
+                    onClick={() => { setSelectedListing(listing); setShowBuyModal(true); setTradeamountEth(''); setTradeError(''); }}
                     disabled={!kycApproved}
                     style={{ 
                       width: '100%',
@@ -687,12 +687,12 @@ const P2PListings = () => {
                   type="number" step="0.01" required
                   className="input"
                   placeholder={`Available: $${wallet ? (wallet.ethBalance - (wallet.ethLocked || 0)).toFixed(2) : '0.00'} USD`}
-                  value={amountETH}
-                  onChange={e => setAmountETH(e.target.value)}
+                  value={amountEth}
+                  onChange={e => setamountEth(e.target.value)}
                 />
-                {amountETH && (
+                {amountEth && (
                   <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
-                    ≈ {Math.round(parseFloat(amountETH) * rate).toLocaleString()} ETB at admin rate
+                    ≈ {Math.round(parseFloat(amountEth) * rate).toLocaleString()} ETB at admin rate
                   </div>
                 )}
               </div>
@@ -857,10 +857,10 @@ const P2PListings = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.customRateETB || rate} ETB / $1
+                  {selectedListing.customRateEtb || rate} ETB / $1
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                  Limits: {selectedListing.minLimitETB.toLocaleString()} – {selectedListing.maxLimitETB.toLocaleString()} ETB
+                  Limits: {selectedListing.minLimitEtb.toLocaleString()} – {selectedListing.maxLimitEtb.toLocaleString()} ETB
                 </div>
               </div>
             </div>
@@ -896,28 +896,28 @@ const P2PListings = () => {
                 <input
                   type="number" step="0.01" required
                   className="input"
-                  placeholder={`Max: $${selectedListing.amountETH.toFixed(2)} USD`}
-                  value={tradeAmountETH}
-                  onChange={e => setTradeAmountETH(e.target.value)}
+                  placeholder={`Max: $${selectedListing.amountEth.toFixed(2)} USD`}
+                  value={tradeamountEth}
+                  onChange={e => setTradeamountEth(e.target.value)}
                 />
               </div>
 
-              {tradeAmountETH && !isNaN(parseFloat(tradeAmountETH)) && (
+              {tradeamountEth && !isNaN(parseFloat(tradeamountEth)) && (
                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-3)' }}>Rate</span>
-                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{selectedListing.customRateETB || rate} ETB/$1</span>
+                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{selectedListing.customRateEtb || rate} ETB/$1</span>
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
                     <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeAmountETH) * (selectedListing.customRateETB || rate)).toLocaleString()} ETB
+                      {Math.round(parseFloat(tradeamountEth) * (selectedListing.customRateEtb || rate)).toLocaleString()} ETB
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00d4a0', fontWeight: 600 }}>
                     <span>Platform Fee:</span>
-                    <span>{systemSettings?.is_p2p_free_period ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
+                    <span>{systemSettings?.isP2pFreePeriod ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
                   </div>
                 </div>
               )}

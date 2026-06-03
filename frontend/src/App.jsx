@@ -428,13 +428,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
   const { user, wallet, trades, isLocked, initializing, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
-  const [tab, setTabState] = useState(() => {
-    const path = window.location.pathname;
-    if (path === '/admin') return 'admin';
-    if (path === '/dashboard') return 'home';
-    if (user?.role === 'admin') return 'admin';
-    return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
-  });
+  const [tab, setTabState] = useState('home');
+  const [authMode, setAuthMode] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  // Initialize tab state once user is available
+  React.useEffect(() => {
+    if (user && !initializing) {
+      const path = window.location.pathname;
+      let initialTab = 'home';
+      
+      if (path === '/admin') initialTab = 'admin';
+      else if (path === '/dashboard') initialTab = 'home';
+      else if (user.role === 'admin') initialTab = 'admin';
+      else {
+        initialTab = localStorage.getItem(`ethioswap_active_tab_${user.id}`) || 'home';
+      }
+      
+      setTabState(initialTab);
+    }
+  }, [user, initializing]);
 
   const setTab = (newTab) => {
     setTabState(newTab);
@@ -445,24 +459,6 @@ const AppShell = () => {
       window.history.replaceState({}, '', '/dashboard');
     }
   };
-
-  const [authMode, setAuthMode] = useState(() => {
-    const path = window.location.pathname;
-    if (path === '/login') return 'login';
-    if (path === '/register') return 'register';
-    
-    // Check search params or hash as fallback
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    if (params.get('action') === 'login' || hash === '#login') return 'login';
-    if (params.get('action') === 'register' || hash === '#register') return 'register';
-    
-    return null;
-  });
-
-  const [authError, setAuthError] = useState(null);
-
-  const [notifOpen, setNotifOpen] = useState(false);
   const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
   const [notifications, setNotifications] = useState([]);
 
@@ -898,20 +894,12 @@ class ErrorBoundary extends React.Component {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
-
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught fatal runtime error:", error, errorInfo);
+    console.error("App Crash:", error, errorInfo);
   }
-
-  handleReset = () => {
-    localStorage.clear();
-    window.location.href = window.location.origin;
-  };
-
   render() {
     if (this.state.hasError) {
       return (
@@ -919,97 +907,29 @@ class ErrorBoundary extends React.Component {
           minHeight: '100vh',
           width: '100%',
           background: '#0A0C12',
-          backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(200,150,44,0.08) 0%, transparent 60%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '24px',
-          fontFamily: 'var(--font, system-ui)',
           color: '#F0F4FF',
           textAlign: 'center',
-          boxSizing: 'border-box'
+          fontFamily: 'sans-serif'
         }}>
-          <div style={{
-            background: '#0F121E',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '24px',
-            padding: '36px 32px',
-            maxWidth: '460px',
-            width: '100%',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '16px'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '8px' }}>⚠️</div>
-            <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: '#FFF' }}>App Freeze Audit Guard</h2>
-            <p style={{ fontSize: '13.5px', color: '#8899AA', lineHeight: '1.6', margin: '0 0 8px' }}>
-              EthioSwap intercepted a fatal runtime exception or session freeze. Your funds and database entries remain completely safe.
-            </p>
-            {this.state.error && (
-              <div style={{
-                background: 'rgba(248, 113, 113, 0.05)',
-                border: '1px solid rgba(248, 113, 113, 0.15)',
-                color: '#F87171',
-                padding: '12px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                fontFamily: 'monospace',
-                wordBreak: 'break-all',
-                textAlign: 'left',
-                width: '100%',
-                maxHeight: '120px',
-                overflowY: 'auto',
-                boxSizing: 'border-box'
-              }}>
-                {this.state.error.toString()}
-              </div>
-            )}
-            <button
-              onClick={this.handleReset}
-              style={{
-                marginTop: '12px',
-                width: '100%',
-                padding: '14px',
-                cursor: 'pointer',
-                fontFamily: 'var(--font, system-ui)',
-                fontWeight: 700,
-                fontSize: '14px',
-                border: 'none',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #D4AF37, #F0C040)',
-                color: '#0A0C12',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 15px rgba(212, 175, 55, 0.2)'
-              }}
-              onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.1)'}
-              onMouseLeave={e => e.currentTarget.style.filter = 'none'}
-            >
-              🔄 Reset App Cache & Recover
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#8899AA',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'var(--font, system-ui)',
-                textDecoration: 'underline'
-              }}
-            >
-              Reload Page
-            </button>
-          </div>
+          <Logo size={48} />
+          <h2 style={{ marginTop: '24px', fontSize: '20px', fontWeight: 800 }}>App Encountered an Issue</h2>
+          <p style={{ marginTop: '12px', color: '#8b92a8', maxWidth: '400px', lineHeight: 1.6 }}>
+            {this.state.error?.message || "A runtime error occurred. This is likely due to missing data or a connection issue."}
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ marginTop: '24px', background: '#f5c518', color: '#000', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Reload Page
+          </button>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
