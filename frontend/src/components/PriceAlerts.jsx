@@ -19,19 +19,14 @@ const PriceAlerts = () => {
   }, []);
 
   const fetchAlerts = async () => {
-    const { data } = // await // supabase.from('price_alerts')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    // Mocked for Convex migration
+    const data = [];
     if (data) setAlerts(data);
   };
 
   const fetchCurrentRate = async () => {
-    const { data } = // await // supabase.from('rate_history')
-      .select('usdt_etb_rate')
-      .order('recorded_at', { ascending: false })
-      .limit(1)
-      .single();
+    // Mocked for Convex migration
+    const data = { usdt_etb_rate: 0 };
     if (data) setCurrentRate(data.usdt_etb_rate);
   };
 

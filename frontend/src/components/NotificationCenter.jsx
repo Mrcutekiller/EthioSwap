@@ -31,12 +31,8 @@ const NotificationCenter = ({ userId, isOpen, onClose }) => {
   }, [userId, isOpen]);
 
   const fetchNotifications = async () => {
-    const { data } = // await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    // Mocked for Convex migration
+    const data = [];
     if (data) setNotifications(data);
   };
 

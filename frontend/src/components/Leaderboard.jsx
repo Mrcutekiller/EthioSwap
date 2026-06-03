@@ -14,18 +14,9 @@ const Leaderboard = ({ user }) => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLeaderboardData(undefined);
-      let query = // supabase.from('users').select('*');
       
-      if (category === 'trades') {
-        query = query.order('total_trades', { ascending: false });
-      } else if (category === 'volume') {
-        // Mock volume sorting using total_trades or a dedicated field if available
-        query = query.order('total_trades', { ascending: false });
-      } else if (category === 'referrals') {
-        query = query.order('successful_invites', { ascending: false });
-      }
-
-      const { data } = await query.limit(10);
+      // Mocked for Convex migration
+      const data = []; 
       
       if (data) {
         setLeaderboardData(data.map((u, i) => ({

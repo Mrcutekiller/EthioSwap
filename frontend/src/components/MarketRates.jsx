@@ -25,10 +25,8 @@ const MarketRates = () => {
 
   const fetchRateData = async () => {
     try {
-      const { data } = // await // supabase.from('rate_history')
-        .select('*')
-        .order('recorded_at', { ascending: false })
-        .limit(200);
+      // Mocked for Convex migration
+      const data = [];
       if (data && data.length > 0) {
         setCurrentRate(data[0]);
         setRateHistory(data);
@@ -41,20 +39,11 @@ const MarketRates = () => {
   };
 
   const fetchBestRates = async () => {
-    const { data: listings } = // await // supabase.from('listings')
-      .select('*, seller:users!seller_id(username, avg_rating)')
-      .eq('status', 'active')
-      .eq('type', 'sell')
-      .order('custom_rate_etb', { ascending: true })
-      .limit(5);
+    // Mocked for Convex migration
+    const listings = [];
     if (listings) setBestBuyRates(listings);
 
-    const { data: sellListings } = // await // supabase.from('listings')
-      .select('*, seller:users!seller_id(username, avg_rating)')
-      .eq('status', 'active')
-      .eq('type', 'buy')
-      .order('custom_rate_etb', { ascending: false })
-      .limit(5);
+    const sellListings = [];
     if (sellListings) setBestSellRates(sellListings);
   };
 

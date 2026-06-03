@@ -127,7 +127,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const [calcInput, setCalcInput] = useState('');
 
   // Reviews state
-  const [reviews, setReviews] = useState([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewContent, setReviewContent] = useState('');

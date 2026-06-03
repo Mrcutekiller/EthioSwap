@@ -10,8 +10,16 @@ const InviteEarn = ({ user, systemSettings }) => {
   useEffect(() => {
     if (!user) return;
     const fetchStats = async () => {
-      const { data: userData } = // await // supabase.from('users').select('referral_code, total_invites, successful_invites, pending_invites, total_invite_earnings, invite_earnings_month').eq('id', user.id).single();
-      const { data: referrals } = // await // supabase.from('invite_rewards').select('*, invited:users!invited_user_id(username)').eq('inviter_user_id', user.id);
+      // Mocked for Convex migration
+      const userData = {
+        referral_code: user.referralCode || 'REF' + user._id.substring(0, 5),
+        total_invites: 0,
+        successful_invites: 0,
+        pending_invites: 0,
+        total_invite_earnings: 0,
+        invite_earnings_month: 0
+      };
+      const referrals = [];
       
       if (userData) {
         setInviteStats({
@@ -31,9 +39,6 @@ const InviteEarn = ({ user, systemSettings }) => {
       }
     };
     fetchStats();
-
-    const sub = // supabase.channel('invite-stats').on('postgres_changes', { event: '*', schema: 'public', table: 'invite_rewards', filter: `inviter_user_id=eq.${user.id}` }, fetchStats).subscribe();
-    return () => sub.unsubscribe();
   }, [user]);
 
   const handleCopy = () => {

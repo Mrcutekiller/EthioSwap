@@ -23,23 +23,8 @@ const TransactionHistory = () => {
 
   const fetchTransactions = async () => {
     setLoading(true);
-    let query = supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (filterType !== 'all') {
-      query = query.eq('type', filterType);
-    }
-    if (dateRange.start) {
-      query = query.gte('created_at', dateRange.start);
-    }
-    if (dateRange.end) {
-      query = query.lte('created_at', dateRange.end + 'T23:59:59');
-    }
-
-    const { data, error } = await query;
+    // Mocked for Convex migration
+    const data = [];
     if (data) {
       setTransactions(data);
       calculateSummary(data);
