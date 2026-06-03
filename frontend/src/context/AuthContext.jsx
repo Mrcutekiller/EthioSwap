@@ -171,96 +171,154 @@ export const AuthProvider = ({ children }) => {
 
   // ── Auth Actions ─────────────────────────────────────
   const login = async (identifier, password) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       if (!isSupabaseConfigured) {
-        throw new Error('Supabase is not configured. Please add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the .env.local file in the frontend folder.');
+        throw new Error('Supabase is not configured. Please add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the .env file.');
       }
 
-      let loginEmail = identifier;
+      let loginEmail = identifier.trim().toLowerCase();
 
       // If identifier doesn't look like an email, look up by username
-      if (!identifier.includes('@')) {
-        const { data: profile, error: lookupError } = await supabase.from('users').select('email').eq('username', identifier).single();
+      if (!loginEmail.includes('@')) {
+        const { data: profile, error: lookupError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', identifier.trim())
+          .single();
+        
         if (lookupError || !profile?.email) {
-          throw new Error('Username not found. Please check your username or try logging in with your email.');
+          throw new Error('Invalid email or password. Please try again.');
         }
         loginEmail = profile.email;
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: loginEmail, 
+        password: password 
+      });
+      
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. Please try again.');
+        }
+        throw error;
+      }
 
-      // Fetch profile - create one if it doesn't exist
-      await fetchUserProfile(data.user.id);
+      // Try to fetch profile
+      const { data: profileData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
 
-      // If profile still missing, create a basic one
-      if (!user) {
-        const { data: existingProfile } = await supabase.from('users').select('id').eq('id', data.user.id).single();
-        if (!existingProfile) {
-          const meta = data.user.user_metadata || {};
-          await supabase.from('users').insert([{
-            id: data.user.id,
-            username: meta.username || loginEmail.split('@')[0],
-            phone: meta.phone || '',
-            email: loginEmail,
-            full_name: meta.username || loginEmail.split('@')[0],
-            eth_address: '',
-            eth_private_key: '',
-            display_name: meta.username || loginEmail.split('@')[0],
-            joined_at: new Date().toISOString()
-          }]);
-          await fetchUserProfile(data.user.id);
+      if (profileData) {
+        setUser(profileData);
+        setWallet(profileData);
+        localStorage.setItem('ethioswap_user', JSON.stringify(profileData));
+      } else {
+        // Profile doesn't exist — create it now (fallback for users in Auth but not in users table)
+        const meta = data.user.user_metadata || {};
+        const { data: newProfile, error: insertError } = await supabase.from('users').insert([{
+          id: data.user.id,
+          username: meta.username || loginEmail.split('@')[0],
+          phone: meta.phone || '',
+          email: loginEmail,
+          full_name: meta.full_name || meta.username || loginEmail.split('@')[0],
+          role: 'user',
+          eth_address: '0x' + Math.random().toString(16).slice(2, 42),
+          eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
+          display_name: meta.username || loginEmail.split('@')[0],
+          password_hash: 'managed_by_supabase_auth',
+          joined_at: new Date().toISOString()
+        }]).select().single();
+
+        if (insertError) {
+          console.error('Profile insert error:', insertError.message);
+        } else if (newProfile) {
+          setUser(newProfile);
+          setWallet(newProfile);
+          localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
         }
       }
 
       setSuccess(`Welcome back!`);
       return data.user;
     } catch (err) {
+      console.error('Login error:', err);
       const msg = err.message?.includes('Failed to fetch')
-        ? 'Cannot connect to Supabase. Please check that your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are correct in .env.local'
+        ? 'Cannot connect to Supabase. Please check your network connection.'
         : err.message;
       setError(msg);
       return null;
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   };
 
-  const register = async (username, password, phone, email, fullName, age, gender, avatarId, referralCode) => {
-    setLoading(true); setError(null);
+  const register = async (username, password, phone, email, fullName, age, referralCode) => {
+    setLoading(true);
+    setError(null);
     try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { username, phone } }
+      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedUsername = username.trim();
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: password,
+        options: { 
+          data: { 
+            username: trimmedUsername, 
+            full_name: fullName,
+            phone: phone 
+          } 
+        }
       });
-      if (authError) throw authError;
 
-      // Create profile record
-      const { error: profileError } = await supabase.from('users').insert([{
-        id: authUser.id,
-        username,
-        phone,
-        email,
-        full_name: fullName,
-        age: age ? parseInt(age) : null,
-        gender,
-        selected_avatar: avatarId,
-        referral_code: username.toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000),
-        referred_by: referralCode && referralCode.trim() ? referralCode.trim() : null,
-        eth_address: '0x' + Math.random().toString(16).slice(2, 42),
-        eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
-        display_name: fullName || username,
-        joined_at: new Date().toISOString()
-      }]);
+      if (authError) {
+        if (authError.message.includes('rate limit') || authError.message.includes('email')) {
+          throw new Error('Registration is temporarily limited. Please try again in a few minutes, or contact support.');
+        }
+        throw authError;
+      }
 
-      if (profileError) throw profileError;
+      if (data.user && !data.session) {
+        setSuccess('Account created! Please check your email to verify your account before logging in.');
+        return data.user;
+      }
 
-      await fetchUserProfile(authUser.id);
-      setSuccess('Account created!');
-      return authUser;
-    } catch (err) { setError(err.message); return null; }
-    finally { setLoading(false); }
+      // Create profile record if session exists (auto-login or email confirmation disabled)
+      if (data.user && data.session) {
+        const { error: profileError } = await supabase.from('users').insert([{
+          id: data.user.id,
+          username: trimmedUsername,
+          phone: phone,
+          email: trimmedEmail,
+          full_name: fullName,
+          age: age ? parseInt(age) : null,
+          referral_code: trimmedUsername.toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000),
+          referred_by: referralCode && referralCode.trim() ? referralCode.trim() : null,
+          eth_address: '0x' + Math.random().toString(16).slice(2, 42),
+          eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
+          display_name: fullName || trimmedUsername,
+          joined_at: new Date().toISOString()
+        }]);
+
+        if (profileError) throw profileError;
+
+        await fetchUserProfile(data.user.id);
+        setSuccess('Account created successfully!');
+      }
+
+      return data.user;
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {

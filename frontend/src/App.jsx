@@ -43,76 +43,58 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
   const { login, register, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [referralCode, setReferralCode] = useState('');
-  const [gender, setGender] = useState(''); // 'Male' | 'Female' | 'Other'
-  const [avatar, setAvatar] = useState('');
-  const [regStep, setRegStep] = useState(1); // 1: Basic Info, 2: Gender/Avatar
   const [localError, setLocalError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  const avatars = {
-    Male: [
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile&top=shortHair',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&mouth=smile&top=shortFlat',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack&mouth=smile&top=shortCurly',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo&mouth=smile&top=shortWaved'
-    ],
-    Female: [
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Anya&mouth=smile&top=longHair',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&mouth=smile&top=longHairCurly',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe&mouth=smile&top=bob',
-      'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia&mouth=smile&top=curly'
-    ],
-    Other: [
-      'https://api.dicebear.com/7.x/bottts/svg?seed=B1',
-      'https://api.dicebear.com/7.x/bottts/svg?seed=B2',
-      'https://api.dicebear.com/7.x/bottts/svg?seed=B3',
-      'https://api.dicebear.com/7.x/bottts/svg?seed=B4'
-    ]
-  };
-
-  const allAvatars = [...avatars.Male, ...avatars.Female, ...avatars.Other];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
-    if (!username || !password) { setLocalError('Please fill in all fields.'); return; }
     
-    if (mode === 'register') {
-      if (regStep === 1) {
-        if (!phone || !email || !fullName || !age) {
-          setLocalError('Please fill in all registration fields.');
-          return;
-        }
-        if (parseInt(age) < 18) {
-          setLocalError('You must be at least 18 years old to join.');
-          return;
-        }
-        setRegStep(2);
-        return;
-      }
-      
-      if (!gender) {
-        setLocalError('Please select your gender.');
-        return;
-      }
-    }
-
     if (mode === 'login') {
+      if (!username || !password) {
+        setLocalError('Please enter both username/email and password.');
+        return;
+      }
       await login(username, password);
     } else {
-      await register(username, password, phone, email, fullName, age, gender, avatar, referralCode);
+      if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age) {
+        setLocalError('Please fill in all registration fields.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setLocalError('Passwords do not match.');
+        return;
+      }
+      if (parseInt(age) < 18) {
+        setLocalError('You must be at least 18 years old to join.');
+        return;
+      }
+      await register(username, password, phone, email, fullName, age, referralCode);
     }
   };
 
   const displayError = localError || error;
 
+  const Spinner = () => (
+    <svg className="animate-spin" viewBox="0 0 24 24" style={{ width: '18px', height: '18px', marginRight: '8px', animation: 'spin 1s linear infinite' }}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" style={{ opacity: 0.25 }} />
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" style={{ opacity: 0.75 }} />
+    </svg>
+  );
+
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .input:focus { border-color: var(--gold-light) !important; box-shadow: 0 0 0 2px rgba(212,175,55,0.2) !important; }
+      `}</style>
+      
       {/* Background decoration */}
       <div style={{ position: 'absolute', top: '10%', left: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -147,7 +129,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
           <Logo size={44} />
         </div>
 
-        <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', textAlign: 'center', color: 'var(--text-1)' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', textAlign: 'center', color: '#FFFFFF' }}>
           {mode === 'login' ? 'Welcome back' : 'Create account'}
         </h2>
         <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center' }}>
@@ -155,111 +137,166 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {mode === 'login' || (mode === 'register' && regStep === 1) ? (
+          {mode === 'login' ? (
             <>
               <div className="input-group" style={{ marginBottom: 0 }}>
-                <input className="input" type="text" placeholder={mode === 'login' ? "Username" : "Desired Username"} value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" style={{ width: '100%' }} />
+                <input 
+                  className="input" 
+                  type="text" 
+                  placeholder="Username or Email" 
+                  value={username} 
+                  onChange={e => setUsername(e.target.value)} 
+                  autoComplete="username" 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
               </div>
-              {mode === 'register' && (
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <input className="input" type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" style={{ width: '100%' }} />
-                </div>
-              )}
-              <div className="input-group" style={{ marginBottom: 0, position: 'relative' }}>
-                <input className="input" type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} style={{ width: '100%', paddingRight: '44px' }} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px' }}>
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
-              </div>
-              {mode === 'register' && (
-                <>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <input className="input" type="text" placeholder="Full Legal Name" value={fullName} onChange={e => setFullName(e.target.value)} autoComplete="name" style={{ width: '100%' }} />
-                  </div>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <input className="input" type="text" placeholder="Referral Code (e.g. ABEBE2024)" value={referralCode} onChange={e => setReferralCode(e.target.value.toUpperCase())} style={{ width: '100%' }} />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <input className="input" type="tel" placeholder="Phone (+251...)" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: '100%' }} />
-                    </div>
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <input className="input" type="number" min="18" placeholder="Age" value={age} onChange={e => setAge(e.target.value)} style={{ width: '100%' }} />
-                    </div>
-                  </div>
-                </>
-              )}
             </>
           ) : (
             <>
-              {/* Step 2: Gender & Avatar */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Select Gender</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                  {['Male', 'Female', 'Other'].map(g => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => {
-                        setGender(g);
-                        setAvatar(''); // Reset avatar when gender changes
-                      }}
-                      style={{
-                        padding: '10px',
-                        borderRadius: '10px',
-                        border: `1px solid ${gender === g ? 'var(--gold-light)' : 'var(--border)'}`,
-                        background: gender === g ? 'rgba(212,175,55,0.1)' : 'transparent',
-                        color: gender === g ? 'var(--gold-light)' : 'var(--text-2)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {g === 'Other' ? 'Prefer not to say' : g}
-                    </button>
-                  ))}
-                </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <input 
+                  className="input" 
+                  type="text" 
+                  placeholder="Full Name" 
+                  value={fullName} 
+                  onChange={e => setFullName(e.target.value)} 
+                  autoComplete="name" 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Choose Avatar</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                  {(gender ? avatars[gender] : allAvatars).map((av, i) => (
-                    <div
-                      key={i}
-                      onClick={() => setAvatar(av)}
-                      style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '16px',
-                        border: `2px solid ${avatar === av ? 'var(--gold-light)' : 'transparent'}`,
-                        background: 'var(--bg-base)',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        transition: 'all 0.2s ease',
-                        boxShadow: avatar === av ? '0 0 15px rgba(212,175,55,0.3)' : 'none'
-                      }}
-                    >
-                      <img src={av} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '12px' }} />
-                    </div>
-                  ))}
-                </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <input 
+                  className="input" 
+                  type="text" 
+                  placeholder="Username" 
+                  value={username} 
+                  onChange={e => setUsername(e.target.value)} 
+                  autoComplete="username" 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
               </div>
-
-              <button 
-                type="button" 
-                onClick={() => setRegStep(1)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '12px', cursor: 'pointer', marginTop: '8px', textDecoration: 'underline' }}
-              >
-                ← Back to personal info
-              </button>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <input 
+                  className="input" 
+                  type="email" 
+                  placeholder="Email Address" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  autoComplete="email" 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
+              </div>
             </>
           )}
 
-          {displayError && <p style={{ fontSize: '13px', color: 'var(--status-danger-text)', fontWeight: 500, padding: '10px 12px', background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', borderRadius: '10px' }}>⚠ {displayError}</p>}
+          <div className="input-group" style={{ marginBottom: 0, position: 'relative' }}>
+            <input 
+              className="input" 
+              type={showPassword ? "text" : "password"} 
+              placeholder="Password" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
+              style={{ width: '100%', paddingRight: '44px', background: 'rgba(0,0,0,0.2)' }} 
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowPassword(!showPassword)} 
+              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px' }}
+            >
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </button>
+          </div>
 
-          <button type="submit" disabled={loading} className="btn btn-gold btn-full btn-lg" style={{ marginTop: '8px', padding: '14px' }}>
-            {loading ? 'Processing...' : (mode === 'login' ? 'Sign In' : (regStep === 1 ? 'Next Step' : 'Create Account'))}
+          {mode === 'register' && (
+            <>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <input 
+                  className="input" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="Confirm Password" 
+                  value={confirmPassword} 
+                  onChange={e => setConfirmPassword(e.target.value)} 
+                  autoComplete="new-password" 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <input 
+                    className="input" 
+                    type="tel" 
+                    placeholder="Phone (+251...)" 
+                    value={phone} 
+                    onChange={e => setPhone(e.target.value)} 
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <input 
+                    className="input" 
+                    type="number" 
+                    min="18" 
+                    placeholder="Age" 
+                    value={age} 
+                    onChange={e => setAge(e.target.value)} 
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                  />
+                </div>
+              </div>
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <input 
+                  className="input" 
+                  type="text" 
+                  placeholder="Referral Code (Optional)" 
+                  value={referralCode} 
+                  onChange={e => setReferralCode(e.target.value.toUpperCase())} 
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
+                />
+              </div>
+            </>
+          )}
+
+          {displayError && (
+            <div style={{ 
+              fontSize: '13px', 
+              color: 'var(--status-danger-text)', 
+              fontWeight: 500, 
+              padding: '12px', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              border: '1px solid rgba(239, 68, 68, 0.2)', 
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span>⚠️</span> {displayError}
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="btn btn-gold btn-full" 
+            style={{ 
+              marginTop: '8px', 
+              height: '48px', 
+              fontSize: '16px', 
+              fontWeight: 700, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              color: '#0A0C12'
+            }}
+          >
+            {loading ? (
+              <>
+                <Spinner />
+                {mode === 'login' ? 'Signing in...' : 'Creating account...'}
+              </>
+            ) : (
+              mode === 'login' ? 'Sign In' : 'Create Account'
+            )}
           </button>
         </form>
 
@@ -269,7 +306,22 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
         </div>
 
-        <button onClick={onToggle} style={{ width: '100%', padding: '12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-2)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.2s ease' }}>
+        <button 
+          onClick={onToggle} 
+          style={{ 
+            width: '100%', 
+            padding: '12px', 
+            background: 'transparent', 
+            border: '1px solid var(--border)', 
+            borderRadius: '12px', 
+            color: 'var(--text-2)', 
+            fontSize: '14px', 
+            fontWeight: 500, 
+            cursor: 'pointer', 
+            fontFamily: 'var(--font)', 
+            transition: 'all 0.2s ease' 
+          }}
+        >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}
         </button>
 
