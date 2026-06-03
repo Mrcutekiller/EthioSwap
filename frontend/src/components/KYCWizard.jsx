@@ -161,13 +161,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     setLoading(true);
     setError('');
     try {
-      // await // supabase.from('users').update({
-        full_name: fullName,
-        phone: kycPhone,
-        kyc_status: 'pending',
-        kyc_step: 'info',
-        kyc_data: { name: fullName, phone: kycPhone, age, idType, address }
-      }).eq('id', user.id);
+      // Mocked for Convex migration
+      console.log('Would save KYC info:', { fullName, kycPhone, age, idType });
       setStep(3); // Go to ID Front upload
     } catch (err) {
       setError(err.message || 'Failed to save information. Try again.');
@@ -180,12 +175,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!idFront || !idBack) { setError('Please capture or upload both front and back of your ID.'); return; }
     setLoading(true); setError('');
     try {
-      // await // supabase.from('users').update({
-        kyc_id_front: idFront,
-        kyc_id_back: idBack,
-        kyc_step: 'docs'
-      }).eq('id', user.id);
-
+      // Mocked for Convex migration
+      console.log('Would upload ID docs');
       setStep(5); // Go to selfie step
     } catch (err) {
       console.error('KYC upload error:', err);
@@ -199,11 +190,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!selfieCapture) { setError('Please capture a selfie first.'); return; }
     setLoading(true); setError('');
     try {
-      const { data: updatedUser } = // await // supabase.from('users').update({
-        kyc_selfie: selfieCapture,
-        kyc_status: 'pending',
-        kyc_step: 'selfie'
-      }).eq('id', user.id).select().single();
+      // Mocked for Convex migration
+      const updatedUser = { ...user, kycStatus: 'pending' };
       setStep(6); // Done
       if (onComplete) onComplete(updatedUser);
     } catch (err) {

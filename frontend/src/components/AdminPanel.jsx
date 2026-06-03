@@ -648,7 +648,8 @@ const AdminPanel = ({ user }) => {
   const handleRejectReview = async (reviewId) => {
     if (!window.confirm('Are you sure you want to reject and delete this review?')) return;
     try {
-      const { error } = // await // supabase.from('reviews').delete().eq('id', reviewId);
+      // Mocked for Convex migration
+      const error = null;
       if (error) throw error;
       showAlert('Review rejected and deleted.');
       setAllReviews(prev => prev.filter(r => r.id !== reviewId));
@@ -658,10 +659,8 @@ const AdminPanel = ({ user }) => {
   const handleDispute = async (tradeId, action) => {
     if (!window.confirm(`Force ${action === 'release' ? 'RELEASE to Buyer' : 'REFUND to Seller'}? This is irreversible.`)) return;
     try {
-      // await // supabase.from('trades').update({ 
-        status: action === 'release' ? 'completed' : 'refunded',
-        completed_at: new Date().toISOString()
-      }).eq('id', tradeId);
+      // Mocked for Convex migration
+      console.log('Would resolve dispute for trade:', tradeId, action);
       showAlert(`Dispute resolved: ${action}`);
     } catch (e) { showAlert(e.message, 'error'); }
   };
@@ -669,19 +668,8 @@ const AdminPanel = ({ user }) => {
   const handleSaveSettings = async (e) => {
     e.preventDefault(); setSavingSettings(true);
     try {
-      // await // supabase.from('system_settings').update({ 
-        etb_rate_per_dollar: parseFloat(etbRate), 
-        etb_rate_per_dollar_sell: parseFloat(etbRateSell), 
-        commission_value: parseFloat(commissionValue),
-        deposit_fee_percent: parseFloat(depositFee),
-        withdrawal_fee_percent: parseFloat(withdrawFee),
-        min_deposit_usd: parseFloat(minDeposit),
-        min_withdrawal_usd: parseFloat(minWithdraw),
-        max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw),
-        points_per_trade: parseInt(pointsPerTrade),
-        referral_bonus_points: parseInt(referralPoints),
-        is_leaderboard_enabled: isLeaderboard
-      }).eq('id', settings.id);
+      // Mocked for Convex migration
+      console.log('Would save settings:', { etbRate, etbRateSell });
       showAlert('✓ Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
@@ -691,16 +679,13 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      const { data: currentTicket } = // await // supabase.from('support_tickets').select('messages').eq('id', selectedTicket.id).single();
+      // Mocked for Convex migration
       const newMessage = {
         senderId: user.id,
         message: supportReplyText,
         timestamp: new Date().toISOString()
       };
-      // await // supabase.from('support_tickets').update({ 
-        messages: [...(currentTicket?.messages || []), newMessage],
-        updated_at: new Date().toISOString()
-      }).eq('id', selectedTicket.id);
+      console.log('Would reply to ticket:', selectedTicket.id, newMessage);
       setSupportReplyText('');
     } catch (e) { showAlert(e.message, 'error'); }
   };
@@ -737,14 +722,8 @@ const AdminPanel = ({ user }) => {
 
     setWithdrawingEarnings(true);
     try {
-      // await // supabase.from('withdraw_requests').insert([{
-        user_id: user.id,
-        username: user.username,
-        amount_usd: amt,
-        wallet_type: 'Admin Withdrawal',
-        destination_address: withdrawAddress,
-        status: 'pending'
-      }]);
+      // Mocked for Convex migration
+      console.log('Would request admin withdrawal:', { amt, withdrawAddress });
       showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD requested!`);
       setWithdrawAddress('');
       setWithdrawAmount('');
@@ -3512,16 +3491,8 @@ const AdminPanel = ({ user }) => {
                   const [uStats, setUStats] = useState(null);
                   React.useEffect(() => {
                     if (u?.id) {
-                      // supabase.from('referrals').select('*').eq('referrer_id', u.id).then(({ data }) => {
-                        const totalInvited = data?.length || 0;
-                        const activeFriends = data?.filter(r => r.status === 'active').length || 0;
-                        const pendingFriends = data?.filter(r => r.status === 'pending').length || 0;
-                        // supabase.from('invite_rewards').select('*').eq('inviter_user_id', u.id).then(({ data: rewards }) => {
-                          const totalEarned = rewards?.reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
-                          const earningsMonth = rewards?.filter(r => new Date(r.created_at).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
-                          setUStats({ totalInvited, activeFriends, pendingFriends, totalEarned, earningsMonth, referralList: data?.map(r => ({ username: r.referred_user_id?.substring(0, 8) || 'User', date: r.created_at, status: r.status, earned: r.reward_amount || 0 })) || [] });
-                        });
-                      });
+                      // Mocked for Convex migration
+                      setUStats({ totalInvited: 0, activeFriends: 0, pendingFriends: 0, totalEarned: 0, earningsMonth: 0, referralList: [] });
                     }
                   }, [u?.id]);
                   return (

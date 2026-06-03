@@ -9,41 +9,16 @@ const Announcements = ({ user }) => {
 
   useEffect(() => {
     const fetchLatest = async () => {
-      const { data } = // await supabase
-        .from('announcements')
-        .select('*')
-        .eq('is_published', true)
-        .order('published_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (data) {
-        // Check if user has already read this
-        if (user) {
-          const { data: read } = // await supabase
-            .from('announcement_reads')
-            .select('*')
-            .eq('announcement_id', data.id)
-            .eq('user_id', user.id)
-            .single();
-          
-          if (!read) setAnnouncement(data);
-        } else {
-          setAnnouncement(data);
-        }
-      }
+      // Mocked for Convex migration
+      const data = null;
+      if (data) setAnnouncement(data);
     };
     fetchLatest();
   }, [user]);
 
   const handleDismiss = async () => {
     setDismissed(true);
-    if (user && announcement) {
-      // await // supabase.from('announcement_reads').insert([{
-        announcement_id: announcement.id,
-        user_id: user.id
-      }]);
-    }
+    // Mocked for Convex migration
   };
 
   if (!announcement || dismissed) return null;

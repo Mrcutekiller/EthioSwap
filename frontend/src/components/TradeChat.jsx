@@ -29,27 +29,12 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   useEffect(() => {
     const setupChat = async () => {
-      let { data: chat, error } = // await supabase
-        .from('trade_chats')
-        .select('id')
-        .eq('trade_id', tradeId)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        const { data: newChat, error: createError } = // await supabase
-          .from('trade_chats')
-          .insert([{ trade_id: tradeId }])
-          .select()
-          .single();
-        if (createError) console.error(createError);
-        else chat = newChat;
-      }
-
+      // Mocked for Convex migration
+      const chat = { id: 'mock-chat-' + tradeId };
+      
       if (chat) {
         setChatId(chat.id);
         fetchMessages(chat.id);
-        subscribeToMessages(chat.id);
-        subscribeToTyping(chat.id);
       }
     };
 
@@ -57,65 +42,24 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   }, [tradeId]);
 
   const fetchMessages = async (id) => {
-    const { data } = // await supabase
-      .from('chat_messages')
-      .select('*, sender:users(username, selected_avatar)')
-      .eq('chat_id', id)
-      .order('created_at', { ascending: true });
-
+    // Mocked for Convex migration
+    const data = [];
     if (data) setMessages(data);
   };
 
   const subscribeToMessages = (id) => {
-    const sub = supabase
-      .channel(`chat:${id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `chat_id=eq.${id}`
-      }, (payload) => {
-        fetchSenderAndAppend(payload.new);
-        // Mark as read if from other user
-        if (payload.new.sender_id !== user.id) {
-          // supabase.rpc('mark_messages_read', { p_chat_id: id, p_user_id: user.id });
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `chat_id=eq.${id}`
-      }, (payload) => {
-        setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
-      })
-      .subscribe();
-
-    return () => sub.unsubscribe();
+    // Mocked for Convex migration
+    return () => {};
   };
 
   const subscribeToTyping = (id) => {
-    const sub = supabase
-      .channel(`typing:${id}`)
-      .on('broadcast', { event: 'typing' }, (payload) => {
-        if (payload.payload.user_id !== user.id) {
-          setOtherUserTyping(true);
-          clearTimeout(typingTimeout.current);
-          typingTimeout.current = setTimeout(() => setOtherUserTyping(false), 3000);
-        }
-      })
-      .subscribe();
-
-    return () => sub.unsubscribe();
+    // Mocked for Convex migration
+    return () => {};
   };
 
   const fetchSenderAndAppend = async (msg) => {
-    const { data: sender } = // await supabase
-      .from('users')
-      .select('username, selected_avatar')
-      .eq('id', msg.sender_id)
-      .single();
-
+    // Mocked for Convex migration
+    const sender = { username: 'user', selected_avatar: null };
     setMessages(prev => [...prev, { ...msg, sender }]);
   };
 
@@ -132,11 +76,8 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   const handleTyping = useCallback(() => {
     if (chatId) {
-      // supabase.channel(`typing:${chatId}`).send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { user_id: user.id }
-      });
+      // Mocked for Convex migration
+      console.log('User is typing...');
     }
   }, [chatId, user.id]);
 
@@ -147,16 +88,17 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     const msgText = newMessage;
     setNewMessage('');
 
-    const { error } = // await supabase
-      .from('chat_messages')
-      .insert([{
-        chat_id: chatId,
-        sender_id: user.id,
-        message_text: msgText,
-        message_type: 'text'
-      }]);
-
-    if (error) console.error(error);
+    // Mocked for Convex migration
+    const newMsg = {
+      id: Math.random().toString(),
+      chat_id: chatId,
+      sender_id: user.id,
+      message_text: msgText,
+      message_type: 'text',
+      created_at: new Date().toISOString(),
+      sender: { username: user.username, selected_avatar: user.selectedAvatar }
+    };
+    setMessages(prev => [...prev, newMsg]);
   };
 
   const handleImageUpload = async (e) => {
@@ -169,28 +111,18 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `chat-images/${chatId}/${fileName}`;
-
-      const { error: uploadError } = // await // supabase.storage
-        .from('chat-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = // supabase.storage
-        .from('chat-images')
-        .getPublicUrl(filePath);
-
-      // await supabase
-        .from('chat_messages')
-        .insert([{
-          chat_id: chatId,
-          sender_id: user.id,
-          image_url: publicUrl,
-          message_type: 'image'
-        }]);
+      // Mocked for Convex migration
+      console.log('Would upload image:', file.name);
+      const newMsg = {
+        id: Math.random().toString(),
+        chat_id: chatId,
+        sender_id: user.id,
+        image_url: URL.createObjectURL(file),
+        message_type: 'image',
+        created_at: new Date().toISOString(),
+        sender: { username: user.username, selected_avatar: user.selectedAvatar }
+      };
+      setMessages(prev => [...prev, newMsg]);
     } catch (error) {
       setError('Error uploading image!');
     } finally {
@@ -200,12 +132,16 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   const sendSystemMessage = async (text) => {
     if (!chatId) return;
-    // await // supabase.from('chat_messages').insert([{
+    // Mocked for Convex migration
+    const newMsg = {
+      id: Math.random().toString(),
       chat_id: chatId,
-      sender_id: user.id,
+      sender_id: 'system',
       message_text: text,
-      message_type: 'system'
-    }]);
+      message_type: 'system',
+      created_at: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, newMsg]);
   };
 
   const handleMarkPaid = async () => {

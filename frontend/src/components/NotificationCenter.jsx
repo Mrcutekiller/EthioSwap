@@ -120,19 +120,10 @@ export const useNotifCount = (userId) => {
   useEffect(() => {
     if (!userId) return;
     const fetchCount = async () => {
-      const { count: unreadCount } = // await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_read', false);
-      setCount(unreadCount || 0);
+      // Mocked for Convex migration
+      setCount(0);
     };
     fetchCount();
-    const sub = supabase
-      .channel('notif-count')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => fetchCount())
-      .subscribe();
-    return () => sub.unsubscribe();
   }, [userId]);
   return count;
 };

@@ -22,13 +22,8 @@ const SupportWidget = () => {
   }, [ticket?.messages, botReply]);
 
   const fetchTicket = async () => {
-    const { data } = // await supabase
-      .from('support_tickets')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    // Mocked for Convex migration
+    const data = null;
     if (data) setTicket(data);
   };
 
@@ -37,21 +32,10 @@ const SupportWidget = () => {
     if (!messageText.trim()) return;
     setLoading(true);
     try {
-      let activeTicketId = ticket?.id;
-      if (!ticket || ticket.status === 'closed') {
-        const { data: newTicket } = // await // supabase.from('support_tickets').insert([{
-          user_id: user.id,
-          username: user.username,
-          status: 'open',
-          messages: [{ senderId: user.id, senderName: user.username, message: messageText.trim(), timestamp: new Date().toISOString() }]
-        }]).select().single();
-        activeTicketId = newTicket.id;
-        setTicket(newTicket);
-      } else {
-        const updatedMessages = [...(ticket.messages || []), { senderId: user.id, senderName: user.username, message: messageText.trim(), timestamp: new Date().toISOString() }];
-        // await // supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', activeTicketId);
-        setTicket({ ...ticket, messages: updatedMessages });
-      }
+      // Mocked for Convex migration
+      const newMessage = { senderId: user.id, senderName: user.username, message: messageText.trim(), timestamp: new Date().toISOString() };
+      const updatedMessages = [...(ticket?.messages || []), newMessage];
+      setTicket({ ...(ticket || { id: 'mock-ticket', status: 'open' }), messages: updatedMessages });
       setMessageText('');
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -71,13 +55,8 @@ const SupportWidget = () => {
     if (!ticket || ticket.status === 'closed') {
       setLoading(true);
       try {
-        const { data: newTicket } = // await // supabase.from('support_tickets').insert([{
-          user_id: user.id,
-          username: user.username,
-          status: 'open',
-          messages: []
-        }]).select().single();
-        setTicket(newTicket);
+        // Mocked for Convex migration
+        setTicket({ id: 'mock-ticket', status: 'open', messages: [] });
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     }
