@@ -63,13 +63,13 @@ function buildEmail(type: string, name: string, data: any): { subject: string, h
       <p style="font-size: 16px; line-height: 1.6; color: #8899AA; margin-bottom: 24px;">
         ${data.body || 'You have a new update on your EthioSwap account.'}
       </p>
-      ${data.amount_usd ? `
+      ${data.amount_usd ? \`
         <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.2); padding: 20px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
           <div style="font-size: 12px; color: #8899AA; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Amount</div>
-          <div style="font-size: 24px; font-weight: 800; color: #D4AF37;">$${data.amount_usd} USD</div>
-          ${data.amount_etb ? `<div style="font-size: 14px; color: #00d4a0; margin-top: 4px;">≈ ${data.amount_etb} ETB</div>` : ''}
+          <div style="font-size: 24px; font-weight: 800; color: #D4AF37;">$\${data.amount_usd} USD</div>
+          \${data.amount_etb ? \`<div style="font-size: 14px; color: #00d4a0; margin-top: 4px;">≈ \${data.amount_etb} ETB</div>\` : ''}
         </div>
-      ` : ''}
+      \` : ''}
       <a href="https://ethioswap.qzz.io" style="display: block; width: 100%; padding: 16px; background: #D4AF37; color: #0A0C12; text-decoration: none; text-align: center; border-radius: 12px; font-weight: 700; font-size: 16px;">Open Dashboard</a>
       <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px; font-size: 12px; color: #8899AA; text-align: center;">
         &copy; 2026 EthioSwap. Secured P2P Escrow.

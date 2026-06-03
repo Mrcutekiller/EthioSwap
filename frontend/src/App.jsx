@@ -75,7 +75,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
         setLocalError('You must be at least 18 years old to join.');
         return;
       }
-      await register(username, password, phone, email, fullName, age, referralCode);
+      const result = await register(username, password, phone, email, fullName, age, referralCode);
+      if (result && result.alreadyRegistered) {
+        onToggle(); // Switch to login
+      }
     }
   };
 
@@ -194,9 +197,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
               className="input" 
               type={showPassword ? "text" : "password"} 
               placeholder="Password" 
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
+              autoCorrect="off" 
+              autoCapitalize="off" 
+              spellCheck="false" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
               style={{ width: '100%', paddingRight: '44px', background: 'rgba(0,0,0,0.2)' }} 
             />
             <button 
@@ -215,9 +221,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
                   className="input" 
                   type={showPassword ? "text" : "password"} 
                   placeholder="Confirm Password" 
+                  autoComplete="new-password" 
+                  autoCorrect="off" 
+                  autoCapitalize="off" 
+                  spellCheck="false" 
                   value={confirmPassword} 
                   onChange={e => setConfirmPassword(e.target.value)} 
-                  autoComplete="new-password" 
                   style={{ width: '100%', background: 'rgba(0,0,0,0.2)' }} 
                 />
               </div>
@@ -355,10 +364,37 @@ const AppShell = () => {
 
   React.useEffect(() => {
     if (!user) return;
-    const fetchNotifications = async () => {
-      const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-      if (data) setNotifications(data);
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      if (event === 'SIGNED_IN' && session) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.role === 'admin') {
+          window.location.href = '/?tab=admin';
+        } else {
+          window.location.href = '/?tab=home';
+        }
+      }
+
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/';
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (data) setNotifications(data);
+  };
+
+  React.useEffect(() => {
+    if (!user) return;
     fetchNotifications();
 
     const sub = supabase

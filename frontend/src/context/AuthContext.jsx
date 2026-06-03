@@ -202,45 +202,58 @@ export const AuthProvider = ({ children }) => {
       
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Invalid email or password. Please try again.');
+          throw new Error('Wrong email or password. Please try again.');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('Please confirm your email first. Check your inbox for a verification link.');
         }
         throw error;
       }
 
-      // Try to fetch profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      // ✅ SUCCESS — session exists, redirect NOW
+      if (data.session) {
+        // Try to fetch profile
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
 
-      if (profileData) {
-        setUser(profileData);
-        setWallet(profileData);
-        localStorage.setItem('ethioswap_user', JSON.stringify(profileData));
-      } else {
-        // Profile doesn't exist — create it now (fallback for users in Auth but not in users table)
-        const meta = data.user.user_metadata || {};
-        const { data: newProfile, error: insertError } = await supabase.from('users').insert([{
-          id: data.user.id,
-          username: meta.username || loginEmail.split('@')[0],
-          phone: meta.phone || '',
-          email: loginEmail,
-          full_name: meta.full_name || meta.username || loginEmail.split('@')[0],
-          role: 'user',
-          eth_address: '0x' + Math.random().toString(16).slice(2, 42),
-          eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
-          display_name: meta.username || loginEmail.split('@')[0],
-          password_hash: 'managed_by_supabase_auth',
-          joined_at: new Date().toISOString()
-        }]).select().single();
+        if (profileData) {
+          setUser(profileData);
+          setWallet(profileData);
+          localStorage.setItem('ethioswap_user', JSON.stringify(profileData));
+          
+          // Hard redirect based on role
+          if (profileData.role === 'admin') {
+            window.location.href = '/?tab=admin'; // Since App.jsx uses tabs
+          } else {
+            window.location.href = '/?tab=home';
+          }
+        } else {
+          // Profile doesn't exist — create it now
+          const meta = data.user.user_metadata || {};
+          const { data: newProfile, error: insertError } = await supabase.from('users').insert([{
+            id: data.user.id,
+            username: meta.username || loginEmail.split('@')[0],
+            phone: meta.phone || '',
+            email: loginEmail,
+            full_name: meta.full_name || meta.username || loginEmail.split('@')[0],
+            role: 'user',
+            eth_address: '0x' + Math.random().toString(16).slice(2, 42),
+            eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
+            display_name: meta.username || loginEmail.split('@')[0],
+            password_hash: 'managed_by_supabase_auth',
+            joined_at: new Date().toISOString()
+          }]).select().single();
 
-        if (insertError) {
-          console.error('Profile insert error:', insertError.message);
-        } else if (newProfile) {
-          setUser(newProfile);
-          setWallet(newProfile);
-          localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
+          if (insertError) {
+            console.error('Profile insert error:', insertError.message);
+          } else if (newProfile) {
+            setUser(newProfile);
+            setWallet(newProfile);
+            localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
+            window.location.href = '/?tab=home';
+          }
         }
       }
 
@@ -278,17 +291,20 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (authError) {
-        if (authError.message.includes('rate limit') || authError.message.includes('email')) {
-          throw new Error('Registration is temporarily limited. Please try again in a few minutes, or contact support.');
+        if (authError.message.includes('User already registered') || 
+            authError.message.includes('already been registered') || 
+            authError.message.includes('already exists')) {
+          setSuccess('Account already exists. Please sign in below.');
+          return { alreadyRegistered: true };
         }
-        if (authError.message.includes('User already registered')) {
-          throw new Error('This email is already registered. Please try logging in instead.');
+
+        if (authError.message.includes('rate limit') || authError.message.includes('email')) {
+          throw new Error('Too many attempts. Please wait a few minutes and try again.');
         }
         throw authError;
       }
 
-      // If user is returned but no session, it might mean email confirmation is needed 
-      // OR the user already exists in Auth but not in the users table.
+      // If user is returned but no session, it might mean email confirmation is needed
       if (data.user && !data.session) {
         // Try to check if profile exists
         const { data: existingProfile } = await supabase.from('users').select('id').eq('id', data.user.id).single();
@@ -317,11 +333,11 @@ export const AuthProvider = ({ children }) => {
           }
         }
 
-        setSuccess('Account created! Please check your email to verify your account before logging in.');
+        setSuccess('Account created! Check your email to verify, then sign in.');
         return data.user;
       }
 
-      // Create profile record if session exists (auto-login or email confirmation disabled)
+      // ✅ SUCCESS — logged in immediately
       if (data.user && data.session) {
         const { error: profileError } = await supabase.from('users').insert([{
           id: data.user.id,
@@ -344,6 +360,7 @@ export const AuthProvider = ({ children }) => {
 
         await fetchUserProfile(data.user.id);
         setSuccess('Account created successfully!');
+        window.location.href = '/?tab=home';
       }
 
       return data.user;
