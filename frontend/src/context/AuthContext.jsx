@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchUserProfile = async (userId) => {
-    console.log('fetchUserProfile starting for:', userId);
+    console.log('[Profile] Fetching profile for:', userId);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -80,27 +80,28 @@ export const AuthProvider = ({ children }) => {
         .single();
       
       if (error) {
-        console.error('fetchUserProfile error details:', {
+        console.error('[Profile] Fetch error:', {
           message: error.message,
           code: error.code,
           details: error.details,
-          hint: error.hint
+          hint: error.hint,
+          error
         });
         throw error;
       }
       
       if (data) {
-        console.log('User profile successfully fetched:', data.username, 'Role:', data.role);
+        console.log('[Profile] Success:', data.username, '| Role:', data.role);
         setUser(data);
         setWallet(data);
         localStorage.setItem('ethioswap_user', JSON.stringify(data));
         return data;
       }
       
-      console.warn('fetchUserProfile: No data returned for ID:', userId);
+      console.warn('[Profile] No record found for ID:', userId);
       return null;
     } catch (err) {
-      console.error('fetchUserProfile fatal error:', err);
+      console.error('[Profile] Fatal error:', err);
       throw err;
     }
   };
@@ -250,7 +251,7 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('Sign in successful, user ID:', data.user?.id);
+      console.log('[Auth] Sign in successful, user ID:', data.user?.id);
 
       // ✅ SUCCESS — session exists
       if (data.session) {
@@ -258,51 +259,59 @@ export const AuthProvider = ({ children }) => {
         
         let profileData = null;
         try {
-          console.log('Login: Fetching profile for successful session...');
+          console.log('[Auth] Attempting initial profile fetch...');
           profileData = await fetchUserProfile(data.user.id);
         } catch (fetchErr) {
-          console.warn('Login: Initial profile fetch failed, likely due to RLS sync. Retrying in 500ms...', fetchErr.message);
-          // Small delay to allow session to propagate to RLS
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.warn('[Auth] Initial profile fetch failed, retrying after 800ms delay...', fetchErr.message);
+          // Wait slightly longer for RLS propagation
+          await new Promise(resolve => setTimeout(resolve, 800));
           try {
             profileData = await fetchUserProfile(data.user.id);
           } catch (retryErr) {
-            console.error('Login: Retry profile fetch failed:', retryErr.message);
-            // Don't throw here, proceed to profile creation check
+            console.error('[Auth] Retry profile fetch failed:', retryErr.message);
           }
         }
 
         if (profileData) {
-          console.log('Login: Profile found, redirecting based on role:', profileData.role);
+          console.log('[Auth] Profile verified. Role:', profileData.role);
           if (profileData.role === 'admin') {
             window.history.replaceState({}, '', '/admin');
           } else {
             window.history.replaceState({}, '', '/dashboard');
           }
         } else {
-          console.log('Login: Profile still not found, attempting to create/update profile for:', loginEmail);
-          // Profile doesn't exist — create it now
+          console.log('[Auth] Profile missing. Creating record for:', loginEmail);
           const meta = data.user.user_metadata || {};
-          const { data: newProfile, error: insertError } = await supabase.from('users').upsert([{
+          
+          const profileToUpsert = {
             id: data.user.id,
             username: meta.username || loginEmail.split('@')[0],
-            phone: meta.phone || '',
+            phone: meta.phone || '0000000000',
             email: loginEmail,
             full_name: meta.full_name || meta.username || loginEmail.split('@')[0],
-            role: (loginEmail.includes('admin') || meta.username?.includes('admin')) ? 'admin' : 'user',
+            role: (loginEmail.includes('admin') || meta.username?.toLowerCase().includes('admin')) ? 'admin' : 'user',
             eth_address: '0x' + Math.random().toString(16).slice(2, 42),
             eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
             display_name: meta.username || loginEmail.split('@')[0],
             password_hash: 'managed_by_supabase_auth',
             joined_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          }], { onConflict: 'id' }).select().single();
+          };
 
-          if (insertError) {
-            console.error('Login: Profile upsert error:', insertError.message, insertError);
-            throw new Error('Could not synchronize your profile. Please try again or contact support.');
+          console.log('[Auth] Upserting profile:', profileToUpsert);
+          
+          const { data: newProfile, error: upsertError } = await supabase
+            .from('users')
+            .upsert([profileToUpsert], { onConflict: 'id' })
+            .select()
+            .single();
+
+          if (upsertError) {
+            console.error('[Auth] Profile sync error:', upsertError);
+            const errorDetails = JSON.stringify(upsertError, null, 2);
+            throw new Error(`Profile sync failed. Error: ${upsertError.message}\nDetails: ${errorDetails}`);
           } else if (newProfile) {
-            console.log('Login: Profile synchronized successfully');
+            console.log('[Auth] Profile synced successfully');
             setUser(newProfile);
             setWallet(newProfile);
             localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));

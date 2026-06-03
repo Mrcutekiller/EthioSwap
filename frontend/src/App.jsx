@@ -39,7 +39,7 @@ const Icons = {
 };
 
 // ── Auth Form ──────────────────────────────────────────────────
-const AuthForm = ({ mode, onToggle, onBackToHome }) => {
+const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const { login, register, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -82,7 +82,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome }) => {
     }
   };
 
-  const displayError = localError || error;
+  const displayError = localError || externalError || error;
 
   const Spinner = () => (
     <svg className="animate-spin" viewBox="0 0 24 24" style={{ width: '18px', height: '18px', marginRight: '8px', animation: 'spin 1s linear infinite' }}>
@@ -458,9 +458,21 @@ const AppShell = () => {
     return null;
   });
 
+  const [authError, setAuthError] = useState(null);
+
   const [notifOpen, setNotifOpen] = useState(false);
   const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
   const [notifications, setNotifications] = useState([]);
+
+  // Clear auth error when switching modes
+  React.useEffect(() => {
+    setAuthError(null);
+  }, [authMode]);
+
+  // Sync AuthContext error with local authError
+  React.useEffect(() => {
+    if (error) setAuthError(error);
+  }, [error]);
 
   // Removed redundant onAuthStateChange listener as it's handled in AuthContext.jsx
 
@@ -572,6 +584,7 @@ const AppShell = () => {
         mode={authMode}
         onToggle={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
         onBackToHome={() => setAuthMode(null)}
+        externalError={authError}
       />
     );
   }
