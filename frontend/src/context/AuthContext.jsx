@@ -280,10 +280,42 @@ export const AuthProvider = ({ children }) => {
         if (authError.message.includes('rate limit') || authError.message.includes('email')) {
           throw new Error('Registration is temporarily limited. Please try again in a few minutes, or contact support.');
         }
+        if (authError.message.includes('User already registered')) {
+          throw new Error('This email is already registered. Please try logging in instead.');
+        }
         throw authError;
       }
 
+      // If user is returned but no session, it might mean email confirmation is needed 
+      // OR the user already exists in Auth but not in the users table.
       if (data.user && !data.session) {
+        // Try to check if profile exists
+        const { data: existingProfile } = await supabase.from('users').select('id').eq('id', data.user.id).single();
+        
+        if (!existingProfile) {
+          // Profile doesn't exist — create it now as a fallback
+          const { error: profileError } = await supabase.from('users').insert([{
+            id: data.user.id,
+            username: trimmedUsername,
+            phone: phone,
+            email: trimmedEmail,
+            full_name: fullName,
+            age: age ? parseInt(age) : null,
+            referral_code: trimmedUsername.toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000),
+            referred_by: referralCode && referralCode.trim() ? referralCode.trim() : null,
+            eth_address: '0x' + Math.random().toString(16).slice(2, 42),
+            eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
+            display_name: fullName || trimmedUsername,
+            role: 'user',
+            password_hash: 'managed_by_supabase_auth',
+            joined_at: new Date().toISOString()
+          }]);
+          
+          if (profileError) {
+            console.error('Fallback profile creation error:', profileError.message);
+          }
+        }
+
         setSuccess('Account created! Please check your email to verify your account before logging in.');
         return data.user;
       }
