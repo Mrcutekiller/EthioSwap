@@ -11,6 +11,11 @@ export default defineConfig({
       'convex-api': path.resolve(__dirname, '../convex/_generated/api'),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['convex/server'],
+    },
+  },
   server: {
     fs: {
       allow: ['..'],
