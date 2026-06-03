@@ -302,6 +302,8 @@ export const AuthProvider = ({ children }) => {
           eth_address: '0x' + Math.random().toString(16).slice(2, 42),
           eth_private_key: '0x' + Math.random().toString(16).slice(2, 66),
           display_name: fullName || trimmedUsername,
+          role: 'user',
+          password_hash: 'managed_by_supabase_auth',
           joined_at: new Date().toISOString()
         }]);
 
