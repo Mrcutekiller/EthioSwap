@@ -190,10 +190,12 @@ export const AuthProvider = ({ children }) => {
           .single();
         
         if (lookupError || !profile?.email) {
-          throw new Error('Invalid email or password. Please try again.');
+          throw new Error('Username not found. Please use your email or check the spelling.');
         }
         loginEmail = profile.email;
       }
+
+      console.log('Attempting sign in with:', loginEmail);
 
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email: loginEmail, 
@@ -201,6 +203,7 @@ export const AuthProvider = ({ children }) => {
       });
       
       if (error) {
+        console.error('Supabase auth error:', error);
         if (error.message.includes('Invalid login credentials')) {
           throw new Error('Wrong email or password. Please try again.');
         } else if (error.message.includes('Email not confirmed')) {

@@ -438,19 +438,22 @@ const AppShell = () => {
     setTabState(newTab);
     localStorage.setItem(`ethioswap_active_tab_${user?.id}`, newTab);
     if (newTab === 'admin') {
-      window.history.pushState({}, '', '/admin');
+      window.history.replaceState({}, '', '/admin');
     } else if (newTab === 'home') {
-      window.history.pushState({}, '', '/dashboard');
+      window.history.replaceState({}, '', '/dashboard');
     }
   };
   const [authMode, setAuthMode] = useState(() => {
     const path = window.location.pathname;
     if (path === '/login') return 'login';
     if (path === '/register') return 'register';
+    
+    // Check search params or hash as fallback
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     if (params.get('action') === 'login' || hash === '#login') return 'login';
     if (params.get('action') === 'register' || hash === '#register') return 'register';
+    
     return null;
   });
   const [notifOpen, setNotifOpen] = useState(false);
@@ -464,6 +467,7 @@ const AppShell = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event);
       if (event === 'SIGNED_IN' && session) {
+        // Fetch fresh profile data to ensure role is correct
         const { data: profile } = await supabase
           .from('users')
           .select('role')
