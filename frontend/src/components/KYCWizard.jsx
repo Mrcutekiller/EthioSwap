@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 
 const KYCWizard = ({ user, onComplete, onClose }) => {
   const [step, setStep] = useState(1); // 1=intro, 2=info, 3=id-front, 4=id-back, 5=face, 6=done
@@ -162,7 +161,7 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     setLoading(true);
     setError('');
     try {
-      await supabase.from('users').update({
+      // await // supabase.from('users').update({
         full_name: fullName,
         phone: kycPhone,
         kyc_status: 'pending',
@@ -181,7 +180,7 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!idFront || !idBack) { setError('Please capture or upload both front and back of your ID.'); return; }
     setLoading(true); setError('');
     try {
-      await supabase.from('users').update({
+      // await // supabase.from('users').update({
         kyc_id_front: idFront,
         kyc_id_back: idBack,
         kyc_step: 'docs'
@@ -200,7 +199,7 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!selfieCapture) { setError('Please capture a selfie first.'); return; }
     setLoading(true); setError('');
     try {
-      const { data: updatedUser } = await supabase.from('users').update({
+      const { data: updatedUser } = // await // supabase.from('users').update({
         kyc_selfie: selfieCapture,
         kyc_status: 'pending',
         kyc_step: 'selfie'

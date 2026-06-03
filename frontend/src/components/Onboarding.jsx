@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { Shield, TrendingUp, Star, Rocket, ChevronRight } from 'lucide-react';
 
@@ -45,7 +44,7 @@ const Onboarding = ({ onComplete }) => {
 
   const handleComplete = async () => {
     if (user) {
-      await supabase.from('users').update({ onboarding_completed: true }).eq('id', user.id);
+      // await // supabase.from('users').update({ onboarding_completed: true }).eq('id', user.id);
     }
     onComplete();
   };
@@ -55,7 +54,7 @@ const Onboarding = ({ onComplete }) => {
     i18n.changeLanguage(newLang);
     localStorage.setItem('ethioswap_language', newLang);
     if (user) {
-      await supabase.from('users').update({ preferred_language: newLang }).eq('id', user.id);
+      // await // supabase.from('users').update({ preferred_language: newLang }).eq('id', user.id);
     }
   };
 

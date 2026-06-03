@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
 
 // ─── External wallet options for manual deposit ────────────────
@@ -74,48 +73,22 @@ const WalletCard = () => {
 
   const handleSendById = async (e) => {
     e.preventDefault();
+    setError('Internal transfers are temporarily disabled for maintenance.');
+    /*
     if (!sendRecipientId || !sendAmount || parseFloat(sendAmount) < 1) {
       setError('Minimum transfer is $1.00 USD.');
       return;
     }
     setSendLoading(true);
     try {
-      // 1. Find recipient by numeric_id
-      const { data: recipient } = await supabase.from('users').select('id, username, eth_balance').eq('numeric_id', parseInt(sendRecipientId)).single();
-      if (!recipient) throw new Error('Recipient not found.');
-      if (recipient.id === user.id) throw new Error('You cannot send to yourself.');
-
-      // 2. Check balance
-      if (wallet.eth_balance < parseFloat(sendAmount)) throw new Error('Insufficient balance.');
-
-      // 3. Perform transfer (Ideally in a Supabase function/transaction)
-      const { error: senderErr } = await supabase.from('users').update({ eth_balance: wallet.eth_balance - parseFloat(sendAmount) }).eq('id', user.id);
-      const { error: receiverErr } = await supabase.from('users').update({ eth_balance: recipient.eth_balance + parseFloat(sendAmount) }).eq('id', recipient.id);
-      
-      if (senderErr || receiverErr) throw new Error('Transfer failed.');
-
-      // 4. Log transfer
-      await supabase.from('internal_transfers').insert([{
-        sender_id: user.id,
-        receiver_id: recipient.id,
-        amount: parseFloat(sendAmount),
-        note: 'Internal Transfer',
-        status: 'completed'
-      }]);
-
-      // 5. Log transaction for history
-      await supabase.from('transactions').insert([
-        { user_id: user.id, type: 'send', amount_usd: parseFloat(sendAmount), status: 'completed', note: `Sent to @${recipient.username}` },
-        { user_id: recipient.id, type: 'receive', amount_usd: parseFloat(sendAmount), status: 'completed', note: `Received from @${user.username}` }
-      ]);
-
-      setSuccess(`Successfully sent $${parseFloat(sendAmount).toFixed(2)} to @${recipient.username}!`);
-      setSendAmount(''); setSendRecipientId('');
+      // Logic moved to Convex
+      setSuccess(`Successfully sent!`);
     } catch (err) {
       setError(err.message);
     } finally {
       setSendLoading(false);
     }
+    */
   };
 
   if (!wallet) return (
@@ -378,7 +351,7 @@ const WalletCard = () => {
           <form onSubmit={async (e) => {
             e.preventDefault();
             setPinLoading(true);
-            const { error } = await supabase.from('users').update({ transaction_pin: setupPin }).eq('id', user.id);
+            const { error } = // await // supabase.from('users').update({ transaction_pin: setupPin }).eq('id', user.id);
             setPinLoading(false);
             if (error) setPinMsg({ type: 'error', text: error.message });
             else setPinMsg({ type: 'success', text: 'PIN set successfully!' });

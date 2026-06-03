@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { supabase } from '../supabaseClient';
 
 const SupportWidget = () => {
   const { user } = useAuth();
@@ -23,7 +22,7 @@ const SupportWidget = () => {
   }, [ticket?.messages, botReply]);
 
   const fetchTicket = async () => {
-    const { data } = await supabase
+    const { data } = // await supabase
       .from('support_tickets')
       .select('*')
       .eq('user_id', user.id)
@@ -40,7 +39,7 @@ const SupportWidget = () => {
     try {
       let activeTicketId = ticket?.id;
       if (!ticket || ticket.status === 'closed') {
-        const { data: newTicket } = await supabase.from('support_tickets').insert([{
+        const { data: newTicket } = // await // supabase.from('support_tickets').insert([{
           user_id: user.id,
           username: user.username,
           status: 'open',
@@ -50,7 +49,7 @@ const SupportWidget = () => {
         setTicket(newTicket);
       } else {
         const updatedMessages = [...(ticket.messages || []), { senderId: user.id, senderName: user.username, message: messageText.trim(), timestamp: new Date().toISOString() }];
-        await supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', activeTicketId);
+        // await // supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', activeTicketId);
         setTicket({ ...ticket, messages: updatedMessages });
       }
       setMessageText('');
@@ -72,7 +71,7 @@ const SupportWidget = () => {
     if (!ticket || ticket.status === 'closed') {
       setLoading(true);
       try {
-        const { data: newTicket } = await supabase.from('support_tickets').insert([{
+        const { data: newTicket } = // await // supabase.from('support_tickets').insert([{
           user_id: user.id,
           username: user.username,
           status: 'open',

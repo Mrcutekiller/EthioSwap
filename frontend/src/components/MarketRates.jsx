@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Bell, RefreshCw } from 'lucide-react';
@@ -26,7 +25,7 @@ const MarketRates = () => {
 
   const fetchRateData = async () => {
     try {
-      const { data } = await supabase.from('rate_history')
+      const { data } = // await // supabase.from('rate_history')
         .select('*')
         .order('recorded_at', { ascending: false })
         .limit(200);
@@ -42,7 +41,7 @@ const MarketRates = () => {
   };
 
   const fetchBestRates = async () => {
-    const { data: listings } = await supabase.from('listings')
+    const { data: listings } = // await // supabase.from('listings')
       .select('*, seller:users!seller_id(username, avg_rating)')
       .eq('status', 'active')
       .eq('type', 'sell')
@@ -50,7 +49,7 @@ const MarketRates = () => {
       .limit(5);
     if (listings) setBestBuyRates(listings);
 
-    const { data: sellListings } = await supabase.from('listings')
+    const { data: sellListings } = // await // supabase.from('listings')
       .select('*, seller:users!seller_id(username, avg_rating)')
       .eq('status', 'active')
       .eq('type', 'buy')

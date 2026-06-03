@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownLeft, ArrowUpRight, Repeat, Send, Download, Search, Filter, Calendar, FileText } from 'lucide-react';

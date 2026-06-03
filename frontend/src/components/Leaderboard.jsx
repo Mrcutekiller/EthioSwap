@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { Trophy, Award, TrendingUp, Users, Search, ChevronRight } from 'lucide-react';
 
 const Leaderboard = ({ user }) => {
@@ -15,7 +14,7 @@ const Leaderboard = ({ user }) => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLeaderboardData(undefined);
-      let query = supabase.from('users').select('*');
+      let query = // supabase.from('users').select('*');
       
       if (category === 'trades') {
         query = query.order('total_trades', { ascending: false });

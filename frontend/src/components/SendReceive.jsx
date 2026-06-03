@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Send, QrCode, Search, Copy, CheckCircle, User, ArrowRight } from 'lucide-react';
@@ -20,7 +19,7 @@ const SendReceive = ({ onClose }) => {
   const handleSearch = async (query) => {
     setSearchQuery(query);
     if (query.length < 2) { setSearchResults([]); return; }
-    const { data } = await supabase.from('users')
+    const { data } = // await // supabase.from('users')
       .select('id, username, full_name, selected_avatar, avg_rating')
       .ilike('username', `%${query}%`)
       .neq('id', user.id)

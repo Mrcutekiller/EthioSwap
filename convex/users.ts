@@ -130,10 +130,13 @@ export const updateKycStatus = mutation({
   },
 });
 
-export const remove = mutation({
-  args: { id: v.id("users") },
+export const update = mutation({
+  args: {
+    id: v.id("users"),
+    updates: v.any(),
+  },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
+    await ctx.db.patch(args.id, args.updates);
   },
 });
 

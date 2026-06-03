@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 import { convex } from "../convexClient";
 
 const AuthContext = createContext();
@@ -37,6 +37,8 @@ export const AuthProvider = ({ children }) => {
   
   const updateDepositStatusMutation = useMutation(api.depositRequests.updateStatus);
   const updateWithdrawStatusMutation = useMutation(api.withdrawRequests.updateStatus);
+
+  const updateUserMutation = useMutation(api.users.update);
 
   const markPaidMutation = useMutation(api.trades.markPaid);
   const releaseEthMutation = useMutation(api.trades.releaseEth);
@@ -225,6 +227,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = async (updates) => {
+    if (!user) return;
+    try {
+      await updateUserMutation({ id: user._id, updates });
+      // Update local state if needed
+      setUser({ ...user, ...updates });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, listings, trades, systemSettings,
@@ -234,6 +247,7 @@ export const AuthProvider = ({ children }) => {
       approveDepositRequest, rejectDepositRequest,
       approveWithdrawalRequest, rejectWithdrawalRequest,
       markTradeAsPaid, releaseEscrow, cancelTrade,
+      updateUser,
       setError, setSuccess, setIsLocked
     }}>
       {children}

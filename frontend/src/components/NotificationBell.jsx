@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { Bell, Check, Trash2, Info, AlertTriangle, MessageSquare, ShieldCheck } from 'lucide-react';
 
 const NotificationBell = ({ user }) => {
@@ -12,7 +11,7 @@ const NotificationBell = ({ user }) => {
 
     // Fetch initial notifications
     const fetchNotifications = async () => {
-      const { data } = await supabase
+      const { data } = // await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
@@ -43,12 +42,12 @@ const NotificationBell = ({ user }) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      // supabase.removeChannel(channel);
     };
   }, [user]);
 
   const markAsRead = async (id) => {
-    const { error } = await supabase
+    const { error } = // await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('id', id);
@@ -60,7 +59,7 @@ const NotificationBell = ({ user }) => {
   };
 
   const markAllAsRead = async () => {
-    const { error } = await supabase
+    const { error } = // await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('user_id', user.id)
@@ -73,7 +72,7 @@ const NotificationBell = ({ user }) => {
   };
 
   const deleteNotification = async (id) => {
-    const { error } = await supabase
+    const { error } = // await supabase
       .from('notifications')
       .delete()
       .eq('id', id);

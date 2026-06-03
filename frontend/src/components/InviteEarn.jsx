@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { Copy, Share2, Users, DollarSign, Clock, CheckCircle, Info, MessageCircle, Send } from 'lucide-react';
 
 const InviteEarn = ({ user, systemSettings }) => {
@@ -11,8 +10,8 @@ const InviteEarn = ({ user, systemSettings }) => {
   useEffect(() => {
     if (!user) return;
     const fetchStats = async () => {
-      const { data: userData } = await supabase.from('users').select('referral_code, total_invites, successful_invites, pending_invites, total_invite_earnings, invite_earnings_month').eq('id', user.id).single();
-      const { data: referrals } = await supabase.from('invite_rewards').select('*, invited:users!invited_user_id(username)').eq('inviter_user_id', user.id);
+      const { data: userData } = // await // supabase.from('users').select('referral_code, total_invites, successful_invites, pending_invites, total_invite_earnings, invite_earnings_month').eq('id', user.id).single();
+      const { data: referrals } = // await // supabase.from('invite_rewards').select('*, invited:users!invited_user_id(username)').eq('inviter_user_id', user.id);
       
       if (userData) {
         setInviteStats({
@@ -33,7 +32,7 @@ const InviteEarn = ({ user, systemSettings }) => {
     };
     fetchStats();
 
-    const sub = supabase.channel('invite-stats').on('postgres_changes', { event: '*', schema: 'public', table: 'invite_rewards', filter: `inviter_user_id=eq.${user.id}` }, fetchStats).subscribe();
+    const sub = // supabase.channel('invite-stats').on('postgres_changes', { event: '*', schema: 'public', table: 'invite_rewards', filter: `inviter_user_id=eq.${user.id}` }, fetchStats).subscribe();
     return () => sub.unsubscribe();
   }, [user]);
 

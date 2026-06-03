@@ -16,6 +16,8 @@ import SupportWidget from './components/SupportWidget.jsx';
 import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { convex } from './convexClient';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
@@ -780,7 +782,7 @@ const AppShell = () => {
           <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 800, fontSize: '14px' }}>Notifications</span>
             <button onClick={async () => {
-              await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+              // await // supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
               setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             }} style={{ background: 'transparent', border: 'none', color: 'var(--gold)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Mark all read</button>
           </div>

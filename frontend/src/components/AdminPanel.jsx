@@ -538,13 +538,13 @@ const AdminPanel = ({ user }) => {
   const handleWithdrawal = async (requestId, approve) => {
     try {
       if (approve) {
-        await supabase.from('withdraw_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', requestId);
+        // await // supabase.from('withdraw_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', requestId);
         showAlert('✓ Withdrawal approved and processed!');
       } else {
         const note = prompt('Please specify a rejection reason:');
         if (note === null) return;
         if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        await supabase.from('withdraw_requests').update({ status: 'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', requestId);
+        // await // supabase.from('withdraw_requests').update({ status: 'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', requestId);
         showAlert('Withdrawal rejected and refunded.');
       }
       setSelectedWithdrawDetailId(null);
@@ -554,13 +554,13 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        await supabase.from('users').update({ kyc_status: 'approved' }).eq('id', userId);
+        // await // supabase.from('users').update({ kyc_status: 'approved' }).eq('id', userId);
         showAlert('✓ KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
         if (reason === null) return;
         if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        await supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
+        // await // supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
@@ -572,7 +572,7 @@ const AdminPanel = ({ user }) => {
     if (!resubmitUserId || !resubmitReason.trim()) return;
     setSubmittingResubmit(true);
     try {
-      await supabase.from('users').update({ kyc_status: 'none', kyc_rejection_reason: resubmitReason }).eq('id', resubmitUserId);
+      // await // supabase.from('users').update({ kyc_status: 'none', kyc_rejection_reason: resubmitReason }).eq('id', resubmitUserId);
       
       showAlert('⚠ Resubmission request processed successfully.');
       setResubmitUserId(null);
@@ -590,11 +590,11 @@ const AdminPanel = ({ user }) => {
     if (!messageComposerUserId || !messageBody.trim()) return;
     setSendingMessage(true);
     try {
-      const { data: ticket } = await supabase.from('support_tickets').select('*').eq('user_id', messageComposerUserId).eq('status', 'open').single();
+      const { data: ticket } = // await // supabase.from('support_tickets').select('*').eq('user_id', messageComposerUserId).eq('status', 'open').single();
       let ticketId = ticket?.id;
       
       if (!ticketId) {
-        const { data: newTicket } = await supabase.from('support_tickets').insert([{
+        const { data: newTicket } = // await // supabase.from('support_tickets').insert([{
           user_id: messageComposerUserId,
           username: messageComposerUsername,
           status: 'open',
@@ -603,14 +603,14 @@ const AdminPanel = ({ user }) => {
         ticketId = newTicket.id;
       }
 
-      const { data: currentTicket } = await supabase.from('support_tickets').select('messages').eq('id', ticketId).single();
+      const { data: currentTicket } = // await // supabase.from('support_tickets').select('messages').eq('id', ticketId).single();
       const newMessage = {
         senderId: user.id,
         message: messageSubject.trim() ? `[Subject: ${messageSubject.trim()}]\n\n${messageBody}` : messageBody,
         timestamp: new Date().toISOString()
       };
       
-      await supabase.from('support_tickets').update({ 
+      // await // supabase.from('support_tickets').update({ 
         messages: [...(currentTicket?.messages || []), newMessage],
         updated_at: new Date().toISOString()
       }).eq('id', ticketId);
@@ -628,12 +628,12 @@ const AdminPanel = ({ user }) => {
 
   const handleApproveReview = async (reviewId) => {
     try {
-      const { data: review } = await supabase.from('reviews').select('*').eq('id', reviewId).single();
-      const { error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', reviewId);
+      const { data: review } = // await // supabase.from('reviews').select('*').eq('id', reviewId).single();
+      const { error } = // await // supabase.from('reviews').update({ is_approved: true }).eq('id', reviewId);
       if (error) throw error;
       
       // Notify user
-      const { data: userData } = await supabase.from('users').select('email, username').eq('id', review.user_id).single();
+      const { data: userData } = // await // supabase.from('users').select('email, username').eq('id', review.user_id).single();
       if (userData) {
         notify({
           userId: review.user_id,
@@ -653,7 +653,7 @@ const AdminPanel = ({ user }) => {
   const handleRejectReview = async (reviewId) => {
     if (!window.confirm('Are you sure you want to reject and delete this review?')) return;
     try {
-      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+      const { error } = // await // supabase.from('reviews').delete().eq('id', reviewId);
       if (error) throw error;
       showAlert('Review rejected and deleted.');
       setAllReviews(prev => prev.filter(r => r.id !== reviewId));
@@ -663,7 +663,7 @@ const AdminPanel = ({ user }) => {
   const handleDispute = async (tradeId, action) => {
     if (!window.confirm(`Force ${action === 'release' ? 'RELEASE to Buyer' : 'REFUND to Seller'}? This is irreversible.`)) return;
     try {
-      await supabase.from('trades').update({ 
+      // await // supabase.from('trades').update({ 
         status: action === 'release' ? 'completed' : 'refunded',
         completed_at: new Date().toISOString()
       }).eq('id', tradeId);
@@ -674,7 +674,7 @@ const AdminPanel = ({ user }) => {
   const handleSaveSettings = async (e) => {
     e.preventDefault(); setSavingSettings(true);
     try {
-      await supabase.from('system_settings').update({ 
+      // await // supabase.from('system_settings').update({ 
         etb_rate_per_dollar: parseFloat(etbRate), 
         etb_rate_per_dollar_sell: parseFloat(etbRateSell), 
         commission_value: parseFloat(commissionValue),
@@ -696,13 +696,13 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      const { data: currentTicket } = await supabase.from('support_tickets').select('messages').eq('id', selectedTicket.id).single();
+      const { data: currentTicket } = // await // supabase.from('support_tickets').select('messages').eq('id', selectedTicket.id).single();
       const newMessage = {
         senderId: user.id,
         message: supportReplyText,
         timestamp: new Date().toISOString()
       };
-      await supabase.from('support_tickets').update({ 
+      // await // supabase.from('support_tickets').update({ 
         messages: [...(currentTicket?.messages || []), newMessage],
         updated_at: new Date().toISOString()
       }).eq('id', selectedTicket.id);
@@ -713,7 +713,7 @@ const AdminPanel = ({ user }) => {
   const handleApproveDeposit = async (id) => {
     if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
     try {
-      await supabase.from('deposit_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
+      // await // supabase.from('deposit_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
       showAlert('✓ Deposit approved and wallet credited!');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -724,7 +724,7 @@ const AdminPanel = ({ user }) => {
     if (reason === null) return;
     if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
     try {
-      await supabase.from('deposit_requests').update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() }).eq('id', id);
+      // await // supabase.from('deposit_requests').update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() }).eq('id', id);
       showAlert('Deposit request rejected.');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -742,7 +742,7 @@ const AdminPanel = ({ user }) => {
 
     setWithdrawingEarnings(true);
     try {
-      await supabase.from('withdraw_requests').insert([{
+      // await // supabase.from('withdraw_requests').insert([{
         user_id: user.id,
         username: user.username,
         amount_usd: amt,
@@ -3517,11 +3517,11 @@ const AdminPanel = ({ user }) => {
                   const [uStats, setUStats] = useState(null);
                   React.useEffect(() => {
                     if (u?.id) {
-                      supabase.from('referrals').select('*').eq('referrer_id', u.id).then(({ data }) => {
+                      // supabase.from('referrals').select('*').eq('referrer_id', u.id).then(({ data }) => {
                         const totalInvited = data?.length || 0;
                         const activeFriends = data?.filter(r => r.status === 'active').length || 0;
                         const pendingFriends = data?.filter(r => r.status === 'pending').length || 0;
-                        supabase.from('invite_rewards').select('*').eq('inviter_user_id', u.id).then(({ data: rewards }) => {
+                        // supabase.from('invite_rewards').select('*').eq('inviter_user_id', u.id).then(({ data: rewards }) => {
                           const totalEarned = rewards?.reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
                           const earningsMonth = rewards?.filter(r => new Date(r.created_at).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + (r.reward_amount || 0), 0) || 0;
                           setUStats({ totalInvited, activeFriends, pendingFriends, totalEarned, earningsMonth, referralList: data?.map(r => ({ username: r.referred_user_id?.substring(0, 8) || 'User', date: r.created_at, status: r.status, earned: r.reward_amount || 0 })) || [] });

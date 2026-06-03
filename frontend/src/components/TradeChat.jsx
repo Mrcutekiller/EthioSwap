@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Check, CheckCheck, AlertCircle, X, ZoomIn, Clock, Shield, AlertTriangle } from 'lucide-react';
@@ -30,14 +29,14 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   useEffect(() => {
     const setupChat = async () => {
-      let { data: chat, error } = await supabase
+      let { data: chat, error } = // await supabase
         .from('trade_chats')
         .select('id')
         .eq('trade_id', tradeId)
         .single();
 
       if (error && error.code === 'PGRST116') {
-        const { data: newChat, error: createError } = await supabase
+        const { data: newChat, error: createError } = // await supabase
           .from('trade_chats')
           .insert([{ trade_id: tradeId }])
           .select()
@@ -58,7 +57,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   }, [tradeId]);
 
   const fetchMessages = async (id) => {
-    const { data } = await supabase
+    const { data } = // await supabase
       .from('chat_messages')
       .select('*, sender:users(username, selected_avatar)')
       .eq('chat_id', id)
@@ -79,7 +78,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
         fetchSenderAndAppend(payload.new);
         // Mark as read if from other user
         if (payload.new.sender_id !== user.id) {
-          supabase.rpc('mark_messages_read', { p_chat_id: id, p_user_id: user.id });
+          // supabase.rpc('mark_messages_read', { p_chat_id: id, p_user_id: user.id });
         }
       })
       .on('postgres_changes', {
@@ -111,7 +110,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   };
 
   const fetchSenderAndAppend = async (msg) => {
-    const { data: sender } = await supabase
+    const { data: sender } = // await supabase
       .from('users')
       .select('username, selected_avatar')
       .eq('id', msg.sender_id)
@@ -127,13 +126,13 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   // Mark messages as read when chat opens
   useEffect(() => {
     if (chatId && user.id) {
-      supabase.rpc('mark_messages_read', { p_chat_id: chatId, p_user_id: user.id });
+      // supabase.rpc('mark_messages_read', { p_chat_id: chatId, p_user_id: user.id });
     }
   }, [chatId, messages.length]);
 
   const handleTyping = useCallback(() => {
     if (chatId) {
-      supabase.channel(`typing:${chatId}`).send({
+      // supabase.channel(`typing:${chatId}`).send({
         type: 'broadcast',
         event: 'typing',
         payload: { user_id: user.id }
@@ -148,7 +147,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     const msgText = newMessage;
     setNewMessage('');
 
-    const { error } = await supabase
+    const { error } = // await supabase
       .from('chat_messages')
       .insert([{
         chat_id: chatId,
@@ -174,17 +173,17 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `chat-images/${chatId}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = // await // supabase.storage
         .from('chat-images')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = // supabase.storage
         .from('chat-images')
         .getPublicUrl(filePath);
 
-      await supabase
+      // await supabase
         .from('chat_messages')
         .insert([{
           chat_id: chatId,
@@ -201,7 +200,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   const sendSystemMessage = async (text) => {
     if (!chatId) return;
-    await supabase.from('chat_messages').insert([{
+    // await // supabase.from('chat_messages').insert([{
       chat_id: chatId,
       sender_id: user.id,
       message_text: text,

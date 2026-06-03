@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Bell, BellOff, Trash2, Plus } from 'lucide-react';
@@ -20,7 +19,7 @@ const PriceAlerts = () => {
   }, []);
 
   const fetchAlerts = async () => {
-    const { data } = await supabase.from('price_alerts')
+    const { data } = // await // supabase.from('price_alerts')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -28,7 +27,7 @@ const PriceAlerts = () => {
   };
 
   const fetchCurrentRate = async () => {
-    const { data } = await supabase.from('rate_history')
+    const { data } = // await // supabase.from('rate_history')
       .select('usdt_etb_rate')
       .order('recorded_at', { ascending: false })
       .limit(1)

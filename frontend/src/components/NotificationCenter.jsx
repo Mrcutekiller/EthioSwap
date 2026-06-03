@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 
 const notifIcons = {
   trade_opened:    { icon: '🔄', bg: 'rgba(200,150,44,0.08)', color: 'var(--gold-light)' },
@@ -32,7 +31,7 @@ const NotificationCenter = ({ userId, isOpen, onClose }) => {
   }, [userId, isOpen]);
 
   const fetchNotifications = async () => {
-    const { data } = await supabase
+    const { data } = // await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
@@ -43,12 +42,12 @@ const NotificationCenter = ({ userId, isOpen, onClose }) => {
 
   const markAllRead = async () => {
     if (!userId) return;
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
+    // await // supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
   const markOneRead = async (notifId) => {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', notifId);
+    // await // supabase.from('notifications').update({ is_read: true }).eq('id', notifId);
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
   };
 
@@ -125,7 +124,7 @@ export const useNotifCount = (userId) => {
   useEffect(() => {
     if (!userId) return;
     const fetchCount = async () => {
-      const { count: unreadCount } = await supabase
+      const { count: unreadCount } = // await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)

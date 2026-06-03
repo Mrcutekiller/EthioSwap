@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../supabaseClient';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock, Moon, Sun, Monitor } from 'lucide-react';
 
 /* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
@@ -205,6 +207,7 @@ const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
 
 const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
   const { t, i18n } = useTranslation();
+  const { updateUser } = useAuth();
   const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
   const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
   const [lang, setLang] = useState(i18n.language || 'en');
@@ -215,7 +218,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     setLang(newLang);
     localStorage.setItem('ethioswap_language', newLang);
     if (user) {
-      await supabase.from('users').update({ preferred_language: newLang }).eq('id', user.id);
+      await updateUser({ preferredLanguage: newLang });
     }
   };
 
@@ -223,7 +226,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     setTheme(newTheme);
     localStorage.setItem('ethioswap_theme', newTheme);
     if (user) {
-      await supabase.from('users').update({ theme_preference: newTheme }).eq('id', user.id);
+      await updateUser({ themePreference: newTheme });
     }
   };
 
@@ -427,23 +430,23 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
             </div>
             <div
               onClick={async () => {
-                const newState = !user.two_fa_enabled;
-                await supabase.from('users').update({ two_fa_enabled: newState }).eq('id', user.id);
+                const newState = !user.twoFaEnabled;
+                await updateUser({ twoFaEnabled: newState });
               }}
-              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.two_fa_enabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.two_fa_enabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.twoFaEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.twoFaEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
             >
-              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.two_fa_enabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
             </div>
           </div>
           
-          {user.two_fa_enabled && (
+          {user.twoFaEnabled && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-3)' }}>Verification Method</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <button className={`btn btn-sm ${user.two_fa_method === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => supabase.from('users').update({ two_fa_method: 'email' }).eq('id', user.id)}>
+                <button className={`btn btn-sm ${user.twoFaMethod === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'email' })}>
                   <Mail size={14} /> Email
                 </button>
-                <button className={`btn btn-sm ${user.two_fa_method === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => supabase.from('users').update({ two_fa_method: 'sms' }).eq('id', user.id)}>
+                <button className={`btn btn-sm ${user.twoFaMethod === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'sms' })}>
                   <Smartphone size={14} /> SMS
                 </button>
               </div>

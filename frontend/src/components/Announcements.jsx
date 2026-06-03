@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useTranslation } from 'react-i18next';
 import { Megaphone, X, ChevronRight, Info, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -10,7 +9,7 @@ const Announcements = ({ user }) => {
 
   useEffect(() => {
     const fetchLatest = async () => {
-      const { data } = await supabase
+      const { data } = // await supabase
         .from('announcements')
         .select('*')
         .eq('is_published', true)
@@ -21,7 +20,7 @@ const Announcements = ({ user }) => {
       if (data) {
         // Check if user has already read this
         if (user) {
-          const { data: read } = await supabase
+          const { data: read } = // await supabase
             .from('announcement_reads')
             .select('*')
             .eq('announcement_id', data.id)
@@ -40,7 +39,7 @@ const Announcements = ({ user }) => {
   const handleDismiss = async () => {
     setDismissed(true);
     if (user && announcement) {
-      await supabase.from('announcement_reads').insert([{
+      // await // supabase.from('announcement_reads').insert([{
         announcement_id: announcement.id,
         user_id: user.id
       }]);
