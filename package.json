@@ -9,8 +9,9 @@
     "dev": "npm --prefix frontend run dev"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
     "concurrently": "^8.2.2",
-    "ethers": "^6.13.1"
+    "convex": "^1.40.0",
+    "ethers": "^6.13.1",
+    "resend": "^3.2.0"
   }
 }

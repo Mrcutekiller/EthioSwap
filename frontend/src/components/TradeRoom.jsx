@@ -13,7 +13,7 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
     <div className="modal-overlay">
       <div className="card glass-card" style={{ maxWidth: '400px', width: '90%', padding: '24px', textAlign: 'center' }}>
         <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Rate your trade!</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>How was your experience with @{trade.buyer_id === ratedUserId ? trade.buyerName : trade.sellerName}?</p>
+        <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>How was your experience with @{trade.buyerId === ratedUserId ? trade.buyerName : trade.sellerName}?</p>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
           {[1, 2, 3, 4, 5].map(s => (
@@ -44,13 +44,13 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
 };
 
 const TradeRoom = () => {
-  const { user, trades, markTradeAsPaid, releaseEscrow, openDispute, submitRating, setError, setSuccess } = useAuth();
+  const { user, trades, markTradeAsPaid, releaseEscrow, cancelTrade, openDispute, submitRating, setError, setSuccess } = useAuth();
   const { t } = useTranslation();
   const [selectedTradeId, setSelectedTradeId] = useState(null);
   const [showRating, setShowRating] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
 
-  const activeTrade = trades.find(t => t.id === selectedTradeId);
+  const activeTrade = trades.find(t => t._id === selectedTradeId);
 
   useEffect(() => {
     if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') {
@@ -59,7 +59,8 @@ const TradeRoom = () => {
     }
 
     const interval = setInterval(() => {
-      const expires = new Date(activeTrade.timer_expires_at).getTime();
+      const created = new Date(activeTrade.createdAt).getTime();
+      const expires = created + (30 * 60 * 1000); // 30 mins window
       const now = new Date().getTime();
       const diff = expires - now;
 
@@ -78,23 +79,28 @@ const TradeRoom = () => {
 
   const handleMarkPaid = async () => {
     if (!window.confirm("Confirm that you have sent the payment?")) return;
-    await markTradeAsPaid(activeTrade.id, ''); // In real app, upload proof first
+    await markTradeAsPaid(activeTrade._id);
   };
 
   const handleRelease = async () => {
-    if (!window.confirm("Confirm that you have received the payment? This will release the USDT to the buyer.")) return;
-    await releaseEscrow(activeTrade.id);
+    if (!window.confirm("Confirm that you have received the payment? This will release the ETH to the buyer.")) return;
+    await releaseEscrow(activeTrade._id);
     setShowRating(true);
+  };
+
+  const handleCancel = async () => {
+    if (!window.confirm("Are you sure you want to cancel this trade?")) return;
+    await cancelTrade(activeTrade._id);
   };
 
   const handleOpenDispute = async () => {
     const reason = prompt("Why are you opening a dispute?");
-    if (reason) await openDispute(activeTrade.id, reason);
+    if (reason) await openDispute(activeTrade._id, reason);
   };
 
   const handleRatingSubmit = async (stars, review) => {
-    const ratedUserId = user.id === activeTrade.buyer_id ? activeTrade.seller_id : activeTrade.buyer_id;
-    await submitRating(activeTrade.id, ratedUserId, stars, review);
+    const ratedUserId = user._id === activeTrade.buyerId ? activeTrade.sellerId : activeTrade.buyerId;
+    // await submitRating(activeTrade._id, ratedUserId, stars, review);
     setShowRating(false);
   };
 
@@ -110,22 +116,22 @@ const TradeRoom = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {trades.map(trade => (
             <div 
-              key={trade.id} 
-              onClick={() => setSelectedTradeId(trade.id)}
+              key={trade._id} 
+              onClick={() => setSelectedTradeId(trade._id)}
               style={{
                 padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                background: selectedTradeId === trade.id ? 'rgba(245, 197, 24, 0.1)' : 'var(--bg-elevated)',
-                border: `1px solid ${selectedTradeId === trade.id ? '#f5c518' : 'var(--border)'}`,
+                background: selectedTradeId === trade._id ? 'rgba(245, 197, 24, 0.1)' : 'var(--bg-elevated)',
+                border: `1px solid ${selectedTradeId === trade._id ? '#f5c518' : 'var(--border)'}`,
                 transition: 'all 0.2s'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user.id === trade.buyer_id ? trade.sellerName : trade.buyerName}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user._id === trade.buyerId ? trade.sellerName : trade.buyerName}</span>
                 <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00d4a0' : '#f5c518' }}>
                   {trade.status.toUpperCase()}
                 </span>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>${trade.amount_eth.toFixed(2)} USDT</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{trade.amountEth.toFixed(4)} ETH</div>
             </div>
           ))}
         </div>
@@ -141,7 +147,7 @@ const TradeRoom = () => {
                 <Shield size={24} />
               </div>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Trade #{activeTrade.id.substring(0, 8)}</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Trade #{activeTrade._id.substring(0, 8)}</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-3)' }}>
                   <Clock size={14} /> {timeRemaining || 'Trade Locked'}
                 </div>
@@ -149,27 +155,30 @@ const TradeRoom = () => {
             </div>
             
             <div style={{ display: 'flex', gap: '10px' }}>
-              {user.id === activeTrade.buyer_id && activeTrade.status === 'payment_pending' && (
+              {user._id === activeTrade.buyerId && activeTrade.status === 'payment_pending' && (
                 <button className="btn btn-indigo" onClick={handleMarkPaid}>{t('I Have Sent Payment')}</button>
               )}
-              {user.id === activeTrade.seller_id && activeTrade.status === 'paid' && (
+              {user._id === activeTrade.sellerId && activeTrade.status === 'paid' && (
                 <button className="btn btn-teal" onClick={handleRelease}>{t('I Received Payment')}</button>
               )}
               {activeTrade.status !== 'completed' && activeTrade.status !== 'cancelled' && (
-                <button className="btn btn-ghost" style={{ color: '#ef4444' }} onClick={handleOpenDispute}>{t('Open Dispute')}</button>
+                <>
+                  <button className="btn btn-ghost" style={{ color: '#ef4444' }} onClick={handleCancel}>{t('Cancel Trade')}</button>
+                  <button className="btn btn-ghost" style={{ color: '#ef4444' }} onClick={handleOpenDispute}>{t('Open Dispute')}</button>
+                </>
               )}
             </div>
           </div>
 
           {/* Chat Component */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <TradeChat tradeId={activeTrade.id} sellerId={activeTrade.seller_id} buyerId={activeTrade.buyer_id} />
+            <TradeChat tradeId={activeTrade._id} sellerId={activeTrade.sellerId} buyerId={activeTrade.buyerId} />
           </div>
 
           {showRating && (
             <RatingModal 
               trade={activeTrade} 
-              ratedUserId={user.id === activeTrade.buyer_id ? activeTrade.seller_id : activeTrade.buyer_id} 
+              ratedUserId={user._id === activeTrade.buyerId ? activeTrade.sellerId : activeTrade.buyerId} 
               onClose={() => setShowRating(false)}
               onSubmit={handleRatingSubmit}
             />

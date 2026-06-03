@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
-import { supabase } from '../supabaseClient';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { notify } from '../lib/notify';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */
@@ -45,27 +46,12 @@ const WALLET_META = {
 /* ── Lazy KYC Images Viewer ─────────────────────────────────── */
 const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, kycSelfie, kycDocument }) => {
   const hasDirectDocs = kycIdFront || kycIdBack || kycSelfie || kycDocument;
-  const [images, setImages] = useState(null);
-  const [loading, setLoading] = useState(!hasDirectDocs);
+  const user = useQuery(api.users.get, { id: userId });
+  const loading = !user && !hasDirectDocs;
 
-  useEffect(() => {
-    if (hasDirectDocs) return;
-    const fetchImages = async () => {
-      const { data } = await supabase.from('users').select('kyc_id_front, kyc_id_back, kyc_selfie, kyc_document').eq('id', userId).single();
-      if (data) setImages({
-        kycIdFront: data.kyc_id_front,
-        kycIdBack: data.kyc_id_back,
-        kycSelfie: data.kyc_selfie,
-        kycDocument: data.kyc_document
-      });
-      setLoading(false);
-    };
-    fetchImages();
-  }, [userId, hasDirectDocs]);
-
-  const front = kycIdFront || images?.kycIdFront;
-  const back = kycIdBack || images?.kycIdBack || kycDocument || images?.kycDocument;
-  const selfie = kycSelfie || images?.kycSelfie;
+  const front = kycIdFront || user?.kycIdFront;
+  const back = kycIdBack || user?.kycIdBack || kycDocument || user?.kycDocument;
+  const selfie = kycSelfie || user?.kycSelfie;
 
   if (loading) {
     return (
@@ -130,17 +116,10 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
 
 /* ── Lazy Deposit Screenshot Viewer ─────────────────────────── */
 const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
-  const [screenshotUrl, setScreenshotUrl] = useState(undefined);
+  const deposit = useQuery(api.depositRequests.get, { id: requestId });
+  const screenshotUrl = deposit?.screenshotUrl;
 
-  useEffect(() => {
-    const fetchScreenshot = async () => {
-      const { data } = await supabase.from('deposit_requests').select('screenshot_url').eq('id', requestId).single();
-      setScreenshotUrl(data?.screenshot_url || null);
-    };
-    fetchScreenshot();
-  }, [requestId]);
-
-  if (screenshotUrl === undefined) {
+  if (deposit === undefined) {
     return (
       <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid rgba(255,255,255,0.07)' }} />
     );
@@ -157,11 +136,11 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
 
 /* ── Invite Helper Components ────────────────────────────── */
 const InviteStatusCard = ({ user, settings, showAlert }) => {
+  const updateSettings = useMutation(api.systemSettings.update);
   const manualUnlock = async () => {
     if (window.confirm("Are you sure you want to manually unlock the Invite & Earn program for ALL users?")) {
       try {
-        const { error } = await supabase.from('system_settings').update({ invite_earn_status: 'active' }).eq('id', settings.id);
-        if (error) throw error;
+        await updateSettings({ id: settings._id, updates: { inviteEarnStatus: 'active' } });
         showAlert("✓ Program unlocked successfully!");
       } catch (e) { showAlert(e.message, "error"); }
     }
@@ -171,30 +150,30 @@ const InviteStatusCard = ({ user, settings, showAlert }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Program Status</h3>
         <span className="pill-badge" style={{ 
-          background: settings?.invite_earn_status === 'active' ? 'rgba(0, 212, 160, 0.1)' : 'rgba(244, 63, 94, 0.1)', 
-          color: settings?.invite_earn_status === 'active' ? '#00d4a0' : '#f43f5e' 
+          background: settings?.inviteEarnStatus === 'active' ? 'rgba(0, 212, 160, 0.1)' : 'rgba(244, 63, 94, 0.1)', 
+          color: settings?.inviteEarnStatus === 'active' ? '#00d4a0' : '#f43f5e' 
         }}>
-          <span className="pill-badge-dot" style={{ background: settings?.invite_earn_status === 'active' ? '#00d4a0' : '#f43f5e' }} />
-          {settings?.invite_earn_status?.toUpperCase() || 'LOCKED'}
+          <span className="pill-badge-dot" style={{ background: settings?.inviteEarnStatus === 'active' ? '#00d4a0' : '#f43f5e' }} />
+          {settings?.inviteEarnStatus?.toUpperCase() || 'LOCKED'}
         </span>
       </div>
 
-      {settings?.invite_earn_status !== 'active' && (
+      {settings?.inviteEarnStatus !== 'active' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
             <span style={{ color: '#8b92a8' }}>Progress to Auto-Unlock</span>
-            <span style={{ fontWeight: 700 }}>{settings?.current_verified_users || 0} / {settings?.invite_unlock_target || 200} users</span>
+            <span style={{ fontWeight: 700 }}>{settings?.currentVerifiedUsers || 0} / {settings?.inviteUnlockTarget || 200} users</span>
           </div>
           <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{ 
-              width: `${Math.min(100, ((settings?.current_verified_users || 0) / (settings?.invite_unlock_target || 200)) * 100)}%`, 
+              width: `${Math.min(100, ((settings?.currentVerifiedUsers || 0) / (settings?.inviteUnlockTarget || 200)) * 100)}%`, 
               height: '100%', 
               background: '#00d4a0',
               transition: 'width 0.5s ease'
             }} />
           </div>
           <p style={{ fontSize: '12px', color: '#4e5567', fontStyle: 'italic' }}>
-            ⚠️ Auto-unlocks at {settings?.invite_unlock_target || 200} verified & active users.
+            ⚠️ Auto-unlocks at {settings?.inviteUnlockTarget || 200} verified & active users.
           </p>
           <button 
             onClick={manualUnlock}
@@ -210,22 +189,7 @@ const InviteStatusCard = ({ user, settings, showAlert }) => {
 };
 
 const InviteGlobalStatsCard = ({ user }) => {
-  const [stats, setStats] = useState(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      const { data: invites } = await supabase.from('invite_rewards').select('*');
-      if (invites) {
-        setStats({
-          totalInvites: invites.length,
-          totalRewardsPaid: invites.filter(r => r.reward_status === 'paid').reduce((s, r) => s + r.reward_amount, 0),
-          totalActive: invites.filter(r => r.reward_status === 'paid').length,
-          totalPending: invites.filter(r => r.reward_status === 'pending').length
-        });
-      }
-    };
-    fetchStats();
-  }, [user.id]);
+  const stats = useQuery(api.inviteRewards.getStats);
 
   return (
     <div className="card-premium">
@@ -253,24 +217,7 @@ const InviteGlobalStatsCard = ({ user }) => {
 };
 
 const TopInvitersTable = ({ user }) => {
-  const [topInviters, setTopInviters] = useState([]);
-
-  useEffect(() => {
-    const fetchTopInviters = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('username, successful_invites, total_invite_earnings')
-        .gt('successful_invites', 0)
-        .order('successful_invites', { ascending: false })
-        .limit(5);
-      if (data) setTopInviters(data.map(u => ({
-        username: u.username,
-        invites: u.successful_invites,
-        earned: u.total_invite_earnings
-      })));
-    };
-    fetchTopInviters();
-  }, [user.id]);
+  const topInviters = useQuery(api.inviteRewards.listTopInviters, { limit: 5 }) || [];
 
   return (
     <div className="card-premium">
@@ -289,8 +236,8 @@ const TopInvitersTable = ({ user }) => {
             <tr key={i}>
               <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
               <td style={{ fontWeight: 600 }}>@{inv.username}</td>
-              <td>{inv.invites}</td>
-              <td style={{ color: '#00d4a0', fontWeight: 700 }}>${inv.earned.toFixed(2)}</td>
+              <td>{inv.successfulInvites || 0}</td>
+              <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(inv.totalInviteEarnings || 0).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
@@ -310,8 +257,8 @@ const InviteSettingsCard = ({ settings, updateSettings }) => {
             type="number" 
             step="0.01" 
             className="input-premium" 
-            value={settings?.invite_reward_amount || 0.50} 
-            onChange={async (e) => await updateSettings({ invite_reward_amount: parseFloat(e.target.value) })}
+            value={settings?.inviteRewardAmount || 0.50} 
+            onChange={async (e) => await updateSettings({ id: settings._id, updates: { inviteRewardAmount: parseFloat(e.target.value) } })}
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -329,15 +276,15 @@ const InviteSettingsCard = ({ settings, updateSettings }) => {
               type="number" 
               step="0.1" 
               className="input-premium" 
-              value={settings?.p2p_commission || 0} 
-              onChange={async (e) => await updateSettings({ p2p_commission: parseFloat(e.target.value) })}
+              value={settings?.p2pCommission || 0} 
+              onChange={async (e) => await updateSettings({ id: settings._id, updates: { p2pCommission: parseFloat(e.target.value) } })}
             />
             <button 
-              onClick={async () => await updateSettings({ is_p2p_free_period: !settings?.is_p2p_free_period })}
-              className={settings?.is_p2p_free_period ? "btn-premium-primary" : "btn-premium-ghost"}
+              onClick={async () => await updateSettings({ id: settings._id, updates: { isP2pFreePeriod: !settings?.isP2pFreePeriod } })}
+              className={settings?.isP2pFreePeriod ? "btn-premium-primary" : "btn-premium-ghost"}
               style={{ whiteSpace: 'nowrap' }}
             >
-              {settings?.is_p2p_free_period ? "Free Period ON" : "Free Period OFF"}
+              {settings?.isP2pFreePeriod ? "Free Period ON" : "Free Period OFF"}
             </button>
           </div>
         </div>
@@ -426,80 +373,40 @@ const AdminPanel = ({ user }) => {
     setTimeout(() => setAlertMsg(null), 3500);
   };
 
-  // ── Supabase Data Fetching ──────────────────────────────────
-  const [settings, setSettings] = useState(null);
-  const [allUsersList, setAllUsersList] = useState([]);
-  const [revenue, setRevenue] = useState(null);
+  // ── Convex Data Fetching ──────────────────────────────────
+  const settings = useQuery(api.systemSettings.get);
+  const allUsersList = useQuery(api.users.listAll) || [];
+  const kycQueue = useQuery(api.users.listKycQueue) || [];
+  const auditLogs = useQuery(api.adminAuditLogs.list) || [];
+  const disputes = useQuery(api.trades.listDisputed) || [];
+  const supportTickets = useQuery(api.supportTickets.listAll) || [];
+  const allReviews = useQuery(api.reviews.listAll) || [];
+
+  // Mutations
+  const updateSettingsMutation = useMutation(api.systemSettings.update);
+  const addAuditLog = useMutation(api.adminAuditLogs.insert);
+  const updateUserStatus = useMutation(api.users.updateStatus);
+  const updateKycStatus = useMutation(api.users.updateKycStatus);
+  const removeUserMutation = useMutation(api.users.remove);
+  const addWarningMutation = useMutation(api.users.addWarning);
+  const replyToTicket = useMutation(api.supportTickets.reply);
+  const closeTicket = useMutation(api.supportTickets.close);
+
   const [adminEarnings, setAdminEarnings] = useState(null);
-  const [kycQueue, setKycQueue] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [disputes, setDisputes] = useState([]);
-  const [supportTickets, setSupportTickets] = useState([]);
-  const [allReviews, setAllReviews] = useState([]);
-  const [reviewFilterStatus, setReviewFilterStatus] = useState('all');
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return;
-
-    const fetchAllData = async () => {
-      // Settings
-      const { data: settingsData } = await supabase.from('system_settings').select('*').limit(1).single();
-      setSettings(settingsData);
-
-      // Users
-      const { data: usersData } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-      setAllUsersList(usersData || []);
-
-      // KYC Queue
-      const { data: kycData } = await supabase.from('users').select('*').in('kyc_status', ['pending', 'submitted']).order('created_at', { ascending: false });
-      setKycQueue(kycData || []);
-
-      // Audit Logs
-      const { data: logsData } = await supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false });
-      setAuditLogs(logsData || []);
-
-      // Disputes
-      const { data: disputesData } = await supabase.from('trades').select('*, buyer:users!buyer_id(username), seller:users!seller_id(username)').eq('status', 'disputed').order('created_at', { ascending: false });
-      setDisputes(disputesData || []);
-
-      // Support
-      const { data: supportData } = await supabase.from('support_tickets').select('*').order('updated_at', { ascending: false });
-      setSupportTickets(supportData || []);
-
-      // Reviews
-      const { data: reviewsData } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
-      setAllReviews(reviewsData || []);
-
-      // Admin Earnings (Mock or calculated)
-      setAdminEarnings({ walletBalance: settingsData?.collected_fees_eth || 0 });
-    };
-
-    fetchAllData();
-
-    // Subscriptions
-    const usersSub = supabase.channel('admin-users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchAllData).subscribe();
-    const tradesSub = supabase.channel('admin-trades').on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, fetchAllData).subscribe();
-    const supportSub = supabase.channel('admin-support').on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchAllData).subscribe();
-
-    return () => {
-      usersSub.unsubscribe();
-      tradesSub.unsubscribe();
-      supportSub.unsubscribe();
-    };
-  }, [user]);
+    if (settings) {
+      setAdminEarnings({ walletBalance: settings.collectedFeesETH || 0 });
+    }
+  }, [settings]);
 
   const [selectedUserTxs, setSelectedUserTxs] = useState([]);
+  const userTxs = useQuery(api.trades.listForUser, selectedUserDetailId ? { userId: selectedUserDetailId } : "skip");
+  
   useEffect(() => {
-    if (selectedUserDetailId) {
-      const fetchUserTxs = async () => {
-        const { data } = await supabase.from('transactions').select('*').eq('user_id', selectedUserDetailId).order('created_at', { ascending: false });
-        setSelectedUserTxs(data || []);
-      };
-      fetchUserTxs();
-    }
-  }, [selectedUserDetailId]);
+    if (userTxs) setSelectedUserTxs(userTxs);
+  }, [userTxs]);
 
-  // ── Settings state ──────────────────────────────────────────
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
   const [etbRateSell,      setEtbRateSell]     = useState('');
@@ -532,7 +439,7 @@ const AdminPanel = ({ user }) => {
   // ── Support auto-refresh ──────────────────────────────────────
   useEffect(() => {
     if (selectedTicket) {
-      const updated = supportTickets.find(t => t.id === selectedTicket.id);
+      const updated = supportTickets.find(t => t._id === selectedTicket._id);
       if (updated) setSelectedTicket(updated);
     }
   }, [supportTickets]);
@@ -564,24 +471,16 @@ const AdminPanel = ({ user }) => {
     if (!selectedUserDetailId || !warnMessage.trim()) return;
     setWarnLoading(true);
     try {
-      const { data: userToWarn } = await supabase.from('users').select('warnings').eq('id', selectedUserDetailId).single();
-      const newWarning = {
-        id: Math.random().toString(36).substring(2, 9),
-        message: warnMessage,
-        createdAt: new Date().toISOString()
-      };
-      const updatedWarnings = [...(userToWarn?.warnings || []), newWarning];
-      
-      await supabase.from('users').update({ warnings: updatedWarnings }).eq('id', selectedUserDetailId);
+      await addWarningMutation({ id: selectedUserDetailId, message: warnMessage });
       
       // Add audit log
-      await supabase.from('admin_audit_logs').insert([{
-        admin_id: user.id,
-        admin_username: user.username,
+      await addAuditLog({
+        adminId: user._id,
+        adminUsername: user.username,
         action: 'warn_user',
-        target_id: selectedUserDetailId,
+        targetId: selectedUserDetailId,
         details: `Issued warning: ${warnMessage}`
-      }]);
+      });
 
       showAlert("⚠️ User warning has been issued successfully.");
       setWarnMessage('');
@@ -596,15 +495,15 @@ const AdminPanel = ({ user }) => {
     const actionText = currentSuspended ? "activate" : "suspend";
     if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
     try {
-      await supabase.from('users').update({ is_suspended: !currentSuspended }).eq('id', userId);
+      await updateUserStatus({ id: userId, isSuspended: !currentSuspended });
       
-      await supabase.from('admin_audit_logs').insert([{
-        admin_id: user.id,
-        admin_username: user.username,
+      await addAuditLog({
+        adminId: user._id,
+        adminUsername: user.username,
         action: currentSuspended ? 'unsuspend_user' : 'suspend_user',
-        target_id: userId,
+        targetId: userId,
         details: `${currentSuspended ? 'Unsuspended' : 'Suspended'} user account`
-      }]);
+      });
 
       showAlert(`User account successfully ${currentSuspended ? 'activated' : 'suspended'}.`);
     } catch (err) {
@@ -613,20 +512,20 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleRemoveUser = async (userId, username) => {
-    if (userId === user.id) {
+    if (userId === user._id) {
       showAlert("❌ Safety Guard: You cannot delete your own administrator account.", "error");
       return false;
     }
     if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return false;
     try {
-      await supabase.from('users').delete().eq('id', userId);
+      await removeUserMutation({ id: userId });
       
-      await supabase.from('admin_audit_logs').insert([{
-        admin_id: user.id,
-        admin_username: user.username,
+      await addAuditLog({
+        adminId: user._id,
+        adminUsername: user.username,
         action: 'remove_user',
         details: `Permanently removed user: @${username}`
-      }]);
+      });
 
       showAlert("User account permanently removed.");
       return true;

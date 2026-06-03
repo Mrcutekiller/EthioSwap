@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../components/Logo.jsx';
-import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 // Animated Count-Up component using Intersection Observer
 const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isDecimal = false }) => {
@@ -134,8 +135,10 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  // Stats State
-  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '—', scams: 0 });
+  // Convex Data
+  const convexStats = useQuery(api.stats.get);
+  const convexReviews = useQuery(api.reviews.listApproved);
+  const submitReviewMutation = useMutation(api.reviews.create);
 
   const buyRate = systemSettings?.etbRatePerDollar ?? 190.00;
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 186.00;
@@ -166,44 +169,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [prefersReducedMotion]);
 
-  // Fetch live stats from Supabase
-  const fetchStats = async () => {
-    if (!isSupabaseConfigured) return;
-    try {
-      const [{ count: traders }, tradesRes, reviewsRes, { count: scams }] = await Promise.all([
-        supabase.from('users').select('id', { count: 'exact', head: true }).eq('kyc_status', 'approved'),
-        supabase.from('trades').select('amount_usd').eq('status', 'completed'),
-        supabase.from('reviews').select('rating').eq('is_approved', true),
-        supabase.from('disputes').select('id', { count: 'exact', head: true }).eq('outcome', 'fraud')
-      ]);
-
-      const volume = tradesRes.data?.reduce((s, t) => s + (t.amount_usd || 0), 0) || 0;
-      const avg = reviewsRes.data?.length
-        ? (reviewsRes.data.reduce((s, r) => s + r.rating, 0) / reviewsRes.data.length).toFixed(1)
-        : '—';
-
-      setStats({ traders: traders || 0, volume, avg, scams: scams || 0 });
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchReviews = async () => {
-    if (!isSupabaseConfigured) return;
-    try {
-      const { data } = await supabase.from('reviews')
-        .select('*')
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
-      if (data) setReviews(data);
-    } catch {}
-  };
-
-  useEffect(() => {
-    fetchStats();
-    fetchReviews();
-  }, []);
+  const stats = convexStats || { traders: 0, volume: 0, avg: '—', scams: 0 };
+  const reviews = convexReviews || [];
 
   // Update live rates
   useEffect(() => {
@@ -275,13 +242,12 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     }
     setSubmitLoading(true);
     try {
-      const { error } = await supabase.from('reviews').insert([{
-        user_id: user.id,
+      await submitReviewMutation({
+        userId: user._id,
         username: user.username,
         rating: reviewRating,
         content: reviewContent.trim()
-      }]);
-      if (error) throw error;
+      });
       setReviewSuccess(true);
       setReviewContent('');
       setReviewRating(5);

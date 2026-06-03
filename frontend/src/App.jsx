@@ -15,7 +15,7 @@ import { NotificationCenter, useNotifCount } from './components/NotificationCent
 import SupportWidget from './components/SupportWidget.jsx';
 import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
-import { supabase } from './supabaseClient';
+import { convex } from './convexClient';
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
@@ -499,27 +499,17 @@ const AppShell = () => {
 
   const fetchNotifications = async () => {
     if (!user) return;
-    const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    const data = await convex.query(api.notifications.listForUser, { userId: user._id });
     if (data) setNotifications(data);
   };
 
+  const notificationsFromQuery = useQuery(api.notifications.listForUser, user ? { userId: user._id } : "skip") || [];
+
   React.useEffect(() => {
-    if (!user) return;
-    fetchNotifications();
-
-    const sub = supabase
-      .channel('notifs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-        setNotifications(prev => [payload.new, ...prev]);
-        // Use browser notification or alert if supported
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification(payload.new.title, { body: payload.new.body });
-        }
-      })
-      .subscribe();
-
-    return () => sub.unsubscribe();
-  }, [user]);
+    if (notificationsFromQuery.length > 0) {
+      setNotifications(notificationsFromQuery);
+    }
+  }, [notificationsFromQuery]);
 
   const getInitials = (name) => (name || 'U').substring(0, 2).toUpperCase();
   const lockMethod = localStorage.getItem('ethioswap_lock_method') || 'pin';
