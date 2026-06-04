@@ -67,19 +67,24 @@ export const authenticate = query({
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    // Try by email index first
+    let user = await ctx.db
       .query("users")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("email"), args.identifier),
-          q.eq(q.field("username"), args.identifier)
-        )
-      )
-      .unique();
+      .withIndex("by_email", (q) => q.eq("email", args.identifier))
+      .first();
+
+    // Fall back to username index (handles admins whose email field is missing
+    // but their username IS the email address)
+    if (!user) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", args.identifier))
+        .first();
+    }
 
     if (!user) return null;
     if (user.passwordHash !== args.password) return null;
-    
+
     // Don't return the password hash to the client
     const { passwordHash, ...safeUser } = user;
     return safeUser;
