@@ -17,7 +17,7 @@ import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { convex } from './convexClient';
 import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "convex-api";
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
