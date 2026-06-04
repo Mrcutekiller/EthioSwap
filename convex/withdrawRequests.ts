@@ -71,12 +71,12 @@ export const updateStatus = mutation({
 });
 
 export const listForUser = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.any() },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("withdrawRequests")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .order("desc")
-      .collect();
+    if (!args.userId) return [];
+    const all = await ctx.db.query("withdrawRequests").collect();
+    return all
+      .filter((r) => String(r.userId) === String(args.userId))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 });

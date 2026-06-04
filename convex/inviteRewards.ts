@@ -33,15 +33,14 @@ export const listTopInviters = query({
 });
 
 export const listForUser = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.any() },
   handler: async (ctx, args) => {
-    const rewards = await ctx.db
-      .query("inviteRewards")
-      .filter((q) => q.eq(q.field("referrerId"), args.userId))
-      .collect();
+    if (!args.userId) return [];
+    const rewards = await ctx.db.query("inviteRewards").collect();
+    const userRewards = rewards.filter((r) => String(r.referrerId) === String(args.userId));
     
     const enriched = [];
-    for (const r of rewards) {
+    for (const r of userRewards) {
       const referredUser = await ctx.db.get(r.referredId);
       enriched.push({
         ...r,
