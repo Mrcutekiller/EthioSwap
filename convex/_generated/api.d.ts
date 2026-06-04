@@ -16,6 +16,7 @@ import type * as inviteRewards from "../inviteRewards.js";
 import type * as listings from "../listings.js";
 import type * as notifications from "../notifications.js";
 import type * as reviews from "../reviews.js";
+import type * as seed from "../seed.js";
 import type * as stats from "../stats.js";
 import type * as supportTickets from "../supportTickets.js";
 import type * as systemSettings from "../systemSettings.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   listings: typeof listings;
   notifications: typeof notifications;
   reviews: typeof reviews;
+  seed: typeof seed;
   stats: typeof stats;
   supportTickets: typeof supportTickets;
   systemSettings: typeof systemSettings;
