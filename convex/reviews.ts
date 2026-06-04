@@ -22,7 +22,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("reviews", {
       ...args,
-      isApproved: false,
+      isApproved: true,
       createdAt: new Date().toISOString(),
     });
   },

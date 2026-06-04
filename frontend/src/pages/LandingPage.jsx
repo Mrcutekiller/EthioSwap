@@ -173,18 +173,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const stats = convexStats || { traders: 0, volume: 0, avg: '—', scams: 0 };
   const reviews = convexReviews || [];
 
-  // Update live rates
+  // Sync live rate with database configuration
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveRate(prev => {
-        const delta = (Math.random() - 0.5) * 0.4;
-        const newRate = Math.round((prev + delta) * 100) / 100;
-        setRateTimestamp(new Date().toLocaleTimeString());
-        return newRate;
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    setLiveRate(buyRate);
+    setRateTimestamp(new Date().toLocaleTimeString());
+  }, [buyRate]);
 
   // Intersection Observer for steps timeline
   useEffect(() => {

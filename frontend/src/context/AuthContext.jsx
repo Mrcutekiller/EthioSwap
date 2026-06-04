@@ -250,7 +250,7 @@ export const AuthProvider = ({ children }) => {
         rating,
         content,
       });
-      setSuccess('Review submitted! It will be live after admin approval.');
+      setSuccess('Review submitted successfully!');
     } catch (err) {
       setError(err.message);
     }
