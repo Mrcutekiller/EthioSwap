@@ -1,8 +1,9 @@
+"use node";
+
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendNotification = action({
   args: {
@@ -17,7 +18,9 @@ export const sendNotification = action({
     }
 
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
       const { data, error } = await resend.emails.send({
+
         from: "EthioSwap <notifications@ethioswap.com>",
         to: [args.to],
         subject: args.subject,

@@ -188,3 +188,11 @@ export const updateBalances = mutation({
     });
   },
 });
+
+export const remove = mutation({
+  args: { id: v.id("users") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+

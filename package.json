@@ -9,9 +9,12 @@
     "dev": "npm --prefix frontend run dev"
   },
   "dependencies": {
+    "@convex-dev/auth": "^0.0.93",
     "concurrently": "^8.2.2",
     "convex": "^1.40.0",
     "ethers": "^6.13.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "resend": "^3.2.0"
   }
 }

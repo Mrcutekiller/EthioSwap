@@ -8,13 +8,20 @@
  * @module
  */
 
+import type * as adminAuditLogs from "../adminAuditLogs.js";
+import type * as depositRequests from "../depositRequests.js";
+import type * as emails from "../emails.js";
 import type * as http from "../http.js";
+import type * as inviteRewards from "../inviteRewards.js";
 import type * as listings from "../listings.js";
+import type * as notifications from "../notifications.js";
 import type * as reviews from "../reviews.js";
 import type * as stats from "../stats.js";
+import type * as supportTickets from "../supportTickets.js";
 import type * as systemSettings from "../systemSettings.js";
 import type * as trades from "../trades.js";
 import type * as users from "../users.js";
+import type * as withdrawRequests from "../withdrawRequests.js";
 
 import type {
   ApiFromModules,
@@ -23,13 +30,20 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adminAuditLogs: typeof adminAuditLogs;
+  depositRequests: typeof depositRequests;
+  emails: typeof emails;
   http: typeof http;
+  inviteRewards: typeof inviteRewards;
   listings: typeof listings;
+  notifications: typeof notifications;
   reviews: typeof reviews;
   stats: typeof stats;
+  supportTickets: typeof supportTickets;
   systemSettings: typeof systemSettings;
   trades: typeof trades;
   users: typeof users;
+  withdrawRequests: typeof withdrawRequests;
 }>;
 
 /**

@@ -179,3 +179,26 @@ export const cancelTrade = mutation({
     return { success: true };
   },
 });
+
+export const listDisputed = query({
+  args: {},
+  handler: async (ctx) => {
+    const disputedTrades = await ctx.db
+      .query("trades")
+      .filter((q) => q.eq(q.field("status"), "disputed"))
+      .collect();
+
+    return await Promise.all(
+      disputedTrades.map(async (t) => {
+        const buyer = t.buyerId ? await ctx.db.get(t.buyerId) : null;
+        const seller = await ctx.db.get(t.sellerId);
+        return {
+          ...t,
+          buyerName: buyer?.username,
+          sellerName: seller?.username,
+        };
+      })
+    );
+  },
+});
+
