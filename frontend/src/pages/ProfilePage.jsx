@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMutation } from "convex/react";
-import { api } from "convex-api";
+import { api } from "../../../convex/_generated/api";
 import { 
   Copy, 
   Shield, 

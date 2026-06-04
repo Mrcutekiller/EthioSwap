@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMutation } from "convex/react";
-import { api } from "convex-api";
+import { api } from "../../../convex/_generated/api";
 import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock, Moon, Sun, Monitor } from 'lucide-react';
 
 /* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
