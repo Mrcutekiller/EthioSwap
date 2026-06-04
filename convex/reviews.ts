@@ -49,10 +49,18 @@ export const remove = mutation({
   },
 });
 
+export const approve = mutation({
+  args: { id: v.id("reviews") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { isApproved: true });
+  },
+});
+
 export const listAll = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("reviews").order("desc").collect();
   },
 });
+
 

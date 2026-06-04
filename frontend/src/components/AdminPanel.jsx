@@ -391,6 +391,8 @@ const AdminPanel = ({ user }) => {
   const addWarningMutation = useMutation(api.users.addWarning);
   const replyToTicket = useMutation(api.supportTickets.reply);
   const closeTicket = useMutation(api.supportTickets.close);
+  const approveReviewMutation = useMutation(api.reviews.approve);
+  const removeReviewMutation = useMutation(api.reviews.remove);
 
   const [adminEarnings, setAdminEarnings] = useState(null);
 
@@ -620,24 +622,8 @@ const AdminPanel = ({ user }) => {
 
   const handleApproveReview = async (reviewId) => {
     try {
-      // Mocked for Convex migration
-      const review = { user_id: 'mock-user' };
-      
-      // Notify user mock
-      const userData = { email: 'mock@test.com', username: 'mockuser' };
-      if (userData) {
-        notify({
-          userId: review.user_id,
-          userEmail: userData.email,
-          userName: userData.username,
-          type: 'review_approved',
-          title: 'Review Approved!',
-          body: 'Your review has been approved and is now live on EthioSwap!'
-        });
-      }
-
+      await approveReviewMutation({ id: reviewId });
       showAlert('✓ Review approved successfully!');
-      setAllReviews(prev => prev.map(r => r.id === reviewId ? { ...r, is_approved: true } : r));
     } catch (err) {
       showAlert('Error approving review: ' + err.message, 'error');
     }
@@ -646,11 +632,8 @@ const AdminPanel = ({ user }) => {
   const handleRejectReview = async (reviewId) => {
     if (!window.confirm('Are you sure you want to reject and delete this review?')) return;
     try {
-      // Mocked for Convex migration
-      const error = null;
-      if (error) throw error;
+      await removeReviewMutation({ id: reviewId });
       showAlert('Review rejected and deleted.');
-      setAllReviews(prev => prev.filter(r => r.id !== reviewId));
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
@@ -677,13 +660,11 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      // Mocked for Convex migration
-      const newMessage = {
-        senderId: user.id,
-        message: supportReplyText,
-        timestamp: new Date().toISOString()
-      };
-      console.log('Would reply to ticket:', selectedTicket.id, newMessage);
+      await replyToTicket({
+        id: selectedTicket._id,
+        senderId: user?._id || 'usr_admin',
+        text: supportReplyText.trim()
+      });
       setSupportReplyText('');
     } catch (e) { showAlert(e.message, 'error'); }
   };
@@ -1808,7 +1789,7 @@ const AdminPanel = ({ user }) => {
               const matchesSearch = !depositSearchQuery || 
                 req.username?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
                 req.senderReference?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
-                req.id?.toLowerCase().includes(depositSearchQuery.toLowerCase());
+                req._id?.toString().toLowerCase().includes(depositSearchQuery.toLowerCase());
               
               const statusMap = {
                 completed: 'approved',
@@ -1911,8 +1892,8 @@ const AdminPanel = ({ user }) => {
                         const globalIndex = (depositCurrentPage - 1) * pageSize + idx + 1;
                         return (
                           <tr
-                            key={req.id}
-                            onClick={() => setSelectedDepositDetailId(req.id)}
+                            key={req._id}
+                            onClick={() => setSelectedDepositDetailId(req._id)}
                             className="table-row-clickable"
                           >
                             <td style={{ fontWeight: 600 }}>{globalIndex}</td>
@@ -1943,15 +1924,15 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleApproveDeposit(req.id)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleApproveDeposit(req._id)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
                                     ✓ Approve
                                   </button>
-                                  <button onClick={() => handleRejectDeposit(req.id)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleRejectDeposit(req._id)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
                                     Reject
                                   </button>
                                 </div>
                               ) : (
-                                <button onClick={() => setSelectedDepositDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                <button onClick={() => setSelectedDepositDetailId(req._id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
                                   View Details
                                 </button>
                               )}
@@ -1998,7 +1979,7 @@ const AdminPanel = ({ user }) => {
               const matchesSearch = !withdrawSearchQuery || 
                 req.username?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
                 req.destinationAddress?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
-                req.id?.toLowerCase().includes(withdrawSearchQuery.toLowerCase());
+                req._id?.toString().toLowerCase().includes(withdrawSearchQuery.toLowerCase());
               
               const statusMap = {
                 completed: 'approved',
@@ -2098,8 +2079,8 @@ const AdminPanel = ({ user }) => {
                         const globalIndex = (withdrawCurrentPage - 1) * pageSize + idx + 1;
                         return (
                           <tr
-                            key={req.id}
-                            onClick={() => setSelectedWithdrawDetailId(req.id)}
+                            key={req._id}
+                            onClick={() => setSelectedWithdrawDetailId(req._id)}
                             className="table-row-clickable"
                           >
                             <td style={{ fontWeight: 600 }}>{globalIndex}</td>
@@ -2130,15 +2111,15 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleWithdrawal(req.id, true)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleWithdrawal(req._id, true)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
                                     ✓ Approve
                                   </button>
-                                  <button onClick={() => handleWithdrawal(req.id, false)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleWithdrawal(req._id, false)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
                                     Reject
                                   </button>
                                 </div>
                               ) : (
-                                <button onClick={() => setSelectedWithdrawDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                <button onClick={() => setSelectedWithdrawDetailId(req._id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
                                   View Details
                                 </button>
                               )}
@@ -2252,8 +2233,8 @@ const AdminPanel = ({ user }) => {
                         </tr>
                       ) : filteredKyc.map(u => (
                         <tr
-                          key={u.id}
-                          onClick={() => setSelectedKycDetailId(u.id.toString())}
+                          key={u._id}
+                          onClick={() => setSelectedKycDetailId(u._id)}
                           className="table-row-clickable"
                         >
                           <td>
@@ -2274,14 +2255,14 @@ const AdminPanel = ({ user }) => {
                           <td style={{ color: '#8b92a8' }}>{u.kycData?.age || 'N/A'}</td>
                           <td>
                             <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
-                              {u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}
+                              {u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}
                             </span>
                           </td>
                           <td>
                             <StatusBadge status={u.kycStatus} />
                           </td>
                           <td onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setSelectedKycDetailId(u.id.toString())} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                            <button onClick={() => setSelectedKycDetailId(u._id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
                               Visual Checking →
                             </button>
                           </td>
@@ -2309,10 +2290,10 @@ const AdminPanel = ({ user }) => {
                     ⚖️ All disputes cleared. Excellent platform compliance!
                   </div>
                 ) : disputes.map(trade => (
-                  <div key={trade.id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div key={trade._id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade.id.toString().substring(0, 8).toUpperCase()}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade._id.substring(0, 8).toUpperCase()}</div>
                         <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
                           Seller: <strong>@{trade.sellerUsername}</strong> | Buyer: <strong>@{trade.buyerUsername}</strong>
                         </div>
@@ -2335,10 +2316,10 @@ const AdminPanel = ({ user }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={() => handleDispute(trade.id.toString(), 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
+                      <button onClick={() => handleDispute(trade._id, 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
                         ✓ Force Release to Buyer (@{trade.buyerUsername})
                       </button>
-                      <button onClick={() => handleDispute(trade.id.toString(), 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
+                      <button onClick={() => handleDispute(trade._id, 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
                         ✗ Force Refund to Seller (@{trade.sellerUsername})
                       </button>
                     </div>
@@ -2362,14 +2343,14 @@ const AdminPanel = ({ user }) => {
                   {supportTickets.length === 0 ? (
                     <div style={{ color: '#4e5567', textAlign: 'center', padding: '20px' }}>No support requests</div>
                   ) : supportTickets.map(t => {
-                    const isSelected = selectedTicket?.id === t.id;
+                    const isSelected = selectedTicket?._id === t._id;
                     const hasMessages = t.messages && t.messages.length > 0;
                     const lastMsg = hasMessages ? t.messages[t.messages.length - 1] : null;
                     const isUnreadByAdmin = lastMsg && lastMsg.senderId !== user?.id && lastMsg.senderId !== 'usr_admin' && t.status === 'open';
 
                     return (
                       <div
-                        key={t.id}
+                        key={t._id}
                         onClick={() => setSelectedTicket(t)}
                         style={{
                           background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#0a0c12',
@@ -2409,7 +2390,7 @@ const AdminPanel = ({ user }) => {
                         <button
                           onClick={async () => {
                             if (!window.confirm("Close this support ticket?")) return;
-                            await closeTicket({ ticketId: selectedTicket.id });
+                            await closeTicket({ id: selectedTicket._id });
                             showAlert("Support ticket closed.");
                           }}
                           className="btn-premium-ghost"
@@ -2501,7 +2482,7 @@ const AdminPanel = ({ user }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
                 <TopInvitersTable user={user} />
-                <InviteSettingsCard settings={settings} updateSettings={updateSettings} />
+                <InviteSettingsCard settings={settings} updateSettings={updateSettingsMutation} />
               </div>
             </div>
           )}
@@ -2590,15 +2571,17 @@ const AdminPanel = ({ user }) => {
                             No users registered in this directory matching filters
                           </td>
                         </tr>
-                      ) : filteredUsers.map(u => (
-                        <tr
-                          key={u.id}
-                          onClick={() => {
-                            setSelectedUserDetailId(u.id.toString());
-                            setUserDrawerTab('profile'); // Reset drawer sub-tabs
-                          }}
-                          className="table-row-clickable"
-                        >
+                      ) : filteredUsers.map(u => {
+                        const isMe = u._id === user?._id;
+                        return (
+                          <tr
+                            key={u._id}
+                            onClick={() => {
+                              setSelectedUserDetailId(u._id);
+                              setUserDrawerTab('profile'); // Reset drawer sub-tabs
+                            }}
+                            className="table-row-clickable"
+                          >
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
@@ -2642,7 +2625,7 @@ const AdminPanel = ({ user }) => {
                           <td onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => {
-                                setSelectedUserDetailId(u.id.toString());
+                                setSelectedUserDetailId(u._id);
                                 setUserDrawerTab('profile');
                               }}
                               className="btn-premium-ghost"
@@ -2653,7 +2636,7 @@ const AdminPanel = ({ user }) => {
                             {!isMe && (
                               <button
                                 onClick={async () => {
-                                  if (await handleRemoveUser(u.id.toString(), u.username)) {
+                                  if (await handleRemoveUser(u._id, u.username)) {
                                     // Refresh or update local state if needed
                                   }
                                 }}
@@ -2666,7 +2649,7 @@ const AdminPanel = ({ user }) => {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      ); })}
                     </tbody>
                   </table>
                 </div>
@@ -2739,7 +2722,7 @@ const AdminPanel = ({ user }) => {
                         }
 
                         return (
-                          <tr key={log.id}>
+                          <tr key={log._id}>
                             <td style={{ color: '#8b92a8', fontSize: '13px', whiteSpace: 'nowrap' }}>
                               {new Date(log.createdAt).toLocaleString()}
                             </td>
@@ -2768,8 +2751,8 @@ const AdminPanel = ({ user }) => {
           {/* ════ REVIEWS MANAGEMENT PAGE per Item #12 ════ */}
           {activeTab === 'reviews' && (() => {
             const filteredReviews = allReviews.filter(r => {
-              if (reviewFilterStatus === 'pending') return !r.is_approved;
-              if (reviewFilterStatus === 'approved') return r.is_approved;
+              if (reviewFilterStatus === 'pending') return !r.isApproved;
+              if (reviewFilterStatus === 'approved') return r.isApproved;
               return true;
             });
 
@@ -2826,7 +2809,7 @@ const AdminPanel = ({ user }) => {
                             <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No reviews found</td>
                           </tr>
                         ) : filteredReviews.map((rev, idx) => (
-                          <tr key={rev.id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.user_id)}>
+                          <tr key={rev._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.userId)}>
                             <td style={{ fontWeight: 600 }}>{idx + 1}</td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2845,15 +2828,15 @@ const AdminPanel = ({ user }) => {
                             <td style={{ maxWidth: '300px', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
                               "{rev.content}"
                             </td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>{new Date(rev.created_at).toLocaleDateString()}</td>
+                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>{new Date(rev.createdAt).toLocaleDateString()}</td>
                             <td>
-                              <StatusBadge status={rev.is_approved ? 'approved' : 'pending'} />
+                              <StatusBadge status={rev.isApproved ? 'approved' : 'pending'} />
                             </td>
                             <td onClick={e => e.stopPropagation()}>
                               <div style={{ display: 'flex', gap: '8px' }}>
-                                {!rev.is_approved && (
+                                {!rev.isApproved && (
                                   <button 
-                                    onClick={() => handleApproveReview(rev.id)} 
+                                    onClick={() => handleApproveReview(rev._id)} 
                                     className="btn-premium-primary" 
                                     style={{ padding: '6px 12px', fontSize: '11px', background: '#00d4a0', color: '#000' }}
                                   >
@@ -2861,7 +2844,7 @@ const AdminPanel = ({ user }) => {
                                   </button>
                                 )}
                                 <button 
-                                  onClick={() => handleRejectReview(rev.id)} 
+                                  onClick={() => handleRejectReview(rev._id)} 
                                   className="btn-premium-danger" 
                                   style={{ padding: '6px 12px', fontSize: '11px' }}
                                 >
@@ -2961,7 +2944,7 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 1. DEPOSIT REQUEST DETAILS DRAWER ── */}
       {selectedDepositDetailId && (() => {
-        const req = allDepositReqs?.find(r => r.id === selectedDepositDetailId);
+        const req = allDepositReqs?.find(r => r._id === selectedDepositDetailId);
         if (!req) return null;
         return (
           <>
@@ -2971,7 +2954,7 @@ const AdminPanel = ({ user }) => {
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📥 Deposit Request Details</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req._id}</span>
                 </div>
                 <button onClick={() => setSelectedDepositDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -3022,7 +3005,7 @@ const AdminPanel = ({ user }) => {
                 {req.hasScreenshot && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Uploaded Receipt Proof Image:</div>
-                    <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                    <DepositScreenshot requestId={req._id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
                   </div>
                 )}
               </div>
@@ -3030,10 +3013,10 @@ const AdminPanel = ({ user }) => {
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleApproveDeposit(req.id)} className="btn-premium-primary" style={{ flex: 1 }}>
+                  <button onClick={() => handleApproveDeposit(req._id)} className="btn-premium-primary" style={{ flex: 1 }}>
                     ✓ Approve & Credit Funds
                   </button>
-                  <button onClick={() => handleRejectDeposit(req.id)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleRejectDeposit(req._id)} className="btn-premium-danger" style={{ flex: 1 }}>
                     Reject
                   </button>
                 </div>
@@ -3045,7 +3028,7 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 2. WITHDRAWAL REQUEST DETAILS DRAWER ── */}
       {selectedWithdrawDetailId && (() => {
-        const req = allWithdrawalReqs?.find(r => r.id === selectedWithdrawDetailId);
+        const req = allWithdrawalReqs?.find(r => r._id === selectedWithdrawDetailId);
         if (!req) return null;
         return (
           <>
@@ -3055,7 +3038,7 @@ const AdminPanel = ({ user }) => {
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📤 Withdrawal Request Details</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req._id}</span>
                 </div>
                 <button onClick={() => setSelectedWithdrawDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -3108,10 +3091,10 @@ const AdminPanel = ({ user }) => {
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleWithdrawal(req.id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                  <button onClick={() => handleWithdrawal(req._id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
                     ✓ Approve & Process
                   </button>
-                  <button onClick={() => handleWithdrawal(req.id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleWithdrawal(req._id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
                     Reject
                   </button>
                 </div>
@@ -3123,7 +3106,7 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 3. KYC SUBMISSIONS DETAILS DRAWER ── */}
       {selectedKycDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord.id.toString() === selectedKycDetailId);
+        const u = allUsersList?.find(userRecord => userRecord._id === selectedKycDetailId);
         if (!u) return null;
         return (
           <>
@@ -3133,7 +3116,7 @@ const AdminPanel = ({ user }) => {
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🛡️ KYC Document Checking</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u.id.toString()}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u._id}</span>
                 </div>
                 <button onClick={() => setSelectedKycDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -3145,7 +3128,7 @@ const AdminPanel = ({ user }) => {
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
                   <KycImages 
-                    userId={u.id.toString()} 
+                    userId={u._id} 
                     getImageUrl={getImageUrl} 
                     onImageClick={setActiveLightboxImage} 
                     kycIdFront={u.kycIdFront}
@@ -3175,7 +3158,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>ID Card Number:</span>
                     <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>
-                      {u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}
+                      {u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}
                     </strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
@@ -3201,7 +3184,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u.id.toString());
+                        setMessageComposerUserId(u._id);
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -3211,7 +3194,7 @@ const AdminPanel = ({ user }) => {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedUserDetailId(u.id.toString());
+                        setSelectedUserDetailId(u._id);
                         setSelectedKycDetailId(null);
                         setUserDrawerTab('activity');
                       }}
@@ -3223,7 +3206,7 @@ const AdminPanel = ({ user }) => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u.id.toString(), !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
                       className="btn-premium-ghost"
                       style={{ border: '1px solid rgba(255,255,255,0.07)', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
                     >
@@ -3231,7 +3214,7 @@ const AdminPanel = ({ user }) => {
                     </button>
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u.id.toString(), u.username)) {
+                        if (await handleRemoveUser(u._id, u.username)) {
                           setSelectedKycDetailId(null);
                         }
                       }}
@@ -3248,15 +3231,15 @@ const AdminPanel = ({ user }) => {
               {/* KYC Decisions Toolbar */}
               <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleKYC(u.id.toString(), true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u._id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
                     ✓ Approve KYC
                   </button>
-                  <button onClick={() => handleKYC(u.id.toString(), false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u._id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
                     ✗ Reject KYC
                   </button>
                 </div>
                 <button
-                  onClick={() => setResubmitUserId(u.id.toString())}
+                  onClick={() => setResubmitUserId(u._id)}
                   className="btn-premium-warning"
                   style={{ width: '100%' }}
                 >
@@ -3271,16 +3254,16 @@ const AdminPanel = ({ user }) => {
 
       {/* ── 4. COMPLETE USER DIRECTORY & MODERATION DRAWER ── */}
       {selectedUserDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord.id.toString() === selectedUserDetailId);
+        const u = allUsersList?.find(userRecord => userRecord._id === selectedUserDetailId);
         if (!u) return null;
 
-        const isMe = u.id.toString() === user?.id;
+        const isMe = u._id === user?._id;
         const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
         const etbVal = totalBal * rate;
 
         // Dynamic Calculations
-        const uDeposits = (allDepositReqs || []).filter(r => (r.user_id === u.id.toString() || r.username === u.username) && r.status === 'approved');
-        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.user_id === u.id.toString() || r.username === u.username) && r.status === 'approved');
+        const uDeposits = (allDepositReqs || []).filter(r => (r.userId === u._id || r.username === u.username) && r.status === 'approved');
+        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.userId === u._id || r.username === u.username) && r.status === 'approved');
         const sumDeposits = uDeposits.reduce((s, r) => s + r.amountUSD, 0);
         const sumWithdrawals = uWithdrawals.reduce((s, r) => s + r.amountUSD, 0);
 
@@ -3346,7 +3329,7 @@ const AdminPanel = ({ user }) => {
                           {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
                           {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u.id.toString()}</span>
+                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u._id}</span>
                       </div>
                     </div>
 
@@ -3464,7 +3447,7 @@ const AdminPanel = ({ user }) => {
                     ) : (
                       <>
                         <KycImages 
-                          userId={u.id.toString()} 
+                          userId={u._id} 
                           getImageUrl={getImageUrl} 
                           onImageClick={setActiveLightboxImage} 
                           kycIdFront={u.kycIdFront}
@@ -3476,7 +3459,7 @@ const AdminPanel = ({ user }) => {
                           <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u.id.toString().substring(0, 8).toUpperCase()}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}</strong></div>
                         </div>
                       </>
                     )}
@@ -3487,11 +3470,11 @@ const AdminPanel = ({ user }) => {
                 {userDrawerTab === 'invites' && (() => {
                   const [uStats, setUStats] = useState(null);
                   React.useEffect(() => {
-                    if (u?.id) {
+                    if (u?._id) {
                       // Mocked for Convex migration
                       setUStats({ totalInvited: 0, activeFriends: 0, pendingFriends: 0, totalEarned: 0, earningsMonth: 0, referralList: [] });
                     }
-                  }, [u?.id]);
+                  }, [u?._id]);
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                       <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invite Stats</div>
@@ -3616,7 +3599,7 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u.id.toString());
+                        setMessageComposerUserId(u._id);
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -3640,7 +3623,7 @@ const AdminPanel = ({ user }) => {
                   {/* Row 2: critical restrictions */}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u.id.toString(), !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
                       className="btn-premium-ghost"
                       style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
                     >
@@ -3649,7 +3632,7 @@ const AdminPanel = ({ user }) => {
                     
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u.id.toString(), u.username)) {
+                        if (await handleRemoveUser(u._id, u.username)) {
                           setSelectedUserDetailId(null);
                         }
                       }}
