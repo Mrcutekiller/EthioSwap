@@ -31,8 +31,10 @@ export const AuthProvider = ({ children }) => {
   const listingsFromQuery = useQuery(api.listings.listActive) || [];
   const tradesFromQuery = useQuery(api.trades.listForUser, user ? { userId: user._id } : "skip") || [];
   
-  const allDepositReqs = useQuery(api.depositRequests.listAll) || [];
-  const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll) || [];
+  // Only fetch admin-level data when user is confirmed admin, to avoid server errors for regular users
+  const isAdmin = user?.role === 'admin';
+  const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
+  const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
 
   // Add id alias for compatibility across all arrays
   const listings = listingsFromQuery.map(l => ({ ...l, id: l._id }));
