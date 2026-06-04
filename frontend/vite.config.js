@@ -12,9 +12,13 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      external: ['convex/server'],
-    },
+    // No externals — bundle everything including convex/server
+  },
+  define: {
+    // Ensure VITE_CONVEX_URL is available, with fallback
+    'import.meta.env.VITE_CONVEX_URL': JSON.stringify(
+      process.env.VITE_CONVEX_URL || 'https://grateful-tern-840.convex.cloud'
+    ),
   },
   server: {
     fs: {
