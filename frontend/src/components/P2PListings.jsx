@@ -134,7 +134,7 @@ const P2PListings = () => {
     const amt = parseFloat(tradeamountEth);
     if (isNaN(amt) || amt < 1) { setTradeError('Minimum transaction amount is $1.00 USD.'); return; }
     if (amt > selectedListing.amountEth) {
-      setTradeError(`Maximum available is $${selectedListing.amountEth.toFixed(2)} USD.`);
+      setTradeError(`Maximum available is $${(selectedListing.amountEth ?? 0).toFixed(2)} USD.`);
       return;
     }
     const effectiveRate = selectedListing.customRateEtb || rate;
@@ -523,7 +523,7 @@ const P2PListings = () => {
                   <div>
                     <div style={{ fontSize: '10px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>AD VOLUME</div>
                     <div className="money-usd" style={{ fontSize: '24px', marginTop: '2px', color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-                      ${listing.amountEth.toFixed(2)}
+                      ${(listing.amountEth ?? 0).toFixed(2)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -686,7 +686,7 @@ const P2PListings = () => {
                 <input
                   type="number" step="0.01" required
                   className="input"
-                  placeholder={`Available: $${wallet ? (wallet.ethBalance - (wallet.ethLocked || 0)).toFixed(2) : '0.00'} USD`}
+                  placeholder={`Available: $${wallet ? ((wallet.ethBalance ?? 0) - (wallet.ethLocked ?? 0)).toFixed(2) : '0.00'} USD`}
                   value={amountEth}
                   onChange={e => setamountEth(e.target.value)}
                 />
@@ -896,7 +896,7 @@ const P2PListings = () => {
                 <input
                   type="number" step="0.01" required
                   className="input"
-                  placeholder={`Max: $${selectedListing.amountEth.toFixed(2)} USD`}
+                  placeholder={`Max: $${(selectedListing.amountEth ?? 0).toFixed(2)} USD`}
                   value={tradeamountEth}
                   onChange={e => setTradeamountEth(e.target.value)}
                 />
@@ -1043,3 +1043,4 @@ const P2PListings = () => {
 };
 
 export default P2PListings;
+

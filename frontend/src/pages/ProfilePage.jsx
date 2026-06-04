@@ -676,7 +676,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div className="stat-card">
           <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Available Balance</span>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#00d4a0' }}>${user.ethBalance.toFixed(2)}</div>
+          <div style={{ fontSize: '24px', fontWeight: 900, color: '#00d4a0' }}>${(user.ethBalance ?? 0).toFixed(2)}</div>
           <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>USD Escrow Wallet</span>
         </div>
         <div className="stat-card" onClick={() => setShowLoyaltyHistory(true)} style={{ cursor: 'pointer' }}>
@@ -1035,3 +1035,4 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 };
 
 export default ProfilePage;
+

@@ -72,7 +72,7 @@ const InviteEarn = ({ user, systemSettings }) => {
           </div>
           <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-1)' }}>🤝 INVITE & EARN</h2>
           {isLive ? (
-            <p style={{ color: '#00d4a0', fontWeight: 700, fontSize: '15px' }}>Earn ${rewardAmount.toFixed(2)} for every friend! 🎉</p>
+            <p style={{ color: '#00d4a0', fontWeight: 700, fontSize: '15px' }}>Earn ${(rewardAmount ?? 0).toFixed(2)} for every friend! 🎉</p>
           ) : (
             <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '4px 12px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--border)' }}>
               🔒 COMING SOON
@@ -84,7 +84,7 @@ const InviteEarn = ({ user, systemSettings }) => {
           <div style={{ background: 'rgba(245, 197, 24, 0.05)', border: '1px dashed rgba(245, 197, 24, 0.3)', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
             <p style={{ fontSize: '14px', fontWeight: 600, color: '#f5c518', marginBottom: '4px' }}>This feature is almost ready!</p>
             <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.5' }}>
-              Invite friends and earn ${rewardAmount.toFixed(2)} for every friend who joins & trades
+              Invite friends and earn ${(rewardAmount ?? 0).toFixed(2)} for every friend who joins & trades
             </p>
           </div>
         )}
@@ -194,7 +194,7 @@ const InviteEarn = ({ user, systemSettings }) => {
                     )}
                   </div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: ref.status === 'paid' ? '#00d4a0' : 'var(--text-3)' }}>
-                    {ref.status === 'paid' ? `+$${ref.earned.toFixed(2)}` : `$0.00`}
+                    {ref.status === 'paid' ? `+$${(ref.earned ?? 0).toFixed(2)}` : `$0.00`}
                   </div>
                 </div>
               </div>
@@ -211,7 +211,7 @@ const InviteEarn = ({ user, systemSettings }) => {
             { step: '1️⃣', text: 'Share your code' },
             { step: '2️⃣', text: 'Friend signs up with your code' },
             { step: '3️⃣', text: 'Friend completes first trade' },
-            { step: '4️⃣', text: `You get $${rewardAmount.toFixed(2)} instantly! 💰` },
+            { step: '4️⃣', text: `You get $${(rewardAmount ?? 0).toFixed(2)} instantly! 💰` },
           ].map((item, i) => (
             <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <div style={{ fontSize: '18px' }}>{item.step}</div>
@@ -225,3 +225,4 @@ const InviteEarn = ({ user, systemSettings }) => {
 };
 
 export default InviteEarn;
+

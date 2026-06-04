@@ -124,7 +124,7 @@ const Navbar = () => {
           {wallet && user.role !== 'admin' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem', fontWeight: '600', color: 'var(--secondary)' }}>
-                <Wallet size={14} /> ${wallet.ethBalance.toFixed(2)} USD
+                <Wallet size={14} /> ${(wallet.ethBalance ?? 0).toFixed(2)} USD
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 ≈ {Math.round(wallet.ethBalance * (systemSettings?.etbRatePerDollar ?? 190.0)).toLocaleString()} ETB
@@ -161,3 +161,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

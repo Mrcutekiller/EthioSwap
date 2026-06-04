@@ -793,7 +793,7 @@ const AdminPanel = ({ user }) => {
     const rows = (allDepositReqs || []).map((req, idx) => [
       idx + 1,
       `@${req.username}`,
-      req.amountUSD.toFixed(2),
+      (req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
       Math.round(req.amountUSD * rate),
       req.walletType,
       new Date(req.createdAt).toLocaleString(),
@@ -815,7 +815,7 @@ const AdminPanel = ({ user }) => {
     const rows = (allWithdrawalReqs || []).map((req, idx) => [
       idx + 1,
       `@${req.username}`,
-      req.amountUSD.toFixed(2),
+      (req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
       Math.round(req.amountUSD * rate),
       req.destinationAddress || 'N/A',
       new Date(req.createdAt).toLocaleString(),
@@ -1930,7 +1930,7 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${req.amountUSD.toFixed(2)}</td>
+                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
                             <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
                             <td>
                               <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -2117,7 +2117,7 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${req.amountUSD.toFixed(2)}</td>
+                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
                             <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
                             <td>
                               <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px', color: '#00d4a0' }}>
@@ -2321,7 +2321,7 @@ const AdminPanel = ({ user }) => {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>${trade.amountUSD.toFixed(2)} USD</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>${(trade.amountUSD ?? trade.amountUsd ?? 0).toFixed(2)} USD</div>
                         <span style={{ fontSize: '10px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>DISPUTED</span>
                       </div>
                     </div>
@@ -2997,7 +2997,7 @@ const AdminPanel = ({ user }) => {
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
-                    <strong style={{ color: '#00d4a0' }}>${req.amountUSD.toFixed(2)} USD</strong>
+                    <strong style={{ color: '#00d4a0' }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
@@ -3081,7 +3081,7 @@ const AdminPanel = ({ user }) => {
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
-                    <strong style={{ color: '#f43f5e' }}>-${req.amountUSD.toFixed(2)} USD</strong>
+                    <strong style={{ color: '#f43f5e' }}>-${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
@@ -3441,7 +3441,7 @@ const AdminPanel = ({ user }) => {
                                     {tx.type?.toUpperCase()}
                                   </td>
                                   <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
-                                    {isDep ? '+' : '-'}${tx.amountUSD.toFixed(2)}
+                                    {isDep ? '+' : '-'}${(tx.amountUSD ?? tx.amountUsd ?? 0).toFixed(2)}
                                   </td>
                                   <td style={{ padding: '10px', color: '#8b92a8', fontSize: '11px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
                                     {tx.note}
@@ -3551,7 +3551,7 @@ const AdminPanel = ({ user }) => {
                                 {ref.status === 'paid' ? '✓ ACTIVE' : '⏳ PENDING'}
                               </div>
                               <div style={{ fontSize: '13px', fontWeight: 700, color: ref.status === 'paid' ? '#00d4a0' : '#8b92a8' }}>
-                                ${ref.earned.toFixed(2)}
+                                ${(ref.earned ?? 0).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -3795,3 +3795,4 @@ const AdminPanel = ({ user }) => {
 };
 
 export default AdminPanel;
+

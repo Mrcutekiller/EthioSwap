@@ -191,7 +191,7 @@ const WalletCard = () => {
           )}
         </div>
         <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: '2px', fontFamily: 'JetBrains Mono, monospace' }}>
-          <span style={{ color: '#f5c518' }}>${wallet.eth_balance.toFixed(2)}</span>
+          <span style={{ color: '#f5c518' }}>${(wallet.eth_balance ?? wallet.ethBalance ?? 0).toFixed(2)}</span>
           <span style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: 500, marginLeft: '6px', fontFamily: 'var(--font)' }}>USD</span>
         </div>
         <div style={{ fontSize: '16px', color: '#00d4a0', fontWeight: 600, marginBottom: '18px', fontFamily: 'JetBrains Mono, monospace' }}>
@@ -370,3 +370,4 @@ const WalletCard = () => {
 };
 
 export default WalletCard;
+
