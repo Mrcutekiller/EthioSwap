@@ -364,6 +364,8 @@ const AdminPanel = ({ user }) => {
   const [kycSearchQuery, setKycSearchQuery] = useState('');
   const [kycFilterStatus, setKycFilterStatus] = useState('all');
 
+  const [reviewFilterStatus, setReviewFilterStatus] = useState('all');
+
   const [logsSearchQuery, setLogsSearchQuery] = useState('');
 
   const chatEndRef = useRef(null);
@@ -1015,6 +1017,10 @@ const AdminPanel = ({ user }) => {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
+        @keyframes slideInLeft {
+          from { transform: translateX(30px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -1134,17 +1140,34 @@ const AdminPanel = ({ user }) => {
         }
       `}</style>
 
-      {/* Toast Alert */}
+      {/* Toast Alert — Premium Slide-In */}
       {alertMsg && (
         <div style={{
-          position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 5000, padding: '12px 20px', whiteSpace: 'nowrap',
-          background: alertType === 'error' ? 'rgba(244,63,94,0.95)' : 'rgba(0, 212, 160, 0.95)',
-          borderRadius: '10px', fontSize: '14px', fontWeight: 600,
-          color: alertType === 'error' ? '#fff' : '#0d1117',
-          animation: 'fadeIn 0.2s ease', boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+          position: 'fixed', top: '24px', right: '24px',
+          zIndex: 9999,
+          animation: 'slideInLeft 0.3s ease',
+          maxWidth: '380px',
+          minWidth: '260px',
         }}>
-          {alertMsg}
+          <div style={{
+            background: '#1a1d26',
+            border: `1px solid ${alertType === 'error' ? 'rgba(244,63,94,0.4)' : 'rgba(0,212,160,0.4)'}`,
+            borderLeft: `4px solid ${alertType === 'error' ? '#f43f5e' : '#00d4a0'}`,
+            borderRadius: '12px',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: alertType === 'error' ? '#f43f5e' : '#00d4a0',
+            boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${alertType === 'error' ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)'}`,
+          }}>
+            <span style={{ fontSize: '18px', flexShrink: 0 }}>
+              {alertType === 'error' ? '✗' : '✓'}
+            </span>
+            <span style={{ flex: 1, lineHeight: 1.4 }}>{alertMsg}</span>
+          </div>
         </div>
       )}
 

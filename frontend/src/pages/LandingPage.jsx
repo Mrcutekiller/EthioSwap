@@ -905,30 +905,31 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {reviews.map((r, idx) => (
-              <div key={r.id || idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
-                  {(() => {
-                    const rating = Math.max(0, Math.min(5, Math.round(Number(r.rating) || 5)));
-                    return (
-                      <>
-                        {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
-                        {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
-                      </>
-                    );
-                  })()}
+              <div key={r.id || idx} className="review-card testimonial-card">
+                {/* Quotation mark decoration */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    {(() => {
+                      const rating = Math.max(0, Math.min(5, Math.round(Number(r.rating) || 5)));
+                      return (
+                        <>
+                          {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '15px' }}>★</span>)}
+                          {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#2a2a2a', fontSize: '15px' }}>★</span>)}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <span style={{ fontSize: '40px', color: 'rgba(245,197,24,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, marginTop: '-8px' }}>"</span>
                 </div>
                 <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{r.content}"</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(245,197,24,0.2), rgba(245,197,24,0.05))', border: '1px solid rgba(245,197,24,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 800, fontSize: '16px', flexShrink: 0 }}>
                     {(r.username || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>@{r.username}</div>
+                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 700 }}>@{r.username}</div>
                     <div style={{ fontSize: '11px', color: '#8b92a8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <span>Trader</span>
-                      {r.trade_count >= 1 && (
-                        <span style={{ color: '#00d4a0', fontWeight: 700, fontSize: '10px' }}>✓ Verified Trader</span>
-                      )}
+                      <span style={{ color: '#00d4a0', fontWeight: 700 }}>✓ Verified Trader</span>
                       <span>•</span>
                       <span>{getRelativeTime(r.createdAt || r.created_at || r._creationTime)}</span>
                     </div>
@@ -995,8 +996,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             Join thousands of Ethiopians already trading USDT safely on EthioSwap. Create your free account in minutes.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
-            <button onClick={onGetStarted} className="cta-btn-gold" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
-              Create Free Account
+            <button onClick={onGetStarted} className="cta-btn-gold cta-shimmer" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
+              Create Free Account →
             </button>
             <a href="#market" className="cta-btn-outline" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
               View Live Rates
