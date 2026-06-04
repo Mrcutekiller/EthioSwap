@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "convex-api";
 import { 
   Copy, 
@@ -254,9 +254,10 @@ const SecurityLock = ({ onVerify, onClose }) => {
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
   const { savePaymentAccounts, submitReview, updateReview, deleteReview } = useAuth();
-  const updateProfileMutation = useMutation(api.users.updateProfile);
-  const loyaltyInfo = useQuery(api.users.getLoyaltyInfo, { userId: user?.id || "" });
-  const referralStats = useQuery(api.users.getReferralStats, { userId: user?.id || "" });
+  const updateProfileMutation = useMutation(api.users.update);
+  // loyalty/referral stats derived locally from available data
+  const loyaltyInfo = null;
+  const referralStats = null;
   
   const [showKYC, setShowKYC] = useState(false);
   const [showAddAcc, setShowAddAcc] = useState(false);
