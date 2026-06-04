@@ -36,10 +36,10 @@ export const AuthProvider = ({ children }) => {
   const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
   const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
 
-  // Fetch user-specific deposits, withdrawals, and invite rewards
-  const userDepositsQuery = useQuery(api.depositRequests.listForUser, user ? { userId: user._id } : "skip") || [];
-  const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, user ? { userId: user._id } : "skip") || [];
-  const inviteRewardsQuery = useQuery(api.inviteRewards.listForUser, user ? { userId: user._id } : "skip") || [];
+  // Fetch user-specific deposits, withdrawals, and invite rewards defensively
+  const userDepositsQuery = useQuery(api.depositRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
+  const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
+  const inviteRewardsQuery = useQuery(api.inviteRewards.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
 
   // Add id alias for compatibility across all arrays
   const listings = listingsFromQuery.map(l => ({ ...l, id: l._id }));
@@ -77,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         const parsed = JSON.parse(savedUser);
         // Ensure compat with legacy .id access
         if (parsed._id) parsed.id = parsed._id;
+        if (parsed.id && !parsed._id) parsed._id = parsed.id;
         setUser(parsed);
       } catch (e) {
         localStorage.removeItem('ethioswap_user');
