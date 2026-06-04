@@ -3,48 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EthioSwap — Buy &amp; Sell USDT in Ethiopia. Safe P2P Escrow.</title>
+  <title>EthioSwap — Ethiopia's Safest Way to Buy &amp; Sell USDT</title>
   <meta name="description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia. Use Telebirr, CBE, and more. Low fees, 24/7 support." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ethioswap.qzz.io/" />
-  <meta property="og:title" content="EthioSwap — Buy &amp; Sell USDT in Ethiopia" />
+  <meta property="og:title" content="EthioSwap — Ethiopia's Safest P2P USDT Exchange" />
   <meta property="og:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://ethioswap.qzz.io/" />
-  <meta property="twitter:title" content="EthioSwap — Buy &amp; Sell USDT in Ethiopia" />
-  <meta property="twitter:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
   <style>
-    /* ===== RESET & BASE ===== */
+    /* ============================================
+       RESET & BASE
+    ============================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #070910;
+      --bg:         #080B14;
       --surface:    #0D1120;
-      --surface2:   #111828;
-      --border:     rgba(255,255,255,0.07);
+      --border:     rgba(255,255,255,0.08);
       --gold:       #D4AF37;
-      --gold-light: #F0C040;
-      --gold-dim:   #B8962E;
-      --gold-glow:  rgba(212,175,55,0.18);
-      --gold-glow2: rgba(212,175,55,0.35);
-      --text:       #EFF3FF;
+      --gold-lt:    #F0C040;
+      --gold-glow:  rgba(212,175,55,0.20);
+      --gold-glow2: rgba(212,175,55,0.38);
+      --text:       #F0F4FF;
       --muted:      #7A8FA6;
       --green:      #10D9A0;
       --red:        #FF4D6D;
-      --radius:     16px;
-      --radius-lg:  24px;
-      --transition: 0.32s cubic-bezier(.4,0,.2,1);
+      --r:          16px;
+      --rl:         24px;
+      --ease:       0.32s cubic-bezier(.4,0,.2,1);
     }
 
     html { scroll-behavior: smooth; font-size: 16px; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
+      background-color: var(--bg);
       color: var(--text);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
@@ -55,9 +53,25 @@
 
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
 
-    /* ===== PARTICLES ===== */
+    /* ============================================
+       LAYOUT
+    ============================================ */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    section { position: relative; z-index: 1; }
+
+    .gold-line {
+      position: relative; z-index: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold-lt) 50%, var(--gold) 70%, transparent 100%);
+      opacity: 0.22;
+    }
+
+    /* ============================================
+       PARTICLES CANVAS (behind everything)
+    ============================================ */
     #particles-canvas {
       position: fixed;
       inset: 0;
@@ -65,1599 +79,517 @@
       pointer-events: none;
     }
 
-    /* ===== LAYOUT ===== */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    section {
-      position: relative;
-      z-index: 1;
-    }
-
-    /* ===== GOLD DIVIDER ===== */
-    .gold-line {
-      height: 1px;
-      background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold-light) 50%, var(--gold) 70%, transparent 100%);
-      opacity: 0.25;
-      position: relative;
-      z-index: 1;
-    }
-
-    /* ===== NAV ===== */
+    /* ============================================
+       NAV
+    ============================================ */
     nav {
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 1000;
-      padding: 0 24px;
       height: 70px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(7,9,16,0.6);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-bottom: 1px solid rgba(212,175,55,0.08);
-      transition: background var(--transition);
+      padding: 0 28px;
+      background: rgba(8,11,20,0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(212,175,55,0.10);
+      transition: background var(--ease), border-color var(--ease);
     }
+    nav.scrolled { background: rgba(8,11,20,0.96); border-bottom-color: rgba(212,175,55,0.16); }
 
-    nav.scrolled {
-      background: rgba(7,9,16,0.96);
-      border-bottom-color: rgba(212,175,55,0.14);
-    }
-
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      font-size: 1.2rem;
-      letter-spacing: -0.02em;
-    }
-
-    .nav-logo .logo-mark {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
+    .logo-mark {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%);
       border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 1rem;
-      color: #070910;
-      box-shadow: 0 0 24px var(--gold-glow2), 0 4px 12px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 1rem; color: #080B14;
+      box-shadow: 0 0 22px var(--gold-glow2);
       flex-shrink: 0;
     }
+    .brand { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-    .brand-name {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--muted);
-      padding: 8px 14px;
-      border-radius: 8px;
-      transition: color var(--transition), background var(--transition);
-    }
-
+    .nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+    .nav-links a { font-size: 0.875rem; font-weight: 500; color: var(--muted); padding: 8px 14px; border-radius: 8px; transition: color var(--ease), background var(--ease); }
     .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-cta { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%) !important; color: #080B14 !important; font-weight: 700 !important; padding: 8px 20px !important; border-radius: 10px !important; box-shadow: 0 4px 16px var(--gold-glow2); transition: transform var(--ease), box-shadow var(--ease) !important; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 28px var(--gold-glow2) !important; }
 
-    .nav-cta {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%) !important;
-      color: #070910 !important;
-      font-weight: 700 !important;
-      padding: 8px 18px !important;
-      border-radius: 9px !important;
-      box-shadow: 0 4px 16px var(--gold-glow2);
-    }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; background: none; border: none; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; transition: var(--ease); }
 
-    .nav-cta:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 24px var(--gold-glow2) !important;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%) !important;
-    }
-
-    .nav-hamburger {
-      display: none;
-      flex-direction: column;
-      gap: 5px;
-      cursor: pointer;
-      padding: 8px;
-      border: none;
-      background: transparent;
-    }
-
-    .nav-hamburger span {
-      display: block;
-      width: 22px;
-      height: 2px;
-      background: var(--text);
-      border-radius: 2px;
-      transition: var(--transition);
-    }
-
-    /* ===== MOBILE MENU ===== */
+    /* MOBILE MENU */
     .mobile-menu {
-      position: fixed;
-      top: 70px; left: 0; right: 0;
-      background: rgba(7,9,16,0.98);
-      backdrop-filter: blur(24px);
-      border-bottom: 1px solid var(--border);
-      padding: 20px 24px;
-      z-index: 999;
-      transform: translateY(-110%);
-      opacity: 0;
-      transition: transform 0.38s cubic-bezier(.4,0,.2,1), opacity 0.3s ease;
+      position: fixed; top: 70px; left: 0; right: 0; z-index: 999;
+      background: rgba(8,11,20,0.98); backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border); padding: 20px 24px;
+      transform: translateY(-110%); opacity: 0;
+      transition: transform 0.36s cubic-bezier(.4,0,.2,1), opacity 0.28s ease;
       pointer-events: none;
     }
-
     .mobile-menu.open { transform: translateY(0); opacity: 1; pointer-events: all; }
-
     .mobile-menu ul { list-style: none; }
     .mobile-menu ul li { border-bottom: 1px solid var(--border); }
     .mobile-menu ul li:last-child { border-bottom: none; }
-    .mobile-menu ul li a {
-      display: block;
-      padding: 15px 0;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
-    .mobile-menu ul li a:hover { color: var(--gold-light); }
+    .mobile-menu ul li a { display: block; padding: 14px 0; font-size: 1rem; font-weight: 600; color: var(--muted); transition: color var(--ease); }
+    .mobile-menu ul li a:hover { color: var(--gold-lt); }
 
-    /* ===== HERO ===== */
+    /* ============================================
+       HERO
+    ============================================ */
     .hero {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
+      display: flex; align-items: center;
       padding: 100px 0 60px;
-      position: relative;
-      overflow: hidden;
+      position: relative; overflow: hidden;
     }
 
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
-    }
-
-    .hero-orb {
-      position: absolute;
-      border-radius: 50%;
+    /* Background orbs - pure CSS, always visible */
+    .hero-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .orb {
+      position: absolute; border-radius: 50%;
       filter: blur(80px);
-      pointer-events: none;
     }
+    .orb-1 { width: 700px; height: 700px; background: radial-gradient(circle, rgba(212,175,55,0.12) 0%, transparent 70%); top: 50%; left: 45%; transform: translate(-50%,-50%); animation: pulse 8s ease-in-out infinite; }
+    .orb-2 { width: 450px; height: 450px; background: radial-gradient(circle, rgba(80,50,200,0.09) 0%, transparent 70%); top: 10%; right: 5%; animation: drift 14s ease-in-out infinite; }
+    .orb-3 { width: 320px; height: 320px; background: radial-gradient(circle, rgba(16,217,160,0.07) 0%, transparent 70%); bottom: 10%; left: -2%; animation: drift 18s ease-in-out infinite reverse; }
 
-    .hero-orb-1 {
-      width: 800px; height: 800px;
-      background: radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%);
-      top: 50%; left: 45%;
-      transform: translate(-50%, -50%);
-      animation: slowPulse 8s ease-in-out infinite;
-    }
+    @keyframes pulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7} 50%{transform:translate(-50%,-50%) scale(1.1);opacity:1} }
+    @keyframes drift { 0%,100%{transform:translate(0,0)} 33%{transform:translate(24px,-16px)} 66%{transform:translate(-14px,11px)} }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
-    .hero-orb-2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(90,60,200,0.09) 0%, transparent 70%);
-      top: 10%; right: 5%;
-      animation: drift 14s ease-in-out infinite;
-    }
-
-    .hero-orb-3 {
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, rgba(16,217,160,0.06) 0%, transparent 70%);
-      bottom: 15%; left: 0%;
-      animation: drift 18s ease-in-out infinite reverse;
-    }
-
-    @keyframes slowPulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
-      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-    }
-
-    @keyframes drift {
-      0%, 100% { transform: translate(0, 0); }
-      33% { transform: translate(25px, -18px); }
-      66% { transform: translate(-15px, 12px); }
-    }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 60px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
+    /* Hero inner layout */
+    .hero-inner {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr auto; gap: 60px; align-items: center;
       width: 100%;
     }
 
-    .hero-content { max-width: 660px; }
+    /* Hero text — always visible, no reveal class needed */
+    .hero-text { max-width: 640px; }
+
+    /* Animate hero elements purely via CSS (no JS dependency) */
+    .hero-badge { animation: fadeUp 0.6s ease 0.1s both; }
+    .hero h1    { animation: fadeUp 0.6s ease 0.2s both; }
+    .hero-sub   { animation: fadeUp 0.6s ease 0.3s both; }
+    .hero-ctas  { animation: fadeUp 0.6s ease 0.4s both; }
+    .hero-stats { animation: fadeUp 0.6s ease 0.5s both; }
 
     .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(212,175,55,0.08);
-      border: 1px solid rgba(212,175,55,0.22);
-      border-radius: 100px;
-      padding: 6px 16px 6px 8px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--gold-light);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 28px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(212,175,55,0.09); border: 1px solid rgba(212,175,55,0.24);
+      border-radius: 100px; padding: 6px 16px 6px 8px;
+      font-size: 0.78rem; font-weight: 600; color: var(--gold-lt);
+      letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 28px;
     }
-
     .hero-badge .dot {
-      width: 8px; height: 8px;
-      background: var(--green);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--green);
+      width: 8px; height: 8px; background: var(--green);
+      border-radius: 50%; box-shadow: 0 0 8px var(--green);
       animation: blink 2s ease-in-out infinite;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
-      50% { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
-    }
-
     .hero h1 {
-      font-size: clamp(2.6rem, 5.5vw, 4.8rem);
-      font-weight: 900;
-      line-height: 1.04;
-      letter-spacing: -0.04em;
-      margin-bottom: 24px;
+      font-size: clamp(2.6rem, 5.5vw, 4.6rem);
+      font-weight: 900; line-height: 1.04;
+      letter-spacing: -0.04em; margin-bottom: 24px;
     }
-
     .hero h1 .gold-text {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, #FFD700 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 0 24px rgba(212,175,55,0.35));
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 50%, #FFD700 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(212,175,55,0.38));
     }
 
-    .hero-sub {
-      font-size: clamp(1rem, 1.8vw, 1.15rem);
-      color: var(--muted);
-      line-height: 1.78;
-      max-width: 560px;
-      margin-bottom: 44px;
-    }
+    .hero-sub { font-size: clamp(1rem, 1.8vw, 1.12rem); color: var(--muted); line-height: 1.78; max-width: 540px; margin-bottom: 40px; }
 
-    .hero-ctas {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      margin-bottom: 56px;
-    }
+    .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 44px; }
 
+    /* Buttons */
     .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: #070910;
-      font-weight: 700;
-      font-size: 0.975rem;
-      padding: 15px 30px;
-      border-radius: 13px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 32px rgba(212,175,55,0.32), 0 2px 8px rgba(0,0,0,0.3);
-      transition: transform var(--transition), box-shadow var(--transition);
-      font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%);
+      color: #080B14; font-weight: 700; font-size: 0.97rem;
+      padding: 15px 30px; border-radius: 13px; border: none; cursor: pointer;
+      box-shadow: 0 8px 28px rgba(212,175,55,0.32); font-family: 'Inter', sans-serif;
+      transition: transform var(--ease), box-shadow var(--ease);
     }
-
-    .btn-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 16px 48px rgba(212,175,55,0.42), 0 4px 16px rgba(0,0,0,0.4);
-    }
-
-    .btn-primary:active { transform: translateY(-1px); }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 16px 44px rgba(212,175,55,0.44); }
 
     .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      font-weight: 600;
-      font-size: 0.975rem;
-      padding: 15px 30px;
-      border-radius: 13px;
-      border: 1px solid rgba(255,255,255,0.11);
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      transition: transform var(--transition), background var(--transition), border-color var(--transition);
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.05); color: var(--text);
+      font-weight: 600; font-size: 0.97rem; padding: 15px 30px;
+      border-radius: 13px; border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
       font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
+      transition: transform var(--ease), background var(--ease), border-color var(--ease);
     }
+    .btn-secondary:hover { transform: translateY(-3px); background: rgba(255,255,255,0.09); border-color: rgba(212,175,55,0.3); }
 
-    .btn-secondary:hover {
-      transform: translateY(-3px);
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(212,175,55,0.32);
-    }
-
-    /* Trust badges row */
-    .trust-row {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    .trust-badge {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      color: var(--muted);
-    }
-
-    .trust-badge .icon {
-      font-size: 1rem;
-      filter: grayscale(0.2);
-    }
-
-    .trust-dot { color: rgba(255,255,255,0.15); }
+    /* Trust row */
+    .trust-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 40px; }
+    .trust-badge { display: flex; align-items: center; gap: 7px; }
+    .trust-sep { color: rgba(255,255,255,0.14); }
 
     /* Hero stats */
-    .hero-stats {
-      display: flex;
-      gap: 32px;
-      flex-wrap: wrap;
-      margin-bottom: 40px;
+    .hero-stats { display: flex; gap: 32px; flex-wrap: wrap; }
+    .stat { display: flex; flex-direction: column; gap: 4px; }
+    .stat .num {
+      font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
+    .stat .lbl { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
 
-    .hero-stat {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .hero-stat .number {
-      font-size: 1.85rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-stat .label {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-    }
-
-    /* Community goal bar */
-    .community-goal {
-      margin-top: 28px;
-      max-width: 380px;
-    }
-
-    .goal-label {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    .goal-bar {
-      height: 6px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .goal-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
-      border-radius: 10px;
-      transition: width 1.2s ease-out;
-    }
-
-    /* Hero card visual */
-    .hero-card-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      width: 300px;
-      flex-shrink: 0;
-    }
-
-    .floating-card {
-      background: rgba(13,17,32,0.85);
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: 16px;
-      padding: 18px 20px;
-      backdrop-filter: blur(20px);
+    /* Hero card stack (right side) */
+    .hero-cards { display: flex; flex-direction: column; gap: 14px; width: 290px; flex-shrink: 0; }
+    .float-card {
+      background: rgba(13,17,32,0.88); border: 1px solid rgba(212,175,55,0.16);
+      border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(20px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-    }
-
-    .card-status {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.7rem;
-      font-weight: 700;
-    }
-
-    .status-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-    }
-
-    .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-    .status-dot.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-
-    .trade-amount {
-      font-size: 1.3rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-    }
-
-    .trade-sub {
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
-
-    .trade-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 10px;
-      background: rgba(16,217,160,0.1);
-      border: 1px solid rgba(16,217,160,0.2);
-      border-radius: 100px;
-      padding: 3px 10px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--green);
-    }
-
-    .escrow-meter {
-      margin-top: 10px;
-    }
-
-    .meter-bar {
-      height: 4px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-
-    .meter-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
-      width: 72%;
-      border-radius: 2px;
-    }
-
-    .rate-display {
-      font-size: 1.05rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* ===== TICKER ===== */
-    .ticker-wrap {
-      width: 100%;
-      overflow: hidden;
-      background: rgba(212,175,55,0.05);
-      border-top: 1px solid rgba(212,175,55,0.08);
-      border-bottom: 1px solid rgba(212,175,55,0.08);
-      padding: 11px 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    .ticker {
-      display: flex;
-      gap: 0;
-      width: max-content;
-      animation: ticker 30s linear infinite;
-    }
-
-    .ticker-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 40px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .ticker-dot {
-      width: 5px; height: 5px;
-      background: var(--gold);
-      border-radius: 50%;
-    }
-
-    .ticker-val { color: var(--gold-light); }
-
-    @keyframes ticker {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-
-    /* ===== SECTION HEADER ===== */
-    .section-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-
-    .section-eyebrow {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 16px;
-    }
-
-    .section-header h2 {
-      font-size: clamp(1.75rem, 4vw, 2.9rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 18px;
-    }
-
-    .section-header p {
-      font-size: 1.02rem;
-      color: var(--muted);
-      line-height: 1.72;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    /* ===== FEATURES ===== */
-    .features { padding: 90px 0; }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    .feature-card {
-      background: linear-gradient(145deg, rgba(13,17,32,0.9), rgba(17,24,40,0.7));
-      border: 1px solid rgba(212,175,55,0.12);
-      border-radius: var(--radius-lg);
-      padding: 36px 28px;
-      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
-      position: relative;
-      overflow: hidden;
-      cursor: default;
-    }
-
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(212,175,55,0.05) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity var(--transition);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      border-color: rgba(212,175,55,0.28);
-      box-shadow: 0 0 0 1px rgba(212,175,55,0.12), 0 24px 60px rgba(0,0,0,0.5);
-    }
-
-    .feature-card:hover::before { opacity: 1; }
-
-    .feature-icon {
-      width: 54px; height: 54px;
-      background: rgba(212,175,55,0.08);
-      border: 1px solid rgba(212,175,55,0.18);
-      border-radius: 13px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      margin-bottom: 22px;
-      transition: transform var(--transition), box-shadow var(--transition);
-      color: var(--gold);
-    }
-
-    .feature-card:hover .feature-icon {
-      transform: scale(1.1);
-      box-shadow: 0 0 24px rgba(212,175,55,0.22);
-    }
-
-    .feature-card h3 {
-      font-size: 1.02rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin-bottom: 12px;
-    }
-
-    .feature-card p {
-      font-size: 0.88rem;
-      color: var(--muted);
-      line-height: 1.72;
-    }
-
-    /* ===== HOW IT WORKS ===== */
-    .how-it-works {
-      padding: 90px 0;
-      background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.025) 50%, transparent 100%);
-    }
-
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-      position: relative;
-    }
-
-    .steps-grid::before {
-      content: '';
-      position: absolute;
-      top: 46px;
-      left: 16%;
-      right: 16%;
-      height: 2px;
-      background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 4px, transparent 4px, transparent 10px);
-      opacity: 0.22;
-      z-index: 0;
-    }
-
-    .step-card {
-      text-align: center;
-      padding: 32px 20px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-number {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      background: var(--surface);
-      border: 2px solid rgba(212,175,55,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      margin: 0 auto 24px;
-      box-shadow: 0 0 28px rgba(212,175,55,0.12);
-      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    }
-
-    .step-card:hover .step-number {
-      transform: scale(1.1);
-      border-color: var(--gold);
-      box-shadow: 0 0 40px rgba(212,175,55,0.28);
-    }
-
-    .step-card h3 {
-      font-size: 1.08rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.01em;
-    }
-
-    .step-card p {
-      font-size: 0.875rem;
-      color: var(--muted);
-      line-height: 1.68;
-    }
-
-    /* ===== LIVE MARKET ===== */
-    .live-market { padding: 90px 0; }
-
-    .market-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      margin-top: 48px;
-    }
-
-    .market-card {
-      background: rgba(13,17,32,0.8);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .market-card h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 24px;
-      border-left: 3px solid var(--gold);
-      padding-left: 14px;
-      line-height: 1.2;
-    }
-
-    .feed-container {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      flex: 1;
-    }
-
-    .feed-item {
-      background: rgba(255,255,255,0.025);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-      transition: border-color var(--transition);
-    }
-
-    .feed-item:hover { border-color: rgba(212,175,55,0.2); }
-
-    .item-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.78rem;
-    }
-
-    .user-badge { font-weight: 600; color: var(--gold-light); }
-
-    .action-badge {
-      font-size: 0.68rem;
-      font-weight: 800;
-      padding: 2px 7px;
-      border-radius: 4px;
-      letter-spacing: 0.06em;
-    }
-
-    .action-badge.buy { background: rgba(16,217,160,0.12); color: var(--green); }
-    .action-badge.sell { background: rgba(255,77,109,0.12); color: var(--red); }
-
-    .item-body { font-size: 0.9rem; font-weight: 500; }
-    .item-body .val { font-weight: 700; }
-
-    .item-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.75rem;
-      color: var(--muted);
-      border-top: 1px solid rgba(255,255,255,0.04);
-      padding-top: 8px;
-    }
-
-    .verified-badge { color: var(--green); font-weight: 600; }
-
-    /* Calculator */
-    .calc-tabs {
-      display: flex;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 4px;
-      margin-bottom: 22px;
-    }
-
-    .calc-tab {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 10px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 7px;
-      transition: var(--transition);
-      font-family: 'Inter', sans-serif;
-    }
-
-    .calc-tab.active {
-      background: rgba(212,175,55,0.12);
-      color: var(--gold-light);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
-    .calc-form { display: flex; flex-direction: column; gap: 18px; }
-
-    .calc-form .input-group { display: flex; flex-direction: column; gap: 8px; }
-
-    .calc-form label {
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .calc-form input, .calc-form select {
-      background: rgba(7,9,16,0.6);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      color: var(--text);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      transition: border-color var(--transition);
-    }
-
-    .calc-form input:focus, .calc-form select:focus {
-      outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 10px var(--gold-glow);
-    }
-
-    .calc-results {
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .calc-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-
-    .calc-row.highlight {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text);
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-      margin-top: 4px;
-    }
-
-    .calc-row.highlight span:last-child { color: var(--gold-light); }
-
-    .calc-cta {
-      margin-top: 14px;
-      width: 100%;
-      justify-content: center;
-      padding: 13px;
-    }
-
-    /* ===== ABOUT ===== */
-    .about-us {
-      padding: 90px 0;
-      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
-    }
-
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 72px;
-      align-items: center;
-    }
-
-    .about-text h2 {
-      font-size: clamp(1.9rem, 3.5vw, 2.7rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 24px;
-    }
-
-    .about-text p {
-      font-size: 0.98rem;
-      color: var(--muted);
-      line-height: 1.78;
-      margin-bottom: 20px;
-    }
-
-    .about-stats-card {
-      background: rgba(13,17,32,0.75);
-      border: 1px solid rgba(212,175,55,0.14);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      backdrop-filter: blur(20px);
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-    }
-
-    .about-stats-card::before {
-      content: '';
-      position: absolute;
-      top: 0; right: 0;
-      width: 200px; height: 200px;
-      background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .stats-items { display: flex; flex-direction: column; gap: 24px; }
-
-    .stats-item {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 16px;
-    }
-
-    .stats-item:last-child { border-bottom: none; padding-bottom: 0; }
-
-    .stats-val {
-      font-size: 2.1rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .stats-lbl {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* ===== REVIEWS ===== */
-    .reviews { padding: 90px 0; }
-
-    .reviews-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 22px;
-      margin-bottom: 48px;
-    }
-
-    .review-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 26px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      transition: transform var(--transition), border-color var(--transition);
-    }
-
-    .review-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(212,175,55,0.2);
-    }
-
-    .review-stars { display: flex; gap: 3px; font-size: 0.88rem; color: var(--gold); }
-
-    .review-content {
-      font-style: italic;
-      font-size: 0.93rem;
-      line-height: 1.65;
-      color: var(--text);
-      flex: 1;
-    }
-
-    .review-user {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: auto;
-    }
-
-    .user-avatar {
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 0.88rem;
-      flex-shrink: 0;
-    }
-
-    .user-info { display: flex; flex-direction: column; gap: 2px; }
-    .user-name { font-size: 0.88rem; font-weight: 700; }
-    .user-verified { font-size: 0.72rem; color: var(--green); font-weight: 600; }
-    .review-date { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
-
-    /* ===== UNIFIED ===== */
-    .unified { padding: 90px 0; }
-
-    .unified-inner {
-      background: rgba(13,17,32,0.85);
-      border: 1px solid rgba(212,175,55,0.14);
-      border-radius: 32px;
-      padding: 72px;
-      backdrop-filter: blur(20px);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .unified-inner::before {
-      content: '';
-      position: absolute;
-      top: -80px; right: -80px;
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .unified-inner::after {
-      content: '';
-      position: absolute;
-      bottom: -60px; left: -60px;
-      width: 260px; height: 260px;
-      background: radial-gradient(circle, rgba(90,60,200,0.05) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .unified-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 72px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-    }
-
-    .unified-text h2 {
-      font-size: clamp(1.8rem, 3vw, 2.7rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 20px;
-    }
-
-    .unified-text h2 .grad {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .unified-text p { font-size: 0.98rem; color: var(--muted); line-height: 1.78; margin-bottom: 16px; }
-
-    .unified-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(212,175,55,0.07);
-      border: 1px solid rgba(212,175,55,0.18);
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gold-light);
-      margin-top: 8px;
-    }
-
-    .unified-cards { display: flex; flex-direction: column; gap: 14px; }
-
-    .sync-card {
-      background: rgba(255,255,255,0.035);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px 22px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      transition: border-color var(--transition), background var(--transition);
-    }
-
-    .sync-card:hover {
-      border-color: rgba(212,175,55,0.22);
-      background: rgba(255,255,255,0.05);
-    }
-
-    .sync-card-icon { font-size: 1.7rem; flex-shrink: 0; }
-    .sync-card-text h4 { font-size: 0.93rem; font-weight: 700; margin-bottom: 4px; }
-    .sync-card-text p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-
-    .sync-badge {
-      margin-left: auto;
-      flex-shrink: 0;
-      background: rgba(34,197,94,0.1);
-      border: 1px solid rgba(34,197,94,0.22);
-      border-radius: 100px;
-      padding: 3px 10px;
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: #4ade80;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-    }
-
-    /* ===== FAQ ===== */
-    .faq {
-      padding: 90px 0;
-      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
-    }
-
-    .faq-accordion {
-      max-width: 740px;
-      margin: 48px auto 0;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .faq-item {
-      background: rgba(13,17,32,0.75);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: all 200ms ease;
-      cursor: pointer;
-    }
-
+    .float-card:nth-child(1) { animation: float 4s ease-in-out infinite; }
+    .float-card:nth-child(2) { animation: float 4s ease-in-out 1.4s infinite; }
+    .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+    .live-badge { display: flex; align-items: center; gap: 5px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s ease-in-out infinite; }
+    .live-dot.gold-dot { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+    .card-big { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .card-small { font-size: 0.8rem; color: var(--muted); }
+    .card-tag { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; background: rgba(16,217,160,0.1); border: 1px solid rgba(16,217,160,0.22); border-radius: 100px; padding: 3px 10px; font-size: 0.7rem; font-weight: 700; color: var(--green); }
+    .rate-big {
+      font-size: 1.08rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 6px;
+    }
+    .card-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .pill { background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.2); border-radius: 100px; padding: 2px 9px; font-size: 0.68rem; font-weight: 700; color: var(--gold-lt); }
+
+    /* ============================================
+       TICKER
+    ============================================ */
+    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(212,175,55,0.05); border-top: 1px solid rgba(212,175,55,0.1); border-bottom: 1px solid rgba(212,175,55,0.1); padding: 11px 0; position: relative; z-index: 1; }
+    .ticker { display: flex; width: max-content; animation: ticker 30s linear infinite; }
+    .t-item { display: flex; align-items: center; gap: 8px; padding: 0 40px; font-size: 0.8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .t-dot { width: 5px; height: 5px; background: var(--gold); border-radius: 50%; }
+    .t-val { color: var(--gold-lt); }
+
+    /* ============================================
+       SECTION HEADER (always visible)
+    ============================================ */
+    .s-head { text-align: center; margin-bottom: 56px; }
+    .eyebrow { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+    .s-head h2 { font-size: clamp(1.75rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 16px; }
+    .s-head p { font-size: 1rem; color: var(--muted); line-height: 1.72; max-width: 490px; margin: 0 auto; }
+
+    /* ============================================
+       FEATURES
+    ============================================ */
+    .features { padding: 88px 0; }
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feat-card {
+      background: linear-gradient(145deg, rgba(13,17,32,0.92), rgba(17,24,40,0.75));
+      border: 1px solid rgba(212,175,55,0.12); border-radius: var(--rl);
+      padding: 34px 26px; position: relative; overflow: hidden; cursor: default;
+      transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease);
+    }
+    .feat-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(212,175,55,0.05) 0%, transparent 60%); opacity: 0; transition: opacity var(--ease); border-radius: var(--rl); }
+    .feat-card:hover { transform: translateY(-5px); border-color: rgba(212,175,55,0.28); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .feat-card:hover::before { opacity: 1; }
+    .feat-icon { width: 52px; height: 52px; background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.18); border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; margin-bottom: 20px; color: var(--gold); transition: transform var(--ease), box-shadow var(--ease); }
+    .feat-card:hover .feat-icon { transform: scale(1.1); box-shadow: 0 0 22px rgba(212,175,55,0.2); }
+    .feat-card h3 { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 10px; }
+    .feat-card p { font-size: 0.87rem; color: var(--muted); line-height: 1.72; }
+
+    /* ============================================
+       HOW IT WORKS
+    ============================================ */
+    .how { padding: 88px 0; background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.025) 50%, transparent 100%); }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; }
+    .steps::before { content: ''; position: absolute; top: 46px; left: 16%; right: 16%; height: 2px; background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 4px, transparent 4px, transparent 10px); opacity: 0.2; z-index: 0; }
+    .step { text-align: center; padding: 30px 18px; position: relative; z-index: 1; }
+    .step-num { width: 78px; height: 78px; border-radius: 50%; background: var(--surface); border: 2px solid rgba(212,175,55,0.28); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; margin: 0 auto 22px; box-shadow: 0 0 26px rgba(212,175,55,0.12); transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease); }
+    .step:hover .step-num { transform: scale(1.1); border-color: var(--gold); box-shadow: 0 0 38px rgba(212,175,55,0.28); }
+    .step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+    .step p { font-size: 0.865rem; color: var(--muted); line-height: 1.66; }
+
+    /* ============================================
+       LIVE MARKET
+    ============================================ */
+    .market { padding: 88px 0; }
+    .mkt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 48px; }
+    .mkt-card { background: rgba(13,17,32,0.82); border: 1px solid var(--border); border-radius: var(--rl); padding: 38px; backdrop-filter: blur(20px); box-shadow: 0 16px 48px rgba(0,0,0,0.42); display: flex; flex-direction: column; }
+    .mkt-card h3 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 22px; border-left: 3px solid var(--gold); padding-left: 14px; }
+    .feed { display: flex; flex-direction: column; gap: 13px; flex: 1; }
+    .f-item { background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; display: flex; flex-direction: column; gap: 8px; transition: border-color var(--ease); }
+    .f-item:hover { border-color: rgba(212,175,55,0.2); }
+    .f-row { display: flex; align-items: center; gap: 7px; font-size: 0.77rem; }
+    .u { font-weight: 600; color: var(--gold-lt); }
+    .ab { font-size: 0.67rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.06em; }
+    .ab.buy { background: rgba(16,217,160,0.12); color: var(--green); }
+    .ab.sell { background: rgba(255,77,109,0.12); color: var(--red); }
+    .f-body { font-size: 0.88rem; font-weight: 500; color: var(--text); }
+    .f-body strong { color: var(--text); }
+    .f-foot { display: flex; justify-content: space-between; font-size: 0.73rem; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.04); padding-top: 7px; }
+    .ok { color: var(--green); font-weight: 600; }
+
+    /* Calc */
+    .calc-tabs { display: flex; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 9px; padding: 4px; margin-bottom: 20px; }
+    .c-tab { flex: 1; background: transparent; border: none; color: var(--muted); padding: 10px; font-size: 0.87rem; font-weight: 600; cursor: pointer; border-radius: 7px; transition: var(--ease); font-family: 'Inter', sans-serif; }
+    .c-tab.active { background: rgba(212,175,55,0.12); color: var(--gold-lt); }
+    .c-form { display: flex; flex-direction: column; gap: 16px; }
+    .c-group { display: flex; flex-direction: column; gap: 7px; }
+    .c-label { font-size: 0.76rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .c-form input, .c-form select { background: rgba(8,11,20,0.7); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 0.97rem; font-family: 'Inter', sans-serif; transition: border-color var(--ease); width: 100%; }
+    .c-form input:focus, .c-form select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
+    .c-results { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 17px; display: flex; flex-direction: column; gap: 11px; }
+    .c-row { display: flex; justify-content: space-between; font-size: 0.87rem; color: var(--muted); }
+    .c-row.hl { font-size: 1.03rem; font-weight: 700; color: var(--text); border-top: 1px solid var(--border); padding-top: 11px; margin-top: 2px; }
+    .c-row.hl span:last-child { color: var(--gold-lt); }
+    .c-cta { margin-top: 13px; width: 100%; justify-content: center; padding: 13px; }
+
+    /* ============================================
+       ABOUT
+    ============================================ */
+    .about { padding: 88px 0; background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent); }
+    .about-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 72px; align-items: center; }
+    .about-text h2 { font-size: clamp(1.9rem, 3.5vw, 2.7rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 22px; }
+    .about-text p { font-size: 0.96rem; color: var(--muted); line-height: 1.78; margin-bottom: 18px; }
+    .a-card { background: rgba(13,17,32,0.78); border: 1px solid rgba(212,175,55,0.14); border-radius: var(--rl); padding: 38px; backdrop-filter: blur(20px); box-shadow: 0 16px 48px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+    .a-card::before { content: ''; position: absolute; top: 0; right: 0; width: 180px; height: 180px; background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%); pointer-events: none; }
+    .a-items { display: flex; flex-direction: column; gap: 22px; }
+    .a-item { display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+    .a-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .a-val { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .a-lbl { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ============================================
+       REVIEWS
+    ============================================ */
+    .reviews { padding: 88px 0; }
+    .rev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 44px; }
+    .rev-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 15px; transition: transform var(--ease), border-color var(--ease); }
+    .rev-card:hover { transform: translateY(-4px); border-color: rgba(212,175,55,0.2); }
+    .stars { font-size: 0.88rem; color: var(--gold); }
+    .rev-text { font-style: italic; font-size: 0.91rem; line-height: 1.65; color: var(--text); flex: 1; }
+    .rev-user { display: flex; align-items: center; gap: 11px; margin-top: auto; }
+    .av { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.86rem; flex-shrink: 0; }
+    .rv-info { display: flex; flex-direction: column; gap: 2px; }
+    .rv-name { font-size: 0.87rem; font-weight: 700; }
+    .rv-vc { font-size: 0.72rem; color: var(--green); font-weight: 600; }
+    .rv-date { font-size: 0.7rem; color: var(--muted); margin-left: auto; }
+
+    /* ============================================
+       UNIFIED / SYNC
+    ============================================ */
+    .sync { padding: 88px 0; }
+    .sync-box { background: rgba(13,17,32,0.88); border: 1px solid rgba(212,175,55,0.14); border-radius: 30px; padding: 68px; backdrop-filter: blur(20px); position: relative; overflow: hidden; }
+    .sync-box::before { content:''; position:absolute; top:-80px; right:-80px; width:340px; height:340px; background:radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%); pointer-events:none; }
+    .sync-box::after { content:''; position:absolute; bottom:-60px; left:-60px; width:250px; height:250px; background:radial-gradient(circle, rgba(80,50,200,0.05) 0%, transparent 70%); pointer-events:none; }
+    .sync-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 68px; align-items: center; position: relative; z-index: 1; }
+    .sync-text h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 18px; }
+    .sync-text h2 .grad { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sync-text p { font-size: 0.96rem; color: var(--muted); line-height: 1.78; margin-bottom: 14px; }
+    .sync-tag { display: inline-flex; align-items: center; gap: 7px; background: rgba(212,175,55,0.07); border: 1px solid rgba(212,175,55,0.18); border-radius: 8px; padding: 7px 13px; font-size: 0.78rem; font-weight: 600; color: var(--gold-lt); margin-top: 6px; }
+    .sync-cards { display: flex; flex-direction: column; gap: 13px; }
+    .s-card { background: rgba(255,255,255,0.035); border: 1px solid var(--border); border-radius: 15px; padding: 17px 20px; display: flex; align-items: center; gap: 15px; transition: border-color var(--ease), background var(--ease); }
+    .s-card:hover { border-color: rgba(212,175,55,0.22); background: rgba(255,255,255,0.05); }
+    .s-icon { font-size: 1.65rem; flex-shrink: 0; }
+    .s-info h4 { font-size: 0.91rem; font-weight: 700; margin-bottom: 3px; }
+    .s-info p { font-size: 0.78rem; color: var(--muted); line-height: 1.48; }
+    .s-badge { margin-left: auto; flex-shrink: 0; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.22); border-radius: 100px; padding: 3px 9px; font-size: 0.67rem; font-weight: 700; color: #4ade80; text-transform: uppercase; letter-spacing: 0.07em; }
+
+    /* ============================================
+       FAQ
+    ============================================ */
+    .faq { padding: 88px 0; background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent); }
+    .faq-list { max-width: 720px; margin: 44px auto 0; display: flex; flex-direction: column; gap: 13px; }
+    .faq-item { background: rgba(13,17,32,0.78); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color 0.2s ease; }
     .faq-item:hover { border-color: rgba(212,175,55,0.18); }
-    .faq-item.active { border-left: 3px solid var(--gold); }
+    .faq-item.open { border-left: 3px solid var(--gold); }
+    .faq-q { width: 100%; background: transparent; border: none; padding: 21px 22px; display: flex; align-items: center; justify-content: space-between; color: var(--text); font-size: 0.96rem; font-weight: 600; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .faq-ic { font-size: 1.35rem; font-weight: 300; color: var(--muted); transition: transform 0.2s ease, color 0.2s ease; flex-shrink: 0; }
+    .faq-item.open .faq-ic { transform: rotate(45deg); color: var(--gold); }
+    .faq-a { max-height: 0; overflow: hidden; padding: 0 22px; transition: max-height 0.38s cubic-bezier(0,1,0,1); }
+    .faq-item.open .faq-a { max-height: 800px; transition: max-height 0.38s cubic-bezier(1,0,1,0); padding-bottom: 20px; }
+    .faq-a p { font-size: 0.87rem; color: var(--muted); line-height: 1.72; }
 
-    .faq-trigger {
-      width: 100%;
-      background: transparent;
-      border: none;
-      padding: 22px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text);
-      font-size: 0.98rem;
-      font-weight: 600;
-      text-align: left;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-    }
+    /* ============================================
+       DOWNLOAD
+    ============================================ */
+    .download { padding: 88px 0; text-align: center; }
+    .dl-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 38px; margin-top: 44px; text-align: left; }
+    .dl-card { background: rgba(13,17,32,0.9); border: 1px solid rgba(212,175,55,0.18); border-radius: var(--rl); padding: 38px; position: relative; overflow: hidden; box-shadow: 0 16px 56px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .dl-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+    .dl-card h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 9px; }
+    .dl-card > p { font-size: 0.88rem; color: var(--muted); margin-bottom: 26px; }
+    .btn-dl { display: inline-flex; align-items: center; gap: 11px; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); color: #080B14; font-weight: 800; font-size: 0.97rem; padding: 15px 34px; border-radius: 13px; border: none; cursor: pointer; box-shadow: 0 8px 30px rgba(212,175,55,0.38); font-family: 'Inter', sans-serif; transition: transform var(--ease), box-shadow var(--ease); margin-bottom: 22px; }
+    .btn-dl:hover { transform: translateY(-3px); box-shadow: 0 16px 44px rgba(212,175,55,0.5); }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; width: 100%; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 11px; padding: 13px; text-align: left; margin: 0; }
+    .mi { display: flex; flex-direction: column; gap: 3px; }
+    .mi-l { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .mi-v { font-size: 0.84rem; font-weight: 600; }
+    .guide-card { background: rgba(13,17,32,0.78); border: 1px solid var(--border); border-radius: var(--rl); padding: 38px; backdrop-filter: blur(20px); box-shadow: 0 16px 44px rgba(0,0,0,0.4); }
+    .guide-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 22px; border-bottom: 1px solid var(--border); padding-bottom: 11px; }
+    .g-steps { display: flex; flex-direction: column; gap: 18px; }
+    .g-step { display: flex; gap: 15px; align-items: flex-start; }
+    .g-n { width: 27px; height: 27px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.28); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+    .g-t h4 { font-size: 0.91rem; font-weight: 700; margin-bottom: 3px; }
+    .g-t p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
 
-    .faq-icon {
-      font-size: 1.4rem;
-      font-weight: 300;
-      color: var(--muted);
-      transition: transform 200ms ease, color 200ms ease;
-      flex-shrink: 0;
-    }
+    /* ============================================
+       FOOTER
+    ============================================ */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 60px 24px 28px; }
+    .f-inner { max-width: 1200px; margin: 0 auto; }
+    .f-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 44px; margin-bottom: 52px; }
+    .f-logo { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800; margin-bottom: 14px; }
+    .logo-sm { width: 34px; height: 34px; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 900; color: #080B14; }
+    .f-brand p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; max-width: 250px; margin-bottom: 22px; }
+    .soc-links { display: flex; gap: 9px; }
+    .soc { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.93rem; transition: background var(--ease), border-color var(--ease), transform var(--ease); }
+    .soc:hover { background: rgba(212,175,55,0.1); border-color: rgba(212,175,55,0.26); transform: translateY(-2px); }
+    .f-col h4 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 17px; }
+    .f-col ul { list-style: none; }
+    .f-col ul li { margin-bottom: 10px; }
+    .f-col ul li a { font-size: 0.84rem; color: var(--muted); transition: color var(--ease); }
+    .f-col ul li a:hover { color: var(--gold-lt); }
+    .f-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 11px; }
+    .f-bottom p { font-size: 0.78rem; color: var(--muted); }
+    .f-bottom .g { color: var(--gold); }
+    .f-links { display: flex; gap: 12px; }
+    .f-links a { font-size: 0.78rem; color: var(--muted); transition: color var(--ease); }
+    .f-links a:hover { color: var(--gold-lt); }
 
-    .faq-item.active .faq-icon { transform: rotate(45deg); color: var(--gold); }
+    /* ============================================
+       MODAL
+    ============================================ */
+    .modal { position: fixed; inset: 0; background: rgba(4,5,10,0.9); backdrop-filter: blur(16px); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.32s ease; padding: 20px; }
+    .modal.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: var(--surface); border: 1px solid rgba(212,175,55,0.18); border-radius: var(--rl); width: 100%; max-width: 680px; max-height: 85vh; padding: 38px; position: relative; overflow-y: auto; transform: translateY(36px); transition: transform 0.32s ease; box-shadow: 0 24px 72px rgba(0,0,0,0.82); }
+    .modal.open .modal-box { transform: translateY(0); }
+    .m-close { position: absolute; top: 22px; right: 22px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 300; cursor: pointer; transition: var(--ease); }
+    .m-close:hover { background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.28); transform: rotate(90deg); }
+    .m-title { font-size: 1.45rem; font-weight: 800; color: var(--gold-lt); border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 22px; }
+    .m-body { font-size: 0.91rem; color: var(--muted); line-height: 1.78; }
+    .m-body h4 { font-size: 0.98rem; font-weight: 700; color: var(--text); margin: 20px 0 7px; }
+    .m-body h4:first-child { margin-top: 0; }
+    .m-body p { margin-bottom: 12px; }
+    .m-body ul { margin-bottom: 12px; padding-left: 18px; }
+    .m-body ul li { margin-bottom: 6px; }
+    .m-body strong { color: var(--text); }
 
-    .faq-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0,1,0,1);
-      padding: 0 24px;
-    }
-
-    .faq-item.active .faq-content {
-      max-height: 1000px;
-      transition: max-height 0.4s cubic-bezier(1,0,1,0);
-      padding-bottom: 22px;
-    }
-
-    .faq-content p { font-size: 0.88rem; color: var(--muted); line-height: 1.72; }
-
-    /* ===== DOWNLOAD ===== */
-    .download { padding: 90px 0; text-align: center; }
-
-    .download-layout {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 40px;
-      margin-top: 48px;
-      text-align: left;
-    }
-
-    .download-card {
-      background: rgba(13,17,32,0.9);
-      border: 1px solid rgba(212,175,55,0.18);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 16px 56px rgba(0,0,0,0.6);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-
-    .download-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    }
-
-    .download-card h3 { font-size: 1.35rem; font-weight: 800; margin-bottom: 10px; }
-    .download-card p { font-size: 0.9rem; color: var(--muted); margin-bottom: 28px; }
-
-    .btn-download {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: #070910;
-      font-weight: 800;
-      font-size: 1rem;
-      padding: 16px 36px;
-      border-radius: 13px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 32px rgba(212,175,55,0.38);
-      transition: transform var(--transition), box-shadow var(--transition);
-      font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
-      margin-bottom: 24px;
-    }
-
-    .btn-download:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(212,175,55,0.5); }
-
-    .download-meta-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      width: 100%;
-      margin: 20px 0;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      text-align: left;
-    }
-
-    .meta-item { display: flex; flex-direction: column; gap: 3px; }
-    .meta-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .meta-value { font-size: 0.85rem; font-weight: 600; }
-
-    .guide-card {
-      background: rgba(13,17,32,0.75);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
-    }
-
-    .guide-card h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-    }
-
-    .guide-steps { display: flex; flex-direction: column; gap: 20px; }
-
-    .guide-step { display: flex; gap: 16px; align-items: flex-start; }
-
-    .step-badge {
-      width: 28px; height: 28px;
-      background: rgba(212,175,55,0.12);
-      border: 1px solid rgba(212,175,55,0.28);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--gold);
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .step-text h4 { font-size: 0.93rem; font-weight: 700; margin-bottom: 4px; }
-    .step-text p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
-
-    /* ===== FOOTER ===== */
-    footer {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 64px 24px 32px;
-    }
-
-    .footer-inner { max-width: 1200px; margin: 0 auto; }
-
-    .footer-top {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 48px;
-      margin-bottom: 56px;
-    }
-
-    .footer-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.1rem;
-      font-weight: 800;
-      margin-bottom: 16px;
-    }
-
-    .logo-sm {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      font-weight: 900;
-      color: #070910;
-    }
-
-    .footer-brand p { font-size: 0.86rem; color: var(--muted); line-height: 1.65; max-width: 260px; margin-bottom: 24px; }
-
-    .social-links { display: flex; gap: 10px; }
-
-    .social-link {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      transition: background var(--transition), border-color var(--transition), transform var(--transition);
-    }
-
-    .social-link:hover {
-      background: rgba(212,175,55,0.1);
-      border-color: rgba(212,175,55,0.28);
-      transform: translateY(-2px);
-    }
-
-    .footer-col h4 {
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text);
-      margin-bottom: 18px;
-    }
-
-    .footer-col ul { list-style: none; }
-    .footer-col ul li { margin-bottom: 11px; }
-    .footer-col ul li a { font-size: 0.86rem; color: var(--muted); transition: color var(--transition); }
-    .footer-col ul li a:hover { color: var(--gold-light); }
-
-    .footer-bottom {
-      border-top: 1px solid var(--border);
-      padding-top: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .footer-bottom p { font-size: 0.8rem; color: var(--muted); }
-    .footer-bottom .gold { color: var(--gold); }
-
-    /* ===== SCROLL REVEAL ===== */
-    .reveal {
-      opacity: 0;
-      transform: translateY(28px);
-      transition: opacity 0.65s ease, transform 0.65s ease;
-    }
-
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-
-    .reveal-delay-1 { transition-delay: 0.08s; }
-    .reveal-delay-2 { transition-delay: 0.16s; }
-    .reveal-delay-3 { transition-delay: 0.24s; }
-    .reveal-delay-4 { transition-delay: 0.32s; }
-
-    /* ===== LEGAL MODAL ===== */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5,7,12,0.88);
-      backdrop-filter: blur(16px);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s cubic-bezier(.4,0,.2,1);
-      padding: 20px;
-    }
-
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-
-    .modal-content {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.18);
-      border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 700px;
-      max-height: 85vh;
-      padding: 40px;
-      position: relative;
-      overflow-y: auto;
-      transform: translateY(40px);
-      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-      box-shadow: 0 24px 72px rgba(0,0,0,0.8);
-    }
-
-    .modal-overlay.open .modal-content { transform: translateY(0); }
-
-    .modal-close {
-      position: absolute;
-      top: 24px; right: 24px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: var(--text);
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      font-weight: 300;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .modal-close:hover { background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.28); transform: rotate(90deg); }
-
-    .modal-header h3 { font-size: 1.5rem; font-weight: 800; color: var(--gold-light); border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
-
-    .modal-body { font-size: 0.93rem; color: var(--muted); line-height: 1.78; }
-    .modal-body h4 { font-size: 1rem; font-weight: 700; color: var(--text); margin: 22px 0 8px; }
-    .modal-body h4:first-of-type { margin-top: 0; }
-    .modal-body p { margin-bottom: 14px; }
-    .modal-body ul { margin-bottom: 14px; padding-left: 20px; }
-    .modal-body ul li { margin-bottom: 7px; }
-    .modal-body strong { color: var(--text); }
-
-    /* ===== RESPONSIVE ===== */
+    /* ============================================
+       RESPONSIVE
+    ============================================ */
     @media (max-width: 1100px) {
       .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .about-grid { grid-template-columns: 1fr; gap: 40px; }
-      .market-grid { grid-template-columns: 1fr; }
-      .unified-grid { grid-template-columns: 1fr; gap: 40px; }
-      .download-layout { grid-template-columns: 1fr; }
-      .hero-grid { grid-template-columns: 1fr; }
-      .hero-card-stack { display: none; }
-      .footer-top { grid-template-columns: 1fr 1fr; }
-      .reviews-grid { grid-template-columns: repeat(2, 1fr); }
+      .about-grid { grid-template-columns: 1fr; gap: 38px; }
+      .mkt-grid { grid-template-columns: 1fr; }
+      .sync-grid { grid-template-columns: 1fr; gap: 38px; }
+      .dl-layout { grid-template-columns: 1fr; }
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-cards { display: none; }
+      .f-top { grid-template-columns: 1fr 1fr; }
+      .rev-grid { grid-template-columns: repeat(2, 1fr); }
     }
-
     @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .nav-hamburger { display: flex; }
+      nav .nav-links { display: none; }
+      .hamburger { display: flex; }
       .features-grid { grid-template-columns: 1fr; }
-      .steps-grid { grid-template-columns: 1fr; }
-      .steps-grid::before { display: none; }
-      .unified-inner { padding: 40px 24px; }
-      .download-card, .guide-card { padding: 32px 20px; }
-      .footer-top { grid-template-columns: 1fr; gap: 32px; }
-      .footer-bottom { flex-direction: column; align-items: flex-start; }
-      .reviews-grid { grid-template-columns: 1fr; }
-      .about-grid { gap: 40px; }
+      .steps { grid-template-columns: 1fr; }
+      .steps::before { display: none; }
+      .sync-box { padding: 36px 22px; }
+      .dl-card, .guide-card { padding: 30px 18px; }
+      .f-top { grid-template-columns: 1fr; gap: 28px; }
+      .f-bottom { flex-direction: column; align-items: flex-start; }
+      .rev-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
+  <!-- PARTICLES -->
   <canvas id="particles-canvas"></canvas>
 
   <!-- NAV -->
-  <nav id="navbar">
+  <nav id="nav">
     <a class="nav-logo" href="#">
       <div class="logo-mark">ES</div>
-      <span class="brand-name">EthioSwap</span>
+      <span class="brand">EthioSwap</span>
     </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
-      <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#live-market">Live P2P</a></li>
-      <li><a href="#about-us">About</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#market">Live P2P</a></li>
+      <li><a href="#about">About</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#download">Download</a></li>
-      <li style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--green);font-weight:700;">
-        <span>🔒 256-bit Secure</span>
-      </li>
+      <li style="display:flex;align-items:center;font-size:0.72rem;color:var(--green);font-weight:700;padding-left:8px;">🔒 256-bit Secure</li>
       <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="nav-cta">Use Web App →</a></li>
     </ul>
-    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+    <button class="hamburger" id="ham" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
   </nav>
 
   <!-- MOBILE MENU -->
-  <div class="mobile-menu" id="mobile-menu">
+  <div class="mobile-menu" id="mmenu">
     <ul>
-      <li><a href="#features" onclick="closeMobileMenu()">Features</a></li>
-      <li><a href="#how-it-works" onclick="closeMobileMenu()">How It Works</a></li>
-      <li><a href="#live-market" onclick="closeMobileMenu()">Live P2P</a></li>
-      <li><a href="#about-us" onclick="closeMobileMenu()">About Us</a></li>
-      <li><a href="#faq" onclick="closeMobileMenu()">FAQ</a></li>
-      <li><a href="#download" onclick="closeMobileMenu()">Download APK</a></li>
-      <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" onclick="closeMobileMenu()">Use Web App →</a></li>
+      <li><a href="#features" onclick="closeMenu()">Features</a></li>
+      <li><a href="#how" onclick="closeMenu()">How It Works</a></li>
+      <li><a href="#market" onclick="closeMenu()">Live P2P</a></li>
+      <li><a href="#about" onclick="closeMenu()">About</a></li>
+      <li><a href="#faq" onclick="closeMenu()">FAQ</a></li>
+      <li><a href="#download" onclick="closeMenu()">Download APK</a></li>
+      <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" onclick="closeMenu()">Use Web App →</a></li>
     </ul>
   </div>
 
   <!-- HERO -->
   <section class="hero" id="home">
     <div class="hero-bg">
-      <div class="hero-orb hero-orb-1"></div>
-      <div class="hero-orb hero-orb-2"></div>
-      <div class="hero-orb hero-orb-3"></div>
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
     </div>
     <div class="container">
-      <div class="hero-grid">
-        <div class="hero-content">
+      <div class="hero-inner">
+
+        <!-- LEFT: Text -->
+        <div class="hero-text">
           <div class="hero-badge">
             <span class="dot"></span>
-            Live Escrow Marketplace &nbsp;·&nbsp; Last updated: <span id="last-updated-time">Just now</span>
+            Live Escrow Marketplace &nbsp;·&nbsp; Updated <span id="upd-time">just now</span>
           </div>
+
           <h1>
             Trade USD ($) &amp; ETB.<br />
             <span class="gold-text">Safe &amp; Secure.</span>
           </h1>
+
           <p class="hero-sub">
             EthioSwap is Ethiopia's premier peer-to-peer USD trading platform.
             Verified users. Admin-backed escrow. Real-time settlements.
             Trade confidently — from your phone or any browser.
           </p>
+
+          <div class="trust-row">
+            <span class="trust-badge">🔒 256-bit SSL</span>
+            <span class="trust-sep">|</span>
+            <span class="trust-badge">🛡️ Admin-Backed Escrow</span>
+            <span class="trust-sep">|</span>
+            <span class="trust-badge">✅ KYC Verified Users</span>
+          </div>
+
           <div class="hero-ctas">
             <a href="./ethioswap.apk" class="btn-primary" download>
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download App (APK)
+              Download APK
             </a>
             <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary">
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -1666,109 +598,61 @@
           </div>
 
           <div class="hero-stats">
-            <div class="hero-stat">
-              <span class="number">10k+</span>
-              <span class="label">Verified Traders</span>
-            </div>
-            <div class="hero-stat">
-              <span class="number">$2M+</span>
-              <span class="label">Volume Traded</span>
-            </div>
-            <div class="hero-stat">
-              <span class="number">4.9★</span>
-              <span class="label">User Rating</span>
-            </div>
-            <div class="hero-stat">
-              <span class="number">0</span>
-              <span class="label">Scam Reports</span>
-            </div>
-          </div>
-
-          <div class="community-goal">
-            <div class="goal-label">
-              <span>Community Goal</span>
-              <span id="traders-count-label">10,000 / 50,000 verified traders</span>
-            </div>
-            <div class="goal-bar">
-              <div class="goal-bar-fill" id="goal-progress-bar" style="width: 20%"></div>
-            </div>
-          </div>
-
-          <div class="trust-row" style="margin-top: 28px;">
-            <span class="trust-badge"><span class="icon">🔒</span> 256-bit SSL</span>
-            <span class="trust-dot">|</span>
-            <span class="trust-badge"><span class="icon">🛡️</span> Admin-Backed Escrow</span>
-            <span class="trust-dot">|</span>
-            <span class="trust-badge"><span class="icon">✅</span> KYC Verified</span>
+            <div class="stat"><span class="num">10k+</span><span class="lbl">Verified Traders</span></div>
+            <div class="stat"><span class="num">$2M+</span><span class="lbl">Volume Traded</span></div>
+            <div class="stat"><span class="num">4.9★</span><span class="lbl">User Rating</span></div>
+            <div class="stat"><span class="num">0</span><span class="lbl">Scam Reports</span></div>
           </div>
         </div>
 
-        <!-- Floating Card Stack -->
-        <div class="hero-card-stack">
-          <!-- Trade card -->
-          <div class="floating-card" style="animation: float 4s ease-in-out infinite;">
-            <div class="card-header">
+        <!-- RIGHT: Floating Cards -->
+        <div class="hero-cards">
+          <div class="float-card">
+            <div class="card-top">
               <span>Latest Trade</span>
-              <div class="card-status">
-                <div class="status-dot green"></div>
-                <span style="color: var(--green);">Completed</span>
-              </div>
+              <div class="live-badge"><div class="live-dot"></div><span style="color:var(--green)">Completed</span></div>
             </div>
-            <div class="trade-amount">$250 USD</div>
-            <div class="trade-sub">↔ 47,500 ETB via CBE</div>
-            <div class="trade-tag">✓ Escrow Released</div>
-            <div class="escrow-meter">
-              <div style="font-size:0.7rem; color: var(--muted); margin-top: 10px;">Trade Progress</div>
-              <div class="meter-bar"><div class="meter-fill" style="width:100%"></div></div>
-            </div>
+            <div class="card-big">$250 USD</div>
+            <div class="card-small">↔ 47,500 ETB via CBE</div>
+            <div class="card-tag">✓ Escrow Released</div>
           </div>
-
-          <!-- Rate card -->
-          <div class="floating-card" style="animation: float 4s ease-in-out infinite 1.5s;">
-            <div class="card-header">
+          <div class="float-card">
+            <div class="card-top">
               <span>Live Rate</span>
-              <div class="card-status">
-                <div class="status-dot gold"></div>
-                <span style="color: var(--gold);">Live</span>
-              </div>
+              <div class="live-badge"><div class="live-dot gold-dot"></div><span style="color:var(--gold)">Live</span></div>
             </div>
-            <div class="rate-display">1 USD = 190 ETB</div>
-            <div class="trade-sub" style="margin-top: 6px;">Telebirr · CBE · Dashen</div>
-            <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-              <span style="background: rgba(16,217,160,0.1); border: 1px solid rgba(16,217,160,0.2); border-radius: 6px; padding: 3px 8px; font-size:0.7rem; font-weight:700; color: var(--green);">+2.1%</span>
-              <span style="font-size:0.72rem; color:var(--muted); align-self:center;">vs last week</span>
+            <div class="rate-big">1 USD = 190 ETB</div>
+            <div class="card-small">Telebirr · CBE · Dashen</div>
+            <div class="card-pills">
+              <span class="pill">TRC20</span>
+              <span class="pill">BEP20</span>
+              <span class="pill">ERC20</span>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </section>
 
-  <style>
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-  </style>
-
   <!-- TICKER -->
   <div class="ticker-wrap">
     <div class="ticker">
-      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val">1 USD = 190.00 ETB</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Secure Escrow <span class="ticker-val">Every Trade</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> KYC Verified <span class="ticker-val">All Users</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App &amp; Web</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Biometric Lock <span class="ticker-val">Your Security</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Admin Protected <span class="ticker-val">Dispute Ready</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> 10,000+ Traders <span class="ticker-val">Verified</span></div>
-      <!-- Duplicate for seamless loop -->
-      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val">1 USD = 190.00 ETB</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Secure Escrow <span class="ticker-val">Every Trade</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> KYC Verified <span class="ticker-val">All Users</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App &amp; Web</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Biometric Lock <span class="ticker-val">Your Security</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Admin Protected <span class="ticker-val">Dispute Ready</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> 10,000+ Traders <span class="ticker-val">Verified</span></div>
+      <div class="t-item"><span class="t-dot"></span> USD/ETB <span class="t-val">1 USD = 190.00 ETB</span></div>
+      <div class="t-item"><span class="t-dot"></span> Secure Escrow <span class="t-val">Every Trade</span></div>
+      <div class="t-item"><span class="t-dot"></span> KYC Verified <span class="t-val">All Users</span></div>
+      <div class="t-item"><span class="t-dot"></span> Real-Time Sync <span class="t-val">App &amp; Web</span></div>
+      <div class="t-item"><span class="t-dot"></span> Biometric Lock <span class="t-val">Your Security</span></div>
+      <div class="t-item"><span class="t-dot"></span> Admin Protected <span class="t-val">Dispute Ready</span></div>
+      <div class="t-item"><span class="t-dot"></span> 10,000+ Traders <span class="t-val">Verified</span></div>
+      <!-- duplicate for seamless loop -->
+      <div class="t-item"><span class="t-dot"></span> USD/ETB <span class="t-val">1 USD = 190.00 ETB</span></div>
+      <div class="t-item"><span class="t-dot"></span> Secure Escrow <span class="t-val">Every Trade</span></div>
+      <div class="t-item"><span class="t-dot"></span> KYC Verified <span class="t-val">All Users</span></div>
+      <div class="t-item"><span class="t-dot"></span> Real-Time Sync <span class="t-val">App &amp; Web</span></div>
+      <div class="t-item"><span class="t-dot"></span> Biometric Lock <span class="t-val">Your Security</span></div>
+      <div class="t-item"><span class="t-dot"></span> Admin Protected <span class="t-val">Dispute Ready</span></div>
+      <div class="t-item"><span class="t-dot"></span> 10,000+ Traders <span class="t-val">Verified</span></div>
     </div>
   </div>
 
@@ -1777,126 +661,89 @@
   <!-- FEATURES -->
   <section class="features" id="features">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Built to Perform</span>
+      <div class="s-head">
+        <span class="eyebrow">Built to Perform</span>
         <h2>Everything you need<br />to trade with confidence</h2>
         <p>From identity verification to instant settlements, every feature is engineered for security and speed.</p>
       </div>
       <div class="features-grid">
-
-        <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div>
           <h3>Real-Time Trading</h3>
           <p>Live order book updates powered by our cloud backend. Post a buy or sell — the market responds instantly, no refresh needed.</p>
         </div>
-
-        <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
           <h3>Secure KYC Verification</h3>
-          <p>Every user is identity-verified before trading. Upload your National ID and selfie — reviewed and approved by our admin team for a fraud-free marketplace.</p>
+          <p>Every user is identity-verified before trading. Upload your National ID and selfie — reviewed by our admin team for a fraud-free marketplace.</p>
         </div>
-
-        <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
           <h3>Admin-Protected Escrow</h3>
           <p>Funds are held in escrow during every trade. Disputes are resolved by human admins, not algorithms. Your USD is never at risk.</p>
         </div>
-
-        <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
           <h3>Instant Notifications</h3>
-          <p>Never miss a trade. Get push notifications the moment a buyer or seller responds to your order, from both the mobile app and the web.</p>
+          <p>Never miss a trade. Get push notifications the moment a buyer or seller responds to your order, from both mobile app and web.</p>
         </div>
-
-        <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
           <h3>Biometric Lock</h3>
           <p>Secure your app with fingerprint or face ID. Even if your phone is unlocked, EthioSwap requires biometric confirmation before entry.</p>
         </div>
-
-        <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-          </div>
+        <div class="feat-card">
+          <div class="feat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
           <h3>Transparent Fees</h3>
           <p>Transparent fee structure. Admins manage platform commissions in real-time — always visible to traders. No hidden charges, ever.</p>
         </div>
-
       </div>
     </div>
   </section>
 
   <div class="gold-line"></div>
 
-  <!-- LIVE MARKETPLACE -->
-  <section class="live-market" id="live-market">
+  <!-- LIVE MARKET -->
+  <section class="market" id="market">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Live Activity</span>
+      <div class="s-head">
+        <span class="eyebrow">Live Activity</span>
         <h2>Real-Time Market Tracker</h2>
         <p>Monitor live P2P orders and estimate your trading returns with our interactive commission calculator.</p>
       </div>
-
-      <div class="market-grid">
-        <!-- Live Activity Feed -->
-        <div class="market-card activity-feed reveal">
+      <div class="mkt-grid">
+        <div class="mkt-card">
           <h3>Recent Trades Completed</h3>
-          <div class="feed-container" id="live-trades-feed">
-            <!-- Injected by JS -->
-          </div>
+          <div class="feed" id="feed"></div>
         </div>
-
-        <!-- Calculator Widget -->
-        <div class="market-card calculator-widget reveal reveal-delay-2">
+        <div class="mkt-card">
           <h3>Fee &amp; Swap Estimator</h3>
           <div class="calc-tabs">
-            <button class="calc-tab active" id="calc-tab-buy" onclick="setCalcMode('buy')">Buy USD ($)</button>
-            <button class="calc-tab" id="calc-tab-sell" onclick="setCalcMode('sell')">Sell USD ($)</button>
+            <button class="c-tab active" id="tab-buy" onclick="setMode('buy')">Buy USD ($)</button>
+            <button class="c-tab" id="tab-sell" onclick="setMode('sell')">Sell USD ($)</button>
           </div>
-          <div class="calc-form">
-            <div class="input-group">
-              <label for="calc-amount">Amount (USD)</label>
-              <input type="number" id="calc-amount" value="100" oninput="calculateSimulator()" />
+          <div class="c-form">
+            <div class="c-group">
+              <label class="c-label" for="c-amt">Amount (USD)</label>
+              <input type="number" id="c-amt" value="100" oninput="calc()" />
             </div>
-            <div class="input-group">
-              <label for="calc-commission">Commission Fee</label>
-              <select id="calc-commission" onchange="calculateSimulator()">
-                <option value="0.005">0.5% (Admin Tier) — No hidden fees</option>
-                <option value="0.01">1.0% (Standard Tier)</option>
+            <div class="c-group">
+              <label class="c-label" for="c-fee">Commission Fee</label>
+              <select id="c-fee" onchange="calc()">
+                <option value="0.005">0.5% (Admin Tier)</option>
+                <option value="0.01">1.0% (Standard)</option>
                 <option value="0.015">1.5%</option>
                 <option value="0.02" selected>2.0% (Default)</option>
                 <option value="0.025">2.5%</option>
                 <option value="0.03">3.0%</option>
-                <option value="0.04">4.0%</option>
                 <option value="0.05">5.0%</option>
               </select>
             </div>
-            <div class="calc-results">
-              <div class="calc-row">
-                <span>Exchange Rate:</span>
-                <span id="calc-rate-display">1 USD = 190.00 ETB</span>
-              </div>
-              <div class="calc-row">
-                <span>Platform Fee:</span>
-                <span id="calc-fee-display" style="color: var(--gold-light);">$2.00 USD</span>
-              </div>
-              <div class="calc-row highlight">
-                <span id="calc-result-label">Total to Pay:</span>
-                <span id="calc-result-display">19,000.00 ETB</span>
-              </div>
-              <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-primary calc-cta">
-                Start Trading at This Rate →
-              </a>
+            <div class="c-results">
+              <div class="c-row"><span>Exchange Rate:</span><span id="c-rate">1 USD = 190.00 ETB</span></div>
+              <div class="c-row"><span>Platform Fee:</span><span id="c-fee-out" style="color:var(--gold-lt)">$2.00 USD</span></div>
+              <div class="c-row hl"><span id="c-lbl">Total to Pay:</span><span id="c-out">19,000.00 ETB</span></div>
+              <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-primary c-cta">Start Trading →</a>
             </div>
           </div>
         </div>
@@ -1907,74 +754,52 @@
   <div class="gold-line"></div>
 
   <!-- HOW IT WORKS -->
-  <section class="how-it-works" id="how-it-works">
+  <section class="how" id="how">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Simple by Design</span>
+      <div class="s-head">
+        <span class="eyebrow">Simple by Design</span>
         <h2>Start trading in<br />three simple steps</h2>
         <p>From zero to your first USD trade — EthioSwap makes it fast, safe, and straightforward.</p>
       </div>
-      <div class="steps-grid">
-
-        <div class="step-card reveal reveal-delay-1">
-          <div class="step-number">👤</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">👤</div>
           <h3>Register</h3>
           <p>Create your account with a phone number and email. Takes under 60 seconds. Works on the app or web — same account, always.</p>
         </div>
-
-        <div class="step-card reveal reveal-delay-2">
-          <div class="step-number">🔍</div>
+        <div class="step">
+          <div class="step-num">🔍</div>
           <h3>KYC Verify</h3>
           <p>Submit your National ID and a selfie. Our admin team reviews and approves within hours. One-time process, lifetime access.</p>
         </div>
-
-        <div class="step-card reveal reveal-delay-3">
-          <div class="step-number">🛡️</div>
+        <div class="step">
+          <div class="step-num">🛡️</div>
           <h3>Secure Trade</h3>
           <p>Browse live buy/sell offers or post your own. Escrow protects both sides. Confirm payment, release funds — done.</p>
         </div>
-
       </div>
     </div>
   </section>
 
   <div class="gold-line"></div>
 
-  <!-- ABOUT US -->
-  <section class="about-us" id="about-us">
+  <!-- ABOUT -->
+  <section class="about" id="about">
     <div class="container">
       <div class="about-grid">
-        <div class="about-text reveal">
-          <span class="section-eyebrow">Our Mission</span>
+        <div class="about-text">
+          <span class="eyebrow">Our Mission</span>
           <h2>Bridging Payments<br />for Ethiopia</h2>
-          <p>
-            EthioSwap was founded in Addis Ababa with a singular vision: to create the most secure, reliable, and compliant peer-to-peer USD exchange tailored specifically for the Ethiopian market.
-          </p>
-          <p>
-            We understand the challenges of trading digital assets in Ethiopia—untrusted counterparties, high risk of bank transfer fraud, and slow communication. That's why we engineered an automated admin-backed escrow system that guarantees the safety of every single cent.
-          </p>
-          <p>
-            With support for Commercial Bank of Ethiopia (CBE), Telebirr, Dashen Bank, Bank of Abyssinia, and others, we make it seamless for traders to buy and sell USD ($) directly using local payment methods, backed by 24/7 human dispute resolution.
-          </p>
+          <p>EthioSwap was founded in Addis Ababa with a singular vision: to create the most secure, reliable, and compliant peer-to-peer USD exchange tailored specifically for the Ethiopian market.</p>
+          <p>We understand the challenges of trading digital assets in Ethiopia — untrusted counterparties, high risk of bank transfer fraud, and slow communication. That's why we engineered an automated admin-backed escrow system that guarantees the safety of every single cent.</p>
+          <p>With support for CBE, Telebirr, Dashen Bank, Bank of Abyssinia, and others, we make it seamless for traders to buy and sell USD ($) using local payment methods, backed by 24/7 human dispute resolution.</p>
         </div>
-        <div class="about-stats-card reveal reveal-delay-2">
-          <div class="stats-items">
-            <div class="stats-item">
-              <span class="stats-val">100%</span>
-              <span class="stats-lbl">Funds Secured in Escrow</span>
-            </div>
-            <div class="stats-item">
-              <span class="stats-val">&lt; 15m</span>
-              <span class="stats-lbl">Average Trade Completion</span>
-            </div>
-            <div class="stats-item">
-              <span class="stats-val">10k+</span>
-              <span class="stats-lbl">Verified Traders in Ethiopia</span>
-            </div>
-            <div class="stats-item">
-              <span class="stats-val">0 ETB</span>
-              <span class="stats-lbl">Hidden Fees or Payout Delays</span>
-            </div>
+        <div class="a-card">
+          <div class="a-items">
+            <div class="a-item"><span class="a-val">100%</span><span class="a-lbl">Funds Secured in Escrow</span></div>
+            <div class="a-item"><span class="a-val">&lt; 15m</span><span class="a-lbl">Average Trade Completion</span></div>
+            <div class="a-item"><span class="a-val">10k+</span><span class="a-lbl">Verified Traders in Ethiopia</span></div>
+            <div class="a-item"><span class="a-val">0 ETB</span><span class="a-lbl">Hidden Fees or Payout Delays</span></div>
           </div>
         </div>
       </div>
@@ -1986,144 +811,102 @@
   <!-- REVIEWS -->
   <section class="reviews" id="reviews">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Wall of Trust</span>
+      <div class="s-head">
+        <span class="eyebrow">Wall of Trust</span>
         <h2>Verified Trader Reviews</h2>
         <p>All reviews are posted by verified EthioSwap traders after completing real trades.</p>
       </div>
-
-      <div class="reviews-grid">
-        <div class="review-card reveal reveal-delay-1">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"The escrow system gives me complete peace of mind. I've done 12 trades and never once had an issue. The admin team resolves disputes super fast."</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #D4AF37, #F0C040); color: #070910;">YK</div>
-            <div class="user-info">
-              <span class="user-name">Yared K.</span>
-              <span class="user-verified">✓ Verified Trader · 12 trades</span>
-            </div>
-            <span class="review-date">2 days ago</span>
+      <div class="rev-grid">
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"The escrow system gives me complete peace of mind. I've done 12 trades and never once had an issue. The admin team resolves disputes super fast."</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#D4AF37,#F0C040);color:#080B14">YK</div>
+            <div class="rv-info"><span class="rv-name">Yared K.</span><span class="rv-vc">✓ Verified · 12 trades</span></div>
+            <span class="rv-date">2 days ago</span>
           </div>
         </div>
-
-        <div class="review-card reveal reveal-delay-2">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"Best P2P platform in Ethiopia. I can use Telebirr directly and the rate is always fair. EthioSwap changed how I manage my dollars."</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #10D9A0, #0CB87E); color: #070910;">SE</div>
-            <div class="user-info">
-              <span class="user-name">Selam E.</span>
-              <span class="user-verified">✓ Verified Trader · 28 trades</span>
-            </div>
-            <span class="review-date">5 days ago</span>
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"Best P2P platform in Ethiopia. I can use Telebirr directly and the rate is always fair. EthioSwap changed how I manage my dollars."</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#10D9A0,#0CB87E);color:#080B14">SE</div>
+            <div class="rv-info"><span class="rv-name">Selam E.</span><span class="rv-vc">✓ Verified · 28 trades</span></div>
+            <span class="rv-date">5 days ago</span>
           </div>
         </div>
-
-        <div class="review-card reveal reveal-delay-3">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"I was skeptical at first but after my first trade I was completely sold. The app is smooth, the KYC was fast, and my money was safe the whole time."</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #7C3AED, #A855F7); color: #FFF;">HM</div>
-            <div class="user-info">
-              <span class="user-name">Helen M.</span>
-              <span class="user-verified">✓ Verified Trader · 7 trades</span>
-            </div>
-            <span class="review-date">1 week ago</span>
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"I was skeptical at first but after my first trade I was sold. The app is smooth, KYC was fast, and my money was safe the whole time."</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff">HM</div>
+            <div class="rv-info"><span class="rv-name">Helen M.</span><span class="rv-vc">✓ Verified · 7 trades</span></div>
+            <span class="rv-date">1 week ago</span>
           </div>
         </div>
-
-        <div class="review-card reveal reveal-delay-1">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"The 15-minute timer and real-time chat kept things moving. I sold $500 and received my ETB in 8 minutes. This is how P2P should work."</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #F59E0B, #FBBF24); color: #070910;">KB</div>
-            <div class="user-info">
-              <span class="user-name">Kebede B.</span>
-              <span class="user-verified">✓ Verified Trader · 45 trades</span>
-            </div>
-            <span class="review-date">1 week ago</span>
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"The 15-minute timer and real-time chat kept things moving. I sold $500 and received my ETB in 8 minutes. This is how P2P should work."</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#080B14">KB</div>
+            <div class="rv-info"><span class="rv-name">Kebede B.</span><span class="rv-vc">✓ Verified · 45 trades</span></div>
+            <span class="rv-date">1 week ago</span>
           </div>
         </div>
-
-        <div class="review-card reveal reveal-delay-2">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"The web app works just like the Android app. Same account, same data. I switched from phone to laptop mid-trade and it was seamless!"</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #EC4899, #F472B6); color: #FFF;">TW</div>
-            <div class="user-info">
-              <span class="user-name">Tigist W.</span>
-              <span class="user-verified">✓ Verified Trader · 19 trades</span>
-            </div>
-            <span class="review-date">2 weeks ago</span>
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"The web app works just like the Android app. Same account, same data. I switched from phone to laptop mid-trade and it was seamless!"</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#EC4899,#F472B6);color:#fff">TW</div>
+            <div class="rv-info"><span class="rv-name">Tigist W.</span><span class="rv-vc">✓ Verified · 19 trades</span></div>
+            <span class="rv-date">2 weeks ago</span>
           </div>
         </div>
-
-        <div class="review-card reveal reveal-delay-3">
-          <div class="review-stars">★★★★★</div>
-          <div class="review-content">"I had a dispute once because the seller was slow to release. The admin stepped in within 5 minutes and the funds were returned to me. Full trust in this platform."</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: linear-gradient(135deg, #0EA5E9, #38BDF8); color: #FFF;">DG</div>
-            <div class="user-info">
-              <span class="user-name">Dawit G.</span>
-              <span class="user-verified">✓ Verified Trader · 33 trades</span>
-            </div>
-            <span class="review-date">3 weeks ago</span>
+        <div class="rev-card">
+          <div class="stars">★★★★★</div>
+          <div class="rev-text">"I had a dispute once and the admin stepped in within 5 minutes. Funds were returned to me immediately. Full trust in this platform."</div>
+          <div class="rev-user">
+            <div class="av" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8);color:#fff">DG</div>
+            <div class="rv-info"><span class="rv-name">Dawit G.</span><span class="rv-vc">✓ Verified · 33 trades</span></div>
+            <span class="rv-date">3 weeks ago</span>
           </div>
         </div>
       </div>
-
-      <div style="text-align:center;">
-        <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary" style="border-color:var(--gold);color:var(--gold-light);">
-          Write a Review →
-        </a>
+      <div style="text-align:center">
+        <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary" style="border-color:var(--gold);color:var(--gold-lt);display:inline-flex;">Write a Review →</a>
       </div>
     </div>
   </section>
 
   <div class="gold-line"></div>
 
-  <!-- UNIFIED ACCOUNT -->
-  <section class="unified" id="unified">
+  <!-- SYNC / UNIFIED -->
+  <section class="sync" id="sync">
     <div class="container">
-      <div class="unified-inner reveal">
-        <div class="unified-grid">
-          <div class="unified-text">
-            <span class="section-eyebrow">One Account. App or Web.</span>
+      <div class="sync-box">
+        <div class="sync-grid">
+          <div class="sync-text">
+            <span class="eyebrow">One Account. App or Web.</span>
             <h2>Your account works<br /><span class="grad">everywhere.</span></h2>
-            <p>
-              Your EthioSwap account works everywhere. Whether you use the Android app or open the website — everything is synced live through our cloud database.
-            </p>
-            <p>
-              Log in on the app, check your orders on the web. Switch devices mid-trade with zero interruption. Your portfolio, history, and active orders follow you anywhere, in real time.
-            </p>
-            <div class="unified-tag">
-              ⚡ Powered by real-time cloud sync
-            </div>
+            <p>Your EthioSwap account works everywhere. Whether you use the Android app or open the website — everything is synced live through our cloud database.</p>
+            <p>Log in on the app, check your orders on the web. Switch devices mid-trade with zero interruption. Your portfolio, history, and active orders follow you anywhere, in real time.</p>
+            <div class="sync-tag">⚡ Powered by real-time cloud sync</div>
           </div>
-          <div class="unified-cards">
-            <div class="sync-card">
-              <div class="sync-card-icon">📱</div>
-              <div class="sync-card-text">
-                <h4>Android App</h4>
-                <p>Full-featured native experience with biometric lock, push notifications, and offline caching.</p>
-              </div>
-              <div class="sync-badge">Live</div>
+          <div class="sync-cards">
+            <div class="s-card">
+              <div class="s-icon">📱</div>
+              <div class="s-info"><h4>Android App</h4><p>Full-featured native experience with biometric lock, push notifications, and offline caching.</p></div>
+              <div class="s-badge">Live</div>
             </div>
-            <div class="sync-card">
-              <div class="sync-card-icon">🌐</div>
-              <div class="sync-card-text">
-                <h4>Web App</h4>
-                <p>Access EthioSwap from any browser — desktop or mobile — with the exact same account and data.</p>
-              </div>
-              <div class="sync-badge">Live</div>
+            <div class="s-card">
+              <div class="s-icon">🌐</div>
+              <div class="s-info"><h4>Web App</h4><p>Access EthioSwap from any browser — desktop or mobile — with the exact same account and data.</p></div>
+              <div class="s-badge">Live</div>
             </div>
-            <div class="sync-card">
-              <div class="sync-card-icon">☁️</div>
-              <div class="sync-card-text">
-                <h4>Real-Time Cloud Sync</h4>
-                <p>All trades, balances, and notifications sync instantly across every device via our cloud backend.</p>
-              </div>
-              <div class="sync-badge">Always On</div>
+            <div class="s-card">
+              <div class="s-icon">☁️</div>
+              <div class="s-info"><h4>Real-Time Cloud Sync</h4><p>All trades, balances, and notifications sync instantly across every device.</p></div>
+              <div class="s-badge">Always On</div>
             </div>
           </div>
         </div>
@@ -2136,61 +919,31 @@
   <!-- FAQ -->
   <section class="faq" id="faq">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Got Questions?</span>
+      <div class="s-head">
+        <span class="eyebrow">Got Questions?</span>
         <h2>Frequently Asked Questions</h2>
         <p>Everything you need to know about trading, security, fees, and verification on EthioSwap.</p>
       </div>
-
-      <div class="faq-accordion reveal">
+      <div class="faq-list">
         <div class="faq-item">
-          <button class="faq-trigger">
-            <span>What is EthioSwap and how does P2P trading work?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-content">
-            <p>EthioSwap is a peer-to-peer (P2P) escrow platform that allows individuals in Ethiopia to buy and sell USD ($) directly from each other using local payment methods like CBE, Telebirr, and others. The platform acts as a secure escrow provider. When a trade starts, the seller's USD is automatically locked. Once the buyer sends the fiat payment and the seller confirms receipt, the USD is released to the buyer.</p>
-          </div>
+          <button class="faq-q"><span>What is EthioSwap and how does P2P trading work?</span><span class="faq-ic">+</span></button>
+          <div class="faq-a"><p>EthioSwap is a peer-to-peer (P2P) escrow platform that allows individuals in Ethiopia to buy and sell USD ($) directly from each other using local payment methods like CBE, Telebirr, and others. When a trade starts, the seller's USD is automatically locked in escrow. Once the buyer sends the fiat payment and the seller confirms receipt, the USD is released to the buyer.</p></div>
         </div>
-
         <div class="faq-item">
-          <button class="faq-trigger">
-            <span>Is identity verification (KYC) mandatory?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-content">
-            <p>Yes. To ensure a safe, fraud-free environment and comply with international anti-money laundering (AML) standards, all users must complete identity verification (KYC) before they can initiate any buy or sell trades. You will need to fill out your details (name, age, phone) and upload clear pictures of your National ID or Passport (front and back) along with a live camera selfie. Our admins review submissions quickly to authorize accounts.</p>
-          </div>
+          <button class="faq-q"><span>Is identity verification (KYC) mandatory?</span><span class="faq-ic">+</span></button>
+          <div class="faq-a"><p>Yes. To ensure a safe, fraud-free environment and comply with AML standards, all users must complete KYC before they can initiate any trades. You will need to upload your National ID or Passport (front and back) along with a live camera selfie. Our admins review submissions quickly to authorize accounts.</p></div>
         </div>
-
         <div class="faq-item">
-          <button class="faq-trigger">
-            <span>How does the escrow system protect my funds?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-content">
-            <p>When a buyer responds to a sell offer, the seller's USD balance is moved into the EthioSwap secure Escrow holding vault. The seller cannot cancel the trade while in escrow, preventing them from running away with the assets after payment. The buyer is given 15 minutes to transfer the fiat money to the seller. Once paid, the buyer marks it as paid. The seller then verifies their bank statement and releases the escrow. If any issue arises, either party can open a dispute.</p>
-          </div>
+          <button class="faq-q"><span>How does the escrow system protect my funds?</span><span class="faq-ic">+</span></button>
+          <div class="faq-a"><p>When a buyer responds to a sell offer, the seller's USD balance is moved into EthioSwap's secure Escrow vault. The seller cannot cancel the trade while in escrow. The buyer is given 15 minutes to transfer the fiat money to the seller. Once paid, the buyer marks it as paid. The seller then verifies and releases the escrow. If any issue arises, either party can open a dispute.</p></div>
         </div>
-
         <div class="faq-item">
-          <button class="faq-trigger">
-            <span>What happens in case of a dispute?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-content">
-            <p>If a buyer claims they paid but the seller refuses to release, or if a buyer marks a trade as paid without transferring the funds, a dispute can be opened. Once a dispute is active, a certified EthioSwap admin will step into the secure trade chat room. Both users must provide verified screenshots or PDF receipts of the transaction. The admin will verify the logs and release the USD to the buyer or refund it to the seller based on audit evidence.</p>
-          </div>
+          <button class="faq-q"><span>What happens in case of a dispute?</span><span class="faq-ic">+</span></button>
+          <div class="faq-a"><p>If a buyer claims they paid but the seller refuses to release, a dispute can be opened. Once active, a certified EthioSwap admin will step into the trade chat. Both users must provide verified screenshots or PDF receipts of the transaction. The admin will verify the logs and release the USD to the buyer or refund to the seller based on audit evidence.</p></div>
         </div>
-
         <div class="faq-item">
-          <button class="faq-trigger">
-            <span>What are the platform trading fees?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-content">
-            <p>EthioSwap charges a highly competitive, transparent commission fee on every completed trade. The commission rate is set dynamically by the platform administrator (typically between 1.0% and 5.0%) and is shown clearly to you before you start a trade. Fees are deducted only upon successful trade completion. There are zero deposit fees, and withdrawal processing fees are calculated dynamically.</p>
-          </div>
+          <button class="faq-q"><span>What are the platform trading fees?</span><span class="faq-ic">+</span></button>
+          <div class="faq-a"><p>EthioSwap charges a highly competitive, transparent commission fee on every completed trade. The commission rate is set by the platform administrator (typically 1.0%–5.0%) and is shown clearly before you start a trade. Fees are deducted only upon successful trade completion.</p></div>
         </div>
       </div>
     </div>
@@ -2201,68 +954,33 @@
   <!-- DOWNLOAD -->
   <section class="download" id="download">
     <div class="container">
-      <div class="section-header reveal">
-        <span class="section-eyebrow">Get the App</span>
+      <div class="s-head">
+        <span class="eyebrow">Get the App</span>
         <h2>Secure Mobile Trading</h2>
         <p>Take EthioSwap on the go. Direct Android APK download with local biometric locks and push notifications.</p>
       </div>
-
-      <div class="download-layout reveal">
-        <div class="download-card">
-          <div style="font-size:3.5rem; margin-bottom:16px;">📦</div>
+      <div class="dl-layout">
+        <div class="dl-card">
+          <div style="font-size:3.2rem;margin-bottom:14px">📦</div>
           <h3>EthioSwap for Android</h3>
           <p>Download the APK file directly. Verified safe, secure, and malware-free.</p>
-          <a href="./ethioswap.apk" class="btn-download" download>
-            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <a href="./ethioswap.apk" class="btn-dl" download>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download APK (Android)
           </a>
-          <div class="download-meta-grid">
-            <div class="meta-item">
-              <span class="meta-label">Version</span>
-              <span class="meta-value">v1.2.0 (Stable)</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">File Size</span>
-              <span class="meta-value">18.4 MB</span>
-            </div>
-            <div class="meta-item" style="grid-column:span 2;">
-              <span class="meta-label">SHA-256 Checksum</span>
-              <span class="meta-value" style="font-size:0.7rem; word-break:break-all;">d4af37b8f9e20c40a58e604a2cf01f3d8225555c8899aa10b981</span>
-            </div>
+          <div class="meta-grid">
+            <div class="mi"><span class="mi-l">Version</span><span class="mi-v">v1.2.0 (Stable)</span></div>
+            <div class="mi"><span class="mi-l">File Size</span><span class="mi-v">18.4 MB</span></div>
+            <div class="mi" style="grid-column:span 2"><span class="mi-l">SHA-256 Checksum</span><span class="mi-v" style="font-size:0.68rem;word-break:break-all">d4af37b8f9e20c40a58e604a2cf01f3d822555c8899aa10b981</span></div>
           </div>
         </div>
-
         <div class="guide-card">
           <h3>Android Installation Guide</h3>
-          <div class="guide-steps">
-            <div class="guide-step">
-              <div class="step-badge">1</div>
-              <div class="step-text">
-                <h4>Download the APK</h4>
-                <p>Click the download button to fetch the <code>ethioswap.apk</code> file to your device.</p>
-              </div>
-            </div>
-            <div class="guide-step">
-              <div class="step-badge">2</div>
-              <div class="step-text">
-                <h4>Allow Installation from Chrome</h4>
-                <p>If prompted with a warning, tap <strong>Settings</strong> and slide the toggle to <strong>Allow from this source</strong>.</p>
-              </div>
-            </div>
-            <div class="guide-step">
-              <div class="step-badge">3</div>
-              <div class="step-text">
-                <h4>Execute Installation</h4>
-                <p>Open your file manager or browser downloads, tap <code>ethioswap.apk</code>, and click <strong>Install</strong>.</p>
-              </div>
-            </div>
-            <div class="guide-step">
-              <div class="step-badge">4</div>
-              <div class="step-text">
-                <h4>Secure App Entry</h4>
-                <p>Log in with your existing credentials, then set up your local biometric fingerprint or 6-digit PIN to lock the app.</p>
-              </div>
-            </div>
+          <div class="g-steps">
+            <div class="g-step"><div class="g-n">1</div><div class="g-t"><h4>Download the APK</h4><p>Click the download button to fetch the <code>ethioswap.apk</code> file to your device.</p></div></div>
+            <div class="g-step"><div class="g-n">2</div><div class="g-t"><h4>Allow Installation from Chrome</h4><p>If prompted, tap <strong>Settings</strong> and toggle <strong>Allow from this source</strong>.</p></div></div>
+            <div class="g-step"><div class="g-n">3</div><div class="g-t"><h4>Execute Installation</h4><p>Open your file manager or downloads, tap <code>ethioswap.apk</code>, and click <strong>Install</strong>.</p></div></div>
+            <div class="g-step"><div class="g-n">4</div><div class="g-t"><h4>Secure App Entry</h4><p>Log in with your existing credentials, then set up biometric fingerprint or a 6-digit PIN.</p></div></div>
           </div>
         </div>
       </div>
@@ -2271,356 +989,201 @@
 
   <!-- FOOTER -->
   <footer>
-    <div class="footer-inner">
-      <div class="footer-top">
-        <div class="footer-brand">
-          <div class="footer-logo">
+    <div class="f-inner">
+      <div class="f-top">
+        <div class="f-brand">
+          <div class="f-logo">
             <div class="logo-sm">ES</div>
-            <span class="brand-name">EthioSwap</span>
+            <span class="brand">EthioSwap</span>
           </div>
           <p>Safe. Verified. Ethiopian. The premier P2P USD escrow platform in Ethiopia, built for trust and speed.</p>
-          <div class="social-links">
-            <a href="#" class="social-link" aria-label="Telegram">✈️</a>
-            <a href="#" class="social-link" aria-label="Twitter">🐦</a>
-            <a href="#" class="social-link" aria-label="Instagram">📷</a>
-            <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" class="social-link" aria-label="TikTok">🎵</a>
+          <div class="soc-links">
+            <a href="#" class="soc" aria-label="Telegram">✈️</a>
+            <a href="#" class="soc" aria-label="Twitter">🐦</a>
+            <a href="#" class="soc" aria-label="Instagram">📷</a>
+            <a href="https://www.tiktok.com/@ethioswap0" target="_blank" class="soc" aria-label="TikTok">🎵</a>
           </div>
         </div>
-        <div class="footer-col">
+        <div class="f-col">
           <h4>Product</h4>
           <ul>
             <li><a href="#features">Features</a></li>
-            <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#live-market">Live Rates</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#market">Live Rates</a></li>
             <li><a href="#download">Download App</a></li>
           </ul>
         </div>
-        <div class="footer-col">
+        <div class="f-col">
           <h4>Company</h4>
           <ul>
-            <li><a href="#about-us">About Us</a></li>
+            <li><a href="#about">About Us</a></li>
             <li><a href="#faq">FAQ</a></li>
             <li><a href="mailto:support@ethioswap.qzz.io">Contact</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('privacy')">Privacy Policy</a></li>
-            <li><a href="javascript:void(0)" onclick="openLegalModal('terms')">Terms of Service</a></li>
+            <li><a href="javascript:void(0)" onclick="openModal('privacy')">Privacy Policy</a></li>
+            <li><a href="javascript:void(0)" onclick="openModal('terms')">Terms of Service</a></li>
           </ul>
         </div>
-        <div class="footer-col">
+        <div class="f-col">
           <h4>Contact Info</h4>
-          <p style="font-size:0.84rem;margin-bottom:16px;color:var(--muted);">Addis Ababa, Ethiopia<br>support@ethioswap.qzz.io</p>
-          <a href="./ethioswap.apk" class="btn-secondary" style="border:1px solid var(--gold);color:var(--gold-light);font-size:0.8rem;padding:10px 16px;" download>
+          <p style="font-size:0.83rem;color:var(--muted);margin-bottom:16px">Addis Ababa, Ethiopia<br>support@ethioswap.qzz.io</p>
+          <a href="./ethioswap.apk" class="btn-secondary" style="border-color:var(--gold);color:var(--gold-lt);font-size:0.8rem;padding:9px 15px;display:inline-flex" download>
             Download Android APK
           </a>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>© 2026 <span class="gold">EthioSwap</span>. All rights reserved. Made with ❤️ in Ethiopia.</p>
-        <div style="display:flex;gap:14px;font-size:0.8rem;color:var(--muted);">
-          <a href="javascript:void(0)" onclick="openLegalModal('terms')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Terms</a>
-          <a href="javascript:void(0)" onclick="openLegalModal('privacy')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Privacy</a>
-          <a href="javascript:void(0)" onclick="openLegalModal('escrow')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Escrow Policy</a>
+      <div class="f-bottom">
+        <p>© 2026 <span class="g">EthioSwap</span>. All rights reserved. Made with ❤️ in Ethiopia.</p>
+        <div class="f-links">
+          <a href="javascript:void(0)" onclick="openModal('terms')">Terms</a>
+          <a href="javascript:void(0)" onclick="openModal('privacy')">Privacy</a>
+          <a href="javascript:void(0)" onclick="openModal('escrow')">Escrow Policy</a>
         </div>
       </div>
     </div>
   </footer>
 
   <!-- LEGAL MODAL -->
-  <div class="modal-overlay" id="legal-modal" onclick="closeLegalModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeLegalModal()">&times;</button>
-      <div class="modal-header">
-        <h3 id="modal-title">Legal Document</h3>
-      </div>
-      <div class="modal-body" id="modal-body"></div>
+  <div class="modal" id="modal" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button class="m-close" onclick="closeModal()">&times;</button>
+      <div class="m-title" id="m-title">Legal Document</div>
+      <div class="m-body" id="m-body"></div>
     </div>
   </div>
 
   <script>
-    /* ===== PARTICLES ===== */
-    (function() {
-      const canvas = document.getElementById('particles-canvas');
-      const ctx = canvas.getContext('2d');
-      let W, H, particles = [];
-
-      function resize() {
-        W = canvas.width = window.innerWidth;
-        H = canvas.height = window.innerHeight;
-      }
-
-      function Particle() {
-        this.x = Math.random() * W;
-        this.y = Math.random() * H;
-        this.r = Math.random() * 1.4 + 0.3;
-        this.vx = (Math.random() - 0.5) * 0.25;
-        this.vy = (Math.random() - 0.5) * 0.25;
-        this.alpha = Math.random() * 0.45 + 0.08;
-        this.gold = Math.random() > 0.55;
-      }
-
-      function initParticles() {
-        particles = [];
-        const count = Math.floor((W * H) / 14000);
-        for (let i = 0; i < count; i++) particles.push(new Particle());
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, W, H);
-        particles.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = p.gold
-            ? `rgba(212,175,55,${p.alpha})`
-            : `rgba(122,143,166,${p.alpha * 0.4})`;
+    /* ---- PARTICLES ---- */
+    (function(){
+      var c=document.getElementById('particles-canvas'),ctx=c.getContext('2d'),W,H,ps=[];
+      function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+      function P(){this.x=Math.random()*W;this.y=Math.random()*H;this.r=Math.random()*1.4+0.3;this.vx=(Math.random()-.5)*.25;this.vy=(Math.random()-.5)*.25;this.a=Math.random()*.4+.08;this.g=Math.random()>.55;}
+      function init(){ps=[];var n=Math.floor((W*H)/15000);for(var i=0;i<n;i++)ps.push(new P());}
+      function draw(){
+        ctx.clearRect(0,0,W,H);
+        for(var i=0;i<ps.length;i++){
+          var p=ps[i];
+          ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+          ctx.fillStyle=p.g?'rgba(212,175,55,'+p.a+')':'rgba(122,143,166,'+(p.a*.4)+')';
           ctx.fill();
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-          if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-        });
+          p.x+=p.vx;p.y+=p.vy;
+          if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+          if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+        }
         requestAnimationFrame(draw);
       }
-
-      window.addEventListener('resize', () => { resize(); initParticles(); });
-      resize(); initParticles(); draw();
+      window.addEventListener('resize',function(){resize();init();});
+      resize();init();draw();
     })();
 
-    /* ===== SCROLL REVEAL ===== */
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          revealObserver.unobserve(entry.target);
-        }
+    /* ---- NAV SCROLL ---- */
+    var nav=document.getElementById('nav');
+    window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40);},{passive:true});
+
+    /* ---- HAMBURGER ---- */
+    var ham=document.getElementById('ham'),mm=document.getElementById('mmenu'),mOpen=false;
+    ham.addEventListener('click',function(){
+      mOpen=!mOpen;mm.classList.toggle('open',mOpen);
+      var sp=ham.querySelectorAll('span');
+      if(mOpen){sp[0].style.transform='rotate(45deg) translate(5px,5px)';sp[1].style.opacity='0';sp[2].style.transform='rotate(-45deg) translate(5px,-5px)';}
+      else{sp[0].style.transform='';sp[1].style.opacity='';sp[2].style.transform='';}
+    });
+    function closeMenu(){mOpen=false;mm.classList.remove('open');ham.querySelectorAll('span').forEach(function(s){s.style.transform='';s.style.opacity='';});}
+
+    /* ---- SMOOTH LINKS ---- */
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click',function(e){
+        var t=document.querySelector(this.getAttribute('href'));
+        if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'});}
       });
-    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+    });
 
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    /* ---- LAST UPDATED ---- */
+    function updTime(){var el=document.getElementById('upd-time');if(el)el.innerText=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+    updTime();setInterval(updTime,60000);
 
-    /* ===== NAV SCROLL ===== */
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-      navbar.classList.toggle('scrolled', window.scrollY > 40);
-    }, { passive: true });
+    /* ---- 3D TILT FEATURE CARDS ---- */
+    document.querySelectorAll('.feat-card').forEach(function(card){
+      card.addEventListener('mousemove',function(e){
+        var r=card.getBoundingClientRect();
+        var rx=((e.clientY-r.top-r.height/2)/r.height)*-7;
+        var ry=((e.clientX-r.left-r.width/2)/r.width)*7;
+        card.style.transform='perspective(1000px) rotateX('+rx+'deg) rotateY('+ry+'deg) translateY(-5px)';
+      });
+      card.addEventListener('mouseleave',function(){card.style.transform='';});
+    });
 
-    /* ===== HAMBURGER ===== */
-    const hamburger = document.getElementById('hamburger');
-    const mobileMenu = document.getElementById('mobile-menu');
-    let menuOpen = false;
+    /* ---- FAQ ---- */
+    document.querySelectorAll('.faq-q').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var item=btn.parentElement,isOpen=item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(function(i){i.classList.remove('open');});
+        if(!isOpen)item.classList.add('open');
+      });
+    });
 
-    hamburger.addEventListener('click', () => {
-      menuOpen = !menuOpen;
-      mobileMenu.classList.toggle('open', menuOpen);
-      const spans = hamburger.querySelectorAll('span');
-      if (menuOpen) {
-        spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-        spans[1].style.opacity = '0';
-        spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+    /* ---- LIVE TRADE FEED ---- */
+    var RATE=190;
+    var BUYERS=['@yared_k','@selam_eth','@helen_m','@kebede_c','@almaz_a','@tariku_t','@aster_g','@dawit_b','@foziya_a','@samuel_j'];
+    var SELLERS=['@ethio_merchant','@abyssinia_btc','@cbe_trader','@gold_miner','@dilla_swap','@addis_whale'];
+    var METHODS=['Telebirr','CBE','Dashen Bank','Bank of Abyssinia','CBE Birr'];
+    function renderFeed(){
+      var fd=document.getElementById('feed');if(!fd)return;
+      fd.innerHTML='';
+      for(var i=0;i<4;i++){
+        var isBuy=i%2===0;
+        var buyer=BUYERS[(i*3)%BUYERS.length];
+        var seller=SELLERS[(i*7)%SELLERS.length];
+        var method=METHODS[(i*2)%METHODS.length];
+        var usd=(Math.random()*200+15).toFixed(2);
+        var etb=Math.round(usd*RATE);
+        var mago=Math.floor(Math.random()*18)+1;
+        var div=document.createElement('div');
+        div.className='f-item';
+        div.innerHTML='<div class="f-row"><span class="u">'+(isBuy?buyer:seller)+'</span><span class="ab '+(isBuy?'buy':'sell')+'">'+(isBuy?'BUY':'SELL')+'</span><span style="color:var(--muted)">⇄</span><span class="u">'+(isBuy?seller:buyer)+'</span></div>'
+          +'<div class="f-body">Swapped <strong>$'+usd+' USD</strong> for <strong>'+etb.toLocaleString()+' ETB</strong></div>'
+          +'<div class="f-foot"><span>🏦 '+method+'</span><span class="ok">✓ Escrow Released · '+mago+'m ago</span></div>';
+        fd.appendChild(div);
+      }
+    }
+    renderFeed();
+    setInterval(renderFeed,9000);
+
+    /* ---- CALCULATOR ---- */
+    var cMode='buy';
+    function setMode(m){
+      cMode=m;
+      document.getElementById('tab-buy').classList.toggle('active',m==='buy');
+      document.getElementById('tab-sell').classList.toggle('active',m==='sell');
+      calc();
+    }
+    function calc(){
+      var amt=parseFloat(document.getElementById('c-amt').value)||0;
+      var fee=parseFloat(document.getElementById('c-fee').value)||0.02;
+      var feeUSD=amt*fee;
+      var netUSD=amt-feeUSD;
+      var totalETB=amt*RATE;
+      var netETB=netUSD*RATE;
+      document.getElementById('c-rate').innerText='1 USD = '+RATE.toFixed(2)+' ETB';
+      document.getElementById('c-fee-out').innerText='$'+feeUSD.toFixed(2)+' USD';
+      if(cMode==='buy'){
+        document.getElementById('c-lbl').innerText='Total to Pay:';
+        document.getElementById('c-out').innerText=totalETB.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ETB';
       } else {
-        spans.forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
-      }
-    });
-
-    function closeMobileMenu() {
-      menuOpen = false;
-      mobileMenu.classList.remove('open');
-      hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
-    }
-
-    /* ===== SMOOTH NAV ===== */
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
-      });
-    });
-
-    /* ===== LAST UPDATED ===== */
-    function updateLastUpdated() {
-      const el = document.getElementById('last-updated-time');
-      if (el) el.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    updateLastUpdated();
-    setInterval(updateLastUpdated, 60000);
-
-    /* ===== 3D TILT FEATURE CARDS ===== */
-    document.querySelectorAll('.feature-card').forEach(card => {
-      card.addEventListener('mousemove', e => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const rotateX = ((y - rect.height / 2) / rect.height) * -7;
-        const rotateY = ((x - rect.width / 2) / rect.width) * 7;
-        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
-      });
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = '';
-      });
-    });
-
-    /* ===== FAQ ACCORDION ===== */
-    document.querySelectorAll('.faq-trigger').forEach(trigger => {
-      trigger.addEventListener('click', () => {
-        const item = trigger.parentElement;
-        const isActive = item.classList.contains('active');
-        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
-        if (!isActive) item.classList.add('active');
-      });
-    });
-
-    /* ===== MOCK LIVE TRADE FEED ===== */
-    const buyers = ['@yared_k', '@selam_eth', '@helen_m', '@kebede_c', '@almaz_a', '@tariku_t', '@aster_g', '@dawit_b', '@foziya_a', '@samuel_j'];
-    const sellers = ['@ethio_merchant', '@abyssinia_btc', '@cbe_trader', '@gold_miner', '@dilla_swap', '@addis_whale'];
-    const methods = ['Telebirr', 'CBE', 'Dashen Bank', 'Bank of Abyssinia', 'CBE Birr'];
-    const usdPriceETB = 190;
-
-    function renderMockTrades() {
-      const feed = document.getElementById('live-trades-feed');
-      if (!feed) return;
-      feed.innerHTML = '';
-      const count = 4;
-      for (let i = 0; i < count; i++) {
-        const buyer = buyers[(i * 3) % buyers.length];
-        const seller = sellers[(i * 7) % sellers.length];
-        const method = methods[(i * 2) % methods.length];
-        const isBuy = i % 2 === 0;
-        const amountUSD = (Math.random() * 200 + 15).toFixed(2);
-        const amountETB = Math.round(amountUSD * usdPriceETB);
-        const minsAgo = Math.floor(Math.random() * 15) + 1;
-        const item = document.createElement('div');
-        item.className = 'feed-item';
-        item.innerHTML = `
-          <div class="item-header">
-            <span class="user-badge">${isBuy ? buyer : seller}</span>
-            <span class="action-badge ${isBuy ? 'buy' : 'sell'}">${isBuy ? 'BUY' : 'SELL'}</span>
-            <span style="color:var(--muted);">⇄</span>
-            <span class="user-badge">${isBuy ? seller : buyer}</span>
-          </div>
-          <div class="item-body">
-            Swapped <span class="val">$${amountUSD} USD</span> for <span class="val">${amountETB.toLocaleString()} ETB</span>
-          </div>
-          <div class="item-footer">
-            <span>🏦 ${method}</span>
-            <span class="verified-badge">✓ Escrow Released · ${minsAgo}m ago</span>
-          </div>
-        `;
-        feed.appendChild(item);
+        document.getElementById('c-lbl').innerText='Net Payout:';
+        document.getElementById('c-out').innerText=netETB.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' ETB';
       }
     }
+    calc();
 
-    renderMockTrades();
-    setInterval(() => {
-      renderMockTrades();
-    }, 8000);
-
-    /* ===== CALCULATOR ===== */
-    let calcMode = 'buy';
-
-    function setCalcMode(mode) {
-      calcMode = mode;
-      document.getElementById('calc-tab-buy').classList.toggle('active', mode === 'buy');
-      document.getElementById('calc-tab-sell').classList.toggle('active', mode === 'sell');
-      calculateSimulator();
-    }
-
-    function calculateSimulator() {
-      const amount = parseFloat(document.getElementById('calc-amount').value) || 0;
-      const commissionRate = parseFloat(document.getElementById('calc-commission').value) || 0.02;
-      const feeUSD = amount * commissionRate;
-      const netUSD = amount - feeUSD;
-      const totalETB = amount * usdPriceETB;
-      const netETB = netUSD * usdPriceETB;
-
-      document.getElementById('calc-rate-display').innerText = `1 USD = ${usdPriceETB.toFixed(2)} ETB`;
-      document.getElementById('calc-fee-display').innerText = `$${feeUSD.toFixed(2)} USD`;
-
-      if (calcMode === 'buy') {
-        document.getElementById('calc-result-label').innerText = 'Total to Pay:';
-        document.getElementById('calc-result-display').innerText = totalETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
-      } else {
-        document.getElementById('calc-result-label').innerText = 'Net Payout:';
-        document.getElementById('calc-result-display').innerText = netETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
-      }
-    }
-
-    calculateSimulator();
-
-    /* ===== LEGAL MODALS ===== */
-    const legalDocs = {
-      terms: {
-        title: "Terms of Service",
-        content: `
-          <h4>1. Acceptance of Terms</h4>
-          <p>By registering an account on EthioSwap, downloading our APK, or accessing our P2P trading engine, you agree to comply with and be bound by these Terms of Service.</p>
-          <h4>2. Eligibility &amp; KYC Requirements</h4>
-          <p>You must be at least 18 years of age and reside in Ethiopia or have valid Ethiopian identification. All users are required to undergo a Know Your Customer (KYC) identity verification process.</p>
-          <h4>3. P2P Escrow Trading Rules</h4>
-          <ul>
-            <li><strong>Escrow Lock:</strong> When a trade is initiated, the seller's USD is immediately moved to a secure vault locked by EthioSwap.</li>
-            <li><strong>Fiat Transfer:</strong> The buyer must transfer the agreed fiat amount in Ethiopian Birr (ETB) directly to the seller's bank account within 15 minutes.</li>
-            <li><strong>Payment Confirmation:</strong> Once the transfer is complete, the buyer must click "I Have Paid" and upload a valid transaction receipt.</li>
-            <li><strong>Asset Release:</strong> Upon verifying receipt of funds, the seller is obligated to release the escrow.</li>
-          </ul>
-          <h4>4. Dispute Arbitration</h4>
-          <p>If either party fails to fulfill their obligations, a dispute may be opened. An EthioSwap admin will inspect the chat transcript, uploaded receipts, and bank logs. The admin's decision is final and binding on both parties.</p>
-          <h4>5. Fees &amp; Commission</h4>
-          <p>EthioSwap charges a transaction fee on all completed trades. This fee is automatically deducted from the escrowed amount before release. Current commission rates are managed by the administrator and are displayed before confirming a transaction.</p>
-        `
-      },
-      privacy: {
-        title: "Privacy &amp; Data Protection Policy",
-        content: `
-          <h4>1. Information We Collect</h4>
-          <p>We collect personal information necessary to facilitate safe trading and confirm user identities:</p>
-          <ul>
-            <li>Your phone number and display name during registration.</li>
-            <li>National ID card or Passport photos (front and back).</li>
-            <li>Live camera selfie photos for face match verification.</li>
-            <li>Your wallet balance and transaction logs.</li>
-            <li>Transaction history and secure chat logs between traders.</li>
-          </ul>
-          <h4>2. How We Use Your Data</h4>
-          <p>Your personal data is used solely for verifying your identity, complying with AML standards, enabling communication during P2P trades, and resolving trading disputes.</p>
-          <h4>3. Data Security and Encryption</h4>
-          <p>All uploaded documents are stored in secure, encrypted cloud environments. Your private wallet keys are stored locally on your device and are never uploaded to our servers.</p>
-          <h4>4. Data Sharing and Third Parties</h4>
-          <p>EthioSwap does not sell, rent, or lease your personal information to third parties. We do not share your KYC data with anyone unless required by a formal legal warrant issued by an Ethiopian court of law.</p>
-        `
-      },
-      escrow: {
-        title: "Escrow &amp; Dispute Policy",
-        content: `
-          <h4>1. The Escrow Safeguard</h4>
-          <p>EthioSwap operates a strict locked escrow vault mechanism. When a trade starts, the seller's USD balance is instantly locked in the platform's escrow vault.</p>
-          <h4>2. Trading Timers &amp; Deadlines</h4>
-          <p>Trades have a 15-minute countdown timer. If the buyer fails to mark the trade as paid within 15 minutes, the trade is cancelled, and the USD is returned to the seller.</p>
-          <h4>3. Dispute Resolution Rules</h4>
-          <ul>
-            <li><strong>Required Proof:</strong> The buyer must upload a clear screenshot of the bank transfer or mobile money receipt.</li>
-            <li><strong>Verification:</strong> The seller must verify their bank account statements.</li>
-            <li><strong>Resolution Action:</strong> If the admin determines the payment was delivered, the escrow will be released to the buyer. Otherwise the trade is cancelled and USD refunded to the seller.</li>
-          </ul>
-        `
-      }
+    /* ---- LEGAL MODALS ---- */
+    var DOCS={
+      terms:{title:'Terms of Service',body:'<h4>1. Acceptance of Terms</h4><p>By registering an account on EthioSwap, downloading our APK, or accessing our P2P trading engine, you agree to comply with and be bound by these Terms of Service.</p><h4>2. Eligibility &amp; KYC Requirements</h4><p>You must be at least 18 years of age and reside in Ethiopia or have valid Ethiopian identification. All users are required to undergo a Know Your Customer (KYC) identity verification process.</p><h4>3. P2P Escrow Trading Rules</h4><ul><li><strong>Escrow Lock:</strong> When a trade is initiated, the seller\'s USD is immediately moved to a secure vault locked by EthioSwap.</li><li><strong>Fiat Transfer:</strong> The buyer must transfer the agreed fiat amount in ETB directly to the seller\'s bank account within 15 minutes.</li><li><strong>Payment Confirmation:</strong> Once the transfer is complete, the buyer must click "I Have Paid" and upload a valid receipt.</li><li><strong>Asset Release:</strong> Upon verifying receipt of funds, the seller is obligated to release the escrow.</li></ul><h4>4. Dispute Arbitration</h4><p>If either party fails to fulfill their obligations, a dispute may be opened. An EthioSwap admin will inspect the chat transcript, uploaded receipts, and bank logs. The admin\'s decision is final and binding on both parties.</p><h4>5. Fees &amp; Commission</h4><p>EthioSwap charges a transaction fee on all completed trades. This fee is automatically deducted from the escrowed amount before release.</p>'},
+      privacy:{title:'Privacy &amp; Data Protection Policy',body:'<h4>1. Information We Collect</h4><p>We collect personal information necessary to facilitate safe trading and confirm user identities:</p><ul><li>Your phone number and display name during registration.</li><li>National ID card or Passport photos (front and back).</li><li>Live camera selfie photos for face match verification.</li><li>Your wallet balance and transaction logs.</li></ul><h4>2. How We Use Your Data</h4><p>Your personal data is used solely for verifying your identity, complying with AML standards, enabling communication during P2P trades, and resolving trading disputes.</p><h4>3. Data Security</h4><p>All uploaded documents are stored in secure, encrypted cloud environments. Your private wallet keys are stored locally on your device and are never uploaded to our servers.</p><h4>4. Data Sharing</h4><p>EthioSwap does not sell, rent, or lease your personal information to third parties. We do not share your KYC data with anyone unless required by a formal legal warrant issued by an Ethiopian court of law.</p>'},
+      escrow:{title:'Escrow &amp; Dispute Policy',body:'<h4>1. The Escrow Safeguard</h4><p>When a trade starts, the seller\'s USD balance is instantly locked in the platform\'s escrow vault, guaranteeing the buyer the funds exist and cannot be withdrawn.</p><h4>2. Trading Timers</h4><p>Trades have a 15-minute countdown timer. If the buyer fails to mark the trade as paid within 15 minutes, the trade is cancelled and USD is returned to the seller.</p><h4>3. Dispute Resolution</h4><ul><li><strong>Required Proof:</strong> The buyer must upload a clear screenshot of the bank transfer or mobile money receipt.</li><li><strong>Verification:</strong> The seller must verify their bank account statements.</li><li><strong>Resolution:</strong> If the admin determines payment was delivered, the escrow will be released to the buyer. Otherwise the trade is cancelled and USD refunded to the seller.</li></ul>'}
     };
-
-    const legalModal = document.getElementById('legal-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-
-    function openLegalModal(docKey) {
-      const doc = legalDocs[docKey];
-      if (!doc) return;
-      modalTitle.innerHTML = doc.title;
-      modalBody.innerHTML = doc.content;
-      legalModal.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeLegalModal(e) {
-      if (!e || e.target === legalModal || e.target.classList.contains('modal-close')) {
-        legalModal.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    }
+    var modal=document.getElementById('modal');
+    function openModal(key){var d=DOCS[key];if(!d)return;document.getElementById('m-title').innerHTML=d.title;document.getElementById('m-body').innerHTML=d.body;modal.classList.add('open');document.body.style.overflow='hidden';}
+    function closeModal(e){if(!e||e.target===modal||e.target.classList.contains('m-close')){modal.classList.remove('open');document.body.style.overflow='';}}
   </script>
 
 </body>
