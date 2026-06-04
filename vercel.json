@@ -4,7 +4,7 @@
   "installCommand": "npm --prefix frontend install",
   "framework": null,
   "env": {
-    "VITE_CONVEX_URL": "https://grateful-tern-840.convex.cloud"
+    "VITE_CONVEX_URL": "https://tangible-nightingale-795.convex.cloud"
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

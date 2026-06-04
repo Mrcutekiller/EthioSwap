@@ -4,7 +4,7 @@
   publish = "dist"
 
 [build.environment]
-  VITE_CONVEX_URL = "https://grateful-tern-840.convex.cloud"
+  VITE_CONVEX_URL = "https://tangible-nightingale-795.convex.cloud"
   NODE_VERSION    = "20"
 
 [[redirects]]

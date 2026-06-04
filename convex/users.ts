@@ -22,25 +22,27 @@ export const getByEmail = query({
 export const create = mutation({
   args: {
     username: v.string(),
-    email: v.string(),
+    email: v.optional(v.union(v.string(), v.null())),
     password: v.string(),
-    fullName: v.optional(v.string()),
+    fullName: v.optional(v.union(v.string(), v.null())),
     role: v.string(),
-    phone: v.optional(v.string()),
+    phone: v.optional(v.union(v.string(), v.null())),
     ethAddress: v.string(),
     ethPrivateKey: v.string(),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-    if (existing) throw new Error("Email already registered");
+    if (args.email) {
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first();
+      if (existing) throw new Error("Email already registered");
+    }
 
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
-      .unique();
+      .first();
     if (existingUser) throw new Error("Username already taken");
 
     const { password, ...userData } = args;

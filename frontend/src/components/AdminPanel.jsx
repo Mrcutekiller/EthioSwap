@@ -747,6 +747,7 @@ const AdminPanel = ({ user }) => {
   const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + r.amountUSD, 0);
 
   // ── Bezier Chart Calculations ──────────────────────────────
+  const m = undefined;
   const realVolume = liveTotalDeposit || 150.0;
   const realUsers = liveTotalUsers || 12;
   
