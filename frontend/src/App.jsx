@@ -428,38 +428,36 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 // ── Main App Shell ─────────────────────────────────────────────
 const AppShell = () => {
   const { user, wallet, trades, isLocked, initializing, unlock, logout, updateUser, switchUser, error, success, systemSettings, acknowledgeWarning } = useAuth();
-  const [tab, setTabState] = useState('home');
-  const [authMode, setAuthMode] = useState(null);
-  const [authError, setAuthError] = useState(null);
-  const [notifOpen, setNotifOpen] = useState(false);
+  
+  const [authMode, setAuthMode] = useState(() => {
+    const path = window.location.pathname;
+    if (path === '/login') return 'login';
+    if (path === '/register') return 'register';
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    if (params.get('action') === 'login' || hash === '#login') return 'login';
+    if (params.get('action') === 'register' || hash === '#register') return 'register';
+    return null;
+  });
 
-  // Initialize tab state once user is available
-  React.useEffect(() => {
-    if (user && !initializing) {
-      const path = window.location.pathname;
-      let initialTab = 'home';
-      
-      if (path === '/admin') initialTab = 'admin';
-      else if (path === '/dashboard') initialTab = 'home';
-      else if (user.role === 'admin') initialTab = 'admin';
-      else {
-        initialTab = localStorage.getItem(`ethioswap_active_tab_${user.id}`) || 'home';
-      }
-      
-      setTabState(initialTab);
-    }
-  }, [user, initializing]);
+  const [tab, setTabState] = useState(() => {
+    const path = window.location.pathname;
+    if (path === '/admin') return 'admin';
+    if (path === '/dashboard') return 'home';
+    if (user?.role === 'admin') return 'admin';
+    return localStorage.getItem(`ethioswap_active_tab_${user?.id}`) || 'home';
+  });
 
   const setTab = (newTab) => {
     setTabState(newTab);
-    localStorage.setItem(`ethioswap_active_tab_${user?.id}`, newTab);
-    if (newTab === 'admin') {
-      window.history.replaceState({}, '', '/admin');
-    } else if (newTab === 'home') {
-      window.history.replaceState({}, '', '/dashboard');
+    if (user) {
+      localStorage.setItem(`ethioswap_active_tab_${user.id}`, newTab);
     }
   };
-  const activeTrades = trades.filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
+
+  const [authError, setAuthError] = useState(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const activeTrades = (trades || []).filter(t => ['payment_pending', 'paid', 'disputed'].includes(t.status)).length;
   const [notifications, setNotifications] = useState([]);
 
   // Clear auth error when switching modes
