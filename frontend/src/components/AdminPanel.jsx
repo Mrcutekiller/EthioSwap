@@ -647,10 +647,29 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleSaveSettings = async (e) => {
-    e.preventDefault(); setSavingSettings(true);
+    e.preventDefault();
+    if (!settings?._id) {
+      showAlert('Error: Settings document not found.', 'error');
+      return;
+    }
+    setSavingSettings(true);
     try {
-      // Mocked for Convex migration
-      console.log('Would save settings:', { etbRate, etbRateSell });
+      await updateSettingsMutation({
+        id: settings._id,
+        updates: {
+          etbRatePerDollar: parseFloat(etbRate) || 190.0,
+          etbRatePerDollarSell: parseFloat(etbRateSell) || 186.0,
+          commissionValue: parseFloat(commissionValue) || 1.0,
+          depositFeePercent: parseFloat(depositFee) || 1.0,
+          withdrawalFeePercent: parseFloat(withdrawFee) || 1.0,
+          minDepositUSD: parseFloat(minDeposit) || 5,
+          minWithdrawalUSD: parseFloat(minWithdraw) || 10,
+          maxDailyWithdrawalUSD: parseFloat(maxDailyWithdraw) || 1000,
+          pointsPerTrade: parseFloat(pointsPerTrade) || 10,
+          referralBonusPoints: parseFloat(referralPoints) || 50,
+          isLeaderboardEnabled: !!isLeaderboard,
+        }
+      });
       showAlert('✓ Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
