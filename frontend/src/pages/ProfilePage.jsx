@@ -711,6 +711,132 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </button>
       </div>
 
+      {/* ─── IDENTITY VERIFICATION (KYC) ──────────────────────── */}
+      {user.kycStatus === 'approved' ? (
+        <div style={{
+          borderRadius: '20px', padding: '20px',
+          background: 'linear-gradient(135deg, rgba(0,212,160,0.08) 0%, rgba(0,180,135,0.04) 100%)',
+          border: '1.5px solid rgba(0,212,160,0.3)',
+          display: 'flex', alignItems: 'center', gap: '16px',
+        }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '16px', flexShrink: 0,
+            background: 'rgba(0,212,160,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26,
+          }}>✅</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#00d4a0', marginBottom: '2px' }}>Identity Verified</div>
+            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+              Your KYC is approved. You can trade freely on EthioSwap.
+            </div>
+          </div>
+        </div>
+      ) : user.kycStatus === 'pending' ? (
+        <div style={{
+          borderRadius: '20px', padding: '20px',
+          background: 'linear-gradient(135deg, rgba(245,197,24,0.08) 0%, rgba(200,150,0,0.04) 100%)',
+          border: '1.5px solid rgba(245,197,24,0.3)',
+          display: 'flex', alignItems: 'center', gap: '16px',
+        }}>
+          <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,197,24,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>⏳</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#f5c518', marginBottom: '2px' }}>Under Review</div>
+            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+              Your documents are being reviewed by our team. Usually takes under 24 hours.
+            </div>
+          </div>
+        </div>
+      ) : user.kycStatus === 'rejected' ? (
+        <div style={{
+          borderRadius: '20px', padding: '20px',
+          background: 'rgba(239,68,68,0.06)', border: '1.5px solid rgba(239,68,68,0.3)',
+          display: 'flex', flexDirection: 'column', gap: '14px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>❌</div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#ef4444', marginBottom: '2px' }}>Verification Rejected</div>
+              {user.kycRejectionReason && (
+                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.4 }}>
+                  Reason: <span style={{ color: '#fca5a5' }}>{user.kycRejectionReason}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowKYC(true)}
+            style={{
+              padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+              background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '14px',
+              fontFamily: 'var(--font)', width: '100%',
+            }}
+          >
+            🔄 Retry Verification
+          </button>
+        </div>
+      ) : (
+        /* NOT STARTED — the most important CTA */
+        <div style={{
+          borderRadius: '20px', overflow: 'hidden',
+          border: '1.5px solid rgba(245,197,24,0.35)',
+          background: 'linear-gradient(135deg, #111318 0%, rgba(245,197,24,0.05) 100%)',
+        }}>
+          {/* Top urgency banner */}
+          <div style={{
+            background: 'rgba(245,197,24,0.12)', padding: '10px 20px',
+            borderBottom: '1px solid rgba(245,197,24,0.15)',
+            fontSize: '11px', fontWeight: 700, color: '#f5c518', textAlign: 'center',
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>
+            ⚠️ Required to Trade on EthioSwap
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '18px' }}>
+              <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,197,24,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🛡️</div>
+              <div>
+                <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Verify Your Identity</div>
+                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.6 }}>
+                  Complete a quick KYC check to unlock deposits, withdrawals, and P2P trading.
+                </div>
+              </div>
+            </div>
+
+            {/* Steps */}
+            {kycSteps.map((s, i) => (
+              <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < kycSteps.length - 1 ? '10px' : '18px' }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: s.done ? 'rgba(0,212,160,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: `1.5px solid ${s.done ? '#00d4a0' : 'rgba(255,255,255,0.1)'}`,
+                  fontSize: '12px', fontWeight: 800,
+                  color: s.done ? '#00d4a0' : '#6b7280',
+                }}>
+                  {s.done ? '✓' : i + 1}
+                </div>
+                <span style={{ fontSize: '13px', color: s.done ? '#00d4a0' : '#9ca3af', fontWeight: s.done ? 700 : 400 }}>{s.label}</span>
+              </div>
+            ))}
+
+            <button
+              onClick={() => setShowKYC(true)}
+              style={{
+                width: '100%', padding: '16px', borderRadius: '14px', border: 'none',
+                cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 800, fontSize: '16px',
+                background: 'linear-gradient(135deg, #f5c518, #e5a800)',
+                color: '#000',
+                boxShadow: '0 4px 20px rgba(245,197,24,0.35)',
+                transition: 'all 0.2s',
+              }}
+            >
+              🪪 Start Identity Verification →
+            </button>
+            <div style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '10px' }}>
+              Takes 2–3 minutes · Your data is encrypted and secure
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
       <div className="card" style={{ padding: '20px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Performance Stats</h3>

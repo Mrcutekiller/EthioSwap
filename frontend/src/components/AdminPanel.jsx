@@ -534,17 +534,16 @@ const AdminPanel = ({ user }) => {
       return false;
     }
   };
-
   const handleWithdrawal = async (requestId, approve) => {
     try {
       if (approve) {
-        // await // supabase.from('withdraw_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', requestId);
+        await approveWithdrawalRequest(requestId);
         showAlert('✓ Withdrawal approved and processed!');
       } else {
         const note = prompt('Please specify a rejection reason:');
         if (note === null) return;
         if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        // await // supabase.from('withdraw_requests').update({ status: 'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', requestId);
+        await rejectWithdrawalRequest(requestId, note);
         showAlert('Withdrawal rejected and refunded.');
       }
       setSelectedWithdrawDetailId(null);
@@ -554,13 +553,13 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        // await // supabase.from('users').update({ kyc_status: 'approved' }).eq('id', userId);
+        await updateKycStatus({ id: userId, status: 'approved' });
         showAlert('✓ KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
         if (reason === null) return;
         if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        // await // supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
+        await updateKycStatus({ id: userId, status: 'rejected', rejectionReason: reason });
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
@@ -572,8 +571,7 @@ const AdminPanel = ({ user }) => {
     if (!resubmitUserId || !resubmitReason.trim()) return;
     setSubmittingResubmit(true);
     try {
-      // await // supabase.from('users').update({ kyc_status: 'none', kyc_rejection_reason: resubmitReason }).eq('id', resubmitUserId);
-      
+      await updateKycStatus({ id: resubmitUserId, status: 'none', rejectionReason: resubmitReason });
       showAlert('⚠ Resubmission request processed successfully.');
       setResubmitUserId(null);
       setResubmitReason('');
@@ -689,11 +687,10 @@ const AdminPanel = ({ user }) => {
       setSupportReplyText('');
     } catch (e) { showAlert(e.message, 'error'); }
   };
-
   const handleApproveDeposit = async (id) => {
     if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
     try {
-      // await // supabase.from('deposit_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
+      await approveDepositRequest(id);
       showAlert('✓ Deposit approved and wallet credited!');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -704,7 +701,7 @@ const AdminPanel = ({ user }) => {
     if (reason === null) return;
     if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
     try {
-      // await // supabase.from('deposit_requests').update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() }).eq('id', id);
+      await rejectDepositRequest(id, reason);
       showAlert('Deposit request rejected.');
       setSelectedDepositDetailId(null);
     } catch (err) { showAlert(err.message, 'error'); }
@@ -750,8 +747,7 @@ const AdminPanel = ({ user }) => {
   const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + r.amountUSD, 0);
 
   // ── Bezier Chart Calculations ──────────────────────────────
-  const m = revenue?.metrics;
-  const realVolume = m?.totalUSD || 150.0;
+  const realVolume = liveTotalDeposit || 150.0;
   const realUsers = liveTotalUsers || 12;
   
   const volumeFactors = [0.10, 0.14, 0.12, 0.19, 0.15, 0.22, 0.18];

@@ -401,10 +401,12 @@ const WalletCard = () => {
               {depAmtNum > 0 && (
                 <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
                   <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Deposit Breakdown</div>
-                  <FeePill label="You're Sending"      value={`$${fmt(depAmtNum)}`}     color="#e5e7eb" />
-                  <FeePill label={`Platform Fee (${platFee}%)`} value={`-$${fmt(depPlatFeeAmt)}`} color="#f87171" />
+                  <FeePill label="USDT to Deposit (on platform)" value={`$${fmt(depAmtNum)} USDT`} color="#fff" />
+                  <FeePill label={`Platform Commission (${platFee}%)`} value={`-$${fmt(depPlatFeeAmt)} USDT`} color="#f87171" />
+                  <FeePill label={`Est. Network Fee (${depNet.toUpperCase()})`} value={`+$${fmt(chainFee)} USDT`} color="#fbbf24" />
                   <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
-                  <FeePill label="💰 You Will Receive" value={`$${fmt(depYouGet)}`}     color="#00d4a0" />
+                  <FeePill label="Total Wallet Cost (incl. network fee)" value={`$${fmt(depAmtNum + chainFee)} USDT`} color="#fbbf24" />
+                  <FeePill label="💰 Net Balance You Receive" value={`$${fmt(depYouGet)} USDT`} color="#00d4a0" />
                   <div style={{ fontSize:'10px', color:'#6b7280', textAlign:'center', marginTop:'2px' }}>
                     ≈ {fmtEtb(depYouGet * rate)} ETB at today's rate
                   </div>
@@ -454,13 +456,15 @@ const WalletCard = () => {
                   style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#fff', fontSize:'15px', fontFamily:'JetBrains Mono, monospace', fontWeight:700, outline:'none' }}
                 />
               </div>
-              {parseFloat(snAmt) > 0 && (
+               {parseFloat(snAmt) > 0 && (
                 <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
                   <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Transfer Summary</div>
-                  <FeePill label="Amount to Send"       value={`$${fmt(parseFloat(snAmt))}`} color="#e5e7eb" />
-                  <FeePill label="Platform Fee (0%)"    value="FREE ✓"                        color="#00d4a0" />
+                  <FeePill label="Amount to Send" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#fff" />
+                  <FeePill label="Platform Commission" value="0.00 USDT (Free) ✓" color="#00d4a0" />
+                  <FeePill label="Network Transfer Fee" value="0.00 USDT (Free) ✓" color="#00d4a0" />
                   <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
-                  <FeePill label="💰 Recipient Gets"   value={`$${fmt(parseFloat(snAmt))}`} color="#00d4a0" />
+                  <FeePill label="Total Deducted" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#fbbf24" />
+                  <FeePill label="💰 Recipient Gets" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#00d4a0" />
                 </div>
               )}
               <button type="submit" style={{ padding:'15px', borderRadius:'14px', border:'none', cursor:'pointer', fontFamily:'var(--font)', fontWeight:800, fontSize:'15px', background:'rgba(245,197,24,0.15)', color:'#f5c518', border:'1px solid rgba(245,197,24,0.3)' }}>
@@ -539,11 +543,11 @@ const WalletCard = () => {
               {wdAmtNum > 0 && (
                 <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
                   <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Withdrawal Breakdown</div>
-                  <FeePill label="You're Withdrawing"       value={`$${fmt(wdAmtNum)}`}    color="#e5e7eb" />
-                  <FeePill label={`Platform Fee (${platFee}%)`}   value={`-$${fmt(wdPlatFeeAmt)}`}  color="#f87171" />
-                  <FeePill label={`Network Fee (${wdNet.toUpperCase()})`} value={`-$${fmt(wdChainFee)}`}   color="#f87171" />
+                  <FeePill label="Amount to Withdraw" value={`$${fmt(wdAmtNum)} USDT`} color="#fff" />
+                  <FeePill label={`Platform Commission (${platFee}%)`} value={`-$${fmt(wdPlatFeeAmt)} USDT`} color="#f87171" />
+                  <FeePill label={`Network Transfer Fee (${wdNet.toUpperCase()})`} value={`-$${fmt(wdChainFee)} USDT`} color="#f87171" />
                   <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
-                  <FeePill label="💰 You Will Receive"      value={wdYouGet > 0 ? `$${fmt(wdYouGet)}` : '⚠️ Too Low'} color={wdYouGet > 0 ? '#00d4a0' : '#f87171'} />
+                  <FeePill label="💰 Net Received in Your Wallet" value={wdYouGet > 0 ? `$${fmt(wdYouGet)} USDT` : '⚠️ Too Low'} color={wdYouGet > 0 ? '#00d4a0' : '#f87171'} />
                   {wdYouGet > 0 && (
                     <div style={{ fontSize:'10px', color:'#6b7280', textAlign:'center', marginTop:'2px' }}>
                       ≈ {fmtEtb(wdYouGet * rate)} ETB at today's rate

@@ -190,10 +190,25 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     if (!selfieCapture) { setError('Please capture a selfie first.'); return; }
     setLoading(true); setError('');
     try {
-      // Mocked for Convex migration
-      const updatedUser = { ...user, kycStatus: 'pending' };
+      const updates = {
+        kycStatus: 'pending',
+        kycStep: 'pending',
+        kycIdFront: idFront,
+        kycIdBack: idBack,
+        kycSelfie: selfieCapture,
+        kycData: {
+          name: fullName,
+          phone: kycPhone,
+          age: parseInt(age, 10) || 18,
+          idType: idType,
+          address: address,
+          idNumber: 'ETH-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+        },
+        fullName: fullName,
+        phone: kycPhone,
+      };
       setStep(6); // Done
-      if (onComplete) onComplete(updatedUser);
+      if (onComplete) onComplete(updates);
     } catch (err) {
       setError(err.message || 'Upload failed. Try again.');
     } finally {
