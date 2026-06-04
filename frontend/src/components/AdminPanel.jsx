@@ -2842,12 +2842,22 @@ const AdminPanel = ({ user }) => {
                               </div>
                             </td>
                             <td style={{ color: 'var(--gold)', letterSpacing: '2px' }}>
-                              {'★'.repeat(rev.rating)}{'☆'.repeat(5-rev.rating)}
+                              {(() => {
+                                const rating = Math.max(0, Math.min(5, Math.round(Number(rev.rating) || 5)));
+                                return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                              })()}
                             </td>
                             <td style={{ maxWidth: '300px', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
                               "{rev.content}"
                             </td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>{new Date(rev.createdAt).toLocaleDateString()}</td>
+                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+                              {(() => {
+                                const dateVal = rev.createdAt || rev.created_at || rev._creationTime;
+                                if (!dateVal) return 'N/A';
+                                const d = new Date(dateVal);
+                                return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+                              })()}
+                            </td>
                             <td>
                               <StatusBadge status={rev.isApproved ? 'approved' : 'pending'} />
                             </td>

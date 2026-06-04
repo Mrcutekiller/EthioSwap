@@ -935,8 +935,15 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         {myReview && !reviewEditing ? (
           <div>
             <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-              {Array.from({ length: myReview.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
-              {Array.from({ length: 5 - myReview.rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
+              {(() => {
+                const rating = Math.max(0, Math.min(5, Math.round(Number(myReview.rating) || 5)));
+                return (
+                  <>
+                    {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                    {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
+                  </>
+                );
+              })()}
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic', margin: '0 0 16px 0', lineHeight: 1.6 }}>"{myReview.content}"</p>
             <div style={{ display: 'flex', gap: '8px' }}>

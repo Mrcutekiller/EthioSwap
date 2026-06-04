@@ -57,8 +57,10 @@ const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isD
 function getRelativeTime(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const diffMs = now - date;
+  if (isNaN(diffMs)) return '';
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
@@ -912,8 +914,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             {reviews.map((r, idx) => (
               <div key={r.id || idx} className="testimonial-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px' }}>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
-                  {Array.from({ length: r.rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
-                  {Array.from({ length: 5 - r.rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
+                  {(() => {
+                    const rating = Math.max(0, Math.min(5, Math.round(Number(r.rating) || 5)));
+                    return (
+                      <>
+                        {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                        {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
+                      </>
+                    );
+                  })()}
                 </div>
                 <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{r.content}"</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -928,7 +937,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                         <span style={{ color: '#00d4a0', fontWeight: 700, fontSize: '10px' }}>✓ Verified Trader</span>
                       )}
                       <span>•</span>
-                      <span>{getRelativeTime(r.created_at)}</span>
+                      <span>{getRelativeTime(r.createdAt || r.created_at || r._creationTime)}</span>
                     </div>
                   </div>
                 </div>
