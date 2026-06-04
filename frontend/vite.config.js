@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'convex-api': path.resolve(__dirname, '../convex/_generated/api'),
+      'convex-api': path.resolve(__dirname, './src/convexApi'),
     },
   },
   build: {
