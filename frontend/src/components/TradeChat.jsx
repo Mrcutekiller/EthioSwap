@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Check, CheckCheck, AlertCircle, X, ZoomIn, Clock, Shield, AlertTriangle } from 'lucide-react';
+import { useQuery, useMutation } from "convex/react";
+import { api } from "convex-api";
 
 const ImageZoomModal = ({ src, onClose }) => (
   <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -15,7 +17,6 @@ const ImageZoomModal = ({ src, onClose }) => (
 const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const { user, markTradeAsPaid, releaseEscrow, openDispute, setError, setSuccess } = useAuth();
   const { t } = useTranslation();
-  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [chatId, setChatId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -27,83 +28,45 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const isBuyer = user.id === buyerId;
   const isActive = ['payment_pending', 'paid'].includes(tradeStatus);
 
-  useEffect(() => {
-    const setupChat = async () => {
-      // Mocked for Convex migration
-      const chat = { id: 'mock-chat-' + tradeId };
-      
-      if (chat) {
-        setChatId(chat.id);
-        fetchMessages(chat.id);
-      }
-    };
+  const messagesFromQuery = useQuery(api.messages.listForTrade, { tradeId }) || [];
+  const sendMessageMutation = useMutation(api.messages.send);
 
-    setupChat();
-  }, [tradeId]);
-
-  const fetchMessages = async (id) => {
-    // Mocked for Convex migration
-    const data = [];
-    if (data) setMessages(data);
-  };
-
-  const subscribeToMessages = (id) => {
-    // Mocked for Convex migration
-    return () => {};
-  };
-
-  const subscribeToTyping = (id) => {
-    // Mocked for Convex migration
-    return () => {};
-  };
-
-  const fetchSenderAndAppend = async (msg) => {
-    // Mocked for Convex migration
-    const sender = { username: 'user', selected_avatar: null };
-    setMessages(prev => [...prev, { ...msg, sender }]);
-  };
+  const messages = messagesFromQuery.map(m => ({
+    id: m._id,
+    sender_id: m.senderId,
+    message_text: m.messageText,
+    message_type: m.messageType,
+    created_at: m.createdAt,
+    sender: { username: m.senderUsername || 'User', selected_avatar: null }
+  }));
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Mark messages as read when chat opens
-  useEffect(() => {
-    if (chatId && user.id) {
-      // supabase.rpc('mark_messages_read', { p_chat_id: chatId, p_user_id: user.id });
-    }
-  }, [chatId, messages.length]);
+  }, [messages.length]);
 
   const handleTyping = useCallback(() => {
-    if (chatId) {
-      // Mocked for Convex migration
-      console.log('User is typing...');
-    }
-  }, [chatId, user.id]);
+    // Typing state is currently silent in Convex
+  }, []);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !chatId) return;
+    if (!newMessage.trim()) return;
 
     const msgText = newMessage;
     setNewMessage('');
 
-    // Mocked for Convex migration
-    const newMsg = {
-      id: Math.random().toString(),
-      chat_id: chatId,
-      sender_id: user.id,
-      message_text: msgText,
-      message_type: 'text',
-      created_at: new Date().toISOString(),
-      sender: { username: user.username, selected_avatar: user.selectedAvatar }
-    };
-    setMessages(prev => [...prev, newMsg]);
+    await sendMessageMutation({
+      tradeId,
+      senderId: user.id,
+      senderUsername: user.username,
+      messageText: msgText,
+      messageType: 'text',
+    });
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file || !chatId) return;
+    if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       setError('File size must be less than 5MB');
       return;
@@ -111,18 +74,14 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
     setUploading(true);
     try {
-      // Mocked for Convex migration
-      console.log('Would upload image:', file.name);
-      const newMsg = {
-        id: Math.random().toString(),
-        chat_id: chatId,
-        sender_id: user.id,
-        image_url: URL.createObjectURL(file),
-        message_type: 'image',
-        created_at: new Date().toISOString(),
-        sender: { username: user.username, selected_avatar: user.selectedAvatar }
-      };
-      setMessages(prev => [...prev, newMsg]);
+      // For simplicity in the P2P chat, we mock the image upload but insert the message to backend
+      await sendMessageMutation({
+        tradeId,
+        senderId: user.id,
+        senderUsername: user.username,
+        messageText: 'Sent an image: ' + file.name,
+        messageType: 'text',
+      });
     } catch (error) {
       setError('Error uploading image!');
     } finally {
@@ -131,22 +90,18 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   };
 
   const sendSystemMessage = async (text) => {
-    if (!chatId) return;
-    // Mocked for Convex migration
-    const newMsg = {
-      id: Math.random().toString(),
-      chat_id: chatId,
-      sender_id: 'system',
-      message_text: text,
-      message_type: 'system',
-      created_at: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, newMsg]);
+    await sendMessageMutation({
+      tradeId,
+      senderId: 'system',
+      senderUsername: 'System',
+      messageText: text,
+      messageType: 'system',
+    });
   };
 
   const handleMarkPaid = async () => {
     if (!window.confirm("Confirm that you have sent the payment?")) return;
-    await markTradeAsPaid(tradeId, '');
+    await markTradeAsPaid(tradeId);
     await sendSystemMessage('Payment marked as sent');
   };
 
@@ -160,14 +115,14 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     const reason = prompt("Why are you opening a dispute?");
     if (reason) {
       await openDispute(tradeId, reason);
-      await sendSystemMessage('Dispute opened');
+      await sendSystemMessage('Dispute opened: ' + reason);
     }
   };
 
-  const getUnreadCount = () => messages.filter(m => !m.is_read && m.sender_id !== user.id).length;
+  const getUnreadCount = () => 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
       {zoomImage && <ImageZoomModal src={zoomImage} onClose={() => setZoomImage(null)} />}
 
       {/* Trade Controls Bar */}

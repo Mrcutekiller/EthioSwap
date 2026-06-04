@@ -170,10 +170,10 @@ const WalletCard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
       {/* ── HERO BALANCE CARD ─────────────────────────────────── */}
-      <div style={{
+      <div className="premium-glow" style={{
         borderRadius: '24px', padding: '24px',
-        background: 'linear-gradient(135deg, #0e1117 0%, #151924 100%)',
-        border: '1.5px solid rgba(245,197,24,0.2)',
+        background: 'linear-gradient(135deg, #111318 0%, #1a1d26 100%)',
+        border: '1px solid rgba(245,197,24,0.25)',
         boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
         position: 'relative', overflow: 'hidden',
       }}>

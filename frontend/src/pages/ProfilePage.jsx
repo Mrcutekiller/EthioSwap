@@ -1164,6 +1164,55 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       )}
 
+      {/* ─── AVATAR PICKER MODAL ───────────────────────────────── */}
+      {showAvatarPicker && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowAvatarPicker(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-1)' }}>Choose Avatar</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Select one of our premium illustrated avatars.</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '24px' }}>
+              {AVATAR_TEMPLATES.map(avatar => {
+                const isSelected = user.kycSelfie === avatar.svg;
+                return (
+                  <button 
+                    key={avatar.id}
+                    onClick={async () => {
+                      try {
+                        await updateProfileMutation({ id: user._id, updates: { kycSelfie: avatar.svg } });
+                        if (onUserUpdate) onUserUpdate({ ...user, kycSelfie: avatar.svg, id: user._id });
+                        setShowAvatarPicker(false);
+                      } catch (err) {
+                        alert("Error saving avatar: " + err.message);
+                      }
+                    }}
+                    style={{
+                      background: 'var(--bg-base)',
+                      border: `2px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
+                      borderRadius: '16px',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div 
+                      style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden' }}
+                      dangerouslySetInnerHTML={{ __html: avatar.svg }}
+                    />
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)' }}>{avatar.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

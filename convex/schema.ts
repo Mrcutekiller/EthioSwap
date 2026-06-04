@@ -220,4 +220,13 @@ export default defineSchema({
     rewardStatus: v.optional(v.string()),
     createdAt: v.string(),
   }),
+
+  messages: defineTable({
+    tradeId: v.id("trades"),
+    senderId: v.string(), // userId or "system"
+    senderUsername: v.optional(v.string()),
+    messageText: v.string(),
+    messageType: v.string(), // "text" | "image" | "system"
+    createdAt: v.string(),
+  }).index("by_trade", ["tradeId"]),
 });

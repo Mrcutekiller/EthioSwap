@@ -118,9 +118,10 @@ const TradeRoom = () => {
             <div 
               key={trade._id} 
               onClick={() => setSelectedTradeId(trade._id)}
+              className={selectedTradeId === trade._id ? "premium-glow" : ""}
               style={{
                 padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                background: selectedTradeId === trade._id ? 'rgba(245, 197, 24, 0.1)' : 'var(--bg-elevated)',
+                background: selectedTradeId === trade._id ? 'rgba(245, 197, 24, 0.05)' : 'var(--bg-elevated)',
                 border: `1px solid ${selectedTradeId === trade._id ? '#f5c518' : 'var(--border)'}`,
                 transition: 'all 0.2s'
               }}

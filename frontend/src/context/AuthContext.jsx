@@ -36,12 +36,18 @@ export const AuthProvider = ({ children }) => {
   const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
   const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
 
+  // Fetch user-specific deposits, withdrawals, and invite rewards
+  const userDepositsQuery = useQuery(api.depositRequests.listForUser, user ? { userId: user._id } : "skip") || [];
+  const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, user ? { userId: user._id } : "skip") || [];
+  const inviteRewardsQuery = useQuery(api.inviteRewards.listForUser, user ? { userId: user._id } : "skip") || [];
+
   // Add id alias for compatibility across all arrays
   const listings = listingsFromQuery.map(l => ({ ...l, id: l._id }));
   const trades = tradesFromQuery.map(t => ({ ...t, id: t._id }));
 
-  const myDepositReqs = user ? allDepositReqs.filter(r => r.userId === user._id).map(r => ({ ...r, id: r._id })) : [];
-  const myWithdrawalReqs = user ? allWithdrawalReqs.filter(r => r.userId === user._id).map(r => ({ ...r, id: r._id })) : [];
+  const myDepositReqs = user ? (isAdmin ? allDepositReqs.filter(r => r.userId === user._id) : userDepositsQuery).map(r => ({ ...r, id: r._id })) : [];
+  const myWithdrawalReqs = user ? (isAdmin ? allWithdrawalReqs.filter(r => r.userId === user._id) : userWithdrawalsQuery).map(r => ({ ...r, id: r._id })) : [];
+  const referrals = inviteRewardsQuery.map(r => ({ ...r, id: r._id }));
   const myTransactions = trades; 
 
   const createUser = useMutation(api.users.create);
@@ -389,7 +395,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, wallet, listings, trades, systemSettings,
       allDepositReqs, allWithdrawalReqs,
-      myDepositReqs, myWithdrawalReqs, myTransactions,
+      myDepositReqs, myWithdrawalReqs, myTransactions, referrals,
       error, success, loading, initializing, isLocked,
       login, register, logout, createListing, initiateTrade,
       createDepositRequest, withdrawETH, savePaymentAccounts, sendById,

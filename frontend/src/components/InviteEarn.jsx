@@ -1,50 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Copy, Share2, Users, DollarSign, Clock, CheckCircle, Info, MessageCircle, Send } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Copy, Share2, Users, DollarSign, Clock, CheckCircle, Info, MessageCircle, Send, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
 
-const InviteEarn = ({ user, systemSettings }) => {
-  const [inviteStats, setInviteStats] = useState(null);
+const InviteEarn = () => {
+  const { user, systemSettings, referrals } = useAuth();
+  const [copied, setCopied] = useState(false);
   
   const isLive = systemSettings?.invite_earn_status === "active";
   const rewardAmount = systemSettings?.invite_reward_amount || 0.50;
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchStats = async () => {
-      // Mocked for Convex migration
-      const userData = {
-        referral_code: user.referralCode || 'REF' + user._id.substring(0, 5),
-        total_invites: 0,
-        successful_invites: 0,
-        pending_invites: 0,
-        total_invite_earnings: 0,
-        invite_earnings_month: 0
-      };
-      const referrals = [];
-      
-      if (userData) {
-        setInviteStats({
-          referralCode: userData.referral_code,
-          totalInvited: userData.total_invites,
-          activeFriends: userData.successful_invites,
-          pendingFriends: userData.pending_invites,
-          totalEarned: userData.total_invite_earnings,
-          earningsMonth: userData.invite_earnings_month,
-          referralList: referrals?.map(r => ({
-            username: r.invited?.username,
-            date: r.invite_date,
-            status: r.reward_status,
-            earned: r.reward_status === 'paid' ? r.reward_amount : 0
-          })) || []
-        });
-      }
+  const inviteStats = useMemo(() => {
+    if (!user) return null;
+    const refCode = user.referralCode || 'REF' + user._id.substring(0, 5);
+    const refs = referrals || [];
+    const active = refs.filter(r => r.rewardStatus === 'paid');
+    const pending = refs.filter(r => r.rewardStatus === 'pending');
+    const totalEarned = active.reduce((s, r) => s + (r.rewardAmount || rewardAmount), 0);
+    
+    return {
+      referralCode: refCode,
+      totalInvited: refs.length,
+      activeFriends: active.length,
+      pendingFriends: pending.length,
+      totalEarned: totalEarned,
+      earningsMonth: totalEarned, // Simple summary for month
+      referralList: refs.map(r => ({
+        username: r.referredUsername || 'Unknown',
+        date: r.createdAt,
+        status: r.rewardStatus,
+        earned: r.rewardStatus === 'paid' ? (r.rewardAmount || rewardAmount) : 0
+      }))
     };
-    fetchStats();
-  }, [user]);
+  }, [user, referrals, rewardAmount]);
 
   const handleCopy = () => {
     if (inviteStats?.referralCode) {
       navigator.clipboard.writeText(inviteStats.referralCode);
-      alert("Referral code copied to clipboard!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -95,8 +88,8 @@ const InviteEarn = ({ user, systemSettings }) => {
             <div style={{ flex: 1, background: 'var(--bg-base)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '14px', fontSize: '18px', fontWeight: 900, color: '#f5c518', letterSpacing: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {inviteStats?.referralCode || '—'}
             </div>
-            <button onClick={handleCopy} className="btn btn-gold" style={{ padding: '0 20px', borderRadius: '12px' }}>
-              <Copy size={18} />
+            <button onClick={handleCopy} className="btn btn-gold" style={{ padding: '0 20px', borderRadius: '12px', background: copied ? '#00d4a0' : 'var(--gold)', transition: 'all 0.2s' }}>
+              {copied ? <Check size={18} /> : <Copy size={18} />}
             </button>
           </div>
         </div>

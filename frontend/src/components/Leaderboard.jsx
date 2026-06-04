@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trophy, Award, TrendingUp, Users, Search, ChevronRight } from 'lucide-react';
+import { useQuery } from "convex/react";
+import { api } from "convex-api";
 
 const Leaderboard = ({ user }) => {
   const [category, setCategory] = useState('trades'); // 'trades' | 'volume' | 'referrals'
-  const [leaderboardData, setLeaderboardData] = useState(undefined);
 
   const categories = [
     { id: 'trades', label: 'Top Traders', icon: <TrendingUp size={18} />, color: '#00d4a0' },
@@ -11,30 +12,29 @@ const Leaderboard = ({ user }) => {
     { id: 'referrals', label: 'Top Referrers', icon: <Users size={18} />, color: '#f5c518' },
   ];
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLeaderboardData(undefined);
-      
-      // Mocked for Convex migration
-      const data = []; 
-      
-      if (data) {
-        setLeaderboardData(data.map((u, i) => ({
-          id: u.id,
-          username: u.username,
-          rank: i + 1,
-          avatar: u.selected_avatar,
-          isVerified: u.is_verified_trader,
-          badge: u.badge_level,
-          score: category === 'trades' ? u.total_trades : (category === 'volume' ? u.total_trades * 10 : u.successful_invites)
-        })));
-      } else {
-        setLeaderboardData([]);
-      }
-    };
+  const allUsers = useQuery(api.users.listAll);
 
-    fetchLeaderboard();
-  }, [category]);
+  const leaderboardData = useMemo(() => {
+    if (allUsers === undefined) return undefined;
+    if (allUsers.length === 0) return [];
+    
+    // Sort users based on active category
+    const sorted = [...allUsers].sort((a, b) => {
+      const valA = category === 'trades' ? (a.totalTrades ?? 0) : (category === 'volume' ? (a.totalVolume ?? 0) : (a.successfulInvites ?? 0));
+      const valB = category === 'trades' ? (b.totalTrades ?? 0) : (category === 'volume' ? (b.totalVolume ?? 0) : (b.successfulInvites ?? 0));
+      return valB - valA;
+    });
+
+    return sorted.map((u, i) => ({
+      id: u._id,
+      username: u.username,
+      rank: i + 1,
+      avatar: u.selectedAvatar || u.selected_avatar || "",
+      isVerified: u.is_verified_trader || u.kycStatus === 'approved',
+      badge: u.kycStatus === 'approved' ? 'Verified' : 'Novice',
+      score: category === 'trades' ? (u.totalTrades ?? 0) : (category === 'volume' ? (u.totalVolume ?? 0) : (u.successfulInvites ?? 0))
+    }));
+  }, [allUsers, category]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>

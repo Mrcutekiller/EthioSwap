@@ -69,3 +69,14 @@ export const updateStatus = mutation({
     });
   },
 });
+
+export const listForUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("withdrawRequests")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .order("desc")
+      .collect();
+  },
+});

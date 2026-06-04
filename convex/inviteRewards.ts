@@ -31,3 +31,23 @@ export const listTopInviters = query({
       .take(args.limit);
   },
 });
+
+export const listForUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const rewards = await ctx.db
+      .query("inviteRewards")
+      .filter((q) => q.eq(q.field("referrerId"), args.userId))
+      .collect();
+    
+    const enriched = [];
+    for (const r of rewards) {
+      const referredUser = await ctx.db.get(r.referredId);
+      enriched.push({
+        ...r,
+        referredUsername: referredUser?.username || "Unknown",
+      });
+    }
+    return enriched;
+  },
+});

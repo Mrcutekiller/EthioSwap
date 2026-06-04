@@ -97,7 +97,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     <div style={{ minHeight: '100vh', width: '100%', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .input:focus { border-color: var(--gold-light) !important; box-shadow: 0 0 0 2px rgba(212,175,55,0.2) !important; }
+        .input:focus { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(245,197,24,0.15) !important; }
         .input:-webkit-autofill,
         .input:-webkit-autofill:hover, 
         .input:-webkit-autofill:focus, 
@@ -109,10 +109,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       `}</style>
       
       {/* Background decoration */}
-      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,197,24,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(0,212,160,0.06) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
-      <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border)', width: '100%', maxWidth: '440px', padding: '36px 32px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1, backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column' }}>
+      <div className="premium-glow" style={{ background: 'rgba(17, 19, 24, 0.85)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', width: '100%', maxWidth: '440px', padding: '40px 36px', zIndex: 1, backdropFilter: 'blur(20px)', display: 'flex', flexDirection: 'column' }}>
         {onBackToHome && (
           <button 
             type="button" 

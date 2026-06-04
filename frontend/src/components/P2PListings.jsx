@@ -454,15 +454,16 @@ const P2PListings = () => {
             return (
               <div 
                 key={listing.id} 
+                className={isBuyType ? "premium-glow" : "premium-glow-teal"}
                 style={{
-                  background: '#111318', 
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: 'rgba(17, 19, 24, 0.75)', 
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '16px', 
                   padding: '20px',
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '14px',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  backdropFilter: 'blur(10px)',
                   animation: 'fadeInUp 0.3s ease both',
                   animationDelay: `${index * 80}ms`
                 }}
@@ -582,6 +583,7 @@ const P2PListings = () => {
                   <button
                     onClick={() => { setSelectedListing(listing); setShowBuyModal(true); setTradeamountEth(''); setTradeError(''); }}
                     disabled={!kycApproved}
+                    className="glow-btn"
                     style={{ 
                       width: '100%',
                       height: '46px',
