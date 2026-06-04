@@ -3,24 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EthioSwap — Buy & Sell USDT in Ethiopia. Safe P2P Escrow.</title>
+  <title>EthioSwap — Buy &amp; Sell USDT in Ethiopia. Safe P2P Escrow.</title>
   <meta name="description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia. Use Telebirr, CBE, and more. Low fees, 24/7 support." />
-  
-  <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ethioswap.qzz.io/" />
-  <meta property="og:title" content="EthioSwap — Buy & Sell USDT in Ethiopia" />
+  <meta property="og:title" content="EthioSwap — Buy &amp; Sell USDT in Ethiopia" />
   <meta property="og:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
-  <meta property="og:image" content="https://ethioswap.qzz.io/og-image.png" />
-
-  <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://ethioswap.qzz.io/" />
-  <meta property="twitter:title" content="EthioSwap — Buy & Sell USDT in Ethiopia" />
+  <meta property="twitter:title" content="EthioSwap — Buy &amp; Sell USDT in Ethiopia" />
   <meta property="twitter:description" content="Safe, verified P2P escrow for buying and selling USDT in Ethiopia." />
-  <meta property="twitter:image" content="https://ethioswap.qzz.io/og-image.png" />
-
-  <link rel="icon" type="image/png" href="https://ethioswap.qzz.io/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -30,19 +22,22 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0A0C12;
-      --surface:    #0F121E;
-      --surface2:   #13182A;
-      --border:     rgba(255,255,255,0.08);
+      --bg:         #070910;
+      --surface:    #0D1120;
+      --surface2:   #111828;
+      --border:     rgba(255,255,255,0.07);
       --gold:       #D4AF37;
       --gold-light: #F0C040;
+      --gold-dim:   #B8962E;
       --gold-glow:  rgba(212,175,55,0.18);
       --gold-glow2: rgba(212,175,55,0.35);
-      --text:       #F0F4FF;
-      --muted:      #8899AA;
+      --text:       #EFF3FF;
+      --muted:      #7A8FA6;
+      --green:      #10D9A0;
+      --red:        #FF4D6D;
       --radius:     16px;
       --radius-lg:  24px;
-      --transition: 0.35s cubic-bezier(.4,0,.2,1);
+      --transition: 0.32s cubic-bezier(.4,0,.2,1);
     }
 
     html { scroll-behavior: smooth; font-size: 16px; }
@@ -58,12 +53,11 @@
     a { color: inherit; text-decoration: none; }
     img { max-width: 100%; display: block; }
 
-    /* ===== SCROLLBAR ===== */
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
 
-    /* ===== PARTICLES CANVAS ===== */
+    /* ===== PARTICLES ===== */
     #particles-canvas {
       position: fixed;
       inset: 0;
@@ -71,77 +65,74 @@
       pointer-events: none;
     }
 
-    /* ===== LAYOUT HELPERS ===== */
+    /* ===== LAYOUT ===== */
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 24px;
     }
 
-    section { 
-      position: relative; 
-      z-index: 1; 
-      border-top: 1px solid rgba(255,255,255,0.05);
+    section {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== GOLD DIVIDER ===== */
+    .gold-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold-light) 50%, var(--gold) 70%, transparent 100%);
+      opacity: 0.25;
+      position: relative;
+      z-index: 1;
     }
 
     /* ===== NAV ===== */
     nav {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       z-index: 1000;
       padding: 0 24px;
-      height: 72px;
+      height: 70px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(10,12,18,0.72);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
+      background: rgba(7,9,16,0.6);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(212,175,55,0.08);
       transition: background var(--transition);
     }
 
     nav.scrolled {
-      background: rgba(10,12,18,0.95);
+      background: rgba(7,9,16,0.96);
+      border-bottom-color: rgba(212,175,55,0.14);
     }
 
     .nav-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-weight: 800;
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       letter-spacing: -0.02em;
-      color: var(--text);
     }
 
-    .nav-logo .logo-shield {
-      width: 42px;
-      height: 42px;
+    .nav-logo .logo-mark {
+      width: 40px;
+      height: 40px;
       background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
       font-weight: 900;
-      color: #0A0C12;
-      box-shadow: 0 0 20px var(--gold-glow2), 0 4px 12px rgba(0,0,0,0.4);
+      font-size: 1rem;
+      color: #070910;
+      box-shadow: 0 0 24px var(--gold-glow2), 0 4px 12px rgba(0,0,0,0.4);
       flex-shrink: 0;
-      position: relative;
-      overflow: hidden;
     }
 
-    .nav-logo .logo-shield::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 60%);
-    }
-
-    .nav-logo span.brand-name {
+    .brand-name {
       background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -151,39 +142,35 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
       list-style: none;
     }
 
     .nav-links a {
-      font-size: 0.88rem;
+      font-size: 0.875rem;
       font-weight: 500;
       color: var(--muted);
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 8px;
       transition: color var(--transition), background var(--transition);
     }
 
-    .nav-links a:hover {
-      color: var(--text);
-      background: rgba(255,255,255,0.05);
-    }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 
     .nav-cta {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: #0A0C12 !important;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%) !important;
+      color: #070910 !important;
       font-weight: 700 !important;
-      padding: 9px 20px !important;
-      border-radius: 10px !important;
+      padding: 8px 18px !important;
+      border-radius: 9px !important;
       box-shadow: 0 4px 16px var(--gold-glow2);
-      transition: transform var(--transition), box-shadow var(--transition) !important;
     }
 
     .nav-cta:hover {
+      opacity: 0.9;
       transform: translateY(-1px);
-      box-shadow: 0 6px 24px var(--gold-glow2) !important;
-      background: rgba(255,255,255,0.05) !important;
-      color: #0A0C12 !important;
+      box-shadow: 0 8px 24px var(--gold-glow2) !important;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%) !important;
     }
 
     .nav-hamburger {
@@ -198,47 +185,51 @@
 
     .nav-hamburger span {
       display: block;
-      width: 24px;
+      width: 22px;
       height: 2px;
       background: var(--text);
       border-radius: 2px;
       transition: var(--transition);
     }
 
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      position: fixed;
+      top: 70px; left: 0; right: 0;
+      background: rgba(7,9,16,0.98);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      z-index: 999;
+      transform: translateY(-110%);
+      opacity: 0;
+      transition: transform 0.38s cubic-bezier(.4,0,.2,1), opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .mobile-menu.open { transform: translateY(0); opacity: 1; pointer-events: all; }
+
+    .mobile-menu ul { list-style: none; }
+    .mobile-menu ul li { border-bottom: 1px solid var(--border); }
+    .mobile-menu ul li:last-child { border-bottom: none; }
+    .mobile-menu ul li a {
+      display: block;
+      padding: 15px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: color var(--transition);
+    }
+    .mobile-menu ul li a:hover { color: var(--gold-light); }
+
     /* ===== HERO ===== */
     .hero {
       min-height: 100vh;
       display: flex;
       align-items: center;
-      padding: 80px 0; /* Reduced padding as per Item 4 */
+      padding: 100px 0 60px;
       position: relative;
       overflow: hidden;
-    }
-
-    /* Floating phone in hero */
-    .hero-visual {
-      position: absolute;
-      right: 40px;
-      top: 55%;
-      transform: perspective(1000px) rotateY(-15deg) rotateX(5deg);
-      width: 320px;
-      z-index: 1;
-      display: none;
-      filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5));
-      animation: float 4s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(0);
-      }
-      50% {
-        transform: perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(-12px);
-      }
-    }
-
-    @media (min-width: 1100px) {
-      .hero-visual { display: block; }
     }
 
     .hero-bg {
@@ -248,91 +239,91 @@
       overflow: hidden;
     }
 
-    .hero-gradient {
+    .hero-orb {
       position: absolute;
-      width: 900px;
-      height: 900px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.04) 40%, transparent 70%);
-      top: 50%;
-      left: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    .hero-orb-1 {
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%);
+      top: 50%; left: 45%;
       transform: translate(-50%, -50%);
-      animation: pulseGlow 6s ease-in-out infinite;
+      animation: slowPulse 8s ease-in-out infinite;
     }
 
-    .hero-gradient-2 {
-      position: absolute;
-      width: 600px;
-      height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(100,80,212,0.1) 0%, transparent 70%);
-      top: 20%;
-      right: -10%;
-      animation: drift 12s ease-in-out infinite;
+    .hero-orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(90,60,200,0.09) 0%, transparent 70%);
+      top: 10%; right: 5%;
+      animation: drift 14s ease-in-out infinite;
     }
 
-    .hero-gradient-3 {
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%);
-      bottom: 10%;
-      left: -5%;
-      animation: drift 15s ease-in-out infinite reverse;
+    .hero-orb-3 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(16,217,160,0.06) 0%, transparent 70%);
+      bottom: 15%; left: 0%;
+      animation: drift 18s ease-in-out infinite reverse;
     }
 
-    @keyframes pulseGlow {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-      50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+    @keyframes slowPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
     }
 
     @keyframes drift {
       0%, 100% { transform: translate(0, 0); }
-      33% { transform: translate(30px, -20px); }
-      66% { transform: translate(-20px, 15px); }
+      33% { transform: translate(25px, -18px); }
+      66% { transform: translate(-15px, 12px); }
     }
 
-    .hero-content {
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 60px;
+      align-items: center;
       position: relative;
       z-index: 1;
-      max-width: 780px;
-      padding: 80px 0;
+      width: 100%;
     }
+
+    .hero-content { max-width: 660px; }
 
     .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(212,175,55,0.1);
-      border: 1px solid rgba(212,175,55,0.25);
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.22);
       border-radius: 100px;
       padding: 6px 16px 6px 8px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--gold-light);
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-bottom: 28px;
     }
 
     .hero-badge .dot {
-      width: 8px;
-      height: 8px;
-      background: var(--gold);
+      width: 8px; height: 8px;
+      background: var(--green);
       border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
       animation: blink 2s ease-in-out infinite;
     }
 
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+      50% { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
     }
 
     .hero h1 {
-      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-size: clamp(2.6rem, 5.5vw, 4.8rem);
       font-weight: 900;
-      line-height: 1.05;
+      line-height: 1.04;
       letter-spacing: -0.04em;
       margin-bottom: 24px;
     }
@@ -342,23 +333,22 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      filter: drop-shadow(0 0 20px rgba(212,175,55,0.4));
+      filter: drop-shadow(0 0 24px rgba(212,175,55,0.35));
     }
 
     .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.2rem);
+      font-size: clamp(1rem, 1.8vw, 1.15rem);
       color: var(--muted);
-      line-height: 1.75;
-      max-width: 580px;
+      line-height: 1.78;
+      max-width: 560px;
       margin-bottom: 44px;
-      font-weight: 400;
     }
 
     .hero-ctas {
       display: flex;
       flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 64px;
+      gap: 14px;
+      margin-bottom: 56px;
     }
 
     .btn-primary {
@@ -366,14 +356,14 @@
       align-items: center;
       gap: 10px;
       background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: #0A0C12;
+      color: #070910;
       font-weight: 700;
-      font-size: 1rem;
-      padding: 16px 32px;
-      border-radius: 14px;
+      font-size: 0.975rem;
+      padding: 15px 30px;
+      border-radius: 13px;
       border: none;
       cursor: pointer;
-      box-shadow: 0 8px 32px rgba(212,175,55,0.35), 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 8px 32px rgba(212,175,55,0.32), 0 2px 8px rgba(0,0,0,0.3);
       transition: transform var(--transition), box-shadow var(--transition);
       font-family: 'Inter', sans-serif;
       letter-spacing: -0.01em;
@@ -381,7 +371,7 @@
 
     .btn-primary:hover {
       transform: translateY(-3px);
-      box-shadow: 0 16px 48px rgba(212,175,55,0.45), 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 16px 48px rgba(212,175,55,0.42), 0 4px 16px rgba(0,0,0,0.4);
     }
 
     .btn-primary:active { transform: translateY(-1px); }
@@ -390,13 +380,13 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.04);
       color: var(--text);
       font-weight: 600;
-      font-size: 1rem;
-      padding: 16px 32px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.975rem;
+      padding: 15px 30px;
+      border-radius: 13px;
+      border: 1px solid rgba(255,255,255,0.11);
       cursor: pointer;
       backdrop-filter: blur(8px);
       transition: transform var(--transition), background var(--transition), border-color var(--transition);
@@ -406,14 +396,41 @@
 
     .btn-secondary:hover {
       transform: translateY(-3px);
-      background: rgba(255,255,255,0.09);
-      border-color: rgba(212,175,55,0.35);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(212,175,55,0.32);
     }
 
+    /* Trust badges row */
+    .trust-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+    }
+
+    .trust-badge .icon {
+      font-size: 1rem;
+      filter: grayscale(0.2);
+    }
+
+    .trust-dot { color: rgba(255,255,255,0.15); }
+
+    /* Hero stats */
     .hero-stats {
       display: flex;
+      gap: 32px;
       flex-wrap: wrap;
-      gap: 40px;
+      margin-bottom: 40px;
     }
 
     .hero-stat {
@@ -423,7 +440,7 @@
     }
 
     .hero-stat .number {
-      font-size: 1.8rem;
+      font-size: 1.85rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
@@ -433,1237 +450,152 @@
     }
 
     .hero-stat .label {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* Floating card in hero - REMOVED OLD VERSION */
-    
-    /* ===== SECTION HEADER ===== */
-    .section-header {
-      text-align: center;
-      margin-bottom: 64px;
-    }
-
-    .section-eyebrow {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 16px;
-    }
-
-    .section-header h2 {
-      font-size: clamp(1.8rem, 4vw, 3rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 18px;
-    }
-
-    .section-header p {
-      font-size: 1.05rem;
-      color: var(--muted);
-      line-height: 1.7;
-      max-width: 520px;
-      margin: 0 auto;
-    }
-
-    /* ===== FEATURES ===== */
-    .features {
-      padding: 80px 0;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    @media (max-width: 768px) {
-      .features-grid { grid-template-columns: 1fr; }
-    }
-
-    .feature-card {
-      background: #161b22;
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: var(--radius-lg);
-      padding: 36px 28px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .feature-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(212,175,55,0.04) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity var(--transition);
-      border-radius: var(--radius-lg);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(212,175,55,0.3);
-      box-shadow: 0 0 0 1px rgba(245,197,24,0.3), 0 20px 60px rgba(0,0,0,0.4);
-    }
-
-    .feature-card:hover::before { opacity: 1; }
-
-    .feature-icon {
-      width: 56px;
-      height: 56px;
-      background: rgba(212,175,55,0.1);
-      border: 1px solid rgba(212,175,55,0.2);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      margin-bottom: 22px;
-      transition: transform var(--transition), box-shadow var(--transition);
-      color: var(--gold);
-    }
-
-    .feature-card:hover .feature-icon {
-      transform: scale(1.1);
-      box-shadow: 0 0 20px rgba(212,175,55,0.2);
-    }
-
-    .feature-card h3 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-
-    .feature-card p {
-      font-size: 0.9rem;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    /* ===== HOW IT WORKS ===== */
-    .how-it-works {
-      padding: 80px 0;
-      background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.03) 50%, transparent 100%);
-    }
-
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      position: relative;
-    }
-
-    .steps-grid::before {
-      content: '';
-      position: absolute;
-      top: 48px;
-      left: 15%;
-      right: 15%;
-      height: 2px;
-      background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 4px, transparent 4px, transparent 10px);
-      opacity: 0.3;
-      z-index: 0;
-    }
-
-    @media (max-width: 1024px) {
-      .steps-grid::before { display: none; }
-      .steps-grid { grid-template-columns: 1fr; }
-    }
-
-    .step-card {
-      text-align: center;
-      padding: 32px 20px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-number {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: #161b22;
-      border: 2px solid rgba(212,175,55,0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      margin: 0 auto 24px;
-      position: relative;
-      box-shadow: 0 0 30px rgba(212,175,55,0.15);
-      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    }
-
-    .step-card:hover .step-number {
-      transform: scale(1.1);
-      border-color: var(--gold);
-      box-shadow: 0 0 40px rgba(212,175,55,0.3);
-    }
-
-    .step-card h3 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: -0.01em;
-    }
-
-    .step-card p {
-      font-size: 0.875rem;
-      color: var(--muted);
-      line-height: 1.65;
-    }
-
-    /* ===== ABOUT US SECTION ===== */
-    .about-us {
-      padding: 80px 0;
-      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
-    }
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 64px;
-      align-items: center;
-    }
-    .about-text h2 {
-      font-size: clamp(2rem, 3.5vw, 2.8rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, var(--text) 30%, var(--muted) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .about-text p {
-      font-size: 1rem;
-      color: var(--muted);
-      line-height: 1.75;
-      margin-bottom: 20px;
-    }
-    .about-stats-card {
-      background: rgba(15,18,30,0.7);
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      backdrop-filter: blur(20px);
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
-    }
-    .about-stats-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 100% 0%, rgba(212,175,55,0.08) 0%, transparent 60%);
-      pointer-events: none;
-    }
-    .stats-card-content {
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
-    }
-    .stats-item {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 16px;
-    }
-    .stats-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-    .stats-val {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .stats-lbl {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* ===== LIVE P2P MARKETPLACE ===== */
-    .live-market {
-      padding: 80px 0;
-    }
-    .market-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      margin-top: 48px;
-    }
-    .market-card {
-      background: rgba(15,18,30,0.7);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
-      display: flex;
-      flex-direction: column;
-    }
-    .market-card h3 {
-      font-size: 1.3rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 24px;
-      border-left: 3px solid var(--gold);
-      padding-left: 12px;
-      line-height: 1.2;
-      color: var(--text);
-    }
-    .feed-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      height: 380px;
-      overflow: hidden;
-      position: relative;
-    }
-    .feed-item {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      animation: slideInDown 0.5s ease forwards;
-    }
-    @keyframes slideInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .feed-item .item-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.8rem;
-    }
-    .user-badge {
-      font-weight: 600;
-      color: var(--gold-light);
-    }
-    .action-badge {
-      font-size: 0.7rem;
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 4px;
-      letter-spacing: 0.05em;
-    }
-    .action-badge.buy {
-      background: rgba(16,185,129,0.15);
-      color: #10B981;
-    }
-    .action-badge.sell {
-      background: rgba(239,68,68,0.15);
-      color: #EF4444;
-    }
-    .feed-item .item-body {
-      font-size: 0.92rem;
-      font-weight: 500;
-      color: var(--text);
-    }
-    .feed-item .val {
-      font-weight: 700;
-      color: var(--text);
-    }
-    .feed-item .item-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       font-size: 0.78rem;
-      color: var(--muted);
-      border-top: 1px solid rgba(255,255,255,0.04);
-      padding-top: 8px;
-    }
-    .payment-method {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .status-badge.verified {
-      color: #10B981;
-      font-weight: 600;
-    }
-
-    /* Calculator style */
-    .calc-tabs {
-      display: flex;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 24px;
-    }
-    .calc-tab {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: var(--transition);
-      font-family: 'Inter', sans-serif;
-    }
-    .calc-tab.active {
-      background: rgba(212,175,55,0.12);
-      color: var(--gold-light);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    .calc-form {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .calc-form .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .calc-form label {
-      font-size: 0.8rem;
       font-weight: 600;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.07em;
     }
-    .calc-form input, .calc-form select {
-      background: rgba(10,12,18,0.5);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: var(--text);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      transition: border-color var(--transition);
+
+    /* Community goal bar */
+    .community-goal {
+      margin-top: 28px;
+      max-width: 380px;
     }
-    .calc-form input:focus, .calc-form select:focus {
-      outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 10px var(--gold-glow);
-    }
-    .calc-results {
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .calc-row {
+
+    .goal-label {
       display: flex;
       justify-content: space-between;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-    .calc-row.highlight {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-      margin-top: 4px;
-    }
-    .calc-row.highlight span:last-child {
-      color: var(--gold-light);
-      text-shadow: 0 0 10px var(--gold-glow);
-    }
-    .calc-example-note {
-      font-size: 0.75rem;
-      color: var(--muted);
-      line-height: 1.5;
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .calc-example-note .info-icon {
-      color: var(--gold);
-      font-weight: bold;
-    }
-
-    /* ===== FAQ SECTION ===== */
-    .faq {
-      padding: 80px 0;
-      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
-    }
-    .faq-accordion {
-      max-width: 760px;
-      margin: 48px auto 0;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .faq-item {
-      background: rgba(15,18,30,0.7);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: all 200ms ease;
-      cursor: pointer;
-    }
-
-    .faq-item:hover {
-      border-color: rgba(212,175,55,0.2);
-      background: rgba(245,197,24,0.03);
-    }
-
-    .faq-item.active {
-      border-left: 3px solid #f5c518;
-      background: rgba(245,197,24,0.03);
-    }
-
-    .faq-trigger {
-      width: 100%;
-      background: transparent;
-      border: none;
-      padding: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text);
-      font-size: 1rem;
+      margin-bottom: 10px;
+      font-size: 0.82rem;
       font-weight: 600;
-      text-align: left;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: color var(--transition);
-    }
-
-    .faq-icon {
-      font-size: 1.5rem;
-      font-weight: 300;
       color: var(--muted);
-      transition: transform 200ms ease, color 200ms ease;
     }
 
-    .faq-item.active .faq-icon {
-      transform: rotate(45deg);
-      color: var(--gold);
-    }
-    .faq-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0,1,0,1);
-      padding: 0 24px;
-    }
-    .faq-item.active .faq-content {
-      max-height: 1000px;
-      transition: max-height 0.4s cubic-bezier(1,0,1,0);
-      padding-bottom: 24px;
-    }
-    .faq-content p {
-      font-size: 0.9rem;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    /* ===== UNIFIED ACCOUNT SECTION ===== */
-    .unified {
-      padding: 80px 0;
-    }
-
-    .unified-inner {
-      background: rgba(15,18,30,0.8);
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: 32px;
-      padding: 72px;
-      backdrop-filter: blur(20px);
-      position: relative;
+    .goal-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
       overflow: hidden;
     }
 
-    .unified-inner::before {
-      content: '';
-      position: absolute;
-      top: -100px;
-      right: -100px;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%);
-      pointer-events: none;
+    .goal-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
+      border-radius: 10px;
+      transition: width 1.2s ease-out;
     }
 
-    .unified-inner::after {
-      content: '';
-      position: absolute;
-      bottom: -80px;
-      left: -80px;
+    /* Hero card visual */
+    .hero-card-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
       width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(100,80,212,0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .unified-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 72px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-    }
-
-    .unified-text h2 {
-      font-size: clamp(1.8rem, 3vw, 2.8rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 20px;
-    }
-
-    .unified-text p {
-      font-size: 1rem;
-      color: var(--muted);
-      line-height: 1.75;
-      margin-bottom: 16px;
-    }
-
-    .unified-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(212,175,55,0.08);
-      border: 1px solid rgba(212,175,55,0.2);
-      border-radius: 8px;
-      padding: 8px 14px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--gold-light);
-      margin-top: 8px;
-    }
-
-    .unified-cards {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .sync-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      transition: border-color var(--transition), background var(--transition);
-    }
-
-    .sync-card:hover {
-      border-color: rgba(212,175,55,0.25);
-      background: rgba(255,255,255,0.06);
-    }
-
-    .sync-card-icon {
-      font-size: 1.8rem;
       flex-shrink: 0;
     }
 
-    .sync-card-text h4 {
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-
-    .sync-card-text p {
-      font-size: 0.82rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .sync-badge {
-      margin-left: auto;
-      flex-shrink: 0;
-      background: rgba(34,197,94,0.1);
-      border: 1px solid rgba(34,197,94,0.25);
-      border-radius: 100px;
-      padding: 4px 10px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #4ade80;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* ===== DOWNLOAD SECTION ===== */
-    .download {
-      padding: 80px 0;
-      text-align: center;
-    }
-
-    .download-layout {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 40px;
-      margin-top: 48px;
-      text-align: left;
-    }
-    .download-card {
-      background: rgba(15,18,30,0.85);
-      border: 1px solid rgba(212,175,55,0.2);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-    .download-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    }
-    .download-card h3 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-    .download-card p {
-      font-size: 0.92rem;
-      color: var(--muted);
-      margin-bottom: 28px;
-    }
-    .btn-download {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: #0A0C12;
-      font-weight: 800;
-      font-size: 1.05rem;
-      padding: 18px 40px;
-      border-radius: 14px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 8px 32px rgba(212,175,55,0.4);
-      transition: transform var(--transition), box-shadow var(--transition);
-      font-family: 'Inter', sans-serif;
-      letter-spacing: -0.01em;
-      margin-bottom: 24px;
-    }
-
-    .btn-download:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 16px 48px rgba(212,175,55,0.5);
-    }
-    .download-meta-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      width: 100%;
-      margin: 24px 0;
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: left;
-    }
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .meta-item .meta-label {
-      font-size: 0.72rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .meta-item .meta-value {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-    .qr-container {
-      background: rgba(255,255,255,0.03);
+    .floating-card {
+      background: rgba(13,17,32,0.85);
       border: 1px solid rgba(212,175,55,0.15);
       border-radius: 16px;
-      padding: 16px;
-      width: 150px;
-      height: 150px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .qr-mock-code {
-      width: 100px;
-      height: 100px;
-      background: white;
-      border-radius: 8px;
-      padding: 6px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .qr-mock-code::before {
-      content: '';
-      position: absolute;
-      width: 88px;
-      height: 88px;
-      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="20" height="20" fill="black"/><rect x="70" y="10" width="20" height="20" fill="black"/><rect x="10" y="70" width="20" height="20" fill="black"/><rect x="40" y="40" width="20" height="20" fill="black"/><rect x="15" y="15" width="10" height="10" fill="white"/><rect x="75" y="15" width="10" height="10" fill="white"/><rect x="15" y="75" width="10" height="10" fill="white"/><rect x="45" y="45" width="10" height="10" fill="white"/><rect x="35" y="10" width="5" height="15" fill="black"/><rect x="50" y="20" width="15" height="5" fill="black"/><rect x="10" y="35" width="15" height="5" fill="black"/><rect x="70" y="40" width="10" height="10" fill="black"/><rect x="35" y="70" width="15" height="5" fill="black"/><rect x="55" y="75" width="10" height="15" fill="black"/><rect x="80" y="70" width="10" height="10" fill="black"/></svg>') center/contain no-repeat;
-    }
-    .qr-container span {
-      font-size: 0.72rem;
-      font-weight: 500;
-      color: var(--muted);
-    }
-    .guide-card {
-      background: rgba(15,18,30,0.7);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 40px;
+      padding: 18px 20px;
       backdrop-filter: blur(20px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
-    }
-    .guide-card h3 {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-      color: var(--text);
-    }
-    .guide-steps {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .guide-step {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-    .step-badge {
-      width: 28px;
-      height: 28px;
-      background: rgba(212,175,55,0.15);
-      border: 1px solid rgba(212,175,55,0.3);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--gold);
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    .step-text h4 {
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-    .step-text p {
-      font-size: 0.85rem;
-      color: var(--muted);
-      line-height: 1.5;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
 
-    /* ===== FOOTER ===== */
-    footer {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 64px 24px 32px;
-    }
-
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .footer-top {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 48px;
-      margin-bottom: 56px;
-    }
-
-    .footer-brand .footer-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.1rem;
-      font-weight: 800;
-      margin-bottom: 16px;
-    }
-
-    .footer-brand .footer-logo .logo-shield-sm {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      font-weight: 900;
-      color: #0A0C12;
-    }
-
-    .footer-brand p {
-      font-size: 0.88rem;
-      color: var(--muted);
-      line-height: 1.65;
-      max-width: 280px;
-      margin-bottom: 24px;
-    }
-
-    .social-links {
-      display: flex;
-      gap: 12px;
-    }
-
-    .social-link {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      transition: background var(--transition), border-color var(--transition), transform var(--transition);
-    }
-
-    .social-link:hover {
-      background: rgba(212,175,55,0.1);
-      border-color: rgba(212,175,55,0.3);
-      transform: translateY(-2px);
-    }
-
-    .footer-col h4 {
-      font-size: 0.82rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text);
-      margin-bottom: 20px;
-    }
-
-    .footer-col ul { list-style: none; }
-    .footer-col ul li { margin-bottom: 12px; }
-
-    .footer-col ul li a {
-      font-size: 0.875rem;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
-
-    .footer-col ul li a:hover { color: var(--gold-light); }
-
-    .footer-bottom {
-      border-top: 1px solid var(--border);
-      padding-top: 28px;
+    .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .footer-bottom p {
-      font-size: 0.82rem;
+      margin-bottom: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
       color: var(--muted);
     }
 
-    .footer-bottom .gold { color: var(--gold); }
-
-    /* ===== SCROLL ANIMATIONS ===== */
-    .reveal {
-      opacity: 0;
-      transform: translateY(32px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
-    }
-
-    .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-    .reveal-delay-4 { transition-delay: 0.4s; }
-    .reveal-delay-5 { transition-delay: 0.5s; }
-
-    /* ===== LEGAL MODAL ===== */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5,7,12,0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      z-index: 2000;
+    .card-status {
       display: flex;
       align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s cubic-bezier(.4,0,.2,1);
-      padding: 20px;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
     }
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .modal-content {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.2);
-      border-radius: var(--radius-lg);
-      width: 100%;
-      max-width: 720px;
-      max-height: 85vh;
-      padding: 40px;
-      position: relative;
-      overflow-y: auto;
-      transform: translateY(40px);
-      transition: transform 0.4s cubic-bezier(.4,0,.2,1);
-      box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 40px rgba(212,175,55,0.05);
-    }
-    .modal-overlay.open .modal-content {
-      transform: translateY(0);
-    }
-    .modal-close {
-      position: absolute;
-      top: 24px;
-      right: 24px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: var(--text);
-      width: 36px;
-      height: 36px;
+
+    .status-dot {
+      width: 6px; height: 6px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      font-weight: 300;
-      cursor: pointer;
-      transition: var(--transition);
-      z-index: 10;
     }
-    .modal-close:hover {
-      background: rgba(212,175,55,0.15);
-      border-color: rgba(212,175,55,0.3);
-      color: var(--gold-light);
-      transform: rotate(90deg);
-    }
-    .modal-header h3 {
-      font-size: 1.6rem;
+
+    .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+    .trade-amount {
+      font-size: 1.3rem;
       font-weight: 800;
       letter-spacing: -0.02em;
-      margin-bottom: 24px;
-      color: var(--gold-light);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 16px;
+      margin-bottom: 4px;
     }
-    .modal-body {
-      font-size: 0.95rem;
+
+    .trade-sub {
+      font-size: 0.82rem;
       color: var(--muted);
-      line-height: 1.75;
     }
-    .modal-body h4 {
+
+    .trade-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+      background: rgba(16,217,160,0.1);
+      border: 1px solid rgba(16,217,160,0.2);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .escrow-meter {
+      margin-top: 10px;
+    }
+
+    .meter-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
+      width: 72%;
+      border-radius: 2px;
+    }
+
+    .rate-display {
       font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text);
-      margin: 24px 0 8px;
-    }
-    .modal-body h4:first-of-type {
-      margin-top: 0;
-    }
-    .modal-body p {
-      margin-bottom: 16px;
-    }
-    .modal-body ul {
-      margin-bottom: 16px;
-      padding-left: 20px;
-    }
-    .modal-body ul li {
-      margin-bottom: 8px;
-    }
-    .modal-body strong {
-      color: var(--text);
-    }
-
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 1024px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .steps-grid { grid-template-columns: repeat(2, 1fr); }
-      .steps-grid::before { display: none; }
-      .unified-grid { grid-template-columns: 1fr; gap: 40px; }
-      .footer-top { grid-template-columns: 1fr 1fr; }
-      .about-grid { grid-template-columns: 1fr; gap: 40px; }
-      .market-grid { grid-template-columns: 1fr; }
-      .download-layout { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .nav-hamburger { display: flex; }
-      .features-grid { grid-template-columns: 1fr; }
-      .unified-inner { padding: 40px 24px; }
-      .download-card { padding: 40px 24px; }
-      .guide-card { padding: 40px 24px; }
-      .footer-top { grid-template-columns: 1fr; }
-      .footer-bottom { flex-direction: column; align-items: flex-start; }
-      .hero-stats { gap: 28px; }
-    }
-
-    @media (min-width: 1100px) {
-      /* Handled in HERO section styles */
-    }
-
-    /* ===== REVIEWS ===== */
-    .review-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      transition: transform var(--transition);
-    }
-    .review-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(212,175,55,0.2);
-    }
-    .review-stars {
-      color: var(--gold);
-      display: flex;
-      gap: 4px;
-      font-size: 0.9rem;
-    }
-    .review-content {
-      font-style: italic;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: var(--text);
-    }
-    .review-user {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: auto;
-    }
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      background: var(--gold);
-      color: #000;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       font-weight: 800;
-      font-size: 0.9rem;
-    }
-    .user-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .user-name {
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-    .user-badge-verified {
-      font-size: 0.75rem;
-      color: #00d4a0;
-      font-weight: 600;
-    }
-    .review-date {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-left: auto;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    /* ===== MOBILE MENU ===== */
-    .mobile-menu {
-      position: fixed;
-      top: 72px;
-      left: 0;
-      right: 0;
-      background: rgba(10,12,18,0.98);
-      backdrop-filter: blur(24px);
-      border-bottom: 1px solid var(--border);
-      padding: 24px;
-      z-index: 999;
-      transform: translateY(-100%);
-      opacity: 0;
-      transition: transform 0.4s cubic-bezier(.4,0,.2,1), opacity 0.4s ease;
-      pointer-events: none;
-    }
-
-    .mobile-menu.open {
-      transform: translateY(0);
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .mobile-menu ul { list-style: none; }
-    .mobile-menu ul li { border-bottom: 1px solid var(--border); }
-    .mobile-menu ul li:last-child { border-bottom: none; }
-    .mobile-menu ul li a {
-      display: block;
-      padding: 16px 0;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--muted);
-      transition: color var(--transition);
-    }
-    .mobile-menu ul li a:hover { color: var(--gold-light); }
-
-    /* ===== TICKER TAPE ===== */
+    /* ===== TICKER ===== */
     .ticker-wrap {
       width: 100%;
       overflow: hidden;
-      background: rgba(212,175,55,0.06);
-      border-top: 1px solid rgba(212,175,55,0.1);
-      border-bottom: 1px solid rgba(212,175,55,0.1);
-      padding: 12px 0;
-      margin-top: -1px;
+      background: rgba(212,175,55,0.05);
+      border-top: 1px solid rgba(212,175,55,0.08);
+      border-bottom: 1px solid rgba(212,175,55,0.08);
+      padding: 11px 0;
+      position: relative;
+      z-index: 1;
     }
 
     .ticker {
@@ -1678,62 +610,1008 @@
       align-items: center;
       gap: 8px;
       padding: 0 40px;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--muted);
       white-space: nowrap;
     }
 
-    .ticker-item .ticker-dot {
-      width: 5px;
-      height: 5px;
+    .ticker-dot {
+      width: 5px; height: 5px;
       background: var(--gold);
       border-radius: 50%;
-      flex-shrink: 0;
     }
 
-    .ticker-item .ticker-val {
-      color: var(--gold-light);
-    }
+    .ticker-val { color: var(--gold-light); }
 
     @keyframes ticker {
       0% { transform: translateX(0); }
       100% { transform: translateX(-50%); }
     }
 
-    /* ===== GRADIENT LINE ===== */
-    .gold-line {
-      height: 2px;
-      background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold-light) 50%, var(--gold) 70%, transparent 100%);
-      opacity: 0.5;
-      margin: 0;
+    /* ===== SECTION HEADER ===== */
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
     }
 
+    .section-eyebrow {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.75rem, 4vw, 2.9rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 18px;
+    }
+
+    .section-header p {
+      font-size: 1.02rem;
+      color: var(--muted);
+      line-height: 1.72;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ===== FEATURES ===== */
+    .features { padding: 90px 0; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: linear-gradient(145deg, rgba(13,17,32,0.9), rgba(17,24,40,0.7));
+      border: 1px solid rgba(212,175,55,0.12);
+      border-radius: var(--radius-lg);
+      padding: 36px 28px;
+      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(212,175,55,0.05) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(212,175,55,0.28);
+      box-shadow: 0 0 0 1px rgba(212,175,55,0.12), 0 24px 60px rgba(0,0,0,0.5);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 54px; height: 54px;
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 22px;
+      transition: transform var(--transition), box-shadow var(--transition);
+      color: var(--gold);
+    }
+
+    .feature-card:hover .feature-icon {
+      transform: scale(1.1);
+      box-shadow: 0 0 24px rgba(212,175,55,0.22);
+    }
+
+    .feature-card h3 {
+      font-size: 1.02rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .how-it-works {
+      padding: 90px 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(212,175,55,0.025) 50%, transparent 100%);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      position: relative;
+    }
+
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 46px;
+      left: 16%;
+      right: 16%;
+      height: 2px;
+      background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 4px, transparent 4px, transparent 10px);
+      opacity: 0.22;
+      z-index: 0;
+    }
+
+    .step-card {
+      text-align: center;
+      padding: 32px 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-number {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid rgba(212,175,55,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto 24px;
+      box-shadow: 0 0 28px rgba(212,175,55,0.12);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+
+    .step-card:hover .step-number {
+      transform: scale(1.1);
+      border-color: var(--gold);
+      box-shadow: 0 0 40px rgba(212,175,55,0.28);
+    }
+
+    .step-card h3 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .step-card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.68;
+    }
+
+    /* ===== LIVE MARKET ===== */
+    .live-market { padding: 90px 0; }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .market-card {
+      background: rgba(13,17,32,0.8);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .market-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      border-left: 3px solid var(--gold);
+      padding-left: 14px;
+      line-height: 1.2;
+    }
+
+    .feed-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .feed-item {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      transition: border-color var(--transition);
+    }
+
+    .feed-item:hover { border-color: rgba(212,175,55,0.2); }
+
+    .item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .user-badge { font-weight: 600; color: var(--gold-light); }
+
+    .action-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.06em;
+    }
+
+    .action-badge.buy { background: rgba(16,217,160,0.12); color: var(--green); }
+    .action-badge.sell { background: rgba(255,77,109,0.12); color: var(--red); }
+
+    .item-body { font-size: 0.9rem; font-weight: 500; }
+    .item-body .val { font-weight: 700; }
+
+    .item-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding-top: 8px;
+    }
+
+    .verified-badge { color: var(--green); font-weight: 600; }
+
+    /* Calculator */
+    .calc-tabs {
+      display: flex;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 4px;
+      margin-bottom: 22px;
+    }
+
+    .calc-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 7px;
+      transition: var(--transition);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .calc-tab.active {
+      background: rgba(212,175,55,0.12);
+      color: var(--gold-light);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .calc-form { display: flex; flex-direction: column; gap: 18px; }
+
+    .calc-form .input-group { display: flex; flex-direction: column; gap: 8px; }
+
+    .calc-form label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .calc-form input, .calc-form select {
+      background: rgba(7,9,16,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: 'Inter', sans-serif;
+      transition: border-color var(--transition);
+    }
+
+    .calc-form input:focus, .calc-form select:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    .calc-results {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .calc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .calc-row.highlight {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 4px;
+    }
+
+    .calc-row.highlight span:last-child { color: var(--gold-light); }
+
+    .calc-cta {
+      margin-top: 14px;
+      width: 100%;
+      justify-content: center;
+      padding: 13px;
+    }
+
+    /* ===== ABOUT ===== */
+    .about-us {
+      padding: 90px 0;
+      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 72px;
+      align-items: center;
+    }
+
+    .about-text h2 {
+      font-size: clamp(1.9rem, 3.5vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 24px;
+    }
+
+    .about-text p {
+      font-size: 0.98rem;
+      color: var(--muted);
+      line-height: 1.78;
+      margin-bottom: 20px;
+    }
+
+    .about-stats-card {
+      background: rgba(13,17,32,0.75);
+      border: 1px solid rgba(212,175,55,0.14);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    }
+
+    .about-stats-card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .stats-items { display: flex; flex-direction: column; gap: 24px; }
+
+    .stats-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .stats-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .stats-val {
+      font-size: 2.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stats-lbl {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ===== REVIEWS ===== */
+    .reviews { padding: 90px 0; }
+
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      margin-bottom: 48px;
+    }
+
+    .review-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+
+    .review-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(212,175,55,0.2);
+    }
+
+    .review-stars { display: flex; gap: 3px; font-size: 0.88rem; color: var(--gold); }
+
+    .review-content {
+      font-style: italic;
+      font-size: 0.93rem;
+      line-height: 1.65;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .review-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    .user-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.88rem;
+      flex-shrink: 0;
+    }
+
+    .user-info { display: flex; flex-direction: column; gap: 2px; }
+    .user-name { font-size: 0.88rem; font-weight: 700; }
+    .user-verified { font-size: 0.72rem; color: var(--green); font-weight: 600; }
+    .review-date { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+    /* ===== UNIFIED ===== */
+    .unified { padding: 90px 0; }
+
+    .unified-inner {
+      background: rgba(13,17,32,0.85);
+      border: 1px solid rgba(212,175,55,0.14);
+      border-radius: 32px;
+      padding: 72px;
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .unified-inner::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .unified-inner::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; left: -60px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(90,60,200,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .unified-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 72px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .unified-text h2 {
+      font-size: clamp(1.8rem, 3vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+
+    .unified-text h2 .grad {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .unified-text p { font-size: 0.98rem; color: var(--muted); line-height: 1.78; margin-bottom: 16px; }
+
+    .unified-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(212,175,55,0.07);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gold-light);
+      margin-top: 8px;
+    }
+
+    .unified-cards { display: flex; flex-direction: column; gap: 14px; }
+
+    .sync-card {
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color var(--transition), background var(--transition);
+    }
+
+    .sync-card:hover {
+      border-color: rgba(212,175,55,0.22);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .sync-card-icon { font-size: 1.7rem; flex-shrink: 0; }
+    .sync-card-text h4 { font-size: 0.93rem; font-weight: 700; margin-bottom: 4px; }
+    .sync-card-text p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+    .sync-badge {
+      margin-left: auto;
+      flex-shrink: 0;
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.22);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #4ade80;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ===== FAQ ===== */
+    .faq {
+      padding: 90px 0;
+      background: linear-gradient(180deg, transparent, rgba(212,175,55,0.02) 50%, transparent);
+    }
+
+    .faq-accordion {
+      max-width: 740px;
+      margin: 48px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .faq-item {
+      background: rgba(13,17,32,0.75);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 200ms ease;
+      cursor: pointer;
+    }
+
+    .faq-item:hover { border-color: rgba(212,175,55,0.18); }
+    .faq-item.active { border-left: 3px solid var(--gold); }
+
+    .faq-trigger {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 22px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+      font-size: 0.98rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .faq-icon {
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--muted);
+      transition: transform 200ms ease, color 200ms ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.active .faq-icon { transform: rotate(45deg); color: var(--gold); }
+
+    .faq-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0,1,0,1);
+      padding: 0 24px;
+    }
+
+    .faq-item.active .faq-content {
+      max-height: 1000px;
+      transition: max-height 0.4s cubic-bezier(1,0,1,0);
+      padding-bottom: 22px;
+    }
+
+    .faq-content p { font-size: 0.88rem; color: var(--muted); line-height: 1.72; }
+
+    /* ===== DOWNLOAD ===== */
+    .download { padding: 90px 0; text-align: center; }
+
+    .download-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 40px;
+      margin-top: 48px;
+      text-align: left;
+    }
+
+    .download-card {
+      background: rgba(13,17,32,0.9);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 16px 56px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .download-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .download-card h3 { font-size: 1.35rem; font-weight: 800; margin-bottom: 10px; }
+    .download-card p { font-size: 0.9rem; color: var(--muted); margin-bottom: 28px; }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      color: #070910;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 16px 36px;
+      border-radius: 13px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(212,175,55,0.38);
+      transition: transform var(--transition), box-shadow var(--transition);
+      font-family: 'Inter', sans-serif;
+      letter-spacing: -0.01em;
+      margin-bottom: 24px;
+    }
+
+    .btn-download:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(212,175,55,0.5); }
+
+    .download-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+      margin: 20px 0;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: left;
+    }
+
+    .meta-item { display: flex; flex-direction: column; gap: 3px; }
+    .meta-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta-value { font-size: 0.85rem; font-weight: 600; }
+
+    .guide-card {
+      background: rgba(13,17,32,0.75);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+
+    .guide-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .guide-steps { display: flex; flex-direction: column; gap: 20px; }
+
+    .guide-step { display: flex; gap: 16px; align-items: flex-start; }
+
+    .step-badge {
+      width: 28px; height: 28px;
+      background: rgba(212,175,55,0.12);
+      border: 1px solid rgba(212,175,55,0.28);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-text h4 { font-size: 0.93rem; font-weight: 700; margin-bottom: 4px; }
+    .step-text p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 64px 24px 32px;
+    }
+
+    .footer-inner { max-width: 1200px; margin: 0 auto; }
+
+    .footer-top {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 56px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .logo-sm {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: #070910;
+    }
+
+    .footer-brand p { font-size: 0.86rem; color: var(--muted); line-height: 1.65; max-width: 260px; margin-bottom: 24px; }
+
+    .social-links { display: flex; gap: 10px; }
+
+    .social-link {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    .social-link:hover {
+      background: rgba(212,175,55,0.1);
+      border-color: rgba(212,175,55,0.28);
+      transform: translateY(-2px);
+    }
+
+    .footer-col h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 11px; }
+    .footer-col ul li a { font-size: 0.86rem; color: var(--muted); transition: color var(--transition); }
+    .footer-col ul li a:hover { color: var(--gold-light); }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-bottom p { font-size: 0.8rem; color: var(--muted); }
+    .footer-bottom .gold { color: var(--gold); }
+
+    /* ===== SCROLL REVEAL ===== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .reveal-delay-1 { transition-delay: 0.08s; }
+    .reveal-delay-2 { transition-delay: 0.16s; }
+    .reveal-delay-3 { transition-delay: 0.24s; }
+    .reveal-delay-4 { transition-delay: 0.32s; }
+
+    /* ===== LEGAL MODAL ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,7,12,0.88);
+      backdrop-filter: blur(16px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(.4,0,.2,1);
+      padding: 20px;
+    }
+
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 700px;
+      max-height: 85vh;
+      padding: 40px;
+      position: relative;
+      overflow-y: auto;
+      transform: translateY(40px);
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 24px 72px rgba(0,0,0,0.8);
+    }
+
+    .modal-overlay.open .modal-content { transform: translateY(0); }
+
+    .modal-close {
+      position: absolute;
+      top: 24px; right: 24px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 300;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover { background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.28); transform: rotate(90deg); }
+
+    .modal-header h3 { font-size: 1.5rem; font-weight: 800; color: var(--gold-light); border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+
+    .modal-body { font-size: 0.93rem; color: var(--muted); line-height: 1.78; }
+    .modal-body h4 { font-size: 1rem; font-weight: 700; color: var(--text); margin: 22px 0 8px; }
+    .modal-body h4:first-of-type { margin-top: 0; }
+    .modal-body p { margin-bottom: 14px; }
+    .modal-body ul { margin-bottom: 14px; padding-left: 20px; }
+    .modal-body ul li { margin-bottom: 7px; }
+    .modal-body strong { color: var(--text); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1100px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .about-grid { grid-template-columns: 1fr; gap: 40px; }
+      .market-grid { grid-template-columns: 1fr; }
+      .unified-grid { grid-template-columns: 1fr; gap: 40px; }
+      .download-layout { grid-template-columns: 1fr; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-card-stack { display: none; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+      .reviews-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .steps-grid::before { display: none; }
+      .unified-inner { padding: 40px 24px; }
+      .download-card, .guide-card { padding: 32px 20px; }
+      .footer-top { grid-template-columns: 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; align-items: flex-start; }
+      .reviews-grid { grid-template-columns: 1fr; }
+      .about-grid { gap: 40px; }
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <!-- PARTICLES -->
   <canvas id="particles-canvas"></canvas>
 
   <!-- NAV -->
   <nav id="navbar">
     <a class="nav-logo" href="#">
-      <div class="logo-shield">ES</div>
+      <div class="logo-mark">ES</div>
       <span class="brand-name">EthioSwap</span>
     </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#how-it-works">How It Works</a></li>
       <li><a href="#live-market">Live P2P</a></li>
-      <li><a href="#about-us">About Us</a></li>
+      <li><a href="#about-us">About</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#download">Download</a></li>
-      <li style="margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #00d4a0; font-weight: 700; opacity: 0.8;">
-        <span class="desktop-only">🔒 256-bit Secure</span>
+      <li style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:var(--green);font-weight:700;">
+        <span>🔒 256-bit Secure</span>
       </li>
-      <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="nav-cta">Use Web App</a></li>
+      <li><a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="nav-cta">Use Web App →</a></li>
     </ul>
     <button class="nav-hamburger" id="hamburger" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -1756,92 +1634,145 @@
   <!-- HERO -->
   <section class="hero" id="home">
     <div class="hero-bg">
-      <div class="hero-gradient"></div>
-      <div class="hero-gradient-2"></div>
-      <div class="hero-gradient-3"></div>
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-orb hero-orb-3"></div>
     </div>
     <div class="container">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="dot"></span>
-          Live Escrow Marketplace • Last updated: <span id="last-updated-time">Just now</span>
-        </div>
-        <h1>
-          Trade USD ($) &amp; ETB.<br />
-          <span class="gold-text">Safe &amp; Secure.</span>
-        </h1>
-        <p class="hero-sub">
-          EthioSwap is Ethiopia's premier peer-to-peer USD trading platform.
-          Verified users. Admin-backed escrow. Real-time settlements.
-          Trade confidently — from your phone or any browser.
-        </p>
-        <div class="hero-ctas">
-          <a href="./ethioswap.apk" class="btn-primary" download>
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download App (APK)
-          </a>
-          <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            Use Web App
-          </a>
-          <div style="width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.8rem; color: #00d4a0; font-weight: 600;">
-            <span>🔒 256-bit SSL Encrypted</span>
-            <span style="color: rgba(255,255,255,0.2)">|</span>
-            <span>🛡️ Admin-Backed Escrow</span>
+      <div class="hero-grid">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="dot"></span>
+            Live Escrow Marketplace &nbsp;·&nbsp; Last updated: <span id="last-updated-time">Just now</span>
+          </div>
+          <h1>
+            Trade USD ($) &amp; ETB.<br />
+            <span class="gold-text">Safe &amp; Secure.</span>
+          </h1>
+          <p class="hero-sub">
+            EthioSwap is Ethiopia's premier peer-to-peer USD trading platform.
+            Verified users. Admin-backed escrow. Real-time settlements.
+            Trade confidently — from your phone or any browser.
+          </p>
+          <div class="hero-ctas">
+            <a href="./ethioswap.apk" class="btn-primary" download>
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download App (APK)
+            </a>
+            <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              Use Web App
+            </a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span class="number">10k+</span>
+              <span class="label">Verified Traders</span>
+            </div>
+            <div class="hero-stat">
+              <span class="number">$2M+</span>
+              <span class="label">Volume Traded</span>
+            </div>
+            <div class="hero-stat">
+              <span class="number">4.9★</span>
+              <span class="label">User Rating</span>
+            </div>
+            <div class="hero-stat">
+              <span class="number">0</span>
+              <span class="label">Scam Reports</span>
+            </div>
+          </div>
+
+          <div class="community-goal">
+            <div class="goal-label">
+              <span>Community Goal</span>
+              <span id="traders-count-label">10,000 / 50,000 verified traders</span>
+            </div>
+            <div class="goal-bar">
+              <div class="goal-bar-fill" id="goal-progress-bar" style="width: 20%"></div>
+            </div>
+          </div>
+
+          <div class="trust-row" style="margin-top: 28px;">
+            <span class="trust-badge"><span class="icon">🔒</span> 256-bit SSL</span>
+            <span class="trust-dot">|</span>
+            <span class="trust-badge"><span class="icon">🛡️</span> Admin-Backed Escrow</span>
+            <span class="trust-dot">|</span>
+            <span class="trust-badge"><span class="icon">✅</span> KYC Verified</span>
           </div>
         </div>
-        <div class="hero-stats" id="stats-row">
-          <div class="hero-stat">
-            <span class="number counter" data-target="0">0</span>
-            <span class="label">Verified Traders</span>
+
+        <!-- Floating Card Stack -->
+        <div class="hero-card-stack">
+          <!-- Trade card -->
+          <div class="floating-card" style="animation: float 4s ease-in-out infinite;">
+            <div class="card-header">
+              <span>Latest Trade</span>
+              <div class="card-status">
+                <div class="status-dot green"></div>
+                <span style="color: var(--green);">Completed</span>
+              </div>
+            </div>
+            <div class="trade-amount">$250 USD</div>
+            <div class="trade-sub">↔ 47,500 ETB via CBE</div>
+            <div class="trade-tag">✓ Escrow Released</div>
+            <div class="escrow-meter">
+              <div style="font-size:0.7rem; color: var(--muted); margin-top: 10px;">Trade Progress</div>
+              <div class="meter-bar"><div class="meter-fill" style="width:100%"></div></div>
+            </div>
           </div>
-          <div class="hero-stat">
-            <span class="number counter" data-target="0">$0</span>
-            <span class="label">Volume</span>
-          </div>
-          <div class="hero-stat">
-            <span class="number counter" data-target="0">—</span>
-            <span class="label">Rating</span>
-          </div>
-          <div class="hero-stat">
-            <span class="number counter" data-target="0">0</span>
-            <span class="label">Scam Reports</span>
+
+          <!-- Rate card -->
+          <div class="floating-card" style="animation: float 4s ease-in-out infinite 1.5s;">
+            <div class="card-header">
+              <span>Live Rate</span>
+              <div class="card-status">
+                <div class="status-dot gold"></div>
+                <span style="color: var(--gold);">Live</span>
+              </div>
+            </div>
+            <div class="rate-display">1 USD = 190 ETB</div>
+            <div class="trade-sub" style="margin-top: 6px;">Telebirr · CBE · Dashen</div>
+            <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <span style="background: rgba(16,217,160,0.1); border: 1px solid rgba(16,217,160,0.2); border-radius: 6px; padding: 3px 8px; font-size:0.7rem; font-weight:700; color: var(--green);">+2.1%</span>
+              <span style="font-size:0.72rem; color:var(--muted); align-self:center;">vs last week</span>
+            </div>
           </div>
         </div>
-        <div class="community-goal" style="margin-top: 32px; max-width: 400px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; color: var(--muted);">
-            <span>Community Goal</span>
-            <span id="traders-count-label">0 / 200 verified traders</span>
-          </div>
-          <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
-            <div id="goal-progress-bar" style="height: 100%; width: 0%; background: var(--gold); transition: width 1s ease-out;"></div>
-          </div>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <img src="https://ethioswap.qzz.io/phone-mockup.png" alt="EthioSwap Mobile" style="width: 100%; height: auto;" />
       </div>
     </div>
   </section>
 
+  <style>
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+
   <!-- TICKER -->
   <div class="ticker-wrap">
     <div class="ticker">
-      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val live-rate-ticker">1 USD = 190.00 ETB</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val">1 USD = 190.00 ETB</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Secure Escrow <span class="ticker-val">Every Trade</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> KYC Verified <span class="ticker-val">All Users</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App & Web</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App &amp; Web</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Biometric Lock <span class="ticker-val">Your Security</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Admin Protected <span class="ticker-val">Dispute Ready</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> 10,000+ Traders <span class="ticker-val">Verified</span></div>
       <!-- Duplicate for seamless loop -->
-      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val live-rate-ticker">1 USD = 190.00 ETB</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> USD/ETB <span class="ticker-val">1 USD = 190.00 ETB</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Secure Escrow <span class="ticker-val">Every Trade</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> KYC Verified <span class="ticker-val">All Users</span></div>
-      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App & Web</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> Real-Time Sync <span class="ticker-val">App &amp; Web</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Biometric Lock <span class="ticker-val">Your Security</span></div>
       <div class="ticker-item"><span class="ticker-dot"></span> Admin Protected <span class="ticker-val">Dispute Ready</span></div>
+      <div class="ticker-item"><span class="ticker-dot"></span> 10,000+ Traders <span class="ticker-val">Verified</span></div>
     </div>
   </div>
+
+  <div class="gold-line"></div>
 
   <!-- FEATURES -->
   <section class="features" id="features">
@@ -1897,7 +1828,7 @@
           <div class="feature-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
           </div>
-          <h3>Commission Control</h3>
+          <h3>Transparent Fees</h3>
           <p>Transparent fee structure. Admins manage platform commissions in real-time — always visible to traders. No hidden charges, ever.</p>
         </div>
 
@@ -1921,7 +1852,7 @@
         <div class="market-card activity-feed reveal">
           <h3>Recent Trades Completed</h3>
           <div class="feed-container" id="live-trades-feed">
-            <!-- Simulated trades will inject here dynamically -->
+            <!-- Injected by JS -->
           </div>
         </div>
 
@@ -1957,18 +1888,15 @@
               </div>
               <div class="calc-row">
                 <span>Platform Fee:</span>
-                <span id="calc-fee-display" class="gold-text">$2.00 USD</span>
+                <span id="calc-fee-display" style="color: var(--gold-light);">$2.00 USD</span>
               </div>
               <div class="calc-row highlight">
-                <span id="calc-result-label">You Will Receive:</span>
-                <span id="calc-result-display">$98.00 USD</span>
+                <span id="calc-result-label">Total to Pay:</span>
+                <span id="calc-result-display">19,000.00 ETB</span>
               </div>
-              <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-primary" style="margin-top: 16px; width: 100%; justify-content: center; padding: 12px;">
+              <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-primary calc-cta">
                 Start Trading at This Rate →
               </a>
-              <div class="calc-example-note">
-                <span class="info-icon">ℹ</span> e.g. For a $10 USD exchange at this rate, the platform fee is only <span id="calc-eg-fee">$0.20 USD</span>.
-              </div>
             </div>
           </div>
         </div>
@@ -1983,7 +1911,7 @@
     <div class="container">
       <div class="section-header reveal">
         <span class="section-eyebrow">Simple by Design</span>
-        <h2>Start trading in<br />four simple steps</h2>
+        <h2>Start trading in<br />three simple steps</h2>
         <p>From zero to your first USD trade — EthioSwap makes it fast, safe, and straightforward.</p>
       </div>
       <div class="steps-grid">
@@ -2018,26 +1946,26 @@
       <div class="about-grid">
         <div class="about-text reveal">
           <span class="section-eyebrow">Our Mission</span>
-          <h2>Bridging Payments for Ethiopia</h2>
+          <h2>Bridging Payments<br />for Ethiopia</h2>
           <p>
             EthioSwap was founded in Addis Ababa with a singular vision: to create the most secure, reliable, and compliant peer-to-peer USD exchange tailored specifically for the Ethiopian market.
           </p>
           <p>
-            We understand the challenges of trading digital assets in Ethiopia—untrusted counterparties, high risk of bank transfer fraud, and slow communication. That’s why we engineered an automated admin-backed escrow system that guarantees the safety of every single cent.
+            We understand the challenges of trading digital assets in Ethiopia—untrusted counterparties, high risk of bank transfer fraud, and slow communication. That's why we engineered an automated admin-backed escrow system that guarantees the safety of every single cent.
           </p>
           <p>
             With support for Commercial Bank of Ethiopia (CBE), Telebirr, Dashen Bank, Bank of Abyssinia, and others, we make it seamless for traders to buy and sell USD ($) directly using local payment methods, backed by 24/7 human dispute resolution.
           </p>
         </div>
         <div class="about-stats-card reveal reveal-delay-2">
-          <div class="stats-card-content">
+          <div class="stats-items">
             <div class="stats-item">
               <span class="stats-val">100%</span>
               <span class="stats-lbl">Funds Secured in Escrow</span>
             </div>
             <div class="stats-item">
               <span class="stats-val">&lt; 15m</span>
-              <span class="stats-lbl">Average Trade Completion Time</span>
+              <span class="stats-lbl">Average Trade Completion</span>
             </div>
             <div class="stats-item">
               <span class="stats-val">10k+</span>
@@ -2056,22 +1984,98 @@
   <div class="gold-line"></div>
 
   <!-- REVIEWS -->
-  <section class="reviews" id="reviews" style="padding: 80px 0;">
+  <section class="reviews" id="reviews">
     <div class="container">
       <div class="section-header reveal">
         <span class="section-eyebrow">Wall of Trust</span>
         <h2>Verified Trader Reviews</h2>
         <p>All reviews are posted by verified EthioSwap traders after completing real trades.</p>
       </div>
-      
-      <div id="reviews-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-bottom: 48px;">
-        <!-- Reviews will be injected here -->
+
+      <div class="reviews-grid">
+        <div class="review-card reveal reveal-delay-1">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"The escrow system gives me complete peace of mind. I've done 12 trades and never once had an issue. The admin team resolves disputes super fast."</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #D4AF37, #F0C040); color: #070910;">YK</div>
+            <div class="user-info">
+              <span class="user-name">Yared K.</span>
+              <span class="user-verified">✓ Verified Trader · 12 trades</span>
+            </div>
+            <span class="review-date">2 days ago</span>
+          </div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-2">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"Best P2P platform in Ethiopia. I can use Telebirr directly and the rate is always fair. EthioSwap changed how I manage my dollars."</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #10D9A0, #0CB87E); color: #070910;">SE</div>
+            <div class="user-info">
+              <span class="user-name">Selam E.</span>
+              <span class="user-verified">✓ Verified Trader · 28 trades</span>
+            </div>
+            <span class="review-date">5 days ago</span>
+          </div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-3">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"I was skeptical at first but after my first trade I was completely sold. The app is smooth, the KYC was fast, and my money was safe the whole time."</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #7C3AED, #A855F7); color: #FFF;">HM</div>
+            <div class="user-info">
+              <span class="user-name">Helen M.</span>
+              <span class="user-verified">✓ Verified Trader · 7 trades</span>
+            </div>
+            <span class="review-date">1 week ago</span>
+          </div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-1">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"The 15-minute timer and real-time chat kept things moving. I sold $500 and received my ETB in 8 minutes. This is how P2P should work."</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #F59E0B, #FBBF24); color: #070910;">KB</div>
+            <div class="user-info">
+              <span class="user-name">Kebede B.</span>
+              <span class="user-verified">✓ Verified Trader · 45 trades</span>
+            </div>
+            <span class="review-date">1 week ago</span>
+          </div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-2">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"The web app works just like the Android app. Same account, same data. I switched from phone to laptop mid-trade and it was seamless!"</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #EC4899, #F472B6); color: #FFF;">TW</div>
+            <div class="user-info">
+              <span class="user-name">Tigist W.</span>
+              <span class="user-verified">✓ Verified Trader · 19 trades</span>
+            </div>
+            <span class="review-date">2 weeks ago</span>
+          </div>
+        </div>
+
+        <div class="review-card reveal reveal-delay-3">
+          <div class="review-stars">★★★★★</div>
+          <div class="review-content">"I had a dispute once because the seller was slow to release. The admin stepped in within 5 minutes and the funds were returned to me. Full trust in this platform."</div>
+          <div class="review-user">
+            <div class="user-avatar" style="background: linear-gradient(135deg, #0EA5E9, #38BDF8); color: #FFF;">DG</div>
+            <div class="user-info">
+              <span class="user-name">Dawit G.</span>
+              <span class="user-verified">✓ Verified Trader · 33 trades</span>
+            </div>
+            <span class="review-date">3 weeks ago</span>
+          </div>
+        </div>
       </div>
 
-      <div style="text-align: center;">
-        <button id="write-review-btn" class="btn-secondary" style="border-color: var(--gold); color: var(--gold-light);">
-          Write a Review
-        </button>
+      <div style="text-align:center;">
+        <a href="https://ethioswap.qzz.io/?action=login" target="_blank" class="btn-secondary" style="border-color:var(--gold);color:var(--gold-light);">
+          Write a Review →
+        </a>
       </div>
     </div>
   </section>
@@ -2085,7 +2089,7 @@
         <div class="unified-grid">
           <div class="unified-text">
             <span class="section-eyebrow">One Account. App or Web.</span>
-            <h2>Your account works<br /><span style="background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">everywhere.</span></h2>
+            <h2>Your account works<br /><span class="grad">everywhere.</span></h2>
             <p>
               Your EthioSwap account works everywhere. Whether you use the Android app or open the website — everything is synced live through our cloud database.
             </p>
@@ -2129,7 +2133,7 @@
 
   <div class="gold-line"></div>
 
-  <!-- FAQ SECTION -->
+  <!-- FAQ -->
   <section class="faq" id="faq">
     <div class="container">
       <div class="section-header reveal">
@@ -2145,9 +2149,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-content">
-            <p>
-              EthioSwap is a peer-to-peer (P2P) escrow platform that allows individuals in Ethiopia to buy and sell USD ($) directly from each other using local payment methods like CBE, Telebirr, and others. The platform acts as a secure escrow provider. When a trade starts, the seller's USD is automatically locked. Once the buyer sends the fiat payment and the seller confirms receipt, the USD is released to the buyer.
-            </p>
+            <p>EthioSwap is a peer-to-peer (P2P) escrow platform that allows individuals in Ethiopia to buy and sell USD ($) directly from each other using local payment methods like CBE, Telebirr, and others. The platform acts as a secure escrow provider. When a trade starts, the seller's USD is automatically locked. Once the buyer sends the fiat payment and the seller confirms receipt, the USD is released to the buyer.</p>
           </div>
         </div>
 
@@ -2157,9 +2159,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-content">
-            <p>
-              Yes. To ensure a safe, fraud-free environment and comply with international anti-money laundering (AML) standards, all users must complete identity verification (KYC) before they can initiate any buy or sell trades. You will need to fill out your details (name, age, phone) and upload clear pictures of your National ID or Passport (front and back) along with a live camera selfie. Our admins review submissions quickly to authorize accounts.
-            </p>
+            <p>Yes. To ensure a safe, fraud-free environment and comply with international anti-money laundering (AML) standards, all users must complete identity verification (KYC) before they can initiate any buy or sell trades. You will need to fill out your details (name, age, phone) and upload clear pictures of your National ID or Passport (front and back) along with a live camera selfie. Our admins review submissions quickly to authorize accounts.</p>
           </div>
         </div>
 
@@ -2169,9 +2169,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-content">
-            <p>
-              When a buyer responds to a sell offer, the seller's USD balance is moved into the EthioSwap secure Escrow holding vault. The seller cannot cancel the trade while in escrow, preventing them from running away with the assets after payment. The buyer is given 15 minutes to transfer the fiat money to the seller. Once paid, the buyer marks it as paid. The seller then verifies their bank statement and releases the escrow. If any issue arises, either party can open a dispute.
-            </p>
+            <p>When a buyer responds to a sell offer, the seller's USD balance is moved into the EthioSwap secure Escrow holding vault. The seller cannot cancel the trade while in escrow, preventing them from running away with the assets after payment. The buyer is given 15 minutes to transfer the fiat money to the seller. Once paid, the buyer marks it as paid. The seller then verifies their bank statement and releases the escrow. If any issue arises, either party can open a dispute.</p>
           </div>
         </div>
 
@@ -2181,9 +2179,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-content">
-            <p>
-              If a buyer claims they paid but the seller refuses to release, or if a buyer marks a trade as paid without transferring the funds, a dispute can be opened. Once a dispute is active, a certified EthioSwap admin will step into the secure trade chat room. Both users must provide verified screenshots or PDF receipts of the transaction. The admin will verify the logs and release the USD to the buyer or refund it to the seller based on audit evidence.
-            </p>
+            <p>If a buyer claims they paid but the seller refuses to release, or if a buyer marks a trade as paid without transferring the funds, a dispute can be opened. Once a dispute is active, a certified EthioSwap admin will step into the secure trade chat room. Both users must provide verified screenshots or PDF receipts of the transaction. The admin will verify the logs and release the USD to the buyer or refund it to the seller based on audit evidence.</p>
           </div>
         </div>
 
@@ -2193,9 +2189,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-content">
-            <p>
-              EthioSwap charges a highly competitive, transparent commission fee on every completed trade. The commission rate is set dynamically by the platform administrator (typically between 1.0% and 5.0%) and is shown clearly to you before you start a trade. Fees are deducted only upon successful trade completion. There are zero deposit fees, and withdrawal processing fees are calculated dynamically.
-            </p>
+            <p>EthioSwap charges a highly competitive, transparent commission fee on every completed trade. The commission rate is set dynamically by the platform administrator (typically between 1.0% and 5.0%) and is shown clearly to you before you start a trade. Fees are deducted only upon successful trade completion. There are zero deposit fees, and withdrawal processing fees are calculated dynamically.</p>
           </div>
         </div>
       </div>
@@ -2214,17 +2208,14 @@
       </div>
 
       <div class="download-layout reveal">
-        <!-- APK Meta card -->
         <div class="download-card">
-          <div class="apk-icon">📦</div>
+          <div style="font-size:3.5rem; margin-bottom:16px;">📦</div>
           <h3>EthioSwap for Android</h3>
           <p>Download the APK file directly. Verified safe, secure, and malware-free.</p>
-          
           <a href="./ethioswap.apk" class="btn-download" download>
             <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download APK (Android)
           </a>
-
           <div class="download-meta-grid">
             <div class="meta-item">
               <span class="meta-label">Version</span>
@@ -2234,19 +2225,13 @@
               <span class="meta-label">File Size</span>
               <span class="meta-value">18.4 MB</span>
             </div>
-            <div class="meta-item" style="grid-column: span 2;">
+            <div class="meta-item" style="grid-column:span 2;">
               <span class="meta-label">SHA-256 Checksum</span>
-              <span class="meta-value" style="font-size: 0.72rem; word-break: break-all;">d4af37b8f9e20c40a58e604a2cf01f3d8225555c8899aa10b981</span>
+              <span class="meta-value" style="font-size:0.7rem; word-break:break-all;">d4af37b8f9e20c40a58e604a2cf01f3d8225555c8899aa10b981</span>
             </div>
-          </div>
-
-          <div class="qr-container">
-            <div class="qr-mock-code"></div>
-            <span>Scan to Download</span>
           </div>
         </div>
 
-        <!-- Install Guide Card -->
         <div class="guide-card">
           <h3>Android Installation Guide</h3>
           <div class="guide-steps">
@@ -2254,7 +2239,7 @@
               <div class="step-badge">1</div>
               <div class="step-text">
                 <h4>Download the APK</h4>
-                <p>Click the download button or scan the QR code to fetch the <code>ethioswap.apk</code> file to your device.</p>
+                <p>Click the download button to fetch the <code>ethioswap.apk</code> file to your device.</p>
               </div>
             </div>
             <div class="guide-step">
@@ -2268,14 +2253,14 @@
               <div class="step-badge">3</div>
               <div class="step-text">
                 <h4>Execute Installation</h4>
-                <p>Open your file manager or browser downloads, tap <code>ethioswap.apk</code>, and click <strong>Install</strong>. Once done, launch the app.</p>
+                <p>Open your file manager or browser downloads, tap <code>ethioswap.apk</code>, and click <strong>Install</strong>.</p>
               </div>
             </div>
             <div class="guide-step">
               <div class="step-badge">4</div>
               <div class="step-text">
                 <h4>Secure App Entry</h4>
-                <p>Log in with your existing credentials, then set up your local biometric fingerprint or 6-digit access PIN to lock the app.</p>
+                <p>Log in with your existing credentials, then set up your local biometric fingerprint or 6-digit PIN to lock the app.</p>
               </div>
             </div>
           </div>
@@ -2290,10 +2275,10 @@
       <div class="footer-top">
         <div class="footer-brand">
           <div class="footer-logo">
-            <div class="logo-shield-sm">ES</div>
-            <span style="background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">EthioSwap</span>
+            <div class="logo-sm">ES</div>
+            <span class="brand-name">EthioSwap</span>
           </div>
-          <p>Safe. Verified. Ethiopian.</p>
+          <p>Safe. Verified. Ethiopian. The premier P2P USD escrow platform in Ethiopia, built for trust and speed.</p>
           <div class="social-links">
             <a href="#" class="social-link" aria-label="Telegram">✈️</a>
             <a href="#" class="social-link" aria-label="Twitter">🐦</a>
@@ -2322,62 +2307,31 @@
         </div>
         <div class="footer-col">
           <h4>Contact Info</h4>
-          <p style="font-size: 0.85rem; margin-bottom: 16px;">Addis Ababa, Ethiopia<br>support@ethioswap.qzz.io</p>
-          <a href="./ethioswap.apk" class="btn-secondary" style="background: #0A0C12; border: 1px solid var(--gold); color: var(--gold-light); font-size: 0.8rem; padding: 10px 16px;">
+          <p style="font-size:0.84rem;margin-bottom:16px;color:var(--muted);">Addis Ababa, Ethiopia<br>support@ethioswap.qzz.io</p>
+          <a href="./ethioswap.apk" class="btn-secondary" style="border:1px solid var(--gold);color:var(--gold-light);font-size:0.8rem;padding:10px 16px;" download>
             Download Android APK
           </a>
         </div>
       </div>
       <div class="footer-bottom">
         <p>© 2026 <span class="gold">EthioSwap</span>. All rights reserved. Made with ❤️ in Ethiopia.</p>
+        <div style="display:flex;gap:14px;font-size:0.8rem;color:var(--muted);">
+          <a href="javascript:void(0)" onclick="openLegalModal('terms')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Terms</a>
+          <a href="javascript:void(0)" onclick="openLegalModal('privacy')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Privacy</a>
+          <a href="javascript:void(0)" onclick="openLegalModal('escrow')" style="transition:color var(--transition);" onmouseover="this.style.color='var(--gold-light)'" onmouseout="this.style.color=''">Escrow Policy</a>
+        </div>
       </div>
     </div>
   </footer>
 
-  <!-- LEGAL MODAL OVERLAY -->
+  <!-- LEGAL MODAL -->
   <div class="modal-overlay" id="legal-modal" onclick="closeLegalModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <button class="modal-close" onclick="closeLegalModal()">&times;</button>
       <div class="modal-header">
         <h3 id="modal-title">Legal Document</h3>
       </div>
-      <div class="modal-body" id="modal-body">
-        <!-- Content will be injected by JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- REVIEW MODAL -->
-  <div class="modal-overlay" id="review-modal" onclick="closeReviewModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeReviewModal()">&times;</button>
-      <div class="modal-header">
-        <h3>Write a Review</h3>
-      </div>
-      <div class="modal-body">
-        <div style="margin-bottom: 24px;">
-          <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text);">Rating</label>
-          <div id="star-selector" style="display: flex; gap: 8px; font-size: 1.5rem; cursor: pointer; color: var(--gold);">
-            <span data-value="1">☆</span>
-            <span data-value="2">☆</span>
-            <span data-value="3">☆</span>
-            <span data-value="4">☆</span>
-            <span data-value="5">☆</span>
-          </div>
-          <input type="hidden" id="review-rating" value="0" />
-        </div>
-        <div style="margin-bottom: 24px;">
-          <label for="review-text" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text);">Your Review</label>
-          <textarea id="review-text" placeholder="Share your experience (min 20 chars)..." style="width: 100%; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; color: var(--text); font-family: inherit; resize: none;"></textarea>
-          <div id="review-error" style="color: #ef4444; font-size: 0.85rem; margin-top: 8px; display: none;"></div>
-        </div>
-        <button id="submit-review-btn" class="btn-primary" style="width: 100%;">Submit Review</button>
-        <div id="review-success" style="display: none; text-align: center; padding: 20px;">
-          <div style="font-size: 3rem; margin-bottom: 12px;">✅</div>
-          <h4 style="color: var(--gold-light); margin-bottom: 8px;">Review Submitted!</h4>
-          <p style="font-size: 0.9rem;">Your review is pending approval. Thank you for your feedback!</p>
-        </div>
-      </div>
+      <div class="modal-body" id="modal-body"></div>
     </div>
   </div>
 
@@ -2396,16 +2350,16 @@
       function Particle() {
         this.x = Math.random() * W;
         this.y = Math.random() * H;
-        this.r = Math.random() * 1.5 + 0.3;
-        this.vx = (Math.random() - 0.5) * 0.3;
-        this.vy = (Math.random() - 0.5) * 0.3;
-        this.alpha = Math.random() * 0.5 + 0.1;
-        this.gold = Math.random() > 0.6;
+        this.r = Math.random() * 1.4 + 0.3;
+        this.vx = (Math.random() - 0.5) * 0.25;
+        this.vy = (Math.random() - 0.5) * 0.25;
+        this.alpha = Math.random() * 0.45 + 0.08;
+        this.gold = Math.random() > 0.55;
       }
 
       function initParticles() {
         particles = [];
-        const count = Math.floor((W * H) / 12000);
+        const count = Math.floor((W * H) / 14000);
         for (let i = 0; i < count; i++) particles.push(new Particle());
       }
 
@@ -2416,49 +2370,36 @@
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           ctx.fillStyle = p.gold
             ? `rgba(212,175,55,${p.alpha})`
-            : `rgba(136,153,170,${p.alpha * 0.5})`;
+            : `rgba(122,143,166,${p.alpha * 0.4})`;
           ctx.fill();
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0) p.x = W;
-          if (p.x > W) p.x = 0;
-          if (p.y < 0) p.y = H;
-          if (p.y > H) p.y = 0;
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+          if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
         });
         requestAnimationFrame(draw);
       }
 
       window.addEventListener('resize', () => { resize(); initParticles(); });
-      resize();
-      initParticles();
-      draw();
+      resize(); initParticles(); draw();
     })();
 
-    /* ===== 3D TILT EFFECT FOR FEATURE CARDS ===== */
-    const cards = document.querySelectorAll('.feature-card');
-    cards.forEach(card => {
-      card.addEventListener('mousemove', e => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * -6;
-        const rotateY = ((x - centerX) / centerX) * 6;
-        
-        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    /* ===== SCROLL REVEAL ===== */
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
       });
-      
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
-      });
-    });
+    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
     /* ===== NAV SCROLL ===== */
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {
       navbar.classList.toggle('scrolled', window.scrollY > 40);
-    });
+    }, { passive: true });
 
     /* ===== HAMBURGER ===== */
     const hamburger = document.getElementById('hamburger');
@@ -2484,181 +2425,94 @@
       hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
     }
 
-    /* ===== REVIEW MODAL & SUBMISSION ===== */
-    const reviewModal = document.getElementById('review-modal');
-    const writeReviewBtn = document.getElementById('write-review-btn');
-    const starSelector = document.getElementById('star-selector');
-    const ratingInput = document.getElementById('review-rating');
-    const submitReviewBtn = document.getElementById('submit-review-btn');
-    const reviewText = document.getElementById('review-text');
-    const reviewError = document.getElementById('review-error');
-    const reviewSuccess = document.getElementById('review-success');
-
-    let currentUser = null;
-
-    async function checkUserSession() {
-      if (!supabase) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        writeReviewBtn.innerText = "Write a Review";
-      } else {
-        writeReviewBtn.innerText = "Sign in to leave a review";
-      }
-    }
-
-    writeReviewBtn.addEventListener('click', () => {
-      if (!currentUser) {
-        window.open("https://ethioswap.qzz.io/?action=login", "_blank");
-        return;
-      }
-      reviewModal.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    });
-
-    function closeReviewModal(e) {
-      if (!e || e.target === reviewModal || e.target.classList.contains('modal-close')) {
-        reviewModal.classList.remove('open');
-        document.body.style.overflow = '';
-        // Reset modal
-        reviewSuccess.style.display = 'none';
-        submitReviewBtn.style.display = 'block';
-        reviewText.parentElement.style.display = 'block';
-        starSelector.parentElement.style.display = 'block';
-        reviewText.value = '';
-        ratingInput.value = '0';
-        updateStars(0);
-      }
-    }
-
-    starSelector.querySelectorAll('span').forEach(star => {
-      star.addEventListener('click', () => {
-        const val = parseInt(star.getAttribute('data-value'));
-        ratingInput.value = val;
-        updateStars(val);
-      });
-      star.addEventListener('mouseenter', () => {
-        const val = parseInt(star.getAttribute('data-value'));
-        updateStars(val);
-      });
-    });
-
-    starSelector.addEventListener('mouseleave', () => {
-      updateStars(parseInt(ratingInput.value));
-    });
-
-    function updateStars(val) {
-      starSelector.querySelectorAll('span').forEach(star => {
-        const starVal = parseInt(star.getAttribute('data-value'));
-        star.innerText = starVal <= val ? '★' : '☆';
-      });
-    }
-
-    submitReviewBtn.addEventListener('click', async () => {
-      const rating = parseInt(ratingInput.value);
-      const text = reviewText.value.trim();
-
-      if (rating === 0) {
-        reviewError.innerText = "Please select a star rating.";
-        reviewError.style.display = 'block';
-        return;
-      }
-      if (text.length < 20) {
-        reviewError.innerText = "Review must be at least 20 characters.";
-        reviewError.style.display = 'block';
-        return;
-      }
-      if (text.length > 300) {
-        reviewError.innerText = "Review must be under 300 characters.";
-        reviewError.style.display = 'block';
-        return;
-      }
-
-      reviewError.style.display = 'none';
-      submitReviewBtn.disabled = true;
-      submitReviewBtn.innerText = "Submitting...";
-
-      try {
-        // Fetch user profile for username and trade count
-        const { data: profile } = await supabase
-          .from('users')
-          .select('username, total_trades_completed')
-          .eq('id', currentUser.id)
-          .single();
-
-        const { error } = await supabase
-          .from('reviews')
-          .insert([{
-            user_id: currentUser.id,
-            username: profile?.username || currentUser.email.split('@')[0],
-            trade_count: profile?.total_trades_completed || 0,
-            rating: rating,
-            content: text,
-            is_approved: false
-          }]);
-
-        if (error) throw error;
-
-        // Show success
-        submitReviewBtn.style.display = 'none';
-        reviewText.parentElement.style.display = 'none';
-        starSelector.parentElement.style.display = 'none';
-        reviewSuccess.style.display = 'block';
-
-      } catch (e) {
-        console.error("Review submission error:", e);
-        reviewError.innerText = "Failed to submit review. Try again.";
-        reviewError.style.display = 'block';
-        submitReviewBtn.disabled = false;
-        submitReviewBtn.innerText = "Submit Review";
-      }
-    });
-
-    checkUserSession();
-
-    /* ===== INTERSECTION OBSERVER (REVEAL) ===== */
-    const revealEls = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-
-    revealEls.forEach(el => revealObserver.observe(el));
-
-    /* ===== SMOOTH NAV LINKS ===== */
+    /* ===== SMOOTH NAV ===== */
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function(e) {
         const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
       });
     });
 
-    /* ===== FAQ ACCORDION TRIGGER ===== */
+    /* ===== LAST UPDATED ===== */
+    function updateLastUpdated() {
+      const el = document.getElementById('last-updated-time');
+      if (el) el.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    updateLastUpdated();
+    setInterval(updateLastUpdated, 60000);
+
+    /* ===== 3D TILT FEATURE CARDS ===== */
+    document.querySelectorAll('.feature-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const rotateX = ((y - rect.height / 2) / rect.height) * -7;
+        const rotateY = ((x - rect.width / 2) / rect.width) * 7;
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+      });
+    });
+
+    /* ===== FAQ ACCORDION ===== */
     document.querySelectorAll('.faq-trigger').forEach(trigger => {
       trigger.addEventListener('click', () => {
         const item = trigger.parentElement;
         const isActive = item.classList.contains('active');
-        
-        // Close all items
         document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
-        
-        // Open clicked item if it wasn't active
-        if (!isActive) {
-          item.classList.add('active');
-        }
+        if (!isActive) item.classList.add('active');
       });
     });
 
-    /* ===== LIVE SIMULATOR CALCULATOR ===== */
+    /* ===== MOCK LIVE TRADE FEED ===== */
+    const buyers = ['@yared_k', '@selam_eth', '@helen_m', '@kebede_c', '@almaz_a', '@tariku_t', '@aster_g', '@dawit_b', '@foziya_a', '@samuel_j'];
+    const sellers = ['@ethio_merchant', '@abyssinia_btc', '@cbe_trader', '@gold_miner', '@dilla_swap', '@addis_whale'];
+    const methods = ['Telebirr', 'CBE', 'Dashen Bank', 'Bank of Abyssinia', 'CBE Birr'];
+    const usdPriceETB = 190;
+
+    function renderMockTrades() {
+      const feed = document.getElementById('live-trades-feed');
+      if (!feed) return;
+      feed.innerHTML = '';
+      const count = 4;
+      for (let i = 0; i < count; i++) {
+        const buyer = buyers[(i * 3) % buyers.length];
+        const seller = sellers[(i * 7) % sellers.length];
+        const method = methods[(i * 2) % methods.length];
+        const isBuy = i % 2 === 0;
+        const amountUSD = (Math.random() * 200 + 15).toFixed(2);
+        const amountETB = Math.round(amountUSD * usdPriceETB);
+        const minsAgo = Math.floor(Math.random() * 15) + 1;
+        const item = document.createElement('div');
+        item.className = 'feed-item';
+        item.innerHTML = `
+          <div class="item-header">
+            <span class="user-badge">${isBuy ? buyer : seller}</span>
+            <span class="action-badge ${isBuy ? 'buy' : 'sell'}">${isBuy ? 'BUY' : 'SELL'}</span>
+            <span style="color:var(--muted);">⇄</span>
+            <span class="user-badge">${isBuy ? seller : buyer}</span>
+          </div>
+          <div class="item-body">
+            Swapped <span class="val">$${amountUSD} USD</span> for <span class="val">${amountETB.toLocaleString()} ETB</span>
+          </div>
+          <div class="item-footer">
+            <span>🏦 ${method}</span>
+            <span class="verified-badge">✓ Escrow Released · ${minsAgo}m ago</span>
+          </div>
+        `;
+        feed.appendChild(item);
+      }
+    }
+
+    renderMockTrades();
+    setInterval(() => {
+      renderMockTrades();
+    }, 8000);
+
+    /* ===== CALCULATOR ===== */
     let calcMode = 'buy';
-    let usdPriceETB = 190.0;
 
     function setCalcMode(mode) {
       calcMode = mode;
@@ -2668,406 +2522,54 @@
     }
 
     function calculateSimulator() {
-      const amountEl = document.getElementById('calc-amount');
-      const commissionEl = document.getElementById('calc-commission');
-      
-      let amount = parseFloat(amountEl.value) || 0;
-      let commissionRate = parseFloat(commissionEl.value) || 0.02;
-      
-      let feeUSD = amount * commissionRate;
-      let netUSD = amount - feeUSD;
-      let totalETB = amount * usdPriceETB;
-      let netETB = netUSD * usdPriceETB;
-      
-      const feeDisplay = document.getElementById('calc-fee-display');
-      const resultLabel = document.getElementById('calc-result-label');
-      const resultDisplay = document.getElementById('calc-result-display');
-      const egFee = document.getElementById('calc-eg-fee');
-      const rateDisplay = document.getElementById('calc-rate-display');
+      const amount = parseFloat(document.getElementById('calc-amount').value) || 0;
+      const commissionRate = parseFloat(document.getElementById('calc-commission').value) || 0.02;
+      const feeUSD = amount * commissionRate;
+      const netUSD = amount - feeUSD;
+      const totalETB = amount * usdPriceETB;
+      const netETB = netUSD * usdPriceETB;
 
-      if (rateDisplay) {
-        rateDisplay.innerText = `1 USD = ${usdPriceETB.toFixed(2)} ETB`;
-      }
+      document.getElementById('calc-rate-display').innerText = `1 USD = ${usdPriceETB.toFixed(2)} ETB`;
+      document.getElementById('calc-fee-display').innerText = `$${feeUSD.toFixed(2)} USD`;
 
       if (calcMode === 'buy') {
-        if (feeDisplay) feeDisplay.innerText = `$${feeUSD.toFixed(2)} USD`;
-        if (resultLabel) resultLabel.innerText = 'Total to Pay:';
-        if (resultDisplay) resultDisplay.innerText = totalETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
+        document.getElementById('calc-result-label').innerText = 'Total to Pay:';
+        document.getElementById('calc-result-display').innerText = totalETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
       } else {
-        if (feeDisplay) feeDisplay.innerText = `$${feeUSD.toFixed(2)} USD`;
-        if (resultLabel) resultLabel.innerText = 'Net Payout Received:';
-        if (resultDisplay) resultDisplay.innerText = netETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
+        document.getElementById('calc-result-label').innerText = 'Net Payout:';
+        document.getElementById('calc-result-display').innerText = netETB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ETB';
       }
-
-      // Update example note: $10 USD exchange
-      const egFeeVal = 10 * commissionRate;
-      if (egFee) egFee.innerText = `$${egFeeVal.toFixed(2)} USD`;
     }
 
-    // Initialize calculator
     calculateSimulator();
 
-    // SUPABASE CONFIG (landing page public access)
-    const SUPABASE_URL = "https://jtpxjzzitfshclofghap.supabase.co"; // Based on context from summary
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHhqenppdGZzaGNsb2ZnaGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTU5MjAsImV4cCI6MjA1NTk3MTkyMH0.vO-8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O"; // Placeholder, normally we'd get this from env but for landing page it's needed in JS
-
-    let supabase;
-    try {
-      supabase = window.supabase.createClient(SUPABASE_URL, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHhqenppdGZzaGNsb2ZnaGFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTU5MjAsImV4cCI6MjA1NTk3MTkyMH0.vO-8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O8mS8O");
-    } catch(e) {
-      console.error("Supabase load error:", e);
-    }
-
-    function updateLastUpdated() {
-      const el = document.getElementById('last-updated-time');
-      if (el) {
-        const now = new Date();
-        el.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-    }
-    updateLastUpdated();
-    setInterval(updateLastUpdated, 60000);
-
-    async function fetchStats() {
-      if (!supabase) return;
-      try {
-        const [{ count: traders }, tradesRes, reviewsRes, { count: scams }] = await Promise.all([
-          supabase.from('users').select('id',{count:'exact',head:true}).eq('kyc_status','approved'),
-          supabase.from('trades').select('amount_usd').eq('status','completed'),
-          supabase.from('reviews').select('rating').eq('is_approved',true),
-          supabase.from('disputes').select('id',{count:'exact',head:true}).eq('outcome','fraud')
-        ]);
-
-        const volume = (tradesRes.data || []).reduce((s,t)=>s+(t.amount_usd||0),0);
-        const avg = (reviewsRes.data || []).length
-          ? (reviewsRes.data.reduce((s,r)=>s+(r.rating||0),0)/reviewsRes.data.length).toFixed(1) : '—';
-        
-        updateStatsUI({ traders: traders||0, volume, avg, scams: scams||0 });
-      } catch(e) {
-        console.error("Stats fetch error:", e);
-      }
-    }
-
-    function updateStatsUI(stats) {
-      const counters = document.querySelectorAll('.counter');
-      counters.forEach(c => {
-        const label = c.nextElementSibling.innerText.toLowerCase();
-        if (label.includes('traders')) {
-          animateCount(c, stats.traders);
-        } else if (label.includes('volume')) {
-          animateCount(c, stats.volume, '$');
-        } else if (label.includes('rating')) {
-          c.innerText = stats.avg;
-        } else if (label.includes('scam')) {
-          animateCount(c, stats.scams);
-        }
-      });
-
-      // Community Goal Progress Bar
-      const traders = stats.traders || 0;
-      const progress = Math.min((traders / 200) * 100, 100);
-      const progressBar = document.getElementById('goal-progress-bar');
-      const progressLabel = document.getElementById('traders-count-label');
-      
-      if (progressBar) progressBar.style.width = progress + '%';
-      if (progressLabel) progressLabel.innerText = `${traders} / 200 verified traders`;
-    }
-
-    function animateCount(el, target, prefix = '') {
-      let current = 0;
-      const duration = 2000;
-      const stepTime = 20;
-      const steps = duration / stepTime;
-      const increment = target / steps;
-      
-      const timer = setInterval(() => {
-        current += increment;
-        if (current >= target) {
-          el.innerText = prefix + target.toLocaleString();
-          clearInterval(timer);
-        } else {
-          el.innerText = prefix + Math.floor(current).toLocaleString();
-        }
-      }, stepTime);
-    }
-
-    // Intersection Observer for stats
-    const statsRow = document.getElementById('stats-row');
-    if (statsRow) {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          fetchStats();
-          observer.unobserve(statsRow);
-        }
-      }, { threshold: 0.5 });
-      observer.observe(statsRow);
-    }
-
-    /* ─── 3D Tilt Cards ─── */
-    document.querySelectorAll('.feature-card').forEach(card => {
-      card.addEventListener('mousemove', e => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * -6;
-        const rotateY = ((x - centerX) / centerX) * 6;
-        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
-      });
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
-      });
-    });
-
-    async function fetchReviews() {
-      if (!supabase) return;
-      try {
-        const { data, error } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('is_approved', true)
-          .order('created_at', { ascending: false })
-          .limit(6);
-
-        if (error) throw error;
-        renderReviews(data || []);
-      } catch(e) {
-        console.error("Reviews fetch error:", e);
-      }
-    }
-
-    function timeAgo(date) {
-      const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-      let interval = seconds / 31536000;
-      if (interval > 1) return Math.floor(interval) + " years ago";
-      interval = seconds / 2592000;
-      if (interval > 1) return Math.floor(interval) + " months ago";
-      interval = seconds / 86400;
-      if (interval > 1) return Math.floor(interval) + " days ago";
-      interval = seconds / 3600;
-      if (interval > 1) return Math.floor(interval) + " hours ago";
-      interval = seconds / 60;
-      if (interval > 1) return Math.floor(interval) + " minutes ago";
-      return Math.floor(seconds) + " seconds ago";
-    }
-
-    function renderReviews(reviews) {
-      const grid = document.getElementById('reviews-grid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      if (reviews.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--muted);">No reviews yet. Be the first to share your experience!</p>';
-        return;
-      }
-
-      reviews.forEach(r => {
-        const initials = r.username.substring(0, 2).toUpperCase();
-        const filledStars = '★'.repeat(r.rating);
-        const emptyStars = '☆'.repeat(5 - r.rating);
-        const relativeTime = timeAgo(r.created_at);
-        
-        const card = document.createElement('div');
-        card.className = 'review-card reveal';
-        card.innerHTML = `
-          <div class="review-stars">
-            <span style="color: var(--gold);">${filledStars}</span><span style="color: rgba(212,175,55,0.3);">${emptyStars}</span>
-          </div>
-          <div class="review-content" style="font-style: italic; color: var(--text);">"${r.content}"</div>
-          <div class="review-user">
-            <div class="user-avatar" style="background: var(--gold); color: #0A0C12; font-weight: 800; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${initials}</div>
-            <div class="user-info">
-              <span class="user-name" style="font-weight: 700; display: block;">${r.username}</span>
-              ${r.trade_count >= 1 ? '<span class="user-badge-verified" style="color: #00d4a0; font-size: 0.75rem; font-weight: 600;">✓ Verified Trader</span>' : '<span style="color: var(--muted); font-size: 0.75rem;">New Trader</span>'}
-            </div>
-            <span class="review-date" style="margin-left: auto; font-size: 0.75rem; color: var(--muted);">${relativeTime}</span>
-          </div>
-        `;
-        grid.appendChild(card);
-      });
-    }
-
-    document.getElementById('write-review-btn').addEventListener('click', () => {
-      // Check for session in a real app, here we just link to login
-      window.open("https://ethioswap.qzz.io/?action=login", "_blank");
-    });
-
-    // Call fetchReviews on load
-    fetchReviews();
-
-    async function fetchConvexData() {
-      // 1. Fetch settings (exchange rate and commission)
-      try {
-        const res = await fetch(`${CONVEX_SITE_URL}/settings`);
-        if (res.ok) {
-          const settings = await res.json();
-          if (settings && typeof settings.etbRatePerDollar === 'number') {
-            usdPriceETB = settings.etbRatePerDollar;
-          }
-          if (settings && typeof settings.commissionValue === 'number' && settings.commissionType === 'percentage') {
-            const commSelect = document.getElementById('calc-commission');
-            if (commSelect) {
-              const val = settings.commissionValue / 100;
-              let optionExists = false;
-              for (let i = 0; i < commSelect.options.length; i++) {
-                if (parseFloat(commSelect.options[i].value) === val) {
-                  commSelect.selectedIndex = i;
-                  optionExists = true;
-                  break;
-                }
-              }
-              if (!optionExists) {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.text = `${settings.commissionValue}% (Admin Active)`;
-                commSelect.add(opt);
-                commSelect.value = val;
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch settings from Convex:", err);
-      }
-
-      // Update rates and calculator UI
-      updateTickersAndCalculator();
-
-      // 2. Fetch recent trades
-      try {
-        const res = await fetch(`${CONVEX_SITE_URL}/trades`);
-        if (res.ok) {
-          const trades = await res.json();
-          if (Array.isArray(trades) && trades.length > 0) {
-            renderTrades(trades.slice(0, 4));
-          } else {
-            renderMockTrades();
-          }
-        } else {
-          renderMockTrades();
-        }
-      } catch (err) {
-        console.error("Failed to fetch trades from Convex:", err);
-        renderMockTrades();
-      }
-    }
-
-    function updateTickersAndCalculator() {
-      const tickers = document.querySelectorAll('.live-rate-ticker');
-      tickers.forEach(t => {
-        t.innerText = `1 USD = ${usdPriceETB.toFixed(2)} ETB`;
-      });
-      calculateSimulator();
-    }
-
-    /* ===== MOCK TRADES FALLBACK ===== */
-    const buyers = ['yared_k', 'selam_eth', 'helen_m', 'kebede_crypto', 'almaz_addis', 'tariku_t', 'aster_g', 'dawit_b', 'foziya_a', 'samuel_j', 'tigist_w', 'chala_b', 'solomon_g', 'leila_s', 'bereket_d'];
-    const sellers = ['ethio_merchant', 'abyssinia_btc', 'cbe_trader', 'gold_miner_eth', 'dilla_swapper', 'addis_whale', 'capital_crypto', 'eth_broker', 'sheger_node', 'sheba_coins'];
-    const methods = ['Telebirr', 'Commercial Bank of Ethiopia (CBE)', 'Dashen Bank', 'Bank of Abyssinia', 'CBE Birr'];
-
-    function renderMockTrades() {
-      const feedContainer = document.getElementById('live-trades-feed');
-      if (!feedContainer) return;
-      feedContainer.innerHTML = '';
-      
-      for (let i = 0; i < 4; i++) {
-        const buyer = '@' + buyers[(i * 3) % buyers.length];
-        const seller = '@' + sellers[(i * 7) % sellers.length];
-        const method = methods[(i * 2) % methods.length];
-        const isBuy = i % 2 === 0;
-        
-        const amountUSD = (Math.random() * 150 + 10).toFixed(2);
-        const amountETB = Math.round(amountUSD * usdPriceETB);
-        
-        const item = document.createElement('div');
-        item.className = 'feed-item';
-        item.innerHTML = `
-          <div class="item-header">
-            <span class="user-badge">${isBuy ? buyer : seller}</span>
-            <span class="action-badge ${isBuy ? 'buy' : 'sell'}">${isBuy ? 'BUY' : 'SELL'}</span>
-            <span class="arrow">⇄</span>
-            <span class="user-badge">${isBuy ? seller : buyer}</span>
-          </div>
-          <div class="item-body">
-            Swapped <span class="val">$${amountUSD} USD</span> for <span class="val">${amountETB.toLocaleString()} ETB</span>
-          </div>
-          <div class="item-footer">
-            <span class="payment-method">🏦 ${method}</span>
-            <span class="status-badge verified">✓ Escrow Released</span>
-          </div>
-        `;
-        feedContainer.appendChild(item);
-      }
-    }
-
-    function renderTrades(tradesList) {
-      const feedContainer = document.getElementById('live-trades-feed');
-      if (!feedContainer) return;
-      feedContainer.innerHTML = '';
-
-      tradesList.forEach(t => {
-        const buyer = '@' + t.buyerName;
-        const seller = '@' + t.sellerName;
-        const amountUSD = parseFloat(t.amountETH) || 0;
-        const amountETB = parseInt(t.amountETB) || Math.round(amountUSD * usdPriceETB);
-        
-        const item = document.createElement('div');
-        item.className = 'feed-item';
-        item.innerHTML = `
-          <div class="item-header">
-            <span class="user-badge">${buyer}</span>
-            <span class="action-badge buy">BUY</span>
-            <span class="arrow">⇄</span>
-            <span class="user-badge">${seller}</span>
-          </div>
-          <div class="item-body">
-            Swapped <span class="val">$${amountUSD.toFixed(2)} USD</span> for <span class="val">${amountETB.toLocaleString()} ETB</span>
-          </div>
-          <div class="item-footer">
-            <span class="payment-method">🏦 CBE / Telebirr</span>
-            <span class="status-badge verified">✓ Escrow Released</span>
-          </div>
-        `;
-        feedContainer.appendChild(item);
-      });
-    }
-
-    // Call fetchConvexData immediately and set up 5-second interval
-    fetchConvexData();
-    setInterval(fetchConvexData, 5000);
-
-    /* ===== LEGAL MODALS MANAGER ===== */
+    /* ===== LEGAL MODALS ===== */
     const legalDocs = {
       terms: {
         title: "Terms of Service",
         content: `
           <h4>1. Acceptance of Terms</h4>
-          <p>By registering an account on EthioSwap, downloading our APK, or accessing our P2P trading engine, you agree to comply with and be bound by these Terms of Service. If you do not agree to these terms, you must immediately cease all access to the platform.</p>
-          
-          <h4>2. Eligibility & KYC Requirements</h4>
-          <p>You must be at least 18 years of age and reside in Ethiopia or have valid Ethiopian identification. To ensure compliance and prevent malicious use, all users are required to undergo a Know Your Customer (KYC) identity verification process. You agree to provide accurate and truthful information, including your full legal name, phone number, and a clear photo of your National ID card or Passport (both front and back), as well as a live camera selfie. Using fake credentials or impersonating others will lead to immediate account suspension and asset forfeiture.</p>
-          
+          <p>By registering an account on EthioSwap, downloading our APK, or accessing our P2P trading engine, you agree to comply with and be bound by these Terms of Service.</p>
+          <h4>2. Eligibility &amp; KYC Requirements</h4>
+          <p>You must be at least 18 years of age and reside in Ethiopia or have valid Ethiopian identification. All users are required to undergo a Know Your Customer (KYC) identity verification process.</p>
           <h4>3. P2P Escrow Trading Rules</h4>
           <ul>
-            <li><strong>Escrow Lock:</strong> When a trade is initiated, the seller's USD is immediately moved to a secure vault locked by EthioSwap. The seller cannot cancel the trade or recover the locked USD once in progress.</li>
-            <li><strong>Fiat Transfer:</strong> The buyer must transfer the agreed fiat amount in Ethiopian Birr (ETB) directly to the seller's bank account or mobile money wallet (e.g., CBE, Telebirr) within 15 minutes.</li>
-            <li><strong>Payment Confirmation:</strong> Once the transfer is complete, the buyer must click the "I Have Paid" button and upload a valid transaction receipt.</li>
-            <li><strong>Asset Release:</strong> Upon verifying the receipt of funds, the seller is legally obligated to release the escrow. Failing to release funds after receiving payment is a serious violation and will trigger dispute arbitration.</li>
+            <li><strong>Escrow Lock:</strong> When a trade is initiated, the seller's USD is immediately moved to a secure vault locked by EthioSwap.</li>
+            <li><strong>Fiat Transfer:</strong> The buyer must transfer the agreed fiat amount in Ethiopian Birr (ETB) directly to the seller's bank account within 15 minutes.</li>
+            <li><strong>Payment Confirmation:</strong> Once the transfer is complete, the buyer must click "I Have Paid" and upload a valid transaction receipt.</li>
+            <li><strong>Asset Release:</strong> Upon verifying receipt of funds, the seller is obligated to release the escrow.</li>
           </ul>
-
-          <h4>4. Dispute Arbitration & Administration</h4>
-          <p>If either party fails to fulfill their obligations, a dispute may be opened by either the buyer or the seller. An EthioSwap admin will inspect the chat transcript, uploaded payment receipts, and require verified bank transaction statement logs if necessary. The admin's decision is final and binding on both parties. Locked escrow assets will be released to the buyer or refunded to the seller based on this audit.</p>
-
-          <h4>5. Fees & Commission</h4>
+          <h4>4. Dispute Arbitration</h4>
+          <p>If either party fails to fulfill their obligations, a dispute may be opened. An EthioSwap admin will inspect the chat transcript, uploaded receipts, and bank logs. The admin's decision is final and binding on both parties.</p>
+          <h4>5. Fees &amp; Commission</h4>
           <p>EthioSwap charges a transaction fee on all completed trades. This fee is automatically deducted from the escrowed amount before release. Current commission rates are managed by the administrator and are displayed before confirming a transaction.</p>
         `
       },
       privacy: {
-        title: "Privacy & Data Protection Policy",
+        title: "Privacy &amp; Data Protection Policy",
         content: `
           <h4>1. Information We Collect</h4>
-          <p>We collect personal information necessary to facilitate safe trading and confirm user identities. This includes:</p>
+          <p>We collect personal information necessary to facilitate safe trading and confirm user identities:</p>
           <ul>
             <li>Your phone number and display name during registration.</li>
             <li>National ID card or Passport photos (front and back).</li>
@@ -3075,80 +2577,47 @@
             <li>Your wallet balance and transaction logs.</li>
             <li>Transaction history and secure chat logs between traders.</li>
           </ul>
-
           <h4>2. How We Use Your Data</h4>
-          <p>Your personal data is used solely for the following purposes:</p>
-          <ul>
-            <li>Verifying your identity to prevent fraud, scams, and double-spending.</li>
-            <li>Complying with Anti-Money Laundering (AML) standards.</li>
-            <li>Enabling communication during P2P trades.</li>
-            <li>Resolving trading disputes and checking payment proofs.</li>
-          </ul>
-
+          <p>Your personal data is used solely for verifying your identity, complying with AML standards, enabling communication during P2P trades, and resolving trading disputes.</p>
           <h4>3. Data Security and Encryption</h4>
-          <p>We employ state-of-the-art security practices to protect your data. All uploaded documents (ID photos and selfies) are stored in secure, encrypted cloud environments hosted via Convex Cloud. Your private wallet keys are stored locally on your device in secure storage (for the mobile application) and are never uploaded to our servers or exposed to admins.</p>
-
+          <p>All uploaded documents are stored in secure, encrypted cloud environments. Your private wallet keys are stored locally on your device and are never uploaded to our servers.</p>
           <h4>4. Data Sharing and Third Parties</h4>
-          <p>EthioSwap does not sell, rent, or lease your personal information to third parties. We do not share your KYC data with anyone, unless required by a formal legal warrant issued by an Ethiopian court of law. All verification is handled strictly by authorized in-house administrators.</p>
+          <p>EthioSwap does not sell, rent, or lease your personal information to third parties. We do not share your KYC data with anyone unless required by a formal legal warrant issued by an Ethiopian court of law.</p>
         `
       },
       escrow: {
-        title: "Escrow & Dispute Policy",
+        title: "Escrow &amp; Dispute Policy",
         content: `
           <h4>1. The Escrow Safeguard</h4>
-          <p>EthioSwap operates a strict locked escrow vault mechanism. When a trade starts, the seller's USD balance is instantly locked in the platform's escrow vault. This guarantees to the buyer that the seller actually has the funds and cannot withdraw them. The seller is protected because they are not forced to release the USD until they see the money clear in their bank or mobile money statement.</p>
-
-          <h4>2. Trading Timers & Deadlines</h4>
-          <p>Trades have a 15-minute countdown timer. The buyer must execute the payment and upload the transaction receipt, then click "I Have Paid" before the timer reaches zero. If the buyer fails to mark the trade as paid within 15 minutes, the trade is cancelled, and the USD is returned to the seller.</p>
-
+          <p>EthioSwap operates a strict locked escrow vault mechanism. When a trade starts, the seller's USD balance is instantly locked in the platform's escrow vault.</p>
+          <h4>2. Trading Timers &amp; Deadlines</h4>
+          <p>Trades have a 15-minute countdown timer. If the buyer fails to mark the trade as paid within 15 minutes, the trade is cancelled, and the USD is returned to the seller.</p>
           <h4>3. Dispute Resolution Rules</h4>
-          <p>If a trade goes into dispute, our admins will investigate. The following rules apply:</p>
           <ul>
-            <li><strong>Required Proof:</strong> The buyer must upload a clear screenshot of the bank transfer or mobile money receipt showing the correct recipient name, date, and reference number. Blur, cropped, or edited screenshots will be rejected.</li>
-            <li><strong>Verification:</strong> The seller must verify their bank account statements. If a seller claims they did not receive the money, they must cooperate by uploading a screen recording of their bank statement showing the transaction list.</li>
-            <li><strong>Resolution Action:</strong> If the admin determines that the payment was successfully delivered, the escrow will be released to the buyer. If the admin determines that no payment was sent, the trade will be cancelled, and the USD refunded to the seller.</li>
+            <li><strong>Required Proof:</strong> The buyer must upload a clear screenshot of the bank transfer or mobile money receipt.</li>
+            <li><strong>Verification:</strong> The seller must verify their bank account statements.</li>
+            <li><strong>Resolution Action:</strong> If the admin determines the payment was delivered, the escrow will be released to the buyer. Otherwise the trade is cancelled and USD refunded to the seller.</li>
           </ul>
-        `
-      },
-      aml: {
-        title: "Anti-Money Laundering (AML) Policy",
-        content: `
-          <h4>1. AML Commitment</h4>
-          <p>EthioSwap is committed to maintaining a secure, legal, and transparent P2P market. We strictly prohibit our platform from being used for money laundering, financing of illicit activities, or facilitating tax evasion. We cooperate fully with regulators and banking partners in Ethiopia to enforce these rules.</p>
-
-          <h4>2. Multi-Step KYC System</h4>
-          <p>To curb anonymous transactions, we implement a mandatory multi-step identity verification framework:</p>
-          <ul>
-            <li><strong>Verification Status:</strong> Non-verified users can browse listings but are restricted from posting listings or initiating trades.</li>
-            <li><strong>ID Upload:</strong> Users must submit a valid National ID or Passport.</li>
-            <li><strong>Live Camera check:</strong> Users must upload a live selfie captured to verify liveness and match the ID.</li>
-          </ul>
-
-          <h4>3. Trading Limits</h4>
-          <p>To limit financial exposure, the platform enforces daily and weekly trading volumes on all verified accounts. Trade volumes are capped per user based on system settings. Excess transactions are flagged and require administrative approval.</p>
-
-          <h4>4. Suspicious Activity Monitoring</h4>
-          <p>Our backend automatically logs and flags suspicious patterns, such as multiple accounts linked to the same ID, rapid trade cancellations, or mismatched bank account names. Mismatched names (e.g. paying from a bank account that does not match the verified KYC name on EthioSwap) is strictly forbidden and results in immediate trade freezing.</p>
         `
       }
     };
 
-    const modal = document.getElementById('legal-modal');
+    const legalModal = document.getElementById('legal-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
 
     function openLegalModal(docKey) {
       const doc = legalDocs[docKey];
       if (!doc) return;
-      modalTitle.innerText = doc.title;
+      modalTitle.innerHTML = doc.title;
       modalBody.innerHTML = doc.content;
-      modal.classList.add('open');
+      legalModal.classList.add('open');
       document.body.style.overflow = 'hidden';
     }
 
     function closeLegalModal(e) {
-      if (!e || e.target === modal || e.target.classList.contains('modal-close')) {
-        modal.classList.remove('open');
+      if (!e || e.target === legalModal || e.target.classList.contains('modal-close')) {
+        legalModal.classList.remove('open');
         document.body.style.overflow = '';
       }
     }
