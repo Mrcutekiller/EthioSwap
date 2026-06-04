@@ -1,0 +1,13 @@
+[build]
+  base    = "frontend"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  VITE_CONVEX_URL = "https://grateful-tern-840.convex.cloud"
+  NODE_VERSION    = "20"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
