@@ -14,6 +14,7 @@ import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as inviteRewards from "../inviteRewards.js";
 import type * as listings from "../listings.js";
+import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
 import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   inviteRewards: typeof inviteRewards;
   listings: typeof listings;
+  messages: typeof messages;
   notifications: typeof notifications;
   reviews: typeof reviews;
   seed: typeof seed;
