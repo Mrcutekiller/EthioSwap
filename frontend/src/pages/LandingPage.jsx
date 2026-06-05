@@ -118,250 +118,314 @@ const FeatureIcons = {
   ),
 };
 
-// ── Floating Money Rain Component ──────────────────────────
-// Individual animated money bill that falls from the top
-const FallingBill = ({ style, isBirr = false }) => {
-  const content = isBirr ? (
-    // Ethiopian Birr Bill SVG
-    <svg viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-      <defs>
-        <linearGradient id={`birr-grad-${Math.random()}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.9"/>
-          <stop offset="100%" stopColor="#16a34a" stopOpacity="0.9"/>
-        </linearGradient>
-      </defs>
-      <rect width="220" height="100" rx="6" fill="#15803d" opacity="0.9"/>
-      <rect x="2" y="2" width="216" height="96" rx="5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-      <rect x="8" y="8" width="200" height="84" rx="3" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
-      {/* Wavy pattern lines */}
-      <path d="M0 30 Q55 20 110 30 Q165 40 220 30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-      <path d="M0 50 Q55 40 110 50 Q165 60 220 50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-      <path d="M0 70 Q55 60 110 70 Q165 80 220 70" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-      {/* Amount circle */}
-      <circle cx="35" cy="50" r="22" fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
-      <text x="35" y="45" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif">ብር</text>
-      <text x="35" y="58" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white" fontFamily="sans-serif">100</text>
-      {/* Right side text */}
-      <text x="140" y="38" textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif" letterSpacing="2">NATIONAL BANK</text>
-      <text x="140" y="52" textAnchor="middle" fontSize="14" fontWeight="bold" fill="rgba(255,255,255,0.9)" fontFamily="sans-serif">ETB 100</text>
-      <text x="140" y="65" textAnchor="middle" fontSize="6" fill="rgba(255,255,255,0.4)" fontFamily="sans-serif">OF ETHIOPIA</text>
-      {/* Serial number */}
-      <text x="18" y="88" fontSize="5" fill="rgba(255,255,255,0.3)" fontFamily="monospace">ET2024-789456</text>
-    </svg>
-  ) : (
-    // US Dollar Bill SVG
-    <svg viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-      <rect width="220" height="100" rx="6" fill="#166534" opacity="0.9"/>
-      <rect x="2" y="2" width="216" height="96" rx="5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
-      <rect x="8" y="8" width="200" height="84" rx="3" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
-      {/* Cross-hatch pattern */}
-      <path d="M0 25 L220 25" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-      <path d="M0 50 L220 50" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-      <path d="M0 75 L220 75" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-      {/* Federal Reserve seal */}
-      <circle cx="35" cy="50" r="22" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
-      <text x="35" y="46" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">FEDERAL</text>
-      <text x="35" y="57" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">RESERVE</text>
-      {/* Large denomination */}
-      <text x="110" y="42" textAnchor="middle" fontSize="8" fontWeight="bold" fill="rgba(255,255,255,0.4)" fontFamily="sans-serif" letterSpacing="3">THE UNITED STATES</text>
-      <text x="110" y="58" textAnchor="middle" fontSize="22" fontWeight="bold" fill="rgba(255,255,255,0.95)" fontFamily="serif">$100</text>
-      <text x="110" y="72" textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.35)" fontFamily="sans-serif" letterSpacing="1">ONE HUNDRED DOLLARS</text>
-      {/* Portrait oval */}
-      <ellipse cx="180" cy="50" rx="20" ry="26" fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
-      {/* Serial */}
-      <text x="18" y="88" fontSize="5" fill="rgba(255,255,255,0.3)" fontFamily="monospace">ML20240001A</text>
-    </svg>
-  );
+// ═══════════════════════════════════════════════════════════
+// PREMIUM 3D PAPER MONEY — USD front / Ethiopian Birr back
+// Click to flip. Floats with gentle animation.
+// ═══════════════════════════════════════════════════════════
+
+const PaperMoney3D = ({ size = 'lg', className = '' }) => {
+  const [flipped, setFlipped] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  // Dimensions: real $100 bill ratio = 6.14" × 2.61" ≈ 2.35:1
+  const dims = {
+    lg: { w: 420, h: 178 },
+    md: { w: 340, h: 145 },
+    sm: { w: 260, h: 110 },
+  }[size] || { w: 420, h: 178 };
+
+  const { w, h } = dims;
 
   return (
-    <div style={{ position: 'absolute', ...style, pointerEvents: 'none' }}>
-      <div style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-        {content}
-      </div>
-    </div>
-  );
-};
-
-// Money Rain Container — renders multiple falling bills
-const MoneyRain = ({ prefersReducedMotion }) => {
-  const bills = [
-    // [id, isBirr, width_px, leftPct, animDuration, animDelay, startRotation]
-    [1,  false, 200, '8%',   '7s',  '0s',   '-12deg'],
-    [2,  true,  170, '18%',  '9s',  '-3s',  '8deg'],
-    [3,  false, 190, '30%',  '6.5s','-5.5s','5deg'],
-    [4,  true,  160, '44%',  '8.5s','-1.5s','-6deg'],
-    [5,  false, 210, '56%',  '7s',  '-7s',  '10deg'],
-    [6,  true,  175, '68%',  '9.5s','-4s',  '-9deg'],
-    [7,  false, 185, '78%',  '6s',  '-2s',  '4deg'],
-    [8,  true,  195, '88%',  '8s',  '-6s',  '-14deg'],
-  ];
-
-  if (prefersReducedMotion) return null;
-
-  return (
-    <>
-      <style>{`
-        @keyframes billFall {
-          0%   { transform: translateY(-160px) rotate(var(--rot)); opacity: 0; }
-          8%   { opacity: 0.6; }
-          85%  { opacity: 0.5; }
-          100% { transform: translateY(calc(100vh + 160px)) rotate(calc(var(--rot) + 30deg)); opacity: 0; }
-        }
-      `}</style>
-      {bills.map(([id, isBirr, w, left, dur, delay, rot]) => (
-        <FallingBill
-          key={id}
-          isBirr={isBirr}
-          style={{
-            left,
-            top: 0,
-            width: `${w}px`,
-            height: `${Math.round(w * 0.455)}px`,
-            '--rot': rot,
-            animation: `billFall ${dur} linear ${delay} infinite`,
-            zIndex: 2,
-            opacity: 0,
-          }}
-        />
-      ))}
-    </>
-  );
-};
-
-// Legacy Bill3D kept as stub (no longer used, replaced by MoneyRain)
-const Bill3D = ({ progress, width }) => {
-  return null; // replaced by MoneyRain
-};
-
-// Premium USD Floating Asset Component (Vertical Connector Style)
-const PremiumUSDCard = ({ offset = '0px', delay = '0s', scrollProgress = 0 }) => {
-  const cardRef = useRef(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      setInView(entry.isIntersecting);
-    }, { threshold: 0 });
-    if (cardRef.current) observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Subtle parallax based on scroll
-  const parallaxY = inView ? (scrollProgress * 50) : 0;
-
-  return (
-    <div ref={cardRef} style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      margin: '-120px 0', // Overlap sections
-      position: 'relative',
-      zIndex: 50,
-      pointerEvents: 'none',
-      transform: `translateY(${parallaxY}px)`
-    }}>
-      {/* Upper Connector Line */}
+    <div
+      className={className}
+      style={{
+        width: `${w}px`,
+        height: `${h}px`,
+        perspective: '1200px',
+        cursor: 'pointer',
+        userSelect: 'none',
+        filter: hovered
+          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.7)) drop-shadow(0 0 40px rgba(245,197,24,0.18))'
+          : 'drop-shadow(0 20px 40px rgba(0,0,0,0.55))',
+        transition: 'filter 0.4s ease',
+      }}
+      onClick={() => setFlipped(f => !f)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title="Click to flip"
+    >
+      {/* 3D flip container */}
       <div style={{
-        width: '2px',
-        height: '140px',
-        background: 'linear-gradient(to bottom, transparent, var(--gold), var(--gold-bright))',
-        opacity: 0.4,
-        boxShadow: '0 0 15px var(--gold-muted)'
-      }} />
-
-      <div className="floating" style={{
-        width: '240px',
-        height: '320px',
-        animationDelay: delay,
-        transform: `translateX(${offset})`,
-        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))'
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        transformStyle: 'preserve-3d',
+        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        transition: 'transform 0.75s cubic-bezier(0.4, 0.2, 0.2, 1)',
       }}>
-        <div className="glass-panel" style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '40px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '1px solid rgba(245, 197, 24, 0.3)',
-          background: 'linear-gradient(135deg, rgba(20, 20, 25, 0.9) 0%, rgba(5, 5, 10, 0.95) 100%)',
-          position: 'relative',
+
+        {/* ── FRONT: US $100 Bill ── */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          borderRadius: '8px',
           overflow: 'hidden',
-          boxShadow: '0 40px 100px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(245, 197, 24, 0.05)',
         }}>
-          {/* Animated Glow Background */}
-          <div className="card-glow-pulse" style={{
-            position: 'absolute',
-            width: '200%',
-            height: '200%',
-            background: 'radial-gradient(circle, rgba(245, 197, 24, 0.1) 0%, transparent 60%)',
-            top: '-50%',
-            left: '-50%',
-            pointerEvents: 'none',
-          }} />
-          
-          {/* Central Connecting Line (Behind Symbol) */}
-          <div style={{
-            position: 'absolute',
-            width: '1px',
-            height: '100%',
-            background: 'linear-gradient(to bottom, var(--gold), transparent, var(--gold))',
-            opacity: 0.2,
-            left: '50%',
-            transform: 'translateX(-50%)'
-          }} />
+          <svg viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg"
+            style={{ width: '100%', height: '100%', display: 'block' }}>
+            <defs>
+              <linearGradient id="usd-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#1a4731"/>
+                <stop offset="50%" stopColor="#145228"/>
+                <stop offset="100%" stopColor="#0f3d1f"/>
+              </linearGradient>
+              <linearGradient id="usd-left" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#0f3d1f"/>
+                <stop offset="100%" stopColor="#1a4731"/>
+              </linearGradient>
+              <pattern id="usd-lines" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+              </pattern>
+              <radialGradient id="usd-seal-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(34,197,94,0.3)"/>
+                <stop offset="100%" stopColor="transparent"/>
+              </radialGradient>
+            </defs>
 
-          {/* Main Symbol with multi-layer glow */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'var(--gold)',
-              filter: 'blur(30px)',
-              opacity: 0.3,
-              borderRadius: '50%'
-            }} />
-            <div style={{
-              fontSize: '110px',
-              fontWeight: 900,
-              background: 'linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 15px rgba(245, 197, 24, 0.5))',
-              marginBottom: '10px',
-              position: 'relative',
-              zIndex: 2
-            }}>$</div>
-          </div>
+            {/* Base */}
+            <rect width={w} height={h} fill="url(#usd-bg)"/>
 
-          <div style={{ textAlign: 'center', padding: '0 24px', zIndex: 2 }}>
-            <div style={{ fontSize: '10px', color: 'var(--gold)', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.8 }}>Secure Asset</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>USD RESERVE</div>
-          </div>
+            {/* Fine line texture */}
+            <rect width={w} height={h} fill="url(#usd-lines)"/>
 
-          {/* Bottom detail */}
-          <div style={{ 
-            position: 'absolute', 
-            bottom: '30px', 
-            width: '60%', 
-            height: '1px', 
-            background: 'linear-gradient(90deg, transparent, rgba(245, 197, 24, 0.4), transparent)' 
-          }} />
+            {/* Outer border */}
+            <rect x="3" y="3" width={w-6} height={h-6} rx="6" fill="none"
+              stroke="rgba(255,255,255,0.18)" strokeWidth="1.2"/>
+            {/* Inner border */}
+            <rect x="10" y="10" width={w-20} height={h-20} rx="3" fill="none"
+              stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
+
+            {/* Security strip (vertical gold line) */}
+            <rect x={w*0.38} y="0" width="3" height={h}
+              fill="none" stroke="rgba(245,197,24,0.35)" strokeWidth="2"
+              strokeDasharray="4 3"/>
+
+            {/* LEFT PANEL – Federal Reserve Seal */}
+            <rect x="14" y="14" width={h-28} height={h-28} rx="4"
+              fill="rgba(0,0,0,0.12)"/>
+            {/* Seal circle */}
+            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2}
+              fill="rgba(0,0,0,0.18)" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+            {/* Seal inner ring */}
+            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2 - 6}
+              fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8"/>
+            {/* Seal text */}
+            <text x={14+(h-28)/2} y={h/2 - 8} textAnchor="middle"
+              fontSize="9" fontWeight="700" fill="rgba(255,255,255,0.55)"
+              fontFamily="serif" letterSpacing="0.5">FEDERAL</text>
+            <text x={14+(h-28)/2} y={h/2 + 4} textAnchor="middle"
+              fontSize="9" fontWeight="700" fill="rgba(255,255,255,0.55)"
+              fontFamily="serif" letterSpacing="0.5">RESERVE</text>
+            <text x={14+(h-28)/2} y={h/2 + 16} textAnchor="middle"
+              fontSize="8" fill="rgba(255,255,255,0.35)" fontFamily="serif">NOTE</text>
+
+            {/* CENTER — denomination + portrait */}
+            {/* "THE UNITED STATES OF AMERICA" header */}
+            <text x={w/2} y="28" textAnchor="middle"
+              fontSize={w > 300 ? "10" : "8"} fontWeight="700" fill="rgba(255,255,255,0.45)"
+              fontFamily="serif" letterSpacing={w > 300 ? "3" : "2"}>THE UNITED STATES OF AMERICA</text>
+
+            {/* Big $100 */}
+            <text x={w*0.52} y={h*0.57} textAnchor="middle"
+              fontSize={w > 300 ? "52" : "40"} fontWeight="900" fill="rgba(255,255,255,0.92)"
+              fontFamily="Georgia, serif">$100</text>
+
+            {/* "ONE HUNDRED DOLLARS" */}
+            <text x={w*0.52} y={h-28} textAnchor="middle"
+              fontSize={w > 300 ? "9" : "7"} fill="rgba(255,255,255,0.38)"
+              fontFamily="serif" letterSpacing="2">ONE HUNDRED DOLLARS</text>
+
+            {/* Portrait oval */}
+            <ellipse cx={w*0.73} cy={h/2} rx={w > 300 ? 36 : 28} ry={(h/2)-18}
+              fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2"/>
+            {/* Portrait silhouette hint */}
+            <ellipse cx={w*0.73} cy={h/2 - 6} rx={w > 300 ? 14 : 10} ry={w > 300 ? 18 : 13}
+              fill="rgba(255,255,255,0.06)"/>
+            <ellipse cx={w*0.73} cy={h/2 + 16} rx={w > 300 ? 20 : 15} ry={w > 300 ? 10 : 7}
+              fill="rgba(255,255,255,0.04)"/>
+
+            {/* RIGHT PANEL — corner 100s */}
+            <text x={w-18} y="26" textAnchor="end"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
+              fontFamily="Georgia, serif">100</text>
+            <text x={w-18} y={h-14} textAnchor="end"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
+              fontFamily="Georgia, serif">100</text>
+            <text x="20" y="26"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
+              fontFamily="Georgia, serif">100</text>
+            <text x="20" y={h-14}
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
+              fontFamily="Georgia, serif">100</text>
+
+            {/* Serial number */}
+            <text x="16" y={h-15}
+              fontSize="6.5" fill="rgba(255,255,255,0.3)" fontFamily="monospace"
+              letterSpacing="1">ML 20240001 A</text>
+
+            {/* "IN GOD WE TRUST" */}
+            <text x={w*0.73} y={h-15} textAnchor="middle"
+              fontSize="7" fill="rgba(255,255,255,0.25)" fontFamily="serif"
+              fontStyle="italic">IN GOD WE TRUST</text>
+
+            {/* Subtle green tint overlay top-left */}
+            <rect x="0" y="0" width={w*0.35} height={h}
+              fill="rgba(0,100,50,0.07)" rx="8"/>
+          </svg>
+        </div>
+
+        {/* ── BACK: Ethiopian Birr 100 Note ── */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}>
+          <svg viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg"
+            style={{ width: '100%', height: '100%', display: 'block' }}>
+            <defs>
+              <linearGradient id="etb-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#1e3a5f"/>
+                <stop offset="40%" stopColor="#1a4731"/>
+                <stop offset="100%" stopColor="#7c2d12"/>
+              </linearGradient>
+              <pattern id="etb-wave" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M0 10 Q5 0 10 10 Q15 20 20 10" fill="none"
+                  stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+              </pattern>
+            </defs>
+
+            {/* Base — Ethiopian flag colors blend */}
+            <rect width={w} height={h} fill="url(#etb-bg)"/>
+            <rect width={w} height={h} fill="url(#etb-wave)"/>
+
+            {/* Tri-color top stripe (flag) */}
+            <rect x="0" y="0" width={w} height={h*0.12} fill="rgba(34,197,94,0.35)"/>
+            <rect x="0" y={h*0.12} width={w} height={h*0.12} fill="rgba(234,179,8,0.25)"/>
+            <rect x="0" y={h*0.24} width={w} height={h*0.12} fill="rgba(239,68,68,0.2)"/>
+
+            {/* Outer border */}
+            <rect x="3" y="3" width={w-6} height={h-6} rx="6" fill="none"
+              stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
+            <rect x="10" y="10" width={w-20} height={h-20} rx="3" fill="none"
+              stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
+
+            {/* LEFT — National Bank Seal */}
+            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2}
+              fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
+            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2 - 7}
+              fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
+            {/* Star of David / Ethiopia star */}
+            <text x={14+(h-28)/2} y={h/2 - 4} textAnchor="middle"
+              fontSize="22" fill="rgba(234,179,8,0.7)">★</text>
+            <text x={14+(h-28)/2} y={h/2 + 12} textAnchor="middle"
+              fontSize="7" fill="rgba(255,255,255,0.5)" fontFamily="serif"
+              letterSpacing="0.3">ብሔራዊ ባንክ</text>
+            <text x={14+(h-28)/2} y={h/2 + 22} textAnchor="middle"
+              fontSize="6" fill="rgba(255,255,255,0.35)" fontFamily="serif">ETHIOPIA</text>
+
+            {/* CENTER — denomination */}
+            <text x={w/2} y="26" textAnchor="middle"
+              fontSize={w > 300 ? "9" : "7"} fontWeight="700" fill="rgba(255,255,255,0.45)"
+              fontFamily="serif" letterSpacing="2">NATIONAL BANK OF ETHIOPIA</text>
+
+            {/* Big ብር 100 */}
+            <text x={w*0.50} y={h*0.55} textAnchor="middle"
+              fontSize={w > 300 ? "48" : "36"} fontWeight="900" fill="rgba(255,255,255,0.92)"
+              fontFamily="serif">ብር 100</text>
+            <text x={w*0.50} y={h*0.76} textAnchor="middle"
+              fontSize={w > 300 ? "11" : "9"} fill="rgba(234,179,8,0.8)"
+              fontFamily="serif" letterSpacing="1">ONE HUNDRED BIRR</text>
+
+            {/* Corner 100s */}
+            <text x={w-18} y="26" textAnchor="end"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
+              fontFamily="Georgia, serif">100</text>
+            <text x={w-18} y={h-14} textAnchor="end"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
+              fontFamily="Georgia, serif">100</text>
+            <text x="20" y="26"
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
+              fontFamily="Georgia, serif">100</text>
+            <text x="20" y={h-14}
+              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
+              fontFamily="Georgia, serif">100</text>
+
+            {/* Right vignette panel */}
+            <rect x={w*0.82} y="14" width={w*0.15} height={h-28} rx="3"
+              fill="rgba(0,0,0,0.15)"/>
+
+            {/* Serial */}
+            <text x="16" y={h-15}
+              fontSize="6.5" fill="rgba(255,255,255,0.3)" fontFamily="monospace"
+              letterSpacing="1">ET 2024-100 NBE</text>
+          </svg>
         </div>
       </div>
 
-      {/* Lower Connector Line */}
+      {/* Flip hint */}
       <div style={{
-        width: '2px',
-        height: '140px',
-        background: 'linear-gradient(to top, transparent, var(--gold), var(--gold-bright))',
-        opacity: 0.4,
-        boxShadow: '0 0 15px var(--gold-muted)'
-      }} />
+        position: 'absolute', bottom: '-28px', left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '11px', color: 'rgba(245,197,24,0.55)',
+        fontWeight: 600, letterSpacing: '0.1em', whiteSpace: 'nowrap',
+        pointerEvents: 'none', fontFamily: 'sans-serif',
+      }}>
+        {flipped ? '← Click to see USD' : 'Click to see Birr →'}
+      </div>
     </div>
   );
 };
+
+// Floating wrapper — adds the gentle up/down float + entry animation
+const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => (
+  <div style={{
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+    ...style,
+  }}>
+    <style>{`
+      @keyframes billFloat {
+        0%, 100% { transform: translateY(0px) rotate(-1deg); }
+        50%       { transform: translateY(-14px) rotate(1deg); }
+      }
+      @keyframes billEntry {
+        from { opacity: 0; transform: translateY(30px) scale(0.9); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+    `}</style>
+    <div style={{
+      animation: prefersReducedMotion
+        ? 'none'
+        : 'billFloat 5s ease-in-out infinite, billEntry 0.8s cubic-bezier(0.16,1,0.3,1) both',
+    }}>
+      <PaperMoney3D size={size} />
+    </div>
+  </div>
+);
+
+// Legacy stubs — no longer rendered but kept to avoid ref errors
+const FallingBill = () => null;
+const MoneyRain = () => null;
+const Bill3D = () => null;
+const PremiumUSDCard = () => null;
+
+
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const { user } = useAuth();
@@ -826,10 +890,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         <div className={`cursor-trail ${cursorHovered ? 'hovered' : ''}`} style={{ left: `${cursorPos.x}px`, top: `${cursorPos.y}px` }} />
       )}
 
-      {/* Money Rain Animation — bills falling from top of hero */}
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', pointerEvents: 'none', zIndex: 1 }}>
-        <MoneyRain prefersReducedMotion={prefersReducedMotion} />
-      </div>
+
 
       {/* ── NAVBAR ── */}
       <nav style={{
@@ -978,85 +1039,10 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* Right Side: Premium Animated Exchange Card */}
+            {/* Right Side: 3D Paper Money — USD front / Birr back */}
             {width >= 1024 && (
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
-                {/* Background glow */}
-                <div style={{ position: 'absolute', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,197,24,0.08) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(40px)' }} />
-                
-                {/* Main exchange card */}
-                <div style={{
-                  width: '340px',
-                  background: 'linear-gradient(145deg, rgba(20,20,24,0.95) 0%, rgba(10,10,14,0.98) 100%)',
-                  border: '1px solid rgba(245,197,24,0.18)',
-                  borderRadius: '28px',
-                  padding: '32px',
-                  boxShadow: '0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,197,24,0.06) inset',
-                  position: 'relative',
-                  zIndex: 3,
-                  backdropFilter: 'blur(20px)',
-                }}>
-                  {/* Card header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Live Rate</div>
-                      <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--gold)', fontFamily: 'JetBrains Mono, monospace', marginTop: '4px' }}>1 USDT = {liveRate.toFixed(0)} ETB</div>
-                    </div>
-                    <div style={{ width: '44px', height: '44px', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⚡</div>
-                  </div>
-
-                  {/* USD -> ETB flow */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginBottom: '6px' }}>You Send</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>100</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(245,197,24,0.08)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(245,197,24,0.15)' }}>
-                        <span style={{ fontSize: '16px' }}>$</span>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>USDT</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Swap indicator */}
-                  <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', color: 'var(--gold)' }}>⇅</div>
-                  </div>
-
-                  {/* ETB output */}
-                  <div style={{ background: 'rgba(0,212,160,0.04)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(0,212,160,0.1)', marginBottom: '20px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginBottom: '6px' }}>You Receive</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-green)', fontFamily: 'JetBrains Mono, monospace' }}>{(liveRate * 100).toLocaleString()}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,212,160,0.08)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(0,212,160,0.15)' }}>
-                        <span style={{ fontSize: '16px' }}>🇪🇹</span>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-green)' }}>ETB</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Trade button */}
-                  <button onClick={onGetStarted} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%)', border: 'none', borderRadius: '14px', fontWeight: 800, fontSize: '15px', color: '#000', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 4px 20px rgba(245,197,24,0.3)' }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(245,197,24,0.5)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,197,24,0.3)'; }}>
-                    Trade Now →
-                  </button>
-
-                  {/* Security badge */}
-                  <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--text-dim)', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--accent-green)' }}>🔒</span>
-                    <span>Secured by escrow • No hidden fees</span>
-                  </div>
-                </div>
-
-                {/* Floating stat chips */}
-                <div style={{ position: 'absolute', top: '40px', right: '-20px', background: 'rgba(0,212,160,0.1)', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '10px 14px', backdropFilter: 'blur(10px)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Avg. Trade Time</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-green)' }}>12 min</div>
-                </div>
-                <div style={{ position: 'absolute', bottom: '60px', left: '-30px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '12px', padding: '10px 14px', backdropFilter: 'blur(10px)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Success Rate</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold)' }}>99.8%</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
+                <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
               </div>
             )}
           </div>
@@ -1064,11 +1050,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </header>
 
       {/* Visual Connector: Hero -> Why Us */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="0s" offset={width < 1024 ? '0' : '200px'} />
 
-      {/* ── WHY CHOOSE US SECTION ── */}
-      <section id="why-us" style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
-        <div className="section-glow" style={{ top: '-100px', right: '10%' }} />
+
+      {/* ── HOW IT WORKS TIMELINE (Page 2 of sketch) ── */}
+      <section id="how-it-works" style={{ padding: '120px 24px', background: 'rgba(255,255,255,0.01)', position: 'relative', zIndex: 10 }}>
+        <div className="section-glow" style={{ top: '20%', left: '5%' }} />
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div className="reveal-on-scroll" style={{ 
             display: 'grid', 
@@ -1076,26 +1062,87 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             gap: '80px', 
             alignItems: 'center' 
           }}>
-            {/* Left side visual - trust stats */}
-            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
-              {[
-                { label: 'Zero Scams', val: '0', icon: '🛡️', color: 'var(--accent-green)' },
-                { label: 'Successful Trades', val: '9,200+', icon: '✅', color: 'var(--gold)' },
-                { label: 'Avg. Response', val: '< 2 min', icon: '⚡', color: '#60a5fa' },
-                { label: 'Verified Users', val: '1,400+', icon: '🪪', color: '#a78bfa' },
-              ].map((s, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.3s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,197,24,0.2)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}>
-                  <div style={{ fontSize: '28px' }}>{s.icon}</div>
+            {/* Left Column: 3D Paper Money (alternating layout) */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px', order: width < 1024 ? 2 : 1 }}>
+              <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
+            </div>
+
+            {/* Right Column: Secure Asset Card + Simple & Transparent Steps */}
+            <div style={{ order: width < 1024 ? 1 : 2 }}>
+              {/* Premium $ Secure Asset / USD Reserve Card */}
+              <div className="premium-card" style={{
+                background: 'linear-gradient(145deg, rgba(20,20,24,0.9) 0%, rgba(10,10,14,0.95) 100%)',
+                border: '1px solid rgba(245,197,24,0.18)',
+                borderRadius: '24px',
+                padding: '28px',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(20px)',
+                marginBottom: '40px',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(0,212,160,0.15) 0%, transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    width: '64px', height: '64px',
+                    borderRadius: '16px',
+                    background: 'rgba(245,197,24,0.08)',
+                    border: '1.5px solid var(--gold)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '32px', fontWeight: '900', color: 'var(--gold)',
+                    boxShadow: '0 0 20px rgba(245,197,24,0.2)',
+                    flexShrink: 0
+                  }}>
+                    $
+                  </div>
                   <div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: s.color }}>{s.val}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-dim)' }}>{s.label}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '4px' }}>SECURE ASSETS</div>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '2px' }}>USD Reserve & Escrow</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.4 }}>Every trade is held in secure, fully collateralized escrow.</div>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Title & Timeline Header */}
+              <div style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '32px' }}>
+                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '48px', color: '#fff', margin: '0 0 16px 0' }}>Simple & Transparent</h2>
+                <p style={{ fontSize: '16px', color: 'var(--text-dim)' }}>Start your first trade in three easy steps.</p>
+              </div>
+
+              {/* Steps (Horizontal/Vertical Timeline) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {[
+                  { step: '01', t: 'Create & Verify', d: 'ID verification in under 2 mins.', icon: '👤' },
+                  { step: '02', t: 'Choose an Offer', d: 'Find the best local rates.', icon: '🔍' },
+                  { step: '03', t: 'Trade Safely', d: 'Instant escrow settlement.', icon: '🛡️' },
+                ].map((step, idx) => (
+                  <div key={idx} className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', gap: '20px', transitionDelay: `${idx * 150}ms` }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 0 15px rgba(245, 197, 24, 0.1)' }}>
+                      {step.icon}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '18px', color: '#fff', fontWeight: 700, marginBottom: '4px' }}>{step.t}</h3>
+                      <p style={{ fontSize: '14px', color: 'var(--text-dim)', margin: 0 }}>{step.d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            {/* Right side - why choose content */}
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY CHOOSE US SECTION (Page 3 of sketch) ── */}
+      <section id="why-us" style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
+        <div className="section-glow" style={{ top: '-100px', right: '10%' }} />
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="reveal-on-scroll" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: width < 1024 ? '1fr' : '1.2fr 0.8fr', 
+            gap: '80px', 
+            alignItems: 'center' 
+          }}>
+            {/* Left side - why choose content (4 feature cards in 2x2 grid) */}
             <div>
               <div className="reveal-on-scroll" style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '40px' }}>
                 <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>
@@ -1106,7 +1153,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 </p>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: width < 600 ? '1fr' : '1fr 1fr', gap: '20px' }}>
                 {[
                   { t: 'Escrow Protection', d: 'Your funds are held securely.', ic: '🔒' },
                   { t: 'Verified Community', d: 'Trade with real people.', ic: '🛡️' },
@@ -1123,71 +1170,19 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Visual Connector: Why Us -> How It Works */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="0.5s" offset={width < 1024 ? '0' : '-200px'} />
-
-      {/* ── HOW IT WORKS TIMELINE ── */}
-      <section id="how-it-works" style={{ padding: '120px 24px', background: 'rgba(255,255,255,0.01)', position: 'relative', zIndex: 10 }}>
-        <div className="section-glow" style={{ top: '20%', left: '5%' }} />
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div className="reveal-on-scroll" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: width < 1024 ? '1fr' : '1.2fr 0.8fr', 
-            gap: '60px', 
-            alignItems: 'center' 
-          }}>
-            {/* Left side visual - steps illustration */}
-            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: '440px' }}>
-              {/* Vertical timeline line */}
-              <div style={{ position: 'absolute', left: '50%', top: '40px', bottom: '40px', width: '2px', background: 'linear-gradient(to bottom, var(--gold), transparent)', opacity: 0.3, transform: 'translateX(-50%)' }} />
-              {[
-                { num: '01', label: 'Register & Verify KYC', color: 'var(--gold)' },
-                { num: '02', label: 'Deposit USDT to Wallet', color: '#60a5fa' },
-                { num: '03', label: 'Create or Accept P2P Offer', color: 'var(--accent-green)' },
-                { num: '04', label: 'Escrow Locks — Trade Executes', color: '#a78bfa' },
-                { num: '05', label: 'Receive ETB Instantly', color: 'var(--gold)' },
-              ].map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%', padding: '12px 20px', position: 'relative', zIndex: 2 }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `rgba(${step.color === 'var(--gold)' ? '245,197,24' : step.color === '#60a5fa' ? '96,165,250' : step.color === 'var(--accent-green)' ? '0,212,160' : '167,139,250'},0.1)`, border: `1px solid ${step.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: step.color, fontWeight: 800, fontSize: '12px', flexShrink: 0 }}>{step.num}</div>
-                  <div style={{ fontSize: '15px', color: '#c8c8c8', fontWeight: 500 }}>{step.label}</div>
-                </div>
-              ))}
-            </div>
-            
-            <div>
-              <div className="reveal-on-scroll" style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '64px' }}>
-                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>Simple & Transparent</h2>
-                <p style={{ maxWidth: '500px', margin: width < 1024 ? '0 auto' : '0', fontSize: '18px', color: 'var(--text-dim)' }}>Start your first trade in three easy steps.</p>
+            {/* Right side visual: 3D Paper Money (alternating layout) */}
+            {width >= 1024 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
+                <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                {[
-                  { step: '01', t: 'Create & Verify', d: 'ID verification in under 2 mins.', icon: '👤' },
-                  { step: '02', t: 'Choose an Offer', d: 'Find the best local rates.', icon: '🔍' },
-                  { step: '03', t: 'Trade Safely', d: 'Instant escrow settlement.', icon: '🛡️' },
-                ].map((step, idx) => (
-                  <div key={idx} className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', gap: '24px', transitionDelay: `${idx * 200}ms` }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, boxShadow: '0 0 20px rgba(245, 197, 24, 0.1)' }}>
-                      {step.icon}
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '20px', color: '#fff', fontWeight: 700, marginBottom: '4px' }}>{step.t}</h3>
-                      <p style={{ fontSize: '15px', color: 'var(--text-dim)', margin: 0 }}>{step.d}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* Visual Connector: How It Works -> Features */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="1s" offset={width < 1024 ? '0' : '200px'} />
+
 
       {/* ── FEATURED TRADE SECTIONS (Alternating) ── */}
       <section style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
@@ -1272,7 +1267,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* Visual Connector: Features -> Market */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="1.5s" offset="-30px" />
+
 
       {/* ── LIVE CALCULATOR SECTION ── */}
       <section id="market" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 10 }}>
@@ -1447,7 +1442,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* Visual Connector: Security -> Reviews */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="2s" offset="40px" />
+
 
       {/* ── TESTIMONIALS / REVIEWS (Item 3) ── */}
       <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -1552,7 +1547,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* Visual Connector: FAQ -> CTA */}
-      <PremiumUSDCard scrollProgress={scrollProgress} delay="2.5s" offset="0px" />
+
 
       {/* ── FINAL CTA ── */}
       <section style={{ padding: '120px 24px', textAlign: 'center', position: 'relative' }}>
