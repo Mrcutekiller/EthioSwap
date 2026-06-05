@@ -747,10 +747,23 @@ const AdminPanel = ({ user }) => {
   const liveNewUsersThisWeek = allUsersList?.filter(u => new Date(u.joinedAt).getTime() >= oneWeekAgo).length ?? 0;
   
   const approvedDeposits = allDepositReqs?.filter(r => r.status === 'approved') ?? [];
-  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + r.amountUSD, 0);
+  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + (r.amountUSD ?? r.amountUsd ?? 0), 0);
 
   // ── Bezier Chart Calculations ──────────────────────────────
-  const m = undefined;
+  const totalMyProfit = settings?.collectedFeesETH ?? 0;
+  const approvedDepositsThisWeek = allDepositReqs?.filter(r => 
+    r.status === 'approved' && 
+    new Date(r.createdAt).getTime() >= oneWeekAgo
+  ) ?? [];
+  const depositFeePercent = settings?.depositFeePercent ?? 1.0;
+  const depositFeesThisWeek = approvedDepositsThisWeek.reduce((s, r) => s + (r.amountUSD ?? r.amountUsd ?? 0) * (depositFeePercent / 100), 0);
+
+  const m = {
+    totalMyProfit,
+    feesThisWeek: depositFeesThisWeek,
+    buyCount: allDepositReqs?.filter(r => r.status === 'approved').length ?? 0,
+    sellCount: allWithdrawalReqs?.filter(r => r.status === 'approved').length ?? 0
+  };
   const realVolume = liveTotalDeposit || 150.0;
   const realUsers = liveTotalUsers || 12;
   
@@ -877,6 +890,89 @@ const AdminPanel = ({ user }) => {
           .desktop-only { display: none !important; }
         }
         .mobile-only { display: none; }
+
+        /* Tailwind-Compat Utilities for AdminPanel */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1 1 0%; }
+        .flex-shrink-0 { flex-shrink: 0; }
+        .h-screen { height: 100vh; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .min-w-0 { min-width: 0; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .w-full { width: 100%; }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .text-white { color: #ffffff; }
+        .ml-auto { margin-left: auto; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-auto { margin-top: auto; }
+        .p-2 { padding: 0.5rem; }
+        .p-3 { padding: 0.75rem; }
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .p-6 { padding: 1.5rem; }
+        .p-8 { padding: 2rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+        .px-8 { padding-left: 2rem; padding-right: 2rem; }
+        .py-1\\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+        .py-2\\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .pb-4 { padding-bottom: 1rem; }
+        .border-b { border-bottom: 1px solid var(--border); }
+        .border { border: 1px solid var(--border); }
+        .border-2 { border: 2px solid var(--border); }
+        .rounded-lg { border-radius: var(--radius-md); }
+        .rounded-2xl { border-radius: var(--radius-lg); }
+        .rounded-3xl { border-radius: var(--radius-xl); }
+        .rounded-full { border-radius: 9999px; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-5 { gap: 1.25rem; }
+        .gap-6 { gap: 1.5rem; }
+        .space-y-0\\.5 > * + * { margin-top: 0.125rem; }
+
+        /* Grids */
+        .grid { display: grid; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        @media (min-width: 768px) {
+          .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1024px) {
+          .lg\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+
+        /* Dimension helpers */
+        .w-6 { width: 24px; height: 24px; }
+        .w-9 { width: 36px; height: 36px; }
+        .w-12 { width: 48px; height: 48px; }
+        .h-6 { height: 24px; }
+        .h-9 { height: 36px; }
+        .h-12 { height: 48px; }
+        .h-\\[72px\\] { height: 72px; }
+
+        /* Backgrounds, borders, text color with variable names */
+        .bg-white\\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .hover\\:bg-white\\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .bg-\\[var\\(--bg-surface-hover\\)\\] { background-color: var(--bg-surface-hover); }
+        .border-\\[var\\(--border-hover\\)\\] { border-color: var(--border-hover); }
+        .text-\\[var\\(--text-secondary\\)\\] { color: var(--text-secondary); }
+        .text-\\[var\\(--text-primary\\)\\] { color: var(--text-primary); }
+        .bg-\\[var\\(--gold\\)\\]\\/10 { background-color: rgba(255, 215, 0, 0.1); }
+        .text-\\[var\\(--gold\\)\\] { color: var(--gold); }
+        .bg-\\[var\\(--teal\\)\\]\\/10 { background-color: rgba(0, 212, 160, 0.1); }
+        .text-\\[var\\(--teal\\)\\] { color: var(--teal); }
+        .bg-orange-500\\/10 { background-color: rgba(249, 115, 22, 0.1); }
+        .text-orange-400 { color: #fb923c; }
+        .bg-red-500\\/5 { background-color: rgba(239, 68, 68, 0.05); }
+        .border-2.border-\\[var\\(--gold\\)\\] { border: 2px solid var(--gold); }
+        .text-\\[var\\(--text-muted\\)\\] { color: var(--text-muted); }
       `}</style>
 
       {/* Toast Alert — Premium Slide-In */}
