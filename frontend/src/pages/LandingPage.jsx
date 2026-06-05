@@ -597,7 +597,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     { q: "Why do I need to verify my identity (KYC)?", a: "KYC verification (National ID + live selfie) protects you from fraud. Only verified users can trade, which means every counterparty on the platform is a real, identified person. Unverified users cannot trade." },
     { q: "What networks are supported for crypto deposits?", a: "We support TRC20 (Tron) and ERC20 (Ethereum) networks for USDT deposits and withdrawals. TRC20 is recommended for lower fees." },
     { q: "How fast are trades completed?", a: "Most trades are completed in under 15 minutes. The buyer has a 30-minute window to send payment. The seller then confirms receipt and releases the USDT instantly." },
-    { q: "What happens if there's a dispute?", a: "Either party can open a dispute at any time. Our support team reviews chat history, payment receipts, and bank statements, then makes a fair decision." },
+    { q: "What happens if there's a dispute?", a: "Either party can open a dispute at any time. Our support team reviews chat history, payment receipts, and bank statements, then makes a decision based on the evidence." },
+    { q: "What happens if a user tries to scam me with a fake receipt or fraud?", a: "If a buyer scams you with a fake payment receipt/bill or a seller acts fraudulently, report it to our team immediately. We will investigate, return the locked USDT to the rightful owner (the seller), and permanently ban the scammer from EthioSwap." },
   ];
 
   const getModalTitle = (type) => {
