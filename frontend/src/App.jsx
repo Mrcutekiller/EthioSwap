@@ -152,13 +152,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
             onClick={onBackToHome} 
             style={{ 
               alignSelf: 'flex-start', 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid var(--border)', 
+              background: 'rgba(255,255,255,0.05)', 
+              border: '1px solid rgba(255,255,255,0.2)', 
               borderRadius: '8px', 
-              color: 'var(--text-2)', 
+              color: '#FFFFFF', 
               padding: '6px 12px', 
               fontSize: '12px', 
-              fontWeight: '600',
+              fontWeight: '700',
               cursor: 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
@@ -411,7 +411,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
               color: '#0A0C12',
+              border: 'none',
+              borderRadius: '12px',
+              width: '100%',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(255, 215, 0, 0.4)',
               pointerEvents: loading ? 'none' : 'auto',
               opacity: loading ? 0.8 : 1
             }}
@@ -438,15 +444,16 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
           style={{ 
             width: '100%', 
             padding: '12px', 
-            background: 'transparent', 
-            border: '1px solid var(--border)', 
+            background: 'rgba(255, 215, 0, 0.05)', 
+            border: '1px solid rgba(255, 215, 0, 0.3)', 
             borderRadius: '12px', 
-            color: 'var(--text-2)', 
+            color: '#FFD700', 
             fontSize: '14px', 
-            fontWeight: 500, 
+            fontWeight: 700, 
             cursor: 'pointer', 
             fontFamily: 'var(--font)', 
-            transition: 'all 0.2s ease' 
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 10px rgba(255, 215, 0, 0.05)'
           }}
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}

@@ -6,6 +6,9 @@
   /* Colors */
   --gold:            #FFD700;
   --gold-hover:      #f0b800;
+  --gold-light:      #FFE082;
+  --gold-bg:         rgba(255, 215, 0, 0.1);
+  --gold-glow:       rgba(255, 215, 0, 0.25);
   --teal:            #00d4a0;
   --bg-page:         #010B13;
   --bg-surface:      #060f1c;
@@ -2091,6 +2094,118 @@ input, textarea, select { font-family: inherit; }
 /* ─── RESPONSIVE PC LAYOUT ──────────────────────────────────── */
 .desktop-nav {
   display: none;
+}
+
+/* Mobile Default Layout Styles */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  background: var(--bg-base);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  z-index: 100;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.page-content {
+  flex: 1;
+  padding: var(--space-4) var(--space-4) 100px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: rgba(10, 12, 18, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 12px;
+  z-index: 1000;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 4px;
+  flex: 1;
+  height: 100%;
+  padding: 6px 0;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item svg {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item:hover {
+  color: var(--text-2);
+}
+
+.nav-item.active {
+  color: var(--gold-light);
+}
+
+.nav-item.active svg {
+  transform: scale(1.1) translateY(-2px);
+  filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.4));
+}
+
+.nav-item:active {
+  transform: scale(0.95);
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: var(--status-danger-text);
+  color: white;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--bg-surface);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 @media (min-width: 769px) {

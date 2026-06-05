@@ -29,6 +29,23 @@ export const AuthProvider = ({ children }) => {
   const [listings, setListings] = useState([]);
   const [trades, setTrades] = useState([]);
 
+  const dbUser = useQuery(api.users.get, user?._id ? { id: user._id } : "skip");
+
+  useEffect(() => {
+    if (user?._id && dbUser === null) {
+      console.log("Logged-in user not found in DB (possibly deleted). Logging out.");
+      setUser(null);
+      localStorage.removeItem('ethioswap_user');
+      setErrorState("Account does not exist.");
+    } else if (user?._id && dbUser) {
+      const safeDbUser = { ...dbUser, id: dbUser._id };
+      if (JSON.stringify(user) !== JSON.stringify(safeDbUser)) {
+        setUser(safeDbUser);
+        localStorage.setItem('ethioswap_user', JSON.stringify(safeDbUser));
+      }
+    }
+  }, [user?._id, dbUser]);
+
   // Centralized fetching with error handling to prevent app crashes
   useEffect(() => {
     const fetchData = async () => {
@@ -117,11 +134,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      // First check if the account exists
+      const check = await convex.query(api.users.getByIdentifier, { identifier });
+      if (!check || !check.exists) {
+        throw new Error('Account does not exist.');
+      }
+
       // Use the new authenticate query
       const u = await convex.query(api.users.authenticate, { identifier, password });
       
       if (!u) {
-        throw new Error('Invalid username/email or password.');
+        throw new Error('Invalid password.');
       }
 
       // Add id alias for compatibility
@@ -148,6 +171,7 @@ export const AuthProvider = ({ children }) => {
         password, // Pass password for storage
         fullName,
         phone,
+        age: age ? Number(age) : null,
         role: email.toLowerCase().includes('admin') ? 'admin' : 'user',
         ethAddress: '0x' + Math.random().toString(16).slice(2, 42),
         ethPrivateKey: '0x' + Math.random().toString(16).slice(2, 66),
@@ -208,7 +232,7 @@ export const AuthProvider = ({ children }) => {
         listingId: listingId,
         amountEth: amountEth,
         amountEtb: Math.round(amountEth * (listing.customRateEtb || systemSettings.etbRatePerDollar)),
-        feeEth: amountEth * (systemSettings.flatFeePercent / 100),
+        feeEth: 0,
       });
       setSuccess('Trade initiated!');
     } catch (err) {

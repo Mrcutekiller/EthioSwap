@@ -253,13 +253,15 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts, submitReview, updateReview, deleteReview } = useAuth();
+  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout } = useAuth();
   const updateProfileMutation = useMutation(api.users.update);
+  const deleteAccountMutation = useMutation(api.users.remove);
   // loyalty/referral stats derived locally from available data
   const loyaltyInfo = null;
   const referralStats = null;
   
   const [showKYC, setShowKYC] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddAcc, setShowAddAcc] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurityLock, setShowSecurityLock] = useState(false);
@@ -983,6 +985,21 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         )}
       </div>
 
+      {/* ─── DANGER ZONE: DELETE ACCOUNT ──────────────────────── */}
+      <div className="card" style={{ padding: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.02)' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '8px', color: '#ef4444' }}>Danger Zone</h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
+          Once you delete your account, there is no going back. Please be certain.
+        </p>
+        <button 
+          onClick={() => setShowDeleteConfirm(true)} 
+          className="btn btn-danger" 
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+        >
+          🗑️ Delete My Account
+        </button>
+      </div>
+
       {/* ─── SECURITY LOCK MODAL ───────────────────────────────── */}
       {showSecurityLock && (
         <SecurityLock 
@@ -1070,6 +1087,42 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             if (onUserUpdate) onUserUpdate(updatedUser);
           }}
         />
+      )}
+
+      {/* ─── DELETE ACCOUNT CONFIRMATION MODAL ─────────────────── */}
+      {showDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '30px 24px', position: 'relative', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.3)', boxShadow: '0 20px 40px rgba(239, 68, 68, 0.1)' }}>
+            <div style={{ width: '56px', height: '56px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 16px' }}>⚠️</div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px', color: '#FFF' }}>Delete Account</h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.6', marginBottom: '24px' }}>
+              Are you sure? This action is permanent and cannot be undone. All your balance, trade history, and profile data will be deleted forever.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setShowDeleteConfirm(false)} 
+                className="btn btn-ghost" 
+                style={{ flex: 1, height: '44px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                No, I am not
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    await deleteAccountMutation({ id: user._id });
+                    logout();
+                  } catch (err) {
+                    alert("Failed to delete account: " + err.message);
+                  }
+                }} 
+                className="btn btn-danger" 
+                style={{ flex: 1, height: '44px', background: '#EF4444', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Yes, I am sure
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── EDIT PROFILE MODAL ─────────────────────────────────── */}

@@ -69,7 +69,8 @@ const WalletCard = () => {
 
   /* ─── computed ─────────────────────────────────────────────── */
   const rate        = systemSettings?.etbRatePerDollar ?? 190;
-  const platFee     = systemSettings?.flatFeePercent ?? 1.0;       // %
+  const depFeePercent = systemSettings?.depositFeePercent ?? 1.0;  // %
+  const wdFeePercent  = systemSettings?.withdrawalFeePercent ?? 1.0; // %
   const minDep      = systemSettings?.minDepositUSD   ?? 5;
   const minWd       = systemSettings?.minWithdrawalUSD ?? 10;
 
@@ -84,12 +85,12 @@ const WalletCard = () => {
 
   /* deposit breakdown */
   const depAmtNum     = parseFloat(depAmt) || 0;
-  const depPlatFeeAmt = depAmtNum * platFee / 100;
+  const depPlatFeeAmt = depAmtNum * depFeePercent / 100;
   const depYouGet     = Math.max(0, depAmtNum - depPlatFeeAmt);
 
   /* withdraw breakdown */
   const wdAmtNum      = parseFloat(wdAmt) || 0;
-  const wdPlatFeeAmt  = wdAmtNum * platFee / 100;
+  const wdPlatFeeAmt  = wdAmtNum * wdFeePercent / 100;
   const wdChainFee    = chainFee;
   const wdYouGet      = Math.max(0, wdAmtNum - wdPlatFeeAmt - wdChainFee);
 

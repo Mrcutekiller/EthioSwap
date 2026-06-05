@@ -54,6 +54,16 @@ export const updateStatus = mutation({
       await ctx.db.patch(request.userId, {
         ethLocked: (user.ethLocked || 0) - request.amountEth,
       });
+
+      const settings = await ctx.db.query("systemSettings").first();
+      const feePercent = settings?.withdrawalFeePercent !== undefined ? settings.withdrawalFeePercent : 1.0;
+      const feeEth = request.amountEth * (feePercent / 100);
+
+      if (settings) {
+        await ctx.db.patch(settings._id, {
+          collectedFeesETH: (settings.collectedFeesETH || 0) + feeEth,
+        });
+      }
     } else if (args.status === "rejected") {
       // Return to available balance
       await ctx.db.patch(request.userId, {

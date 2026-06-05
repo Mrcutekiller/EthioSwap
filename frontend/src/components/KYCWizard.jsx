@@ -2,11 +2,15 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 const KYCWizard = ({ user, onComplete, onClose }) => {
   const [step, setStep] = useState(1); // 1=intro, 2=info, 3=id-front, 4=id-back, 5=face, 6=done
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(user.fullName || '');
   const [kycPhone, setKycPhone] = useState(user.phone || '');
-  const [age, setAge] = useState('');
+  const [age, setAge] = useState(user.age !== undefined && user.age !== null ? String(user.age) : '');
   const [idType, setIdType] = useState('National ID Card');
   const [address, setAddress] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('01');
+  const [birthDay, setBirthDay] = useState('');
+  const [idNumber, setIdNumber] = useState('');
 
   const [idFront, setIdFront] = useState(null);
   const [idBack, setIdBack] = useState(null);
@@ -154,21 +158,21 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
 
   const handleSaveInfo = async (e) => {
     e.preventDefault();
-    if (!fullName.trim() || !kycPhone.trim() || !age.trim() || !idType) {
-      setError('Please fill in all required fields.');
+    if (!birthYear.trim() || !birthMonth.trim() || !birthDay.trim() || !idNumber.trim()) {
+      setError('Please fill in your Date of Birth and ID Number.');
       return;
     }
-    setLoading(true);
-    setError('');
-    try {
-      // Mocked for Convex migration
-      console.log('Would save KYC info:', { fullName, kycPhone, age, idType });
-      setStep(3); // Go to ID Front upload
-    } catch (err) {
-      setError(err.message || 'Failed to save information. Try again.');
-    } finally {
-      setLoading(false);
+    const yearVal = parseInt(birthYear, 10);
+    const dayVal = parseInt(birthDay, 10);
+    if (isNaN(yearVal) || yearVal < 1900 || yearVal > new Date().getFullYear()) {
+      setError('Please enter a valid Birth Year.');
+      return;
     }
+    if (isNaN(dayVal) || dayVal < 1 || dayVal > 31) {
+      setError('Please enter a valid Birth Day.');
+      return;
+    }
+    setStep(3); // Go to ID Front upload
   };
 
   const handleUploadIDs = async () => {
@@ -202,7 +206,8 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
           age: parseInt(age, 10) || 18,
           idType: idType,
           address: address,
-          idNumber: 'ETH-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+          idNumber: idNumber,
+          birthDate: `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`,
         },
         fullName: fullName,
         phone: kycPhone,
@@ -280,18 +285,63 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: 600 }}>Full Name *</label>
-                  <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="e.g. Abebe Kebede" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} />
+                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-3)', marginBottom: '6px', fontWeight: 600 }}>Full Name (Pre-filled from Profile)</label>
+                  <input type="text" value={fullName} disabled style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: '14px', fontFamily: 'var(--font)', cursor: 'not-allowed', opacity: 0.7 }} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: 600 }}>Phone Number *</label>
-                    <input type="tel" value={kycPhone} onChange={e => setKycPhone(e.target.value)} required placeholder="+251..." style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} />
+                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-3)', marginBottom: '6px', fontWeight: 600 }}>Phone Number (Pre-filled)</label>
+                    <input type="tel" value={kycPhone} disabled style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: '14px', fontFamily: 'var(--font)', cursor: 'not-allowed', opacity: 0.7 }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: 600 }}>Age *</label>
-                    <input type="number" value={age} onChange={e => setAge(e.target.value)} required min="18" max="120" placeholder="Min 18" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} />
+                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-3)', marginBottom: '6px', fontWeight: 600 }}>Age (Pre-filled)</label>
+                    <input type="number" value={age} disabled style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: '14px', fontFamily: 'var(--font)', cursor: 'not-allowed', opacity: 0.7 }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: 600 }}>Date of Birth *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <input 
+                      type="number" 
+                      placeholder="Year (YYYY)" 
+                      value={birthYear} 
+                      onChange={e => setBirthYear(e.target.value)} 
+                      min="1900" 
+                      max={new Date().getFullYear() - 18} 
+                      required 
+                      style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} 
+                    />
+                    <select 
+                      value={birthMonth} 
+                      onChange={e => setBirthMonth(e.target.value)} 
+                      required 
+                      style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }}
+                    >
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07">July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                    <input 
+                      type="number" 
+                      placeholder="Day (DD)" 
+                      value={birthDay} 
+                      onChange={e => setBirthDay(e.target.value)} 
+                      min="1" 
+                      max="31" 
+                      required 
+                      style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} 
+                    />
                   </div>
                 </div>
 
@@ -302,6 +352,18 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
                     <option value="Passport">Passport</option>
                     <option value="Driver's License">Driver's License</option>
                   </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: 600 }}>ID Number *</label>
+                  <input 
+                    type="text" 
+                    placeholder="Enter ID / Passport number" 
+                    value={idNumber} 
+                    onChange={e => setIdNumber(e.target.value)} 
+                    required 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '14px', fontFamily: 'var(--font)' }} 
+                  />
                 </div>
 
                 <div>

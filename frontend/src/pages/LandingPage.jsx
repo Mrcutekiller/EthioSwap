@@ -1610,7 +1610,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>TikTok</a>
               <a href="https://www.instagram.com/ethioswap" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Instagram</a>
-              <a href="https://t.me/EthioSwapDev" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
+              <a href="https://t.me/EthioSwap1" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
             </div>
           </div>
         </div>

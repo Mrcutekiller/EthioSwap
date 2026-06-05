@@ -46,9 +46,20 @@ export const updateStatus = mutation({
       const user = await ctx.db.get(request.userId);
       if (!user) throw new Error("User not found");
       
+      const settings = await ctx.db.query("systemSettings").first();
+      const feePercent = settings?.depositFeePercent !== undefined ? settings.depositFeePercent : 1.0;
+      const feeEth = request.amountEth * (feePercent / 100);
+      const amountNet = Math.max(0, request.amountEth - feeEth);
+
       await ctx.db.patch(request.userId, {
-        ethBalance: (user.ethBalance || 0) + request.amountEth,
+        ethBalance: (user.ethBalance || 0) + amountNet,
       });
+
+      if (settings) {
+        await ctx.db.patch(settings._id, {
+          collectedFeesETH: (settings.collectedFeesETH || 0) + feeEth,
+        });
+      }
     }
 
     await ctx.db.patch(args.id, {

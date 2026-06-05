@@ -29,6 +29,7 @@ export const create = mutation({
     phone: v.optional(v.union(v.string(), v.null())),
     ethAddress: v.string(),
     ethPrivateKey: v.string(),
+    age: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     if (args.email) {
@@ -200,6 +201,23 @@ export const remove = mutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+export const getByIdentifier = query({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.identifier))
+      .first();
+    if (!user) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", args.identifier))
+        .first();
+    }
+    return user ? { exists: true } : { exists: false };
   },
 });
 
