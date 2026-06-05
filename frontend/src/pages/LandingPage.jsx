@@ -127,12 +127,12 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  // Dimensions: real $100 bill ratio = 6.14" × 2.61" ≈ 2.35:1
+  // Dimensions: real $100 bill ratio (vertical format)
   const dims = {
-    lg: { w: 420, h: 178 },
-    md: { w: 340, h: 145 },
-    sm: { w: 260, h: 110 },
-  }[size] || { w: 420, h: 178 };
+    lg: { w: 178, h: 420 },
+    md: { w: 145, h: 340 },
+    sm: { w: 110, h: 260 },
+  }[size] || { w: 178, h: 420 };
 
   const { w, h } = dims;
 
@@ -176,14 +176,10 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
           background: '#0d2217',
           boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
         }}>
-          {/* Centered rotated container to show tall vertical USD image horizontally */}
+          {/* US dollar note scan is already vertical, fit directly */}
           <div style={{
-            position: 'absolute',
-            width: `${h}px`,
-            height: `${w}px`,
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%) rotate(-90deg)',
+            width: '100%',
+            height: '100%',
             backgroundImage: 'url(/images/usd_100.jpg)',
             backgroundSize: '100% 100%',
             backgroundPosition: 'center',
@@ -203,10 +199,14 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
           background: '#1d1b24',
           boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
         }}>
-          {/* Displaying the top half (Walia Ibex) of the double-note image */}
+          {/* Center and rotate the horizontal ETB scan to fit the vertical card */}
           <div style={{
-            width: '100%',
-            height: '100%',
+            position: 'absolute',
+            width: `${h}px`,
+            height: `${w}px`,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%) rotate(90deg)',
             backgroundImage: 'url(/images/etb_200.jpg)',
             backgroundSize: '100% 200%',
             backgroundPosition: 'top center',
@@ -887,14 +887,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
 
               <h1 className="serif-title" style={{ fontSize: width < 768 ? '42px' : '82px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 20px 0', fontWeight: 800 }}>
-                Swap dollars to<br />
-                <span style={{ color: 'var(--gold)' }}>Birr</span> in <span style={{ color: 'var(--accent-green)' }}>seconds</span>
+                Swap USD to<br />
+                <span style={{ color: 'var(--gold)' }}>ETB</span> with <span style={{ color: 'var(--accent-green)' }}>Trust</span>
               </h1>
 
               <div style={{ height: '4px', width: '100px', background: 'var(--gold)', marginBottom: '32px', borderRadius: '2px', display: width < 1024 ? 'none' : 'block' }} />
 
               <p style={{ fontSize: width < 768 ? '16px' : '20px', color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: width < 1024 ? '100%' : '580px', marginBottom: '32px' }}>
-                Buy and sell USDT for Ethiopian Birr at the best live rates. Fast P2P trades, secure escrow, and instant local payouts.
+                Access the most secure P2P platform in Ethiopia. Trade USDT for Ethiopian Birr instantly at premium rates with multi-bank support and 100% collateralized escrow.
               </p>
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start', marginBottom: '48px' }}>
@@ -926,12 +926,16 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* Right Side: 3D Paper Money — USD front / Birr back */}
-            {width >= 1024 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
-                <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
-              </div>
-            )}
+            {/* Right Side: 3D Paper Money */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: width < 768 ? '300px' : '500px',
+              marginTop: width < 1024 ? '32px' : '0',
+            }}>
+              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
+            </div>
           </div>
         </div>
       </header>
@@ -950,8 +954,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             alignItems: 'center' 
           }}>
             {/* Left Column: 3D Paper Money (alternating layout) */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px', order: width < 1024 ? 2 : 1 }}>
-              <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: width < 768 ? '300px' : '500px',
+              order: width < 1024 ? 2 : 1,
+              marginTop: width < 1024 ? '32px' : '0',
+            }}>
+              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
             </div>
 
             {/* Right Column: Secure Asset Card + Simple & Transparent Steps */}
@@ -992,16 +1003,16 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
               {/* Title & Timeline Header */}
               <div style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '32px' }}>
-                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '48px', color: '#fff', margin: '0 0 16px 0' }}>Simple & Transparent</h2>
-                <p style={{ fontSize: '16px', color: 'var(--text-dim)' }}>Start your first trade in three easy steps.</p>
+                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '48px', color: '#fff', margin: '0 0 16px 0' }}>How It Works</h2>
+                <p style={{ fontSize: '16px', color: 'var(--text-dim)' }}>Three simple steps to secure your first USDT exchange.</p>
               </div>
 
               {/* Steps (Horizontal/Vertical Timeline) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {[
-                  { step: '01', t: 'Create & Verify', d: 'ID verification in under 2 mins.', icon: '👤' },
-                  { step: '02', t: 'Choose an Offer', d: 'Find the best local rates.', icon: '🔍' },
-                  { step: '03', t: 'Trade Safely', d: 'Instant escrow settlement.', icon: '🛡️' },
+                  { step: '01', t: 'Create & Verify Account', d: 'Complete quick verification to secure your profile.', icon: '👤' },
+                  { step: '02', t: 'Select a P2P Listing', d: 'Compare live market rates and pick your preferred bank method.', icon: '🔍' },
+                  { step: '03', t: 'Complete the Trade', d: 'Escrow automatically secures the transaction until funds arrive.', icon: '🛡️' },
                 ].map((step, idx) => (
                   <div key={idx} className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', gap: '20px', transitionDelay: `${idx * 150}ms` }}>
                     <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 0 15px rgba(245, 197, 24, 0.1)' }}>
@@ -1033,19 +1044,19 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div>
               <div className="reveal-on-scroll" style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '40px' }}>
                 <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>
-                  Why Choose <span style={{ color: 'var(--gold)' }}>EthioSwap</span>
+                  Why Trade on <span style={{ color: 'var(--gold)' }}>EthioSwap</span>
                 </h2>
                 <p style={{ maxWidth: '600px', margin: width < 1024 ? '0 auto' : '0', fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                  The most trusted platform for digital asset exchange in Ethiopia, built with security and speed at its core.
+                  Ethiopia's premier fiat-to-USDT exchange, engineered for speed, reliability, and absolute security.
                 </p>
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: width < 600 ? '1fr' : '1fr 1fr', gap: '20px' }}>
                 {[
-                  { t: 'Escrow Protection', d: 'Your funds are held securely.', ic: '🔒' },
-                  { t: 'Verified Community', d: 'Trade with real people.', ic: '🛡️' },
-                  { t: 'Instant Settlement', d: 'Fastest trade times.', ic: '⚡' },
-                  { t: '24/7 Support', d: 'Always here to help.', ic: '🎧' },
+                  { t: 'Escrow Protection', d: 'USDT is locked in automated multi-sig escrow until payment is confirmed.', ic: '🔒' },
+                  { t: 'Verified Community', d: 'Mandatory KYC verification ensures you only trade with verified, trusted members.', ic: '🛡️' },
+                  { t: 'Instant Settlement', d: 'Our automated transaction matching enables fast swaps and real-time payouts.', ic: '⚡' },
+                  { t: 'Dedicated 24/7 Support', d: 'Around-the-clock dispute resolution and technical support for your peace of mind.', ic: '🎧' },
                 ].map((ft, idx) => (
                   <div key={idx} className="premium-card reveal-on-scroll" style={{ padding: '24px', transitionDelay: `${idx * 100}ms` }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--gold-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1px solid var(--gold)', marginBottom: '16px' }}>
@@ -1059,11 +1070,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </div>
 
             {/* Right side visual: 3D Paper Money (alternating layout) */}
-            {width >= 1024 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
-                <FloatingBill size="lg" prefersReducedMotion={prefersReducedMotion} />
-              </div>
-            )}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: width < 768 ? '300px' : '500px',
+              marginTop: width < 1024 ? '32px' : '0',
+            }}>
+              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
+            </div>
           </div>
         </div>
       </section>
