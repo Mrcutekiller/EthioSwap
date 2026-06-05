@@ -52,6 +52,25 @@ export default defineSchema({
     kycDocument: v.optional(v.any()),
     kycIdFront: v.optional(v.any()),
     kycIdBack: v.optional(v.any()),
+    
+    // Ratings & Verification
+    averageRating: v.optional(v.number()),
+    
+    // Telegram Connection
+    telegramChatId: v.optional(v.string()),
+    telegramLinkCode: v.optional(v.string()),
+    telegramLinkExpires: v.optional(v.number()),
+    
+    // Notification toggles
+    smsEnabled: v.optional(v.boolean()),
+    telegramEnabled: v.optional(v.boolean()),
+
+    // KYC Additional fields
+    kycFullName: v.optional(v.string()),
+    kycDob: v.optional(v.string()),
+    kycRejectedCount: v.optional(v.number()),
+    isFlagged: v.optional(v.boolean()),
+    flaggedReason: v.optional(v.string()),
   })
   .index("by_username", ["username"])
   .index("by_email", ["email"]),
@@ -130,9 +149,15 @@ export default defineSchema({
     openedBy: v.id("users"),
     reason: v.string(),
     status: v.string(),
+    buyerEvidence: v.optional(v.array(v.string())),
+    sellerEvidence: v.optional(v.array(v.string())),
     adminNote: v.optional(v.string()),
+    resolvedAt: v.optional(v.string()),
+    resolvedBy: v.optional(v.id("users")),
+    resolution: v.optional(v.string()),
+    splitBuyerPercent: v.optional(v.number()),
     createdAt: v.optional(v.any()), // number or string in live data
-  }),
+  }).index("by_trade", ["tradeId"]),
 
   exchangeRates: defineTable({
     buyRate: v.number(),
@@ -228,5 +253,46 @@ export default defineSchema({
     messageText: v.string(),
     messageType: v.string(), // "text" | "image" | "system"
     createdAt: v.string(),
+    isRead: v.optional(v.boolean()),
+    readAt: v.optional(v.string()),
   }).index("by_trade", ["tradeId"]),
+
+  tradeRatings: defineTable({
+    tradeId: v.id("trades"),
+    raterId: v.id("users"),
+    ratedId: v.id("users"),
+    rating: v.number(),
+    comment: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+  .index("by_trade", ["tradeId"])
+  .index("by_rated", ["ratedId"]),
+
+  disputeAuditLogs: defineTable({
+    adminId: v.id("users"),
+    adminUsername: v.string(),
+    tradeId: v.id("trades"),
+    action: v.string(),
+    details: v.string(),
+    createdAt: v.string(),
+  })
+  .index("by_trade", ["tradeId"]),
+
+  rateHistory: defineTable({
+    buyRate: v.number(),
+    sellRate: v.number(),
+    averageRate: v.number(),
+    createdAt: v.string(),
+  })
+  .index("by_created", ["createdAt"]),
+
+  notificationLogs: defineTable({
+    userId: v.id("users"),
+    type: v.string(),
+    channel: v.string(), // "sms" | "telegram" | "in_app"
+    message: v.string(),
+    status: v.string(), // "delivered" | "failed"
+    sentAt: v.string(),
+  })
+  .index("by_user", ["userId"]),
 });

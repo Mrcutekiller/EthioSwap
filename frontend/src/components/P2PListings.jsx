@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import EmptyState from './EmptyState.jsx';
+import MarketRates from './MarketRates.jsx';
 
 // ─── All Ethiopian payment methods ───────────────────────────
 const ALL_PAYMENT_METHODS = [
@@ -42,6 +43,9 @@ const P2PListings = () => {
   const [kycDismissed, setKycDismissed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('rate_asc');
+  const [onlyVerified, setOnlyVerified] = useState(false);
+  const [onlyKyc, setOnlyKyc] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
 
   // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
   React.useEffect(() => {
@@ -191,7 +195,10 @@ const P2PListings = () => {
         (l.sellerName || '').toLowerCase().includes(term) ||
         (l.paymentMethods || []).some(p => p.toLowerCase().includes(term));
 
-      return matchesType && matchesPayment && matchesAmount && matchesSearch;
+      const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
+      const matchesKyc = !onlyKyc || l.sellerKycStatus === 'verified';
+
+      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc;
     })
     .sort((a, b) => {
       const rateA = a.customRateEtb || rate;
@@ -333,42 +340,73 @@ const P2PListings = () => {
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
         </div>
 
-        {kycApproved ? (
-          <button 
-            onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }} 
-            className="btn btn-gold" 
-            style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="btn btn-ghost"
+            style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, border: '1px solid var(--border)' }}
           >
-            <span>+ Post Ad</span>
+            <span>🧮 {showCalculator ? 'Hide Calc' : 'Calculator'}</span>
           </button>
-        ) : (
-          <button 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'profile' }));
-              setTimeout(() => {
-                window.history.pushState({}, '', '/profile?openKyc=true');
-                window.dispatchEvent(new Event('popstate'));
-              }, 100);
-            }}
-            style={{
-              background: 'transparent',
-              border: '1.5px solid #f5c518',
-              borderRadius: '20px',
-              height: '38px',
-              padding: '0 16px',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#f5c518',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            🛡️ Verify ID to trade
-          </button>
-        )}
+
+          {kycApproved ? (
+            <button 
+              onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }} 
+              className="btn btn-gold" 
+              style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+            >
+              <span>+ Post Ad</span>
+            </button>
+          ) : (
+            <button 
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'profile' }));
+                setTimeout(() => {
+                  window.history.pushState({}, '', '/profile?openKyc=true');
+                  window.dispatchEvent(new Event('popstate'));
+                }, 100);
+              }}
+              style={{
+                background: 'transparent',
+                border: '1.5px solid #f5c518',
+                borderRadius: '20px',
+                height: '38px',
+                padding: '0 16px',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#f5c518',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🛡️ Verify ID to trade
+            </button>
+          )}
+        </div>
       </div>
+
+      {showCalculator && (
+        <div className="premium-dashboard-card fade-in-1" style={{ padding: '20px', borderRadius: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+          <MarketRates 
+            isLoggedIn={true} 
+            onSelectOffer={(type, offerId) => {
+              setP2pTab(type);
+              setTimeout(() => {
+                const el = document.getElementById(`listing-${offerId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  el.style.outline = '2px solid var(--gold)';
+                  setTimeout(() => el.style.outline = 'none', 3000);
+                } else {
+                  alert(`Selected offer is of type ${type.toUpperCase()}. Use filters below to find it.`);
+                }
+              }, 100);
+            }} 
+          />
+        </div>
+      )}
 
       {/* ── Welcome & Balance Widget ── */}
       <div className="premium-dashboard-card" style={{ 
@@ -581,6 +619,44 @@ const P2PListings = () => {
         </select>
       </div>
 
+      {/* ── Quick Filter Badges ── */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '-4px', marginBottom: '4px' }}>
+        <button
+          onClick={() => setOnlyVerified(!onlyVerified)}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: '1px solid',
+            background: onlyVerified ? 'rgba(245, 197, 24, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+            borderColor: onlyVerified ? '#f5c518' : 'rgba(255, 255, 255, 0.08)',
+            color: onlyVerified ? '#f5c518' : '#8b92a8',
+            transition: 'all 0.2s',
+          }}
+        >
+          ★ Show Only Verified Traders
+        </button>
+        <button
+          onClick={() => setOnlyKyc(!onlyKyc)}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: '1px solid',
+            background: onlyKyc ? 'rgba(0, 212, 160, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+            borderColor: onlyKyc ? '#00d4a0' : 'rgba(255, 255, 255, 0.08)',
+            color: onlyKyc ? '#00d4a0' : '#8b92a8',
+            transition: 'all 0.2s',
+          }}
+        >
+          🛡️ KYC Verified Only
+        </button>
+      </div>
+
       {/* ── Filter Row 1: Payment Method ── */}
       <div style={{ position: 'relative', width: '100%' }}>
         <div className="custom-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px', WebkitOverflowScrolling: 'touch' }}>
@@ -761,31 +837,46 @@ const P2PListings = () => {
                   }}>
                     {(listing.sellerName || 'U').charAt(0).toUpperCase()}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#ffffff' }}>@{listing.sellerName}</span>
-                      <span style={{ 
-                        background: 'rgba(0,212,160,0.12)', 
-                        color: '#00d4a0', 
-                        fontSize: '9px', 
-                        fontWeight: 700, 
-                        padding: '2px 6px', 
-                        borderRadius: '99px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px'
-                      }}>
-                        ✓ Verified
-                      </span>
+                      {listing.sellerKycStatus === 'verified' && (
+                        <span style={{ 
+                          background: 'rgba(0,212,160,0.12)', 
+                          color: '#00d4a0', 
+                          fontSize: '9px', 
+                          fontWeight: 700, 
+                          padding: '2px 6px', 
+                          borderRadius: '99px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}>
+                          🛡️ KYC Verified
+                        </span>
+                      )}
+                      {listing.isSellerVerifiedTrader && (
+                        <span style={{ 
+                          background: 'rgba(245,197,24,0.12)', 
+                          color: '#f5c518', 
+                          fontSize: '9px', 
+                          fontWeight: 700, 
+                          padding: '2px 6px', 
+                          borderRadius: '99px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}>
+                          ★ Verified Trader
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: repColor(listing.sellerReputation ?? 100), fontWeight: 700 }}>
-                        ★ {listing.sellerReputation ?? 100}% rep
+                      <span style={{ color: '#f5c518', fontWeight: 700 }}>
+                        ★ {(listing.sellerAverageRating || 5.0).toFixed(1)} rating
                       </span>
                       <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
                       <span>{listing.sellerTotalTrades || 0} trades</span>
                     </div>
-                  </div>
                   <span style={{
                     fontSize: '10px',
                     fontWeight: 800,

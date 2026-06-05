@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTranslation } from 'react-i18next';
 import TradeChat from './TradeChat.jsx';
-import { Star, Shield, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { Star, Shield, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Upload, FileImage } from 'lucide-react';
+import { useQuery } from "convex/react";
+import { api } from "convex-api";
 
 const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   const [stars, setStars] = useState(5);
@@ -43,8 +45,112 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   );
 };
 
+const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, setSuccess }) => {
+  const dispute = useQuery(api.trades.getDisputeForTrade, { tradeId: trade._id });
+  const [uploading, setUploading] = useState(false);
+
+  if (!dispute) return null;
+
+  const isBuyer = user._id === trade.buyerId;
+  const myEvidence = isBuyer ? (dispute.buyerEvidence || []) : (dispute.sellerEvidence || []);
+  const theirEvidence = isBuyer ? (dispute.sellerEvidence || []) : (dispute.buyerEvidence || []);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
+      return;
+    }
+    if (myEvidence.length >= 3) {
+      setError('You can upload a maximum of 3 evidence files.');
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async (event) => {
+      try {
+        const base64String = event.target.result;
+        await uploadDisputeEvidence(trade._id, base64String);
+        setSuccess('Dispute evidence uploaded successfully!');
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.onerror = () => {
+      setError('File reading failed');
+      setUploading(false);
+    };
+  };
+
+  return (
+    <div style={{
+      background: 'rgba(239, 68, 68, 0.05)',
+      border: '1px solid rgba(239, 68, 68, 0.15)',
+      borderRadius: '16px',
+      padding: '20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <AlertTriangle size={20} color="#ef4444" />
+        <div>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#fff' }}>Escrow Dispute Active</h3>
+          <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#8b92a8' }}>Escrow is frozen. Upload proof of payment (Telebirr/CBE receipt screenshot) for admin review.</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        {/* My Evidence */}
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#fff' }}>My Evidence ({myEvidence.length}/3)</span>
+            {myEvidence.length < 3 && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
+                <Upload size={12} /> Upload
+                <input type="file" hidden accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+              </label>
+            )}
+          </div>
+          {uploading && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Uploading...</div>}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {myEvidence.map((src, idx) => (
+              <a href={src} target="_blank" rel="noopener noreferrer" key={idx} style={{ position: 'relative', width: '50px', height: '50px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'block' }}>
+                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="evidence" />
+              </a>
+            ))}
+            {myEvidence.length === 0 && !uploading && (
+              <span style={{ fontSize: '11.5px', color: '#525866' }}>No evidence uploaded yet</span>
+            )}
+          </div>
+        </div>
+
+        {/* Counterparty Evidence */}
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+          <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>Counterparty Evidence ({theirEvidence.length}/3)</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {theirEvidence.map((src, idx) => (
+              <a href={src} target="_blank" rel="noopener noreferrer" key={idx} style={{ position: 'relative', width: '50px', height: '50px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'block' }}>
+                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="evidence" />
+              </a>
+            ))}
+            {theirEvidence.length === 0 && (
+              <span style={{ fontSize: '11.5px', color: '#525866' }}>No evidence uploaded by partner</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TradeRoom = () => {
-  const { user, trades, markTradeAsPaid, releaseEscrow, cancelTrade, openDispute, submitRating, setError, setSuccess } = useAuth();
+  const { user, trades, markTradeAsPaid, releaseEscrow, cancelTrade, openDispute, uploadDisputeEvidence, submitRating, setError, setSuccess } = useAuth();
   const { t } = useTranslation();
   const [selectedTradeId, setSelectedTradeId] = useState(null);
   const [showRating, setShowRating] = useState(false);
@@ -94,13 +200,19 @@ const TradeRoom = () => {
   };
 
   const handleOpenDispute = async () => {
+    const created = new Date(activeTrade.createdAt).getTime();
+    const elapsed = Date.now() - created;
+    if (elapsed < 30 * 60 * 1000) {
+      const remainingMins = Math.ceil((30 * 60 * 1000 - elapsed) / (60 * 1000));
+      alert(`You must wait 30 minutes since trade start before opening a dispute. Please wait another ${remainingMins} minute(s).`);
+      return;
+    }
     const reason = prompt("Why are you opening a dispute?");
     if (reason) await openDispute(activeTrade._id, reason);
   };
 
   const handleRatingSubmit = async (stars, review) => {
-    const ratedUserId = user._id === activeTrade.buyerId ? activeTrade.sellerId : activeTrade.buyerId;
-    // await submitRating(activeTrade._id, ratedUserId, stars, review);
+    await submitRating(activeTrade._id, stars, review);
     setShowRating(false);
   };
 
@@ -170,6 +282,16 @@ const TradeRoom = () => {
               )}
             </div>
           </div>
+
+          {activeTrade.status === 'disputed' && (
+            <DisputeEvidenceConsole 
+              trade={activeTrade} 
+              user={user} 
+              uploadDisputeEvidence={uploadDisputeEvidence} 
+              setError={setError} 
+              setSuccess={setSuccess} 
+            />
+          )}
 
           {/* Chat Component */}
           <div style={{ flex: 1, overflow: 'hidden' }}>

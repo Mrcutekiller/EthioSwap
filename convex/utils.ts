@@ -112,3 +112,30 @@ export function sha256Sync(ascii: string): string {
   }
   return finalHash;
 }
+
+export function encryptText(text: string): string {
+  const key = process.env.CHAT_ENCRYPTION_SECRET || "EthioSwapSecureChatSecretKey123!";
+  const ascii = encodeURIComponent(text);
+  let result = "";
+  for (let i = 0; i < ascii.length; i++) {
+    const charCode = ascii.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    result += charCode.toString(16).padStart(2, "0");
+  }
+  return result;
+}
+
+export function decryptText(hex: string): string {
+  const key = process.env.CHAT_ENCRYPTION_SECRET || "EthioSwapSecureChatSecretKey123!";
+  let ascii = "";
+  for (let i = 0; i < hex.length; i += 2) {
+    const code = parseInt(hex.substring(i, i + 2), 16);
+    const charCode = code ^ key.charCodeAt((i / 2) % key.length);
+    ascii += String.fromCharCode(charCode);
+  }
+  try {
+    return decodeURIComponent(ascii);
+  } catch (e) {
+    return ascii; // fallback
+  }
+}
+

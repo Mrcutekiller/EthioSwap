@@ -303,7 +303,8 @@ const AdminPanel = ({ user }) => {
     allDepositReqs,
     allWithdrawalReqs,
     approveWithdrawalRequest,
-    rejectWithdrawalRequest
+    rejectWithdrawalRequest,
+    resolveDispute
   } = useAuth();
 
   const [activeTab,   setActiveTab]   = useState('overview');
@@ -338,6 +339,9 @@ const AdminPanel = ({ user }) => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [warnMessage, setWarnMessage] = useState('');
   const [warnLoading, setWarnLoading] = useState(false);
+  const [mediationNotes, setMediationNotes] = useState({});
+  const [resolutionActions, setResolutionActions] = useState({});
+  const [splitPercent, setSplitPercent] = useState({});
 
   // Verification Resubmission Reason popup
   const [resubmitUserId, setResubmitUserId] = useState(null);
@@ -380,6 +384,7 @@ const AdminPanel = ({ user }) => {
   const allUsersList = useQuery(api.users.listAll) || [];
   const kycQueue = useQuery(api.users.listKycQueue) || [];
   const auditLogs = useQuery(api.adminAuditLogs.list) || [];
+  const adminAnalytics = useQuery(api.stats.getAdminAnalytics);
   const disputes = useQuery(api.trades.listDisputed) || [];
   const supportTickets = useQuery(api.supportTickets.listAll) || [];
   const allReviews = useQuery(api.reviews.listAll) || [];
@@ -559,7 +564,7 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        await updateKycStatus({ id: userId, status: 'approved' });
+        await updateKycStatus({ id: userId, status: 'verified' });
         showAlert('✓ KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
@@ -641,12 +646,15 @@ const AdminPanel = ({ user }) => {
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
-  const handleDispute = async (tradeId, action) => {
-    if (!window.confirm(`Force ${action === 'release' ? 'RELEASE to Buyer' : 'REFUND to Seller'}? This is irreversible.`)) return;
+  const handleDispute = async (disputeId, action, splitBuyerPercent, adminNote) => {
+    if (!adminNote || !adminNote.trim()) {
+      showAlert('Mediation notes/explanation is required.', 'error');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to resolve this dispute? This is irreversible.`)) return;
     try {
-      // Mocked for Convex migration
-      console.log('Would resolve dispute for trade:', tradeId, action);
-      showAlert(`Dispute resolved: ${action}`);
+      await resolveDispute(disputeId, action, splitBuyerPercent, adminNote);
+      showAlert(`Dispute resolved successfully: ${action}`);
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
@@ -1150,277 +1158,619 @@ const AdminPanel = ({ user }) => {
                 </button>
               </div>
 
-              {/* Segmented Pill Period Control */}
-              <div style={{ display: 'flex', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '30px', padding: '4px', width: '320px', gap: '2px' }}>
-                {[{id:'today',l:'Today'},{id:'week',l:'Week'},{id:'month',l:'Month'},{id:'all',l:'All'}].map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setPeriod(t.id)}
-                    className="segmented-btn"
-                    style={{
-                      borderRadius: '30px',
-                      background: period === t.id ? '#00d4a0' : 'transparent',
-                      color: period === t.id ? '#0d1117' : '#8b92a8',
-                    }}
-                  >
-                    {t.l}
-                  </button>
-                ))}
-              </div>
-
-              {/* Redesigned Bento Grid Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                {/* 1. Volume */}
-                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
-                        <i className="ti ti-coins text-2xl"></i>
+              {!adminAnalytics ? (
+                // LOADING SKELETON STATE
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="skeleton" style={{ height: '110px', borderRadius: '24px' }} />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="skeleton" style={{ height: '300px', borderRadius: '24px' }} />
+                    <div className="skeleton" style={{ height: '300px', borderRadius: '24px' }} />
+                  </div>
+                  <div className="skeleton" style={{ height: '400px', borderRadius: '24px' }} />
+                </div>
+              ) : (
+                // REAL ANALYTICS DASHBOARD
+                <>
+                  {/* Bento Grid Metrics */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    {/* Today's Completed Trades */}
+                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2.5 rounded-2xl bg-[var(--teal)]/10 text-[var(--teal)]">
+                            <i className="ti ti-arrows-right-left text-xl"></i>
+                          </div>
+                          <span className="text-[10px] font-bold text-[var(--teal)] uppercase px-2 py-0.5 rounded-full bg-[var(--teal)]/10">Today</span>
+                        </div>
+                        <div>
+                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Completed Trades</p>
+                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.completedTrades}</h3>
+                        </div>
                       </div>
-                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/viscious-speed/abstract-100.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--gold)' }} alt="abstract" />
                     </div>
-                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Total Volume</p>
-                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">${realVolume.toFixed(2)}</h3>
-                    <p className="text-[var(--teal)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
-                      <i className="ti ti-trending-up"></i> +12.5% <span className="text-[var(--text-muted)] font-medium">Filtered</span>
-                    </p>
-                  </div>
-                </div>
 
-                {/* 2. Users */}
-                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-2xl bg-[var(--teal)]/10 text-[var(--teal)]">
-                        <i className="ti ti-users text-2xl"></i>
+                    {/* Today's Volume */}
+                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2.5 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
+                            <i className="ti ti-coins text-xl"></i>
+                          </div>
+                          <span className="text-[10px] font-bold text-[var(--gold)] uppercase px-2 py-0.5 rounded-full bg-[var(--gold)]/10">USDT</span>
+                        </div>
+                        <div>
+                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Today's Volume</p>
+                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">${adminAnalytics.today.volume.toFixed(2)}</h3>
+                        </div>
                       </div>
-                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/viscious-speed/abstract-111.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--teal)' }} alt="abstract" />
                     </div>
-                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Active Users</p>
-                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">{liveTotalUsers}</h3>
-                    <p className="text-[var(--teal)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
-                      <i className="ti ti-trending-up"></i> +8.2% <span className="text-[var(--text-muted)] font-medium">Growth</span>
-                    </p>
-                  </div>
-                </div>
 
-                {/* 3. Disputes */}
-                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
-                        <i className="ti ti-gavel text-2xl"></i>
+                    {/* Today's Signups */}
+                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-400">
+                            <i className="ti ti-user-plus text-xl"></i>
+                          </div>
+                          <span className="text-[10px] font-bold text-blue-400 uppercase px-2 py-0.5 rounded-full bg-blue-500/10">Users</span>
+                        </div>
+                        <div>
+                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">New Signups</p>
+                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.newSignups}</h3>
+                        </div>
                       </div>
-                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/lorc/spiral-arrow.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--warning)' }} alt="abstract" />
                     </div>
-                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Open Disputes</p>
-                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">{disputes.length}</h3>
-                    <p className="text-red-400 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
-                      <i className="ti ti-alert-circle"></i> Requires Action
-                    </p>
-                  </div>
-                </div>
 
-                {/* 4. Escrow */}
-                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
-                        <i className="ti ti-lock text-2xl"></i>
+                    {/* Open Disputes */}
+                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2.5 rounded-2xl bg-red-500/10 text-red-400">
+                            <i className="ti ti-alert-triangle text-xl"></i>
+                          </div>
+                          <span className="text-[10px] font-bold text-red-400 uppercase px-2 py-0.5 rounded-full bg-red-500/10">Disputes</span>
+                        </div>
+                        <div>
+                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Open Disputes</p>
+                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.openDisputes}</h3>
+                        </div>
                       </div>
-                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/lorc/steelwing-emblem.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--gold)' }} alt="abstract" />
                     </div>
-                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Value Locked</p>
-                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">${(adminEarnings?.walletLocked ?? 0).toFixed(2)}</h3>
-                    <p className="text-[var(--text-muted)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
-                      <i className="ti ti-shield-check"></i> Fully Insured
-                    </p>
+
+                    {/* Pending KYC Submissions */}
+                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2.5 rounded-2xl bg-orange-500/10 text-orange-400">
+                            <i className="ti ti-id-badge text-xl"></i>
+                          </div>
+                          <span className="text-[10px] font-bold text-orange-400 uppercase px-2 py-0.5 rounded-full bg-orange-500/10">KYC</span>
+                        </div>
+                        <div>
+                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Pending KYC</p>
+                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.pendingKyc}</h3>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-              </div>
+                  {/* Charts Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Daily Volume Bar Chart */}
+                    <div className="card-premium" style={{ padding: '24px' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Daily Trade Volume (Last 30 Days)</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>USDT Volume processed daily over the last 30 days</p>
+                      </div>
 
-              {/* Glowing Performance Trends Chart Card */}
-              <div className="card-premium" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Platform Performance Trends</h3>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Visualizing core analytics indices</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px', background: '#0a0c12', padding: '3px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px' }}>
-                    <button
-                      onClick={() => setChartType('volume')}
-                      style={{
-                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700,
-                        background: chartType === 'volume' ? 'rgba(0, 212, 160, 0.15)' : 'transparent',
-                        color: chartType === 'volume' ? '#00d4a0' : '#8b92a8',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      Volume
-                    </button>
-                    <button
-                      onClick={() => setChartType('users')}
-                      style={{
-                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                        fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700,
-                        background: chartType === 'users' ? 'rgba(0, 212, 160, 0.15)' : 'transparent',
-                        color: chartType === 'users' ? '#00d4a0' : '#8b92a8',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      User Growth
-                    </button>
-                  </div>
-                </div>
+                      {/* SVG Bar Chart */}
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <svg viewBox="0 0 600 200" width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
+                          <defs>
+                            <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#00d4a0" />
+                              <stop offset="100%" stopColor="rgba(0, 212, 160, 0.2)" />
+                            </linearGradient>
+                          </defs>
 
-                {/* SVG Canvas with hovering elements */}
-                <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
-                  <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
-                    <defs>
-                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#00d4a0" floodOpacity="0.25" />
-                      </filter>
-                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00d4a0" stopOpacity="0.15" />
-                        <stop offset="100%" stopColor="#00d4a0" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Grid Lines */}
-                    {[0.25, 0.5, 0.75].map((ratio, idx) => {
-                      const y = paddingY + ratio * (svgHeight - paddingY * 2);
-                      return (
-                        <line
-                          key={idx}
-                          x1={paddingX}
-                          y1={y}
-                          x2={svgWidth - paddingX}
-                          y2={y}
-                          stroke="rgba(255,255,255,0.03)"
-                          strokeWidth="1"
-                          strokeDasharray="4 4"
-                        />
-                      );
-                    })}
-
-                    {/* Fill Area */}
-                    {areaD && <path d={areaD} fill="url(#areaGradient)" />}
-
-                    {/* Main Line */}
-                    {pathD && (
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke="#00d4a0"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        filter="url(#glow)"
-                      />
-                    )}
-
-                    {/* Point circles & dynamic hover tooltips */}
-                    {points.map((p, idx) => {
-                      const isHovered = hoveredIdx === idx;
-                      const showTooltip = isHovered || (hoveredIdx === null && idx === points.length - 1);
-                      const isMainPoint = idx === points.length - 1;
-
-                      return (
-                        <g key={idx}>
-                          {/* Vertical cursor grid line */}
-                          <line
-                            x1={p.x}
-                            y1={paddingY}
-                            x2={p.x}
-                            y2={svgHeight - paddingY}
-                            stroke={isHovered ? "rgba(0, 212, 160, 0.15)" : "rgba(255, 255, 255, 0.015)"}
-                            strokeWidth="1.5"
-                            strokeDasharray={isHovered ? "3 3" : "none"}
-                          />
-                          
-                          {/* Outer pulse */}
-                          {(isHovered || (hoveredIdx === null && isMainPoint)) && (
-                            <circle
-                              cx={p.x}
-                              cy={p.y}
-                              r="8"
-                              fill="#00d4a0"
-                              opacity="0.25"
-                            />
-                          )}
-
-                          {/* Interactive circle point */}
-                          <circle
-                            cx={p.x}
-                            cy={p.y}
-                            r={isHovered || (hoveredIdx === null && isMainPoint) ? "5.5" : "3.5"}
-                            fill="#00d4a0"
-                            stroke="#111318"
-                            strokeWidth="2"
-                          />
-
-                          {/* Hover Tooltip Box */}
-                          {showTooltip && (
-                            <g style={{ pointerEvents: 'none' }}>
-                              <rect
-                                x={p.x - 35}
-                                y={p.y - 32}
-                                width="70"
-                                height="20"
-                                rx="6"
-                                fill="#0a0c12"
-                                stroke="rgba(0, 212, 160, 0.4)"
+                          {/* Grid Lines */}
+                          {[0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                            const y = 30 + ratio * 130;
+                            return (
+                              <line
+                                key={idx}
+                                x1={30}
+                                y1={y}
+                                x2={570}
+                                y2={y}
+                                stroke="rgba(255,255,255,0.03)"
                                 strokeWidth="1"
+                                strokeDasharray="3 3"
                               />
-                              <text
-                                x={p.x}
-                                y={p.y - 18}
-                                fontSize="9"
-                                fontWeight="700"
-                                textAnchor="middle"
-                                fill="#f0f2f8"
-                              >
-                                {chartType === 'volume' ? `$${p.val.toFixed(1)}` : `${p.val} usr`}
-                              </text>
-                            </g>
+                            );
+                          })}
+
+                          {/* Bars */}
+                          {(() => {
+                            const data = adminAnalytics.charts.dailyVolume;
+                            const maxVal = Math.max(...data.map(d => d.volume), 10);
+                            const barWidth = 12;
+                            const gap = (540 - (data.length * barWidth)) / (data.length - 1);
+                            
+                            return data.map((d, i) => {
+                              const x = 30 + i * (barWidth + gap);
+                              const h = (d.volume / maxVal) * 130;
+                              const y = 160 - h;
+
+                              return (
+                                <g key={i}>
+                                  <rect
+                                    x={x}
+                                    y={y}
+                                    width={barWidth}
+                                    height={h}
+                                    fill="url(#barGrad)"
+                                    rx="2"
+                                    style={{ transition: 'all 0.3s ease', cursor: 'pointer' }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.fill = '#f0b800';
+                                      const tip = document.getElementById(`vol-tip-${i}`);
+                                      if (tip) tip.setAttribute('opacity', '1');
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.fill = 'url(#barGrad)';
+                                      const tip = document.getElementById(`vol-tip-${i}`);
+                                      if (tip) tip.setAttribute('opacity', '0');
+                                    }}
+                                  />
+                                  {/* Tooltip */}
+                                  <g id={`vol-tip-${i}`} opacity="0" style={{ pointerEvents: 'none', transition: 'opacity 0.2s' }}>
+                                    <rect x={x - 24} y={y - 28} width="60" height="22" rx="4" fill="#0d1117" stroke="#f0b800" strokeWidth="1" />
+                                    <text x={x + 6} y={y - 14} fill="#fff" fontSize="8px" fontWeight="bold" textAnchor="middle">
+                                      ${d.volume.toFixed(0)}
+                                    </text>
+                                  </g>
+                                  
+                                  {/* X-axis ticks (draw every 6th tick) */}
+                                  {i % 6 === 0 && (
+                                    <text x={x + barWidth/2} y={180} fill="#4e5567" fontSize="8px" fontWeight="bold" textAnchor="middle">
+                                      {d.date}
+                                    </text>
+                                  )}
+                                </g>
+                              );
+                            });
+                          })()}
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* New Users Growth (Weekly) */}
+                    <div className="card-premium" style={{ padding: '24px' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Weekly User Growth (Last 6 Weeks)</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Number of new users joined weekly</p>
+                      </div>
+
+                      {/* SVG Line Chart */}
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <svg viewBox="0 0 600 200" width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
+                          <defs>
+                            <linearGradient id="userAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#f0b800" stopOpacity="0.15" />
+                              <stop offset="100%" stopColor="#f0b800" stopOpacity="0" />
+                            </linearGradient>
+                            <filter id="userGlow" x="-20%" y="-20%" width="140%" height="140%">
+                              <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#f0b800" floodOpacity="0.3" />
+                            </filter>
+                          </defs>
+
+                          {/* Grid Lines */}
+                          {[0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                            const y = 30 + ratio * 130;
+                            return (
+                              <line
+                                key={idx}
+                                x1={30}
+                                y1={y}
+                                x2={570}
+                                y2={y}
+                                stroke="rgba(255,255,255,0.03)"
+                                strokeWidth="1"
+                                strokeDasharray="3 3"
+                              />
+                            );
+                          })}
+
+                          {(() => {
+                            const data = adminAnalytics.charts.weeklyUsers;
+                            const maxVal = Math.max(...data.map(d => d.count), 5);
+                            const w = 540;
+                            const points = data.map((d, i) => {
+                              const x = 30 + i * (w / (data.length - 1));
+                              const y = 160 - (d.count / maxVal) * 130;
+                              return { x, y, val: d.count, week: d.week };
+                            });
+
+                            // Build path D
+                            const pathD = points.reduce((acc, p, i) => {
+                              if (i === 0) return `M ${p.x} ${p.y}`;
+                              const prev = points[i - 1];
+                              const cpX1 = prev.x + (p.x - prev.x) / 2;
+                              const cpY1 = prev.y;
+                              const cpX2 = prev.x + (p.x - prev.x) / 2;
+                              const cpY2 = p.y;
+                              return `${acc} C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p.x} ${p.y}`;
+                            }, '');
+
+                            const areaD = `${pathD} L ${points[points.length-1].x} 160 L ${points[0].x} 160 Z`;
+
+                            return (
+                              <>
+                                <path d={areaD} fill="url(#userAreaGrad)" />
+                                <path d={pathD} fill="none" stroke="#f0b800" strokeWidth="2.5" filter="url(#userGlow)" strokeLinecap="round" />
+                                
+                                {points.map((p, i) => (
+                                  <g key={i}>
+                                    <circle
+                                      cx={p.x}
+                                      cy={p.y}
+                                      r="4"
+                                      fill="#f0b800"
+                                      stroke="#0d1117"
+                                      strokeWidth="1.5"
+                                      style={{ cursor: 'pointer' }}
+                                      onMouseEnter={() => {
+                                        const t = document.getElementById(`user-tip-${i}`);
+                                        if (t) t.setAttribute('opacity', '1');
+                                      }}
+                                      onMouseLeave={() => {
+                                        const t = document.getElementById(`user-tip-${i}`);
+                                        if (t) t.setAttribute('opacity', '0');
+                                      }}
+                                    />
+                                    {/* Tooltip */}
+                                    <g id={`user-tip-${i}`} opacity="0" style={{ pointerEvents: 'none', transition: 'opacity 0.2s' }}>
+                                      <rect x={p.x - 20} y={p.y - 26} width="40" height="18" rx="4" fill="#0d1117" stroke="#f0b800" strokeWidth="1" />
+                                      <text x={p.x} y={p.y - 14} fill="#fff" fontSize="8px" fontWeight="bold" textAnchor="middle">
+                                        {p.val}
+                                      </text>
+                                    </g>
+                                    
+                                    <text x={p.x} y={180} fill="#4e5567" fontSize="8px" fontWeight="bold" textAnchor="middle">
+                                      {p.week}
+                                    </text>
+                                  </g>
+                                ))}
+                              </>
+                            );
+                          })()}
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trade Distribution & Flagged Summary Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Pie / Donut Chart */}
+                    <div className="card-premium lg:col-span-1" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Trade Status Distribution</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Completion, cancellation and dispute rates</p>
+                      </div>
+
+                      {/* Donut SVG */}
+                      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '160px', gap: '20px' }}>
+                        {(() => {
+                          const dist = adminAnalytics.charts.distribution;
+                          const total = dist.completed + dist.cancelled + dist.disputed;
+                          if (total === 0) {
+                            return <div style={{ fontSize: '12px', color: '#8b92a8' }}>No trades recorded yet</div>;
+                          }
+
+                          const compP = (dist.completed / total) * 100;
+                          const cancP = (dist.cancelled / total) * 100;
+                          const dispP = (dist.disputed / total) * 100;
+
+                          // Circumference is 2 * pi * r = 2 * 3.1415 * 40 = 251.32
+                          const circ = 251.32;
+                          const strokeCompleted = (compP / 100) * circ;
+                          const strokeCancelled = (cancP / 100) * circ;
+                          const strokeDisputed = (dispP / 100) * circ;
+
+                          return (
+                            <>
+                              <svg width="120" height="120" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="10" />
+                                
+                                {/* Completed Circle */}
+                                <circle
+                                  cx="50"
+                                  cy="50"
+                                  r="40"
+                                  fill="transparent"
+                                  stroke="#00d4a0"
+                                  strokeWidth="10"
+                                  strokeDasharray={`${strokeCompleted} ${circ}`}
+                                  strokeDashoffset="0"
+                                  transform="rotate(-90 50 50)"
+                                />
+
+                                {/* Cancelled Circle */}
+                                <circle
+                                  cx="50"
+                                  cy="50"
+                                  r="40"
+                                  fill="transparent"
+                                  stroke="#8b92a8"
+                                  strokeWidth="10"
+                                  strokeDasharray={`${strokeCancelled} ${circ}`}
+                                  strokeDashoffset={-strokeCompleted}
+                                  transform="rotate(-90 50 50)"
+                                />
+
+                                {/* Disputed Circle */}
+                                <circle
+                                  cx="50"
+                                  cy="50"
+                                  r="40"
+                                  fill="transparent"
+                                  stroke="#f43f5e"
+                                  strokeWidth="10"
+                                  strokeDasharray={`${strokeDisputed} ${circ}`}
+                                  strokeDashoffset={-(strokeCompleted + strokeCancelled)}
+                                  transform="rotate(-90 50 50)"
+                                />
+                              </svg>
+
+                              {/* Donut Legend */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00d4a0' }} />
+                                  <span style={{ color: '#8b92a8' }}>Completed: </span>
+                                  <strong style={{ color: '#f0f2f8' }}>{compP.toFixed(0)}% ({dist.completed})</strong>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b92a8' }} />
+                                  <span style={{ color: '#8b92a8' }}>Cancelled: </span>
+                                  <strong style={{ color: '#f0f2f8' }}>{cancP.toFixed(0)}% ({dist.cancelled})</strong>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e' }} />
+                                  <span style={{ color: '#8b92a8' }}>Disputed: </span>
+                                  <strong style={{ color: '#f0f2f8' }}>{dispP.toFixed(0)}% ({dist.disputed})</strong>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Flagged Accounts Panel */}
+                    <div className="card-premium lg:col-span-2" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>⚠️ Auto-Flagged Accounts</h3>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Traders with 3+ disputes or KYC rejected 2+ times</p>
+                        </div>
+                        <span className="pill-badge" style={{ background: 'rgba(244,63,94,0.1)', color: '#f43f5e' }}>
+                          {adminAnalytics.flaggedAccounts.length} Flagged
+                        </span>
+                      </div>
+
+                      <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto', flex: 1 }}>
+                        {adminAnalytics.flaggedAccounts.length === 0 ? (
+                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#4e5567', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '10px', padding: '20px' }}>
+                            ✓ Clean record! No flagged accounts found.
+                          </div>
+                        ) : (
+                          adminAnalytics.flaggedAccounts.map((acc, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#0a0c12', border: '1px solid rgba(244,63,94,0.15)', borderRadius: '12px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f2f8' }}>
+                                  @{acc.username}
+                                  <span style={{ fontSize: '10px', color: '#8b92a8', marginLeft: '8px', padding: '2px 6px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px' }}>
+                                    Role: {acc.role}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#f43f5e', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>🚨 Reason: {acc.autoFlaggedReason}</span>
+                                  <span>•</span>
+                                  <span>Disputes: {acc.disputesCount}</span>
+                                  <span>•</span>
+                                  <span>KYC Rejections: {acc.kycRejectedCount}</span>
+                                </div>
+                              </div>
+                              
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => { setSelectedUserDetailId(acc.userId); setUserDrawerTab('profile'); }}
+                                  className="btn-premium-ghost"
+                                  style={{ padding: '6px 12px', fontSize: '11px' }}
+                                >
+                                  Inspect User
+                                </button>
+                                <button
+                                  onClick={() => handleToggleSuspend(acc.userId, false)}
+                                  className="btn-premium-danger"
+                                  style={{ padding: '6px 12px', fontSize: '11px', background: '#f43f5e', color: '#fff' }}
+                                >
+                                  Suspend
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Traders & Most Disputed Users Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Top 10 Traders */}
+                    <div className="card-premium" style={{ padding: '24px' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>🏆 Top 10 Traders This Month</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Ranked by completed trade volume this month</p>
+                      </div>
+
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="table-premium">
+                          <thead>
+                            <tr>
+                              <th>Rank</th>
+                              <th>Trader</th>
+                              <th>Completed Trades</th>
+                              <th>Volume (ETH)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminAnalytics.topTraders.length === 0 ? (
+                              <tr>
+                                <td colSpan="4" style={{ textAlign: 'center', color: '#4e5567', padding: '16px' }}>
+                                  No trader activity recorded this month
+                                </td>
+                              </tr>
+                            ) : (
+                              adminAnalytics.topTraders.map((trader, i) => (
+                                <tr key={i} style={{ cursor: 'pointer' }} onClick={() => { setSelectedUserDetailId(trader._id || trader.userId); setUserDrawerTab('profile'); }}>
+                                  <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</td>
+                                  <td style={{ fontWeight: 600 }}>@{trader.username}</td>
+                                  <td>{trader.count}</td>
+                                  <td style={{ color: '#00d4a0', fontWeight: 700 }}>
+                                    {(trader.volume ?? 0).toFixed(4)} ETH
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Most Disputed Users */}
+                    <div className="card-premium" style={{ padding: '24px' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>⚖️ High Dispute Risk Users</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Accounts with dispute rates over 20% (minimum 2 disputes)</p>
+                      </div>
+
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="table-premium">
+                          <thead>
+                            <tr>
+                              <th>User</th>
+                              <th>Total Trades</th>
+                              <th>Disputes</th>
+                              <th>Dispute Rate</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {adminAnalytics.highlyDisputedUsers.length === 0 ? (
+                              <tr>
+                                <td colSpan="5" style={{ textAlign: 'center', color: '#4e5567', padding: '16px' }}>
+                                  ✓ No high-risk dispute accounts found
+                                </td>
+                              </tr>
+                            ) : (
+                              adminAnalytics.highlyDisputedUsers.map((item, i) => (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600 }}>@{item.username}</td>
+                                  <td>{item.totalTrades}</td>
+                                  <td style={{ color: '#f43f5e', fontWeight: 700 }}>{item.disputeCount}</td>
+                                  <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ color: '#f43f5e', fontWeight: 700, minWidth: '34px' }}>{item.disputeRate}%</span>
+                                      <div style={{ flex: 1, minWidth: '60px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${Math.min(100, item.disputeRate)}%`, height: '100%', background: '#f43f5e' }} />
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <button
+                                      onClick={() => { setSelectedUserDetailId(item.userId); setUserDrawerTab('profile'); }}
+                                      className="btn-premium-ghost"
+                                      style={{ padding: '4px 10px', fontSize: '10px' }}
+                                    >
+                                      Inspect
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Trades Feed */}
+                  <div className="card-premium" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>⚡ Real-Time Trades Feed</h3>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Showing the 10 most recent trades on the platform</p>
+                      </div>
+                      <span className="pill-badge" style={{ background: 'rgba(0,212,160,0.1)', color: '#00d4a0' }}>
+                        Live Feed
+                      </span>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="table-premium">
+                        <thead>
+                          <tr>
+                            <th>Trade ID</th>
+                            <th>Buyer</th>
+                            <th>Seller</th>
+                            <th>USDT Amount</th>
+                            <th>ETB Amount</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminAnalytics.recentTrades.length === 0 ? (
+                            <tr>
+                              <td colSpan="7" style={{ textAlign: 'center', color: '#4e5567', padding: '16px' }}>
+                                No recent trade activities found
+                              </td>
+                            </tr>
+                          ) : (
+                            adminAnalytics.recentTrades.map((t, i) => (
+                              <tr key={i}>
+                                <td style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8b92a8' }}>
+                                  {String(t.id).substring(0, 10)}…
+                                </td>
+                                <td>@{t.buyerName}</td>
+                                <td>@{t.sellerName}</td>
+                                <td style={{ fontWeight: 700, color: '#f0f2f8' }}>
+                                  ${t.amountEth.toFixed(2)}
+                                </td>
+                                <td style={{ fontWeight: 600, color: '#8b92a8' }}>
+                                  {Math.round(t.amountEtb).toLocaleString()} ETB
+                                </td>
+                                <td>
+                                  <StatusBadge status={t.status} />
+                                </td>
+                                <td style={{ fontSize: '11px', color: '#4e5567' }}>
+                                  {new Date(t.createdAt).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
                           )}
-
-                          {/* Big trigger area for clean hover */}
-                          <circle
-                            cx={p.x}
-                            cy={p.y}
-                            r="20"
-                            fill="transparent"
-                            style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                            onMouseEnter={() => setHoveredIdx(idx)}
-                            onMouseLeave={() => setHoveredIdx(null)}
-                          />
-                        </g>
-                      );
-                    })}
-
-                    {/* X-Axis labels */}
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
-                      const x = paddingX + (idx * (svgWidth - paddingX * 2) / 6);
-                      return (
-                        <text
-                          key={idx}
-                          x={x}
-                          y={svgHeight - 8}
-                          fontSize="10"
-                          fontWeight="500"
-                          fill="#4e5567"
-                          textAnchor="middle"
-                        >
-                          {day}
-                        </text>
-                      );
-                    })}
-                  </svg>
-                </div>
-              </div>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Floating Bottom Sticky Bar */}
               <div className="floating-bottom-bar" style={{
@@ -1444,7 +1794,6 @@ const AdminPanel = ({ user }) => {
                   <div style={{ fontSize: '14px' }}>
                     <span style={{ color: '#8b92a8' }}>Platform Earnings Pool: </span>
                     <strong style={{ color: '#00d4a0', fontSize: '15px' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)} USD</strong>
-                    <span style={{ color: '#4e5567', marginLeft: '8px' }}>({(m?.feesThisWeek ?? 0) >= 0 ? `+$${(m?.feesThisWeek ?? 0).toFixed(2)} this week` : ''})</span>
                   </div>
                 </div>
                 <button
@@ -2057,7 +2406,7 @@ const AdminPanel = ({ user }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
               <div>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Active Escrow Trade Disputes</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Mediate blocked escrows: force release funds to buyer or refund seller</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Mediate blocked escrows: force release funds to buyer, refund seller, or split ratio</p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -2065,42 +2414,126 @@ const AdminPanel = ({ user }) => {
                   <div style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>
                     ⚖️ All disputes cleared. Excellent platform compliance!
                   </div>
-                ) : disputes.map(trade => (
-                  <div key={trade._id} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{trade._id.substring(0, 8).toUpperCase()}</div>
-                        <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
-                          Seller: <strong>@{trade.sellerUsername}</strong> | Buyer: <strong>@{trade.buyerUsername}</strong>
+                ) : disputes.map(dispute => {
+                  const tradeId = dispute.tradeId;
+                  const disputeId = dispute._id;
+                  const resolution = resolutionActions[disputeId] || 'release_to_buyer';
+                  const notes = mediationNotes[disputeId] || '';
+                  const split = splitPercent[disputeId] || 50;
+
+                  return (
+                    <div key={disputeId} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{tradeId.substring(0, 8).toUpperCase()}</div>
+                          <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
+                            Seller: <strong>@{dispute.sellerUsername}</strong> | Buyer: <strong>@{dispute.buyerUsername}</strong>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>{dispute.amountEth ? dispute.amountEth.toFixed(4) : '0.00'} USDT</div>
+                          <span style={{ fontSize: '10px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>DISPUTED</span>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>${(trade.amountUSD ?? trade.amountUsd ?? 0).toFixed(2)} USD</div>
-                        <span style={{ fontSize: '10px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>DISPUTED</span>
-                      </div>
-                    </div>
 
-                    <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <span style={{ color: '#8b92a8' }}>Fiat Amount:</span>
-                        <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{trade.amountETB} ETB</div>
+                      <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <span style={{ color: '#8b92a8' }}>Fiat Amount:</span>
+                          <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{dispute.amountEtb} ETB</div>
+                        </div>
+                        <div>
+                          <span style={{ color: '#8b92a8' }}>Opened By:</span>
+                          <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>@{dispute.openerUsername} ({new Date(dispute.createdAt).toLocaleString()})</div>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ color: '#8b92a8' }}>Dispute Reason:</span>
+                          <div style={{ fontWeight: 600, color: '#f43f5e', marginTop: '2px', fontStyle: 'italic' }}>"{dispute.reason}"</div>
+                        </div>
                       </div>
-                      <div>
-                        <span style={{ color: '#8b92a8' }}>Created:</span>
-                        <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{new Date(trade.createdAt).toLocaleString()}</div>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button onClick={() => handleDispute(trade._id, 'release')} className="btn-premium-primary" style={{ flex: 1 }}>
-                        ✓ Force Release to Buyer (@{trade.buyerUsername})
-                      </button>
-                      <button onClick={() => handleDispute(trade._id, 'refund')} className="btn-premium-danger" style={{ flex: 1 }}>
-                        ✗ Force Refund to Seller (@{trade.sellerUsername})
-                      </button>
+                      {/* Evidence Files Row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px' }}>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Buyer Evidence ({dispute.buyerEvidence?.length || 0})</div>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {dispute.buyerEvidence?.map((src, i) => (
+                              <div key={i} onClick={() => setActiveLightboxImage(src)} style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+                                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                              </div>
+                            ))}
+                            {(!dispute.buyerEvidence || dispute.buyerEvidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px' }}>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Seller Evidence ({dispute.sellerEvidence?.length || 0})</div>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {dispute.sellerEvidence?.map((src, i) => (
+                              <div key={i} onClick={() => setActiveLightboxImage(src)} style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+                                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                              </div>
+                            ))}
+                            {(!dispute.sellerEvidence || dispute.sellerEvidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Resolution Console Controls */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '14px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '12px', color: '#8b92a8', width: '120px' }}>Resolution Action:</span>
+                          <select
+                            value={resolution}
+                            onChange={e => setResolutionActions({ ...resolutionActions, [disputeId]: e.target.value })}
+                            className="input"
+                            style={{ flex: 1, marginBottom: 0, padding: '6px 10px', fontSize: '12px' }}
+                          >
+                            <option value="release_to_buyer">Release escrow to Buyer (@{dispute.buyerUsername})</option>
+                            <option value="refund_to_seller">Refund escrow to Seller (@{dispute.sellerUsername})</option>
+                            <option value="split">Split escrow (Custom Ratio)</option>
+                          </select>
+                        </div>
+
+                        {resolution === 'split' && (
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', margin: '4px 0' }}>
+                            <span style={{ fontSize: '12px', color: '#8b92a8', width: '120px' }}>Split Ratio:</span>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={split}
+                                onChange={e => setSplitPercent({ ...splitPercent, [disputeId]: parseInt(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{ fontSize: '12px', color: '#fff', fontWeight: 600, width: '90px', textAlign: 'right' }}>
+                                {split}% Buyer / {100 - split}% Seller
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '12px', color: '#8b92a8', width: '120px', marginTop: '6px' }}>Mediation Notes:</span>
+                          <textarea
+                            placeholder="Write reason for this resolution (sent to both parties, logged in audit)..."
+                            value={notes}
+                            onChange={e => setMediationNotes({ ...mediationNotes, [disputeId]: e.target.value })}
+                            className="input"
+                            style={{ flex: 1, height: '60px', marginBottom: 0, fontSize: '12px', padding: '8px' }}
+                          ></textarea>
+                        </div>
+
+                        <button
+                          onClick={() => handleDispute(disputeId, resolution, split, notes)}
+                          className="btn-premium-primary"
+                          style={{ alignSelf: 'flex-end', padding: '8px 20px', fontSize: '12px' }}
+                        >
+                          ⚖️ Confirm Dispute Resolution
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

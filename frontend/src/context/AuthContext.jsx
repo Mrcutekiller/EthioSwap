@@ -104,6 +104,12 @@ export const AuthProvider = ({ children }) => {
   const markPaidMutation = useMutation(api.trades.markPaid);
   const releaseEthMutation = useMutation(api.trades.releaseEth);
   const cancelTradeMutation = useMutation(api.trades.cancelTrade);
+  const submitTradeRatingMutation = useMutation(api.trades.submitTradeRating);
+  const openDisputeMutation = useMutation(api.trades.openDispute);
+  const resolveDisputeMutation = useMutation(api.trades.resolveDispute);
+  const uploadDisputeEvidenceMutation = useMutation(api.trades.uploadDisputeEvidence);
+  const submitKycMutation = useMutation(api.users.submitKyc);
+  const updateKycStatusMutation = useMutation(api.users.updateKycStatus);
 
   const submitReviewMutation = useMutation(api.reviews.create);
   const updateReviewMutation = useMutation(api.reviews.update);
@@ -395,6 +401,70 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const submitRating = async (tradeId, rating, comment) => {
+    try {
+      await submitTradeRatingMutation({ tradeId, rating, comment });
+      setSuccess('Rating submitted successfully!');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const openDispute = async (tradeId, reason) => {
+    try {
+      await openDisputeMutation({ tradeId, reason });
+      setSuccess('Dispute opened successfully. Escrow has been frozen.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const resolveDispute = async (disputeId, resolution, splitBuyerPercent, adminNote) => {
+    try {
+      await resolveDisputeMutation({ disputeId, resolution, splitBuyerPercent, adminNote });
+      setSuccess('Dispute resolved successfully.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const uploadDisputeEvidence = async (tradeId, storageId) => {
+    try {
+      await uploadDisputeEvidenceMutation({ tradeId, storageId });
+      setSuccess('Dispute evidence uploaded successfully.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const submitKycDetails = async (fullName, dob, idFront, selfie) => {
+    try {
+      await submitKycMutation({ fullName, dob, idFront, selfie });
+      setSuccess('KYC submitted successfully!');
+      await updateUser({ kycStatus: 'pending' });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const approveKycRequest = async (userId) => {
+    try {
+      await updateKycStatusMutation({ id: userId, status: 'verified' });
+      setSuccess('KYC request approved.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const rejectKycRequest = async (userId, reason) => {
+    try {
+      await updateKycStatusMutation({ id: userId, status: 'rejected', rejectionReason: reason });
+      setSuccess('KYC request rejected.');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const acknowledgeWarning = async (warningId) => {
     if (!user) return;
     try {
@@ -454,7 +524,9 @@ export const AuthProvider = ({ children }) => {
       submitReview, updateReview, deleteReview,
       approveDepositRequest, rejectDepositRequest,
       approveWithdrawalRequest, rejectWithdrawalRequest,
-      markTradeAsPaid, releaseEscrow, cancelTrade,
+      markTradeAsPaid, releaseEscrow, cancelTrade, submitRating,
+      openDispute, resolveDispute, uploadDisputeEvidence,
+      submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
       setError, setSuccess, setIsLocked
     }}>

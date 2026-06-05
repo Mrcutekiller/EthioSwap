@@ -1,6 +1,6 @@
 import { query, mutation, internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
 
 export const get = query({
@@ -165,10 +165,67 @@ export const updateKycStatus = mutation({
     rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
+    const user = await ctx.db.get(args.id);
+    if (!user) throw new Error("User not found");
+
+    const rejectedCount = user.kycRejectedCount || 0;
+    const isRejected = args.status === "rejected";
+    const updates: any = {
       kycStatus: args.status,
-      kycRejectionReason: args.rejectionReason,
+      kycRejectionReason: isRejected ? args.rejectionReason : undefined,
+    };
+
+    if (isRejected) {
+      updates.kycRejectedCount = rejectedCount + 1;
+      
+      if (rejectedCount + 1 >= 2) {
+        updates.isFlagged = true;
+        updates.flaggedReason = "KYC rejected twice or more";
+      }
+    }
+
+    await ctx.db.patch(args.id, updates);
+
+    // Trigger notification dispatcher
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: args.id,
+      type: args.status === "verified" ? "kyc_approved" : "kyc_rejected",
+      extraText: args.status === "verified" ? undefined : args.rejectionReason,
     });
+  },
+});
+
+export const submitKyc = mutation({
+  args: {
+    fullName: v.string(),
+    dob: v.string(),
+    idFront: v.string(),
+    selfie: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const rejectedCount = user.kycRejectedCount || 0;
+    if (rejectedCount >= 2 && user.kycStatus === "rejected") {
+      throw new Error("You have exceeded the maximum KYC submission attempts.");
+    }
+
+    await ctx.db.patch(user._id, {
+      kycStatus: "pending",
+      kycFullName: args.fullName,
+      kycDob: args.dob,
+      kycIdFront: args.idFront,
+      kycSelfie: args.selfie,
+      kycRejectionReason: undefined,
+    });
+
+    return { success: true };
   },
 });
 
@@ -254,4 +311,72 @@ export const getByIdentifier = query({
     return user ? { exists: true } : { exists: false };
   },
 });
+
+export const generateTelegramLinkCode = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000;
+
+    await ctx.db.patch(user._id, {
+      telegramLinkCode: code,
+      telegramLinkExpires: expires,
+    });
+
+    return { code };
+  },
+});
+
+export const disconnectTelegram = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, {
+      telegramChatId: undefined,
+      telegramLinkCode: undefined,
+      telegramLinkExpires: undefined,
+    });
+
+    return { success: true };
+  },
+});
+
+export const updateNotificationSettings = mutation({
+  args: {
+    smsEnabled: v.boolean(),
+    telegramEnabled: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, {
+      smsEnabled: args.smsEnabled,
+      telegramEnabled: args.telegramEnabled,
+    });
+
+    return { success: true };
+  },
+});
+
 

@@ -1,199 +1,179 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Bell, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 
-const MarketRates = () => {
+const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
   const { t } = useTranslation();
-  const { createPriceAlert } = useAuth();
-  const [currentRate, setCurrentRate] = useState(null);
-  const [rateHistory, setRateHistory] = useState([]);
-  const [bestBuyRates, setBestBuyRates] = useState([]);
-  const [bestSellRates, setBestSellRates] = useState([]);
-  const [timeframe, setTimeframe] = useState('1D');
-  const [loading, setLoading] = useState(true);
-  const [showAlertForm, setShowAlertForm] = useState(false);
-  const [alertPrice, setAlertPrice] = useState('');
-  const [alertCondition, setAlertCondition] = useState('above');
+  const data = useQuery(api.listings.getCalculatorData);
 
+  const [mode, setMode] = useState('buy'); // 'buy' means visitor buys USDT, 'sell' means visitor sells USDT
+  const [usdtAmount, setUsdtAmount] = useState('');
+  const [etbAmount, setEtbAmount] = useState('');
+  const [lastEdited, setLastEdited] = useState('usdt');
+
+  const bestBuyRate = data?.bestBuyRate || 110;
+  const bestSellRate = data?.bestSellRate || 108;
+  const rateHistory = data?.rateHistory || [];
+
+  const currentRate = mode === 'buy' ? bestBuyRate : bestSellRate;
+
+  // Auto-calculate on mode or rate change
   useEffect(() => {
-    fetchRateData();
-    fetchBestRates();
-    const interval = setInterval(fetchRateData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchRateData = async () => {
-    try {
-      // Mocked for Convex migration
-      const data = [];
-      if (data && data.length > 0) {
-        setCurrentRate(data[0]);
-        setRateHistory(data);
-      }
-    } catch (err) {
-      console.error('Error fetching rate:', err);
-    } finally {
-      setLoading(false);
+    if (lastEdited === 'usdt' && usdtAmount !== '') {
+      const val = parseFloat(usdtAmount) * currentRate;
+      setEtbAmount(isNaN(val) ? '' : val.toFixed(2));
+    } else if (lastEdited === 'etb' && etbAmount !== '') {
+      const val = parseFloat(etbAmount) / currentRate;
+      setUsdtAmount(isNaN(val) ? '' : val.toFixed(4));
     }
+  }, [currentRate, usdtAmount, etbAmount, lastEdited]);
+
+  const handleUsdtChange = (e) => {
+    const val = e.target.value;
+    setUsdtAmount(val);
+    setLastEdited('usdt');
+    if (val === '') {
+      setEtbAmount('');
+      return;
+    }
+    const calculated = parseFloat(val) * currentRate;
+    setEtbAmount(isNaN(calculated) ? '' : calculated.toFixed(2));
   };
 
-  const fetchBestRates = async () => {
-    // Mocked for Convex migration
-    const listings = [];
-    if (listings) setBestBuyRates(listings);
-
-    const sellListings = [];
-    if (sellListings) setBestSellRates(sellListings);
-  };
-
-  const handleCreateAlert = async () => {
-    if (!alertPrice) return;
-    await createPriceAlert(parseFloat(alertPrice), alertCondition);
-    setShowAlertForm(false);
-    setAlertPrice('');
+  const handleEtbChange = (e) => {
+    const val = e.target.value;
+    setEtbAmount(val);
+    setLastEdited('etb');
+    if (val === '') {
+      setUsdtAmount('');
+      return;
+    }
+    const calculated = parseFloat(val) / currentRate;
+    setUsdtAmount(isNaN(calculated) ? '' : calculated.toFixed(4));
   };
 
   const get24hChange = () => {
     if (rateHistory.length < 2) return 0;
-    const now = rateHistory[0]?.usdt_etb_rate || 0;
-    const dayAgo = rateHistory[Math.min(96, rateHistory.length - 1)]?.usdt_etb_rate || now;
-    return ((now - dayAgo) / dayAgo * 100).toFixed(2);
+    const now = rateHistory[rateHistory.length - 1]?.averageRate || 0;
+    const first = rateHistory[0]?.averageRate || now;
+    if (first === 0) return 0;
+    return (((now - first) / first) * 100).toFixed(2);
   };
 
-  const get24hHigh = () => {
-    const last24 = rateHistory.slice(0, 96);
-    return Math.max(...last24.map(r => r.usdt_etb_rate)).toFixed(2);
-  };
+  const changePercent = parseFloat(get24hChange());
 
-  const get24hLow = () => {
-    const last24 = rateHistory.slice(0, 96);
-    return Math.min(...last24.map(r => r.usdt_etb_rate)).toFixed(2);
-  };
-
-  const change = parseFloat(get24hChange());
-  const filteredHistory = timeframe === '1D' ? rateHistory.slice(0, 96)
-    : timeframe === '7D' ? rateHistory.slice(0, 672)
-    : timeframe === '30D' ? rateHistory.slice(0, 2880)
-    : rateHistory;
-
-  if (loading) return <div className="card" style={{ padding: '40px', textAlign: 'center' }}>Loading market rates...</div>;
+  if (!data) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-3)' }}>
+        {t('Loading market rates...')}
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
-      {/* Main Rate Display */}
-      <div className="card glass-card" style={{ padding: '28px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(245,197,24,0.05) 0%, rgba(0,212,160,0.05) 100%)' }}>
-        <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>USDT / ETB</div>
-        <div style={{ fontSize: '36px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
-          {currentRate?.usdt_etb_rate?.toFixed(2) || '---'}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Rate Display Card */}
+      <div className="premium-dashboard-card" style={{
+        padding: '24px',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, rgba(245,197,24,0.04) 0%, rgba(0,212,160,0.03) 100%)',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+          USDT / ETB Live Market Average
         </div>
-        <div style={{ fontSize: '13px', color: change >= 0 ? '#00d4a0' : '#ef4444', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          {change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          {change >= 0 ? '+' : ''}{change}% today
+        <div style={{ fontSize: '32px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace', margin: '8px 0' }}>
+          {((bestBuyRate + bestSellRate) / 2).toFixed(2)} <span style={{ fontSize: '18px', fontWeight: 500 }}>ETB</span>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '8px' }}>
-          Updated: {currentRate ? new Date(currentRate.recorded_at).toLocaleTimeString() : '---'}
+        <div style={{ fontSize: '12px', color: changePercent >= 0 ? '#00d4a0' : '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {changePercent >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+          {changePercent >= 0 ? '▲ +' : '▼ '}{changePercent}% {t('last 24h')}
         </div>
       </div>
 
-      {/* Timeframe Selector */}
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-        {['1D', '7D', '30D', '90D'].map(tf => (
-          <button key={tf} onClick={() => setTimeframe(tf)} className={`btn ${timeframe === tf ? 'btn-gold' : 'btn-ghost'}`} style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 700 }}>
-            {tf}
-          </button>
-        ))}
-      </div>
-
-      {/* Chart Placeholder (SVG mini chart) */}
-      <div className="card" style={{ padding: '20px' }}>
-        <svg viewBox="0 0 400 120" style={{ width: '100%', height: '120px' }}>
-          {filteredHistory.length > 1 && (() => {
-            const rates = filteredHistory.map(r => r.usdt_etb_rate);
+      {/* SVG Sparkline */}
+      <div className="premium-dashboard-card" style={{ padding: '16px', borderRadius: '16px', background: '#111318', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>
+          <span>24h Trend Chart</span>
+          <span style={{ color: changePercent >= 0 ? '#00d4a0' : '#ef4444' }}>
+            {changePercent >= 0 ? 'Trending Up' : 'Trending Down'}
+          </span>
+        </div>
+        <svg viewBox="0 0 400 80" style={{ width: '100%', height: '80px', display: 'block' }}>
+          {rateHistory.length > 1 && (() => {
+            const rates = rateHistory.map(r => r.averageRate);
             const min = Math.min(...rates);
             const max = Math.max(...rates);
-            const range = max - min || 1;
+            const range = (max - min) || 1;
             const step = 400 / (rates.length - 1);
-            const points = rates.map((r, i) => `${i * step},${120 - ((r - min) / range) * 100}`).join(' ');
+            const points = rates.map((r, i) => `${i * step},${70 - ((r - min) / range) * 60}`).join(' ');
             return (
               <>
-                <polyline fill="none" stroke={change >= 0 ? '#00d4a0' : '#ef4444'} strokeWidth="2" points={points} />
-                <polygon fill={change >= 0 ? 'rgba(0,212,160,0.1)' : 'rgba(239,68,68,0.1)'} points={`0,120 ${points} 400,120`} />
+                <polyline fill="none" stroke={changePercent >= 0 ? '#00d4a0' : '#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+                <polygon fill={changePercent >= 0 ? 'rgba(0,212,160,0.06)' : 'rgba(239,68,68,0.06)'} points={`0,80 ${points} 400,80`} />
               </>
             );
           })()}
         </svg>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-3)', marginTop: '8px' }}>
-          <span>{filteredHistory.length > 0 ? new Date(filteredHistory[filteredHistory.length - 1]?.recorded_at).toLocaleDateString() : ''}</span>
-          <span>{filteredHistory.length > 0 ? new Date(filteredHistory[0]?.recorded_at).toLocaleDateString() : ''}</span>
+      </div>
+
+      {/* Calculator Inputs Card */}
+      <div className="premium-dashboard-card" style={{ padding: '24px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '10px', padding: '3px', border: '1px solid var(--border)' }}>
+          <button onClick={() => setMode('buy')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: mode === 'buy' ? 'var(--gold)' : 'transparent', color: mode === 'buy' ? '#0a0a0a' : 'var(--text-secondary)', transition: 'all 0.2s' }}>
+            {t('Buy USDT')}
+          </button>
+          <button onClick={() => setMode('sell')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: mode === 'sell' ? 'var(--gold)' : 'transparent', color: mode === 'sell' ? '#0a0a0a' : 'var(--text-secondary)', transition: 'all 0.2s' }}>
+            {t('Sell USDT')}
+          </button>
+        </div>
+
+        {/* USDT Input */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>USDT</label>
+          <div style={{ position: 'relative' }}>
+            <input type="number" placeholder="0.00" value={usdtAmount} onChange={handleUsdtChange} className="input" style={{ width: '100%', paddingRight: '64px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '16px' }} />
+            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: 'var(--gold)' }}>USDT</span>
+          </div>
+        </div>
+
+        {/* ETB Input */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>ETB</label>
+          <div style={{ position: 'relative' }}>
+            <input type="number" placeholder="0.00" value={etbAmount} onChange={handleEtbChange} className="input" style={{ width: '100%', paddingRight: '64px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '16px' }} />
+            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: 'var(--text-1)' }}>ETB</span>
+          </div>
         </div>
       </div>
 
-      {/* 24h Stats */}
-      <div className="card" style={{ padding: '16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', textAlign: 'center' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>24h High</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#00d4a0' }}>{get24hHigh()}</div>
+      {/* Best Offers Section */}
+      <div className="premium-dashboard-card" style={{ padding: '20px', borderRadius: '16px', background: '#111318', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0' }}>Best Buy Offer (Taker buys)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{bestBuyRate.toFixed(2)} ETB</span>
+            <button onClick={() => onSelectOffer('buy', data.bestBuyOfferId)} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(0,212,160,0.15)', color: '#00d4a0', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
+              Go <ArrowRight size={10} />
+            </button>
           </div>
-          <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>24h Low</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#ef4444' }}>{get24hLow()}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>24h Change</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: change >= 0 ? '#00d4a0' : '#ef4444' }}>{change >= 0 ? '+' : ''}{change}%</div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>Best Sell Offer (Taker sells)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{bestSellRate.toFixed(2)} ETB</span>
+            <button onClick={() => onSelectOffer('sell', data.bestSellOfferId)} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(245,197,24,0.15)', color: 'var(--gold)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
+              Go <ArrowRight size={10} />
+            </button>
           </div>
         </div>
       </div>
-
-      {/* Best P2P Rates */}
-      {bestBuyRates.length > 0 && (
-        <div className="card" style={{ padding: '16px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: '#00d4a0' }}>BEST BUY RATES (you buy USDT)</h3>
-          {bestBuyRates.slice(0, 3).map((l, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ fontSize: '14px', fontWeight: 700 }}>{l.custom_rate_etb} ETB</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>@{l.seller?.username} ⭐{(l.seller?.avg_rating || 0).toFixed(1)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {bestSellRates.length > 0 && (
-        <div className="card" style={{ padding: '16px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: '#ef4444' }}>BEST SELL RATES (you sell USDT)</h3>
-          {bestSellRates.slice(0, 3).map((l, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ fontSize: '14px', fontWeight: 700 }}>{l.custom_rate_etb} ETB</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>@{l.seller?.username} ⭐{(l.seller?.avg_rating || 0).toFixed(1)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Set Alert Button */}
-      <button onClick={() => setShowAlertForm(true)} className="btn btn-gold btn-full" style={{ padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-        <Bell size={18} /> {t('Set Alert')}
-      </button>
-
-      {/* Alert Form Modal */}
-      {showAlertForm && (
-        <div className="modal-overlay" onClick={() => setShowAlertForm(false)}>
-          <div className="card glass-card" style={{ maxWidth: '400px', width: '90%', padding: '24px' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Create Price Alert</h3>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <button onClick={() => setAlertCondition('above')} className={`btn ${alertCondition === 'above' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1 }}>Above</button>
-              <button onClick={() => setAlertCondition('below')} className={`btn ${alertCondition === 'below' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1 }}>Below</button>
-            </div>
-            <input type="number" className="input" placeholder="Target price in ETB" value={alertPrice} onChange={e => setAlertPrice(e.target.value)} style={{ marginBottom: '16px' }} />
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowAlertForm(false)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
-              <button onClick={handleCreateAlert} className="btn btn-gold" style={{ flex: 1 }}>Create Alert</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

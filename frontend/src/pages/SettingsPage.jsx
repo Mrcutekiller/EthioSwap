@@ -208,6 +208,40 @@ const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
 const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
   const { t, i18n } = useTranslation();
   const { updateUser } = useAuth();
+  const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
+  const disconnectTelegramMutation = useMutation(api.users.disconnectTelegram);
+
+  const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
+  const [timeRemaining, setTimeRemaining] = useState(0);
+
+  useEffect(() => {
+    if (user?.telegramLinkCode && user?.telegramLinkExpires) {
+      const remaining = user.telegramLinkExpires - Date.now();
+      if (remaining > 0) {
+        setLinkCode(user.telegramLinkCode);
+        setTimeRemaining(remaining);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (timeRemaining <= 0) {
+      setLinkCode('');
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1000) {
+          clearInterval(timer);
+          setLinkCode('');
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
+
   const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
   const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
   const [lang, setLang] = useState(i18n.language || 'en');
@@ -455,6 +489,98 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
         </div>
       </div>
 
+
+      {/* Notification Channels (SMS & Telegram) */}
+      <div className="card">
+        <div className="section-title">{t('Notification Channels')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* SMS Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>SMS Alerts</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive trade alerts on {user.phone || 'your phone'}</div>
+            </div>
+            <div
+              onClick={async () => {
+                await updateUser({ smsEnabled: !user.smsEnabled });
+              }}
+              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.smsEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.smsEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+            >
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.smsEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+            </div>
+          </div>
+
+          {/* Telegram Toggle & Connect */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>Telegram Alerts</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive rich trade alerts on Telegram</div>
+              </div>
+              <div
+                onClick={async () => {
+                  if (!user.telegramChatId) {
+                    alert('Please connect your Telegram account first.');
+                    return;
+                  }
+                  await updateUser({ telegramEnabled: !user.telegramEnabled });
+                }}
+                style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.telegramEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.telegramEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: user.telegramChatId ? 'pointer' : 'not-allowed', position: 'relative', transition: 'all 0.2s ease', opacity: user.telegramChatId ? 1 : 0.5 }}
+              >
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.telegramEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+              </div>
+            </div>
+
+            {/* Telegram Link/Disconnect Widget */}
+            <div style={{ marginTop: '6px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              {user.telegramChatId ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      🟢 Connected
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>ID: {user.telegramChatId}</span>
+                  </div>
+                  <button onClick={async () => {
+                    if (window.confirm("Disconnect Telegram?")) {
+                      await disconnectTelegramMutation();
+                    }
+                  }} className="btn btn-sm btn-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--text-2)', margin: 0 }}>
+                    Connect to the <b>@EthioSwapBot</b> to get rich alerts and check trade statuses.
+                  </p>
+                  {linkCode ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '10px', background: 'rgba(245,197,24,0.06)', borderRadius: '8px', border: '1px dashed var(--gold)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
+                      <strong style={{ fontSize: '20px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'JetBrains Mono, monospace' }}>
+                        {linkCode}
+                      </strong>
+                      <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                        Expires in {Math.max(0, Math.ceil(timeRemaining / 1000))}s. Send this code to bot.
+                      </span>
+                    </div>
+                  ) : (
+                    <button onClick={async () => {
+                      const res = await generateTelegramCodeMutation();
+                      if (res && res.code) {
+                        setLinkCode(res.code);
+                        setTimeRemaining(10 * 60 * 1000); // 10 mins
+                      }
+                    }} className="btn btn-gold btn-full btn-sm" style={{ padding: '8px 12px' }}>
+                      Connect Telegram Bot
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Notification Preferences */}
       <div className="card">

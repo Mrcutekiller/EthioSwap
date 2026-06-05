@@ -253,7 +253,7 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout } = useAuth();
+  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails } = useAuth();
   const updateProfileMutation = useMutation(api.users.update);
   const deleteAccountMutation = useMutation(api.users.remove);
 
@@ -1086,9 +1086,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         <KYCWizard
           user={user}
           onClose={() => setShowKYC(false)}
-          onComplete={(updatedUser) => {
+          onComplete={async (updatedUser) => {
             setShowKYC(false);
-            if (onUserUpdate) onUserUpdate(updatedUser);
+            await submitKycDetails(
+              updatedUser.fullName,
+              updatedUser.kycData.birthDate,
+              updatedUser.kycIdFront,
+              updatedUser.kycSelfie
+            );
           }}
         />
       )}

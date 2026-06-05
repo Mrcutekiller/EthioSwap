@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "convex-api";
 import { convex } from "../convexClient";
+import MarketRates from '../components/MarketRates.jsx';
 
 // Animated Count-Up component using Intersection Observer
 const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isDecimal = false }) => {
@@ -1267,107 +1268,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           </div>
 
           <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
-            {/* Live Rate Display */}
-            <div style={{ textAlign: 'center', marginBottom: '28px', padding: '16px', background: 'rgba(0,212,160,0.05)', borderRadius: '12px', border: '1px solid rgba(0,212,160,0.15)' }}>
-              <span style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600 }}>Current Rate</span>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</div>
-              <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>Last updated: {rateTimestamp}</div>
-            </div>
-
-            {/* Mode Toggle */}
-            <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '12px', padding: '4px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <button onClick={() => { setCalcMode('usd-to-etb'); setCalcInput(''); }}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
-                  background: calcMode === 'usd-to-etb' ? '#f5c518' : 'transparent',
-                  color: calcMode === 'usd-to-etb' ? '#0a0a0a' : '#8b92a8' }}>
-                USDT → ETB
-              </button>
-              <button onClick={() => { setCalcMode('etb-to-usd'); setCalcInput(''); }}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
-                  background: calcMode === 'etb-to-usd' ? '#f5c518' : 'transparent',
-                  color: calcMode === 'etb-to-usd' ? '#0a0a0a' : '#8b92a8' }}>
-                ETB → USDT
-              </button>
-            </div>
-
-            {/* Input */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-                You Send ({calcMode === 'usd-to-etb' ? 'USDT' : 'ETB'})
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="number"
-                  value={calcInput}
-                  onChange={e => setCalcInput(e.target.value)}
-                  placeholder="0.00"
-                  min="0"
-                  step="any"
-                  style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px 60px 16px 16px', fontSize: '24px', fontWeight: 700, color: '#fff', outline: 'none', boxSizing: 'border-box', fontFamily: 'JetBrains Mono, monospace' }}
-                />
-                <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 700, color: '#f5c518' }}>
-                  {calcMode === 'usd-to-etb' ? 'USDT' : 'ETB'}
-                </span>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div style={{ textAlign: 'center', margin: '8px 0' }}>
-              <div style={{ display: 'inline-flex', width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#f5c518' }}>↕</div>
-            </div>
-
-            {/* Output */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-                You Receive ({calcMode === 'usd-to-etb' ? 'ETB' : 'USDT'})
-              </label>
-              <div style={{ background: '#0a0a0a', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '16px', minHeight: '56px', display: 'flex', alignItems: 'center' }}>
-                <span style={{ fontSize: '24px', fontWeight: 700, color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace' }}>
-                  {calcResult || '0.00'}
-                </span>
-                <span style={{ marginLeft: '8px', fontSize: '14px', fontWeight: 700, color: '#8b92a8' }}>
-                  {calcMode === 'usd-to-etb' ? 'ETB' : 'USDT'}
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Amounts */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '24px' }}>
-              {(calcMode === 'usd-to-etb' ? [10, 50, 100, 500, 1000] : [1000, 5000, 10000, 50000, 100000]).map(amt => (
-                <button key={amt} onClick={() => setCalcInput(String(amt))}
-                  style={{ padding: '8px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#c8c8c8', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'JetBrains Mono, monospace' }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = '#f5c518'; e.currentTarget.style.color = '#f5c518'; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#c8c8c8'; }}>
-                  {calcMode === 'usd-to-etb' ? '$' : 'Br'}{amt.toLocaleString()}
-                </button>
-              ))}
-            </div>
-
-            {/* Start Trading button (Item 4) */}
-            <button onClick={onGetStarted} style={{
-              width: '100%',
-              height: '50px',
-              background: '#f5c518',
-              color: '#0a0a0a',
-              border: 'none',
-              borderRadius: '12px',
-              fontWeight: 800,
-              fontSize: '15px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 15px rgba(245, 197, 24, 0.25)'
-            }}>
-              Start Trading at This Rate →
-            </button>
-
-            {/* Note */}
-            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#8b92a8' }}>
-              Rate updates every 5 seconds • No hidden fees • 0.5% platform fee on trades
-            </div>
+            <MarketRates isLoggedIn={false} onSelectOffer={() => onGetStarted()} />
           </div>
         </div>
       </section>
