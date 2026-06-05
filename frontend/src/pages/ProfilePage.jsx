@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMutation, useQuery } from "convex/react";
@@ -255,7 +254,6 @@ const SecurityLock = ({ onVerify, onClose }) => {
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
   const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout } = useAuth();
-  const location = useLocation();
   const updateProfileMutation = useMutation(api.users.update);
   const deleteAccountMutation = useMutation(api.users.remove);
 
@@ -269,11 +267,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [showReferralDash, setShowReferralDash] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(window.location.search);
     if (params.get('openKyc') === 'true' && user?.kycStatus === 'none') {
       setShowKYC(true);
     }
-  }, [location.search, user?.kycStatus]);
+  }, [user?.kycStatus]);
   
   // Edit Profile Form State
   const [editName, setEditName] = useState(user?.fullName || '');

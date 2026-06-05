@@ -89,6 +89,10 @@ const P2PListings = () => {
   // ── Create listing ────────────────────────────────────────
   const handleCreateListing = async (e) => {
     e.preventDefault();
+    if (!kycApproved) {
+      alert('Please verify your identity first. Go to Profile to start KYC verification.');
+      return;
+    }
     if (createType === 'sell' && linkedAccounts.length === 0) {
       alert('Please link at least one of your saved payment accounts.');
       return;
@@ -130,6 +134,10 @@ const P2PListings = () => {
   // ── Open trade ────────────────────────────────────────────
   const handleOpenTrade = async (e) => {
     e.preventDefault();
+    if (!kycApproved) {
+      alert('Please verify your identity first. Go to Profile to start KYC verification.');
+      return;
+    }
     setTradeError('');
     const amt = parseFloat(tradeamountEth);
     if (isNaN(amt) || amt < 1) { setTradeError('Minimum transaction amount is $1.00 USD.'); return; }
@@ -235,7 +243,13 @@ const P2PListings = () => {
           </button>
         ) : (
           <button 
-            onClick={() => navigate('/profile?openKyc=true')}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'profile' }));
+              setTimeout(() => {
+                window.history.pushState({}, '', '/profile?openKyc=true');
+                window.dispatchEvent(new Event('popstate'));
+              }, 100);
+            }}
             style={{
               background: 'transparent',
               border: '1.5px solid #f5c518',
@@ -443,7 +457,13 @@ const P2PListings = () => {
           title="No Active Offers Found"
           subtitle="Be the first to post an offer in Addis Ababa!"
           ctaText="Post a Listing"
-          ctaAction={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }}
+          ctaAction={() => {
+            if (!kycApproved) {
+              alert('Please verify your identity first. Go to Profile to start KYC verification.');
+              return;
+            }
+            setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true);
+          }}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -581,7 +601,13 @@ const P2PListings = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setSelectedListing(listing); setShowBuyModal(true); setTradeamountEth(''); setTradeError(''); }}
+                    onClick={() => {
+                      if (!kycApproved) {
+                        alert('Please verify your identity first. Go to Profile to start KYC verification.');
+                        return;
+                      }
+                      setSelectedListing(listing); setShowBuyModal(true); setTradeamountEth(''); setTradeError('');
+                    }}
                     disabled={!kycApproved}
                     className="glow-btn"
                     style={{ 
