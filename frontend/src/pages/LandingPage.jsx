@@ -312,30 +312,130 @@ const MoneyRain = () => null;
 const Bill3D = () => null;
 const PremiumUSDCard = () => null;
 
+export const AutoScrollingBills = ({ direction = 'up', speed = '20s', size = 'md' }) => {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
+  const billSize = width < 768 ? 'sm' : size;
+
+  // Dimensions
+  const dims = {
+    lg: { w: 178, h: 420 },
+    md: { w: 145, h: 340 },
+    sm: { w: 110, h: 260 },
+  }[billSize] || { w: 145, h: 340 };
+
+  const { w, h } = dims;
+
+  return (
+    <div style={{
+      height: width < 768 ? '300px' : '450px',
+      overflow: 'hidden',
+      position: 'relative',
+      width: '100%',
+      maxWidth: `${w + 40}px`,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      margin: '0 auto',
+      maskImage: 'linear-gradient(to bottom, transparent, white 15%, white 85%, transparent)',
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent, white 15%, white 85%, transparent)',
+    }}>
+      <style>{`
+        @keyframes scrollUp {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-50%); }
+        }
+        @keyframes scrollDown {
+          0% { transform: translateY(-50%); }
+          100% { transform: translateY(0); }
+        }
+        .scroll-container-up {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          animation: scrollUp ${speed} linear infinite;
+        }
+        .scroll-container-down {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          animation: scrollDown ${speed} linear infinite;
+        }
+        .scroll-container-up:hover, .scroll-container-down:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <div className={direction === 'up' ? 'scroll-container-up' : 'scroll-container-down'}>
+        {[1, 2, 3, 4, 1, 2, 3, 4].map((id, index) => {
+          const isUSD = id % 2 === 1;
+          return (
+            <div key={index} style={{
+              width: `${w}px`,
+              height: `${h}px`,
+              position: 'relative',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              border: '1.5px solid rgba(255,255,255,0.12)',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              background: isUSD ? '#0d2217' : '#1d1b24',
+              flexShrink: 0,
+              cursor: 'pointer',
+              transition: 'transform 0.3s ease, border-color 0.3s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)';
+              e.currentTarget.style.borderColor = 'var(--gold)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+            }}
+            >
+              {isUSD ? (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: 'url(/images/usd_100.jpg)',
+                  backgroundSize: '100% 100%',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }} />
+              ) : (
+                <div style={{
+                  position: 'absolute',
+                  width: `${h}px`,
+                  height: `${w}px`,
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%) rotate(90deg)',
+                  backgroundImage: 'url(/images/etb_200.jpg)',
+                  backgroundSize: '100% 200%',
+                  backgroundPosition: 'top center',
+                  backgroundRepeat: 'no-repeat',
+                }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const { user } = useAuth();
   
-  // Convex Data with manual fetching to prevent crashes if backend is missing
-  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '—', scams: 0 });
-  const [reviews, setReviews] = useState([]);
-  
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsData, reviewsData] = await Promise.all([
-          convex.query(api.stats.get).catch(() => null),
-          convex.query(api.reviews.listApproved).catch(() => [])
-        ]);
-        if (statsData) setStats(statsData);
-        if (reviewsData) setReviews(reviewsData);
-      } catch (err) {
-        console.warn("Convex data fetch failed in LandingPage", err);
-      }
-    };
-    fetchData();
-  }, []);
+  // Convex Data - Live Real-Time Queries
+  const liveStats = useQuery(api.stats.get);
+  const liveReviews = useQuery(api.reviews.listApproved);
+
+  const stats = liveStats || { traders: 0, volume: 0, avg: '0.0', scams: 0 };
+  const reviews = liveReviews || [];
 
   const submitReviewMutation = useMutation(api.reviews.create);
 
@@ -910,17 +1010,23 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               {/* Stats Row */}
               <div style={{ display: 'flex', gap: width < 768 ? '24px' : '48px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>24K+</span>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                    <AnimatedCounter value={stats.traders} suffix="+" />
+                  </span>
                   <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>Active traders</span>
                 </div>
                 <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>฿ 9.2M</span>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                    <AnimatedCounter value={stats.volume} prefix="$" />
+                  </span>
                   <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>USDT traded</span>
                 </div>
                 <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>4.9★</span>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                    <AnimatedCounter value={stats.avg} suffix="★" isDecimal={true} />
+                  </span>
                   <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>User rating</span>
                 </div>
               </div>
@@ -1094,30 +1200,16 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div className="reveal-on-scroll" style={{ 
             display: 'grid', 
             gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', 
-            gap: '80px', 
+            gap: width < 768 ? '40px' : '80px', 
             alignItems: 'center', 
-            marginBottom: '160px' 
+            marginBottom: width < 768 ? '80px' : '160px' 
           }}>
-            {/* Left side: Transfer flow visual */}
-            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', minHeight: '380px' }}>
-              {[
-                { from: '🇺🇸 USD Wallet', to: '→', color: 'var(--gold)', label: '$500.00 USDT' },
-                { from: '⚡ Escrow Lock', to: '→', color: '#a78bfa', label: 'Secured instantly' },
-                { from: '🇪🇹 ETB Transfer', to: '✓', color: 'var(--accent-green)', label: 'ETB 95,000 sent' },
-              ].map((item, i) => (
-                <div key={i} style={{ width: '100%', maxWidth: '320px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${item.color}22`, borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.3s' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = item.color}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = `${item.color}22`}>
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '4px' }}>{item.from}</div>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: item.color, fontFamily: 'JetBrains Mono, monospace' }}>{item.label}</div>
-                  </div>
-                  <div style={{ fontSize: '20px', color: item.color, fontWeight: 800 }}>{item.to}</div>
-                </div>
-              ))}
+            {/* Left side: Scrolling bills */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: width < 768 ? '320px' : '380px', order: width < 1024 ? 2 : 1 }}>
+              <AutoScrollingBills direction="up" speed="18s" size="md" />
             </div>
 
-            <div>
+            <div style={{ order: width < 1024 ? 1 : 2 }}>
               <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Lightning Fast</div>
               <h2 className="serif-title" style={{ fontSize: '48px', color: '#fff', marginBottom: '24px' }}>Instant Peer-to-Peer Transfers</h2>
               <p style={{ fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '32px' }}>
@@ -1134,26 +1226,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           </div>
 
           {/* Feature 2: Right Text, Left Card */}
-          <div className="reveal-on-scroll" style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', gap: '80px', alignItems: 'center' }}>
-            <div className="floating" style={{ order: width < 1024 ? 2 : 1 }}>
-              <div className="glass-panel" style={{ borderRadius: '32px', padding: '40px', position: 'relative' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '8px' }}>Success Rate</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent-green)' }}>99.8%</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '8px' }}>Avg. Speed</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)' }}>12m</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600 }}>Security Protocol</span>
-                    <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>Active</span>
-                  </div>
-                </div>
-              </div>
+          <div className="reveal-on-scroll" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', 
+            gap: width < 768 ? '40px' : '80px', 
+            alignItems: 'center' 
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: width < 768 ? '320px' : '380px', order: width < 1024 ? 2 : 1 }}>
+              <AutoScrollingBills direction="down" speed="18s" size="md" />
             </div>
             <div style={{ order: width < 1024 ? 1 : 2 }}>
               <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Unmatched Security</div>
@@ -1455,6 +1535,22 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       <section style={{ padding: '120px 24px', textAlign: 'center', position: 'relative' }}>
         <div className="glass-card" style={{ maxWidth: '1000px', margin: '0 auto', padding: '80px 40px', borderRadius: '32px', position: 'relative', overflow: 'hidden' }}>
           <div className="orb" style={{ top: '-250px', left: '-250px', opacity: 0.5 }} />
+          {/* Large horizontal USD background note decoration */}
+          <div style={{
+            position: 'absolute',
+            width: width < 768 ? '260px' : '380px',
+            height: width < 768 ? '600px' : '900px',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(85deg)',
+            backgroundImage: 'url(/images/usd_100.jpg)',
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: width < 768 ? 0.05 : 0.08,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 24px 0' }}>
               Join the Future of<br />Trading in Ethiopia
@@ -1533,7 +1629,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <span style={{ fontSize: '48px' }}>🎉</span>
                 <p style={{ fontSize: '15px', color: '#00d4a0', fontWeight: 700, marginTop: '16px' }}>
-                  Your review is pending approval. Thank you!
+                  Your review has been posted successfully. Thank you!
                 </p>
                 <button onClick={() => { setShowReviewModal(false); setReviewSuccess(false); }} className="cta-btn-gold" style={{ marginTop: '24px', height: '40px', fontSize: '14px', borderRadius: '8px' }}>
                   Close Window

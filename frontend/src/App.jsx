@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import LandingPage, { FloatingBill } from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
