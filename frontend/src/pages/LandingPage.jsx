@@ -146,8 +146,8 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
         cursor: 'pointer',
         userSelect: 'none',
         filter: hovered
-          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.7)) drop-shadow(0 0 40px rgba(245,197,24,0.18))'
-          : 'drop-shadow(0 20px 40px rgba(0,0,0,0.55))',
+          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.75)) drop-shadow(0 0 40px rgba(245,197,24,0.25))'
+          : 'drop-shadow(0 20px 40px rgba(0,0,0,0.6))',
         transition: 'filter 0.4s ease',
       }}
       onClick={() => setFlipped(f => !f)}
@@ -162,7 +162,7 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
         position: 'relative',
         transformStyle: 'preserve-3d',
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        transition: 'transform 0.75s cubic-bezier(0.4, 0.2, 0.2, 1)',
+        transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
       }}>
 
         {/* ── FRONT: US $100 Bill ── */}
@@ -170,210 +170,48 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
           position: 'absolute', inset: 0,
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
-          borderRadius: '8px',
+          borderRadius: '12px',
           overflow: 'hidden',
+          border: '1.5px solid rgba(255,255,255,0.12)',
+          background: '#0d2217',
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
         }}>
-          <svg viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg"
-            style={{ width: '100%', height: '100%', display: 'block' }}>
-            <defs>
-              <linearGradient id="usd-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1a4731"/>
-                <stop offset="50%" stopColor="#145228"/>
-                <stop offset="100%" stopColor="#0f3d1f"/>
-              </linearGradient>
-              <linearGradient id="usd-left" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#0f3d1f"/>
-                <stop offset="100%" stopColor="#1a4731"/>
-              </linearGradient>
-              <pattern id="usd-lines" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
-              </pattern>
-              <radialGradient id="usd-seal-glow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(34,197,94,0.3)"/>
-                <stop offset="100%" stopColor="transparent"/>
-              </radialGradient>
-            </defs>
-
-            {/* Base */}
-            <rect width={w} height={h} fill="url(#usd-bg)"/>
-
-            {/* Fine line texture */}
-            <rect width={w} height={h} fill="url(#usd-lines)"/>
-
-            {/* Outer border */}
-            <rect x="3" y="3" width={w-6} height={h-6} rx="6" fill="none"
-              stroke="rgba(255,255,255,0.18)" strokeWidth="1.2"/>
-            {/* Inner border */}
-            <rect x="10" y="10" width={w-20} height={h-20} rx="3" fill="none"
-              stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
-
-            {/* Security strip (vertical gold line) */}
-            <rect x={w*0.38} y="0" width="3" height={h}
-              fill="none" stroke="rgba(245,197,24,0.35)" strokeWidth="2"
-              strokeDasharray="4 3"/>
-
-            {/* LEFT PANEL – Federal Reserve Seal */}
-            <rect x="14" y="14" width={h-28} height={h-28} rx="4"
-              fill="rgba(0,0,0,0.12)"/>
-            {/* Seal circle */}
-            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2}
-              fill="rgba(0,0,0,0.18)" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
-            {/* Seal inner ring */}
-            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2 - 6}
-              fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8"/>
-            {/* Seal text */}
-            <text x={14+(h-28)/2} y={h/2 - 8} textAnchor="middle"
-              fontSize="9" fontWeight="700" fill="rgba(255,255,255,0.55)"
-              fontFamily="serif" letterSpacing="0.5">FEDERAL</text>
-            <text x={14+(h-28)/2} y={h/2 + 4} textAnchor="middle"
-              fontSize="9" fontWeight="700" fill="rgba(255,255,255,0.55)"
-              fontFamily="serif" letterSpacing="0.5">RESERVE</text>
-            <text x={14+(h-28)/2} y={h/2 + 16} textAnchor="middle"
-              fontSize="8" fill="rgba(255,255,255,0.35)" fontFamily="serif">NOTE</text>
-
-            {/* CENTER — denomination + portrait */}
-            {/* "THE UNITED STATES OF AMERICA" header */}
-            <text x={w/2} y="28" textAnchor="middle"
-              fontSize={w > 300 ? "10" : "8"} fontWeight="700" fill="rgba(255,255,255,0.45)"
-              fontFamily="serif" letterSpacing={w > 300 ? "3" : "2"}>THE UNITED STATES OF AMERICA</text>
-
-            {/* Big $100 */}
-            <text x={w*0.52} y={h*0.57} textAnchor="middle"
-              fontSize={w > 300 ? "52" : "40"} fontWeight="900" fill="rgba(255,255,255,0.92)"
-              fontFamily="Georgia, serif">$100</text>
-
-            {/* "ONE HUNDRED DOLLARS" */}
-            <text x={w*0.52} y={h-28} textAnchor="middle"
-              fontSize={w > 300 ? "9" : "7"} fill="rgba(255,255,255,0.38)"
-              fontFamily="serif" letterSpacing="2">ONE HUNDRED DOLLARS</text>
-
-            {/* Portrait oval */}
-            <ellipse cx={w*0.73} cy={h/2} rx={w > 300 ? 36 : 28} ry={(h/2)-18}
-              fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2"/>
-            {/* Portrait silhouette hint */}
-            <ellipse cx={w*0.73} cy={h/2 - 6} rx={w > 300 ? 14 : 10} ry={w > 300 ? 18 : 13}
-              fill="rgba(255,255,255,0.06)"/>
-            <ellipse cx={w*0.73} cy={h/2 + 16} rx={w > 300 ? 20 : 15} ry={w > 300 ? 10 : 7}
-              fill="rgba(255,255,255,0.04)"/>
-
-            {/* RIGHT PANEL — corner 100s */}
-            <text x={w-18} y="26" textAnchor="end"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
-              fontFamily="Georgia, serif">100</text>
-            <text x={w-18} y={h-14} textAnchor="end"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
-              fontFamily="Georgia, serif">100</text>
-            <text x="20" y="26"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
-              fontFamily="Georgia, serif">100</text>
-            <text x="20" y={h-14}
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.7)"
-              fontFamily="Georgia, serif">100</text>
-
-            {/* Serial number */}
-            <text x="16" y={h-15}
-              fontSize="6.5" fill="rgba(255,255,255,0.3)" fontFamily="monospace"
-              letterSpacing="1">ML 20240001 A</text>
-
-            {/* "IN GOD WE TRUST" */}
-            <text x={w*0.73} y={h-15} textAnchor="middle"
-              fontSize="7" fill="rgba(255,255,255,0.25)" fontFamily="serif"
-              fontStyle="italic">IN GOD WE TRUST</text>
-
-            {/* Subtle green tint overlay top-left */}
-            <rect x="0" y="0" width={w*0.35} height={h}
-              fill="rgba(0,100,50,0.07)" rx="8"/>
-          </svg>
+          {/* Centered rotated container to show tall vertical USD image horizontally */}
+          <div style={{
+            position: 'absolute',
+            width: `${h}px`,
+            height: `${w}px`,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%) rotate(-90deg)',
+            backgroundImage: 'url(/images/usd_100.jpg)',
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }} />
         </div>
 
-        {/* ── BACK: Ethiopian Birr 100 Note ── */}
+        {/* ── BACK: Ethiopian Birr 200 Note ── */}
         <div style={{
           position: 'absolute', inset: 0,
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          borderRadius: '8px',
+          borderRadius: '12px',
           overflow: 'hidden',
+          border: '1.5px solid rgba(255,255,255,0.12)',
+          background: '#1d1b24',
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
         }}>
-          <svg viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg"
-            style={{ width: '100%', height: '100%', display: 'block' }}>
-            <defs>
-              <linearGradient id="etb-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1e3a5f"/>
-                <stop offset="40%" stopColor="#1a4731"/>
-                <stop offset="100%" stopColor="#7c2d12"/>
-              </linearGradient>
-              <pattern id="etb-wave" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M0 10 Q5 0 10 10 Q15 20 20 10" fill="none"
-                  stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
-              </pattern>
-            </defs>
-
-            {/* Base — Ethiopian flag colors blend */}
-            <rect width={w} height={h} fill="url(#etb-bg)"/>
-            <rect width={w} height={h} fill="url(#etb-wave)"/>
-
-            {/* Tri-color top stripe (flag) */}
-            <rect x="0" y="0" width={w} height={h*0.12} fill="rgba(34,197,94,0.35)"/>
-            <rect x="0" y={h*0.12} width={w} height={h*0.12} fill="rgba(234,179,8,0.25)"/>
-            <rect x="0" y={h*0.24} width={w} height={h*0.12} fill="rgba(239,68,68,0.2)"/>
-
-            {/* Outer border */}
-            <rect x="3" y="3" width={w-6} height={h-6} rx="6" fill="none"
-              stroke="rgba(255,255,255,0.2)" strokeWidth="1.2"/>
-            <rect x="10" y="10" width={w-20} height={h-20} rx="3" fill="none"
-              stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
-
-            {/* LEFT — National Bank Seal */}
-            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2}
-              fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
-            <circle cx={14+(h-28)/2} cy={h/2} r={(h-36)/2 - 7}
-              fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8"/>
-            {/* Star of David / Ethiopia star */}
-            <text x={14+(h-28)/2} y={h/2 - 4} textAnchor="middle"
-              fontSize="22" fill="rgba(234,179,8,0.7)">★</text>
-            <text x={14+(h-28)/2} y={h/2 + 12} textAnchor="middle"
-              fontSize="7" fill="rgba(255,255,255,0.5)" fontFamily="serif"
-              letterSpacing="0.3">ብሔራዊ ባንክ</text>
-            <text x={14+(h-28)/2} y={h/2 + 22} textAnchor="middle"
-              fontSize="6" fill="rgba(255,255,255,0.35)" fontFamily="serif">ETHIOPIA</text>
-
-            {/* CENTER — denomination */}
-            <text x={w/2} y="26" textAnchor="middle"
-              fontSize={w > 300 ? "9" : "7"} fontWeight="700" fill="rgba(255,255,255,0.45)"
-              fontFamily="serif" letterSpacing="2">NATIONAL BANK OF ETHIOPIA</text>
-
-            {/* Big ብር 100 */}
-            <text x={w*0.50} y={h*0.55} textAnchor="middle"
-              fontSize={w > 300 ? "48" : "36"} fontWeight="900" fill="rgba(255,255,255,0.92)"
-              fontFamily="serif">ብር 100</text>
-            <text x={w*0.50} y={h*0.76} textAnchor="middle"
-              fontSize={w > 300 ? "11" : "9"} fill="rgba(234,179,8,0.8)"
-              fontFamily="serif" letterSpacing="1">ONE HUNDRED BIRR</text>
-
-            {/* Corner 100s */}
-            <text x={w-18} y="26" textAnchor="end"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
-              fontFamily="Georgia, serif">100</text>
-            <text x={w-18} y={h-14} textAnchor="end"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
-              fontFamily="Georgia, serif">100</text>
-            <text x="20" y="26"
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
-              fontFamily="Georgia, serif">100</text>
-            <text x="20" y={h-14}
-              fontSize="14" fontWeight="900" fill="rgba(255,255,255,0.65)"
-              fontFamily="Georgia, serif">100</text>
-
-            {/* Right vignette panel */}
-            <rect x={w*0.82} y="14" width={w*0.15} height={h-28} rx="3"
-              fill="rgba(0,0,0,0.15)"/>
-
-            {/* Serial */}
-            <text x="16" y={h-15}
-              fontSize="6.5" fill="rgba(255,255,255,0.3)" fontFamily="monospace"
-              letterSpacing="1">ET 2024-100 NBE</text>
-          </svg>
+          {/* Displaying the top half (Walia Ibex) of the double-note image */}
+          <div style={{
+            width: '100%',
+            height: '100%',
+            backgroundImage: 'url(/images/etb_200.jpg)',
+            backgroundSize: '100% 200%',
+            backgroundPosition: 'top center',
+            backgroundRepeat: 'no-repeat',
+          }} />
         </div>
       </div>
 
@@ -381,9 +219,14 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
       <div style={{
         position: 'absolute', bottom: '-28px', left: '50%',
         transform: 'translateX(-50%)',
-        fontSize: '11px', color: 'rgba(245,197,24,0.55)',
-        fontWeight: 600, letterSpacing: '0.1em', whiteSpace: 'nowrap',
+        fontSize: '11px', color: 'rgba(245,197,24,0.7)',
+        fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap',
         pointerEvents: 'none', fontFamily: 'sans-serif',
+        background: 'rgba(0, 0, 0, 0.4)',
+        padding: '4px 12px',
+        borderRadius: '20px',
+        border: '1px solid rgba(245,197,24,0.15)',
+        backdropFilter: 'blur(5px)',
       }}>
         {flipped ? '← Click to see USD' : 'Click to see Birr →'}
       </div>
@@ -391,33 +234,77 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
   );
 };
 
-// Floating wrapper — adds the gentle up/down float + entry animation
-const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
-    ...style,
-  }}>
-    <style>{`
-      @keyframes billFloat {
-        0%, 100% { transform: translateY(0px) rotate(-1deg); }
-        50%       { transform: translateY(-14px) rotate(1deg); }
+// Floating wrapper — adds the gentle up/down float + entry animation + scroll parallax
+const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => {
+  const containerRef = useRef(null);
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const elementCenter = rect.top + rect.height / 2;
+            const distance = elementCenter - viewportHeight / 2;
+            setScrollY(distance);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
-      @keyframes billEntry {
-        from { opacity: 0; transform: translateY(30px) scale(0.9); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-      }
-    `}</style>
-    <div style={{
-      animation: prefersReducedMotion
-        ? 'none'
-        : 'billFloat 5s ease-in-out infinite, billEntry 0.8s cubic-bezier(0.16,1,0.3,1) both',
-    }}>
-      <PaperMoney3D size={size} />
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [prefersReducedMotion]);
+
+  // Subtle parallax translation and rotation based on scroll distance from center
+  const translateY = prefersReducedMotion ? 0 : scrollY * 0.15; // float lag
+  const rotateZ = prefersReducedMotion ? 0 : scrollY * -0.015; // gentle roll
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        transform: `translateY(${translateY}px) rotate(${rotateZ}deg)`,
+        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        willChange: 'transform',
+        ...style,
+      }}
+    >
+      <style>{`
+        @keyframes billFloat {
+          0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
+          50%       { transform: translateY(-12px) rotate(1.5deg); }
+        }
+        @keyframes billEntry {
+          from { opacity: 0; transform: translateY(40px) scale(0.92); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+      <div style={{
+        animation: prefersReducedMotion
+          ? 'none'
+          : 'billFloat 6s ease-in-out infinite, billEntry 0.8s cubic-bezier(0.16,1,0.3,1) both',
+      }}>
+        <PaperMoney3D size={size} />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Legacy stubs — no longer rendered but kept to avoid ref errors
 const FallingBill = () => null;
