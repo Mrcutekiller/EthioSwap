@@ -1193,7 +1193,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
 
       {/* ── FEATURED TRADE SECTIONS (Alternating) ── */}
-      <section style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
+      <section id="features" style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           
           {/* Feature 1: Spacer for Bill on Left, Text on Right */}
@@ -1372,7 +1372,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* ── INVITE & EARN PROGRAM ── */}
-      <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="invite" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
           <span style={{ fontSize: '11px', color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, background: 'rgba(245,197,24,0.1)', padding: '4px 12px', borderRadius: '20px' }}>COMING SOON</span>
           <h2 className="serif-title" style={{ fontSize: '36px', color: '#fff', margin: '16px 0 12px 0', fontWeight: 400 }}>Invite & Earn Program</h2>
@@ -1398,7 +1398,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       </section>
 
       {/* ── TRUST & SECURITY ── */}
-      <section style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="security" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TRUST & SECURITY</span>
@@ -1583,8 +1583,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div>
               <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Product</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {['Features', 'How It Works', 'Market Rates', 'Security'].map(item => (
-                  <li key={item}><a href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item}</a></li>
+                {[
+                  { label: 'Features', target: '#features' },
+                  { label: 'How It Works', target: '#how-it-works' },
+                  { label: 'Market Rates', target: '#market' },
+                  { label: 'Security', target: '#security' }
+                ].map(item => (
+                  <li key={item.label}><a href={item.target} className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item.label}</a></li>
                 ))}
               </ul>
             </div>

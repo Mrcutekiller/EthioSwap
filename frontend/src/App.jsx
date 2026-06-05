@@ -145,7 +145,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         </div>
 
         {/* Right/Bottom Column: Auth Form Card */}
-        <div className="premium-glow" style={{ background: 'rgba(17, 19, 24, 0.85)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', width: '100%', maxWidth: '440px', padding: '40px 36px', backdropFilter: 'blur(20px)', display: 'flex', flexDirection: 'column' }}>
+        <div className="auth-card" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column' }}>
         {onBackToHome && (
           <button 
             type="button" 
@@ -154,122 +154,98 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
               alignSelf: 'flex-start', 
               background: 'rgba(255,255,255,0.05)', 
               border: '1px solid rgba(255,255,255,0.2)', 
-              borderRadius: '8px', 
+              borderRadius: '50px', 
               color: '#FFFFFF', 
-              padding: '6px 12px', 
+              padding: '8px 18px', 
               fontSize: '12px', 
               fontWeight: '700',
               cursor: 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
               gap: '6px',
-              marginBottom: '20px',
+              marginBottom: '24px',
               transition: 'all 0.2s ease',
               fontFamily: 'var(--font)'
             }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.transform = 'none';
+            }}
           >
-            ← Back to Home
+            <i className="ti ti-arrow-left" style={{ fontSize: '13px' }}></i> Back to Home
           </button>
         )}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
           {/* Logo removed per Item #8 */}
         </div>
 
-        <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', textAlign: 'center', color: '#FFFFFF' }}>
-          {mode === 'login' ? 'Welcome back' : 'Create account'}
+        <h2 className="auth-title" style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', textAlign: 'center' }}>
+          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
         </h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center' }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center', fontWeight: 500 }}>
           {mode === 'login' ? 'Sign in to your EthioSwap wallet' : 'Join the most trusted P2P exchange in Ethiopia'}
         </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {mode === 'login' ? (
             <>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type="text" 
                   placeholder="Username or Email" 
                   value={username} 
                   onChange={e => setUsername(e.target.value)} 
                   autoComplete="username" 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
                 />
+                <i className="auth-input-icon ti ti-user"></i>
               </div>
             </>
           ) : (
             <>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type="text" 
                   placeholder="Full Name" 
                   value={fullName} 
                   onChange={e => setFullName(e.target.value)} 
                   autoComplete="name" 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
                 />
+                <i className="auth-input-icon ti ti-id-badge"></i>
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type="text" 
                   placeholder="Username" 
                   value={username} 
                   onChange={e => setUsername(e.target.value)} 
                   autoComplete="username" 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
                 />
+                <i className="auth-input-icon ti ti-at"></i>
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type="email" 
                   placeholder="Email Address" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   autoComplete="email" 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
                 />
+                <i className="auth-input-icon ti ti-mail"></i>
               </div>
             </>
           )}
 
-          <div className="input-group" style={{ marginBottom: 0, position: 'relative' }}>
+          <div className="auth-input-group">
             <input 
-              className="input" 
+              className="auth-input" 
               type={showPassword ? "text" : "password"} 
               placeholder="Password" 
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
@@ -278,31 +254,23 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
               spellCheck="false" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
-              style={{ 
-                width: '100%', 
-                paddingRight: '44px', 
-                background: '#111318', 
-                border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '10px',
-                color: '#ffffff',
-                padding: '14px 16px',
-                fontSize: '15px'
-              }} 
+              style={{ paddingRight: '48px' }}
             />
             <button 
               type="button" 
               onClick={() => setShowPassword(!showPassword)} 
-              style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '18px' }}
+              className="auth-toggle-pwd"
             >
-              {showPassword ? '👁️' : '👁️‍🗨️'}
+              <i className={showPassword ? "ti ti-eye-off" : "ti ti-eye"}></i>
             </button>
+            <i className="auth-input-icon ti ti-lock"></i>
           </div>
 
           {mode === 'register' && (
             <>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type={showPassword ? "text" : "password"} 
                   placeholder="Confirm Password" 
                   autoComplete="new-password" 
@@ -311,73 +279,42 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   spellCheck="false" 
                   value={confirmPassword} 
                   onChange={e => setConfirmPassword(e.target.value)} 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
+                  style={{ paddingRight: '48px' }}
                 />
+                <i className="auth-input-icon ti ti-shield-lock"></i>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                <div className="auth-input-group">
                   <input 
-                    className="input" 
+                    className="auth-input" 
                     type="tel" 
                     placeholder="Phone (+251...)" 
                     value={phone} 
                     onChange={e => setPhone(e.target.value)} 
-                    style={{ 
-                      width: '100%', 
-                      background: '#111318', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      borderRadius: '10px',
-                      color: '#ffffff',
-                      padding: '14px 16px',
-                      fontSize: '15px'
-                    }} 
                   />
+                  <i className="auth-input-icon ti ti-phone"></i>
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
+                <div className="auth-input-group">
                   <input 
-                    className="input" 
+                    className="auth-input" 
                     type="number" 
                     min="18" 
                     placeholder="Age" 
                     value={age} 
                     onChange={e => setAge(e.target.value)} 
-                    style={{ 
-                      width: '100%', 
-                      background: '#111318', 
-                      border: '1px solid rgba(255,255,255,0.1)', 
-                      borderRadius: '10px',
-                      color: '#ffffff',
-                      padding: '14px 16px',
-                      fontSize: '15px'
-                    }} 
                   />
+                  <i className="auth-input-icon ti ti-calendar-event"></i>
                 </div>
               </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
+              <div className="auth-input-group">
                 <input 
-                  className="input" 
+                  className="auth-input" 
                   type="text" 
                   placeholder="Referral Code (Optional)" 
                   value={referralCode} 
                   onChange={e => setReferralCode(e.target.value.toUpperCase())} 
-                  style={{ 
-                    width: '100%', 
-                    background: '#111318', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    padding: '14px 16px',
-                    fontSize: '15px'
-                  }} 
                 />
+                <i className="auth-input-icon ti ti-gift"></i>
               </div>
             </>
           )}
@@ -386,40 +323,51 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
             <div style={{ 
               fontSize: '13px', 
               color: 'var(--status-danger-text)', 
-              fontWeight: 500, 
-              padding: '12px', 
-              background: 'rgba(239, 68, 68, 0.1)', 
+              fontWeight: 600, 
+              padding: '14px 16px', 
+              background: 'rgba(239, 68, 68, 0.08)', 
               border: '1px solid rgba(239, 68, 68, 0.2)', 
-              borderRadius: '12px',
+              borderRadius: '14px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '10px',
+              lineHeight: 1.4
             }}>
-              <span>⚠️</span> {displayError}
+              <i className="ti ti-alert-triangle" style={{ fontSize: '16px', color: '#EF4444' }}></i>
+              <span>{displayError}</span>
             </div>
           )}
 
           <button 
             type="submit" 
             disabled={loading} 
-            className="btn btn-gold btn-full" 
+            className="btn btn-gold btn-full animate-hover" 
             style={{ 
-              marginTop: '8px', 
-              height: '48px', 
+              marginTop: '12px', 
+              height: '52px', 
               fontSize: '16px', 
-              fontWeight: 700, 
+              fontWeight: 800, 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
               background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
               color: '#0A0C12',
               border: 'none',
-              borderRadius: '12px',
+              borderRadius: '14px',
               width: '100%',
               cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(255, 215, 0, 0.4)',
+              boxShadow: '0 8px 30px rgba(255, 215, 0, 0.25)',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               pointerEvents: loading ? 'none' : 'auto',
               opacity: loading ? 0.8 : 1
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 12px 35px rgba(255, 215, 0, 0.4)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = '0 8px 30px rgba(255, 215, 0, 0.25)';
             }}
           >
             {loading ? (
@@ -428,14 +376,17 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 {mode === 'login' ? 'Signing in...' : 'Creating account...'}
               </>
             ) : (
-              mode === 'login' ? 'Sign In' : 'Create Account'
+              <>
+                {mode === 'login' ? 'Sign In' : 'Create Account'}
+                <i className="ti ti-arrow-right" style={{ marginLeft: '8px', fontSize: '18px' }}></i>
+              </>
             )}
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '24px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '28px 0' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>or</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
         </div>
 
@@ -443,23 +394,29 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
           onClick={onToggle} 
           style={{ 
             width: '100%', 
-            padding: '12px', 
-            background: 'rgba(255, 215, 0, 0.05)', 
-            border: '1px solid rgba(255, 215, 0, 0.3)', 
-            borderRadius: '12px', 
+            padding: '14px', 
+            background: 'rgba(255, 215, 0, 0.04)', 
+            border: '1px solid rgba(255, 215, 0, 0.2)', 
+            borderRadius: '14px', 
             color: '#FFD700', 
             fontSize: '14px', 
             fontWeight: 700, 
             cursor: 'pointer', 
             fontFamily: 'var(--font)', 
-            transition: 'all 0.2s ease',
-            boxShadow: '0 2px 10px rgba(255, 215, 0, 0.05)'
+            transition: 'all 0.25s ease',
+            boxShadow: '0 2px 10px rgba(255, 215, 0, 0.02)'
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
+            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.04)';
+            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
           }}
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}
         </button>
-
-        {/* Secure card removed per Item #8 */}
         </div>
       </div>
     </div>
