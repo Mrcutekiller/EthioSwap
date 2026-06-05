@@ -1,5 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -48,7 +49,7 @@ export const create = mutation({
 
     const { password, ...userData } = args;
 
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       ...userData,
       passwordHash: password, // In production, hash this!
       etbBalance: 0,
@@ -60,6 +61,37 @@ export const create = mutation({
       kycStatus: "none",
       paymentAccounts: [],
       isSuspended: false,
+    });
+
+    // Welcome Notification
+    await ctx.db.insert("notifications", {
+      userId,
+      type: "welcome",
+      title: "Welcome to EthioSwap! 🇪🇹",
+      message: "We're thrilled to have you! Complete your ID verification to unlock all trading features and start swapping.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Send Welcome Email via Action
+    if (args.email) {
+      await ctx.scheduler.runAfter(0, internal.users.sendWelcomeEmailAction, {
+        email: args.email,
+        username: args.username,
+      });
+    }
+
+    return userId;
+  },
+});
+
+export const sendWelcomeEmailAction = action({
+  args: { email: v.string(), username: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.runAction(internal.emails.sendNotification, {
+      to: args.email,
+      subject: "Welcome to EthioSwap! 🇪🇹",
+      text: `Hi ${args.username},\n\nWelcome to EthioSwap! We're thrilled to have you join our community.\n\nEthioSwap is Ethiopia's most trusted P2P platform for digital asset exchange. To get started, please complete your Identity Verification (KYC) in your profile settings.\n\nIf you have any questions, our support team is always here to help.\n\nHappy Trading!\nThe EthioSwap Team`,
     });
   },
 });

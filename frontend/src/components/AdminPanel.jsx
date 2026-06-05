@@ -3052,10 +3052,18 @@ const AdminPanel = ({ user }) => {
         return (
           <>
             <div className="drawer-backdrop" onClick={() => setSelectedUserDetailId(null)} />
-            <div className="drawer-content" style={{ width: '520px' }}>
+            <div className="drawer-content" style={{ 
+              width: width < 768 ? '100%' : '520px',
+              height: '100vh',
+              right: 0,
+              top: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box'
+            }}>
               
               {/* Header */}
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>👤 Member Profile Administration</h3>
                   <span style={{ fontSize: '11px', color: '#8b92a8' }}>Join Date: {new Date(u.joinedAt).toLocaleDateString()}</span>
@@ -3064,7 +3072,7 @@ const AdminPanel = ({ user }) => {
               </div>
 
               {/* Sub tabs inside drawer */}
-              <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0c12', padding: '2px' }}>
+              <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0c12', padding: '2px', flexShrink: 0, overflowX: 'auto' }}>
                 {[
                   { id: 'profile', l: 'Profile Summary' },
                   { id: 'transactions', l: 'Transactions' },
@@ -3076,11 +3084,11 @@ const AdminPanel = ({ user }) => {
                     key={tb.id}
                     onClick={() => setUserDrawerTab(tb.id)}
                     style={{
-                      flex: 1, padding: '10px 4px', border: 'none', background: 'transparent',
+                      flex: 1, padding: '10px 8px', border: 'none', background: 'transparent',
                       color: userDrawerTab === tb.id ? '#00d4a0' : '#8b92a8',
-                      fontSize: '12px', fontWeight: userDrawerTab === tb.id ? 700 : 500,
+                      fontSize: '11px', fontWeight: userDrawerTab === tb.id ? 700 : 500,
                       cursor: 'pointer', borderBottom: userDrawerTab === tb.id ? '2px solid #00d4a0' : '2px solid transparent',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease', whiteSpace: 'nowrap'
                     }}
                   >
                     {tb.l}
@@ -3097,7 +3105,7 @@ const AdminPanel = ({ user }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0a0c12', borderRadius: '12px', padding: '16px' }}>
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden', flexShrink: 0
                       }}>
                         {u.kycSelfie && u.kycSelfie.startsWith('http') ? (
                           <img src={u.kycSelfie} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -3105,20 +3113,20 @@ const AdminPanel = ({ user }) => {
                           (u.username || 'U').charAt(0).toUpperCase()
                         )}
                       </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '15px' }}>@{u.username}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
                           {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
                           {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Reference ID: {u._id}</span>
+                        <span style={{ fontSize: '11px', color: '#8b92a8', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>Ref: {u._id}</span>
                       </div>
                     </div>
 
                     {/* Financial Summary */}
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>💳 Account Financial Balance Summary</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: width < 480 ? '1fr' : '1fr 1fr', gap: '10px' }}>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Available USD</div>
                           <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${(u.ethBalance || 0).toFixed(2)}</div>
@@ -3140,20 +3148,20 @@ const AdminPanel = ({ user }) => {
 
                     {/* Member Details */}
                     <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#8b92a8' }}>Full Name:</span>
-                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.fullName || u.kycData?.name || 'Not specified'}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px' }}>
+                        <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>Full Name:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600, textAlign: 'right' }}>{u.fullName || u.kycData?.name || 'Not specified'}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#8b92a8' }}>Email Address:</span>
-                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.email || 'Not specified'}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px' }}>
+                        <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>Email Address:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600, textAlign: 'right', wordBreak: 'break-all' }}>{u.email || 'Not specified'}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#8b92a8' }}>Phone Contact:</span>
-                        <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.phone}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px' }}>
+                        <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>Phone Contact:</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600, textAlign: 'right' }}>{u.phone}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#8b92a8' }}>KYC Status Badge:</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px', alignItems: 'center' }}>
+                        <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>KYC Status Badge:</span>
                         <StatusBadge status={u.kycStatus} />
                       </div>
                     </div>
@@ -3161,11 +3169,11 @@ const AdminPanel = ({ user }) => {
                     {/* Address block */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span style={{ fontSize: '12px', color: '#8b92a8' }}>On-chain TRC20 / ERC20 wallet address:</span>
-                      <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px' }}>
+                      <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px', alignItems: 'center' }}>
                         <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00d4a0', wordBreak: 'break-all', flex: 1 }}>{u.ethAddress}</span>
                         <button
                           onClick={() => { navigator.clipboard.writeText(u.ethAddress); showAlert('✓ Address copied!'); }}
-                          style={{ border: 'none', background: 'rgba(255,255,255,0.05)', color: '#8b92a8', borderRadius: '4px', cursor: 'pointer', padding: '2px 8px', fontSize: '11px' }}
+                          style={{ border: 'none', background: 'rgba(255,255,255,0.05)', color: '#8b92a8', borderRadius: '4px', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', flexShrink: 0 }}
                         >
                           Copy
                         </button>

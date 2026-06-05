@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMutation, useQuery } from "convex/react";
@@ -254,12 +255,10 @@ const SecurityLock = ({ onVerify, onClose }) => {
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
   const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout } = useAuth();
+  const location = useLocation();
   const updateProfileMutation = useMutation(api.users.update);
   const deleteAccountMutation = useMutation(api.users.remove);
-  // loyalty/referral stats derived locally from available data
-  const loyaltyInfo = null;
-  const referralStats = null;
-  
+
   const [showKYC, setShowKYC] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddAcc, setShowAddAcc] = useState(false);
@@ -268,6 +267,13 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [securityAction, setSecurityAction] = useState(null); // 'view_docs' | 'withdraw'
   const [showLoyaltyHistory, setShowLoyaltyHistory] = useState(false);
   const [showReferralDash, setShowReferralDash] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('openKyc') === 'true' && user?.kycStatus === 'none') {
+      setShowKYC(true);
+    }
+  }, [location.search, user?.kycStatus]);
   
   // Edit Profile Form State
   const [editName, setEditName] = useState(user?.fullName || '');

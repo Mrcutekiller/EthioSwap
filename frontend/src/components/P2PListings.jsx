@@ -235,7 +235,7 @@ const P2PListings = () => {
           </button>
         ) : (
           <button 
-            onClick={() => alert("Please open the Profile section to complete your Identity Verification (KYC).")}
+            onClick={() => navigate('/profile?openKyc=true')}
             style={{
               background: 'transparent',
               border: '1.5px solid #f5c518',

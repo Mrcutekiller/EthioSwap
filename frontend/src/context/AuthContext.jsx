@@ -11,7 +11,7 @@ export const ETH_USD_PRICE = 3000.0;
 export const AuthProvider = ({ children }) => {
   const [user, setUser]         = useState(null);
   const [error, setErrorState]  = useState(null);
-  const [success, setSuccess]   = useState(null);
+  const [success, setSuccessState] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
@@ -128,6 +128,11 @@ export const AuthProvider = ({ children }) => {
   const setError = (message) => {
     setErrorState(message);
     if (message) setTimeout(() => setErrorState(null), 5000);
+  };
+
+  const setSuccess = (message) => {
+    setSuccessState(message);
+    if (message) setTimeout(() => setSuccessState(null), 5000);
   };
 
   const login = async (identifier, password) => {
