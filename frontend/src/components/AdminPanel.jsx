@@ -455,18 +455,19 @@ const AdminPanel = ({ user }) => {
   const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
 
   const navTabs = [
-    { id: 'overview',  em: '📊', title: 'Stats',    badge: 0 },
-    { id: 'earnings',  em: '💰', title: 'Earnings', badge: 0 },
-    { id: 'kyc',       em: '🛡️', title: 'KYC',     badge: kycQueue.length },
-    { id: 'deposits',  em: '📥', title: 'Deposits', badge: pendingDeposits.length },
-    { id: 'withdrawals', em: '📤', title: 'Withdrawals', badge: pendingWithdrawals.length },
-    { id: 'disputes',  em: '⚖️', title: 'Disputes', badge: disputes.length },
-    { id: 'support',   em: '💬', title: 'Support',  badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
-    { id: 'reviews',   em: '⭐', title: 'Reviews',  badge: 0 }, // New Reviews tab
-    { id: 'invite',    em: '🤝', title: 'Invite & Earn', badge: 0 },
-    { id: 'users',     em: '👥', title: 'Users',    badge: 0 },
-    { id: 'logs',      em: '📜', title: 'Audit Logs',badge: 0 },
-    { id: 'settings',  em: '⚙️', title: 'Config',  badge: 0 },
+    { id: 'overview',  icon: 'ti-layout-dashboard', title: 'Dashboard',    badge: 0 },
+    { id: 'users',     icon: 'ti-users',            title: 'Users',        badge: 0 },
+    { id: 'kyc',       icon: 'ti-id-badge',         title: 'KYC',          badge: kycQueue.length },
+    { id: 'trades',    icon: 'ti-arrows-right-left',title: 'Trades',       badge: 0 },
+    { id: 'deposits',  icon: 'ti-credit-card',      title: 'Deposits',     badge: pendingDeposits.length },
+    { id: 'withdrawals',icon: 'ti-wallet',           title: 'Withdrawals',  badge: pendingWithdrawals.length },
+    { id: 'listings',  icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
+    { id: 'reviews',   icon: 'ti-star',             title: 'Reviews',      badge: 0 },
+    { id: 'disputes',  icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
+    { id: 'support',   icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
+    { id: 'earnings',  icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
+    { id: 'settings',  icon: 'ti-settings',         title: 'System Settings', badge: 0 },
+    { id: 'logs',      icon: 'ti-history',           title: 'Audit Logs',    badge: 0 },
   ];
 
   // ── Admin User Handlers ─────────────────────────────────────
@@ -834,310 +835,48 @@ const AdminPanel = ({ user }) => {
   const handleLogout = () => { localStorage.removeItem('ethioswap_user'); window.location.reload(); };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d1117', color: '#f0f2f8', fontFamily: 'var(--font)' }}>
+    <div className="flex h-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-[var(--font-body)]">
       
       {/* ── STYLE INJECTIONS ── */}
       <style>{`
-        /* custom scrollbar */
-        ::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
+        @keyframes pulse-gold {
+          0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(255, 215, 0, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
-        ::-webkit-scrollbar-track {
-          background: rgba(255,255,255,0.01);
+        .pulse-badge { animation: pulse-gold 2s infinite; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .nav-item-active {
+          color: var(--bg-page) !important;
+          background: linear-gradient(90deg, var(--gold), #f0b800);
+          font-weight: 700;
         }
-        ::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.08);
-          border-radius: 99px;
+        .nav-item-active i { color: var(--bg-page) !important; }
+        .bento-card { position: relative; overflow: hidden; }
+        .bento-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-image: url('https://images.unsplash.com/photo-1777886290011-324d49520e93?auto=format&w=600&q=80&fit=crop');
+          background-size: cover;
+          opacity: 0.05;
+          z-index: 0;
         }
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 212, 160, 0.3);
-        }
-        .sidebar-item {
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .sidebar-item:hover {
-          background: rgba(255, 255, 255, 0.03);
-          color: #00d4a0 !important;
-        }
-        .card-premium {
-          background: #111318;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          padding: 24px;
-          transition: border-color 0.2s ease, transform 0.2s ease;
-        }
-        .card-premium:hover {
-          border-color: rgba(0, 212, 160, 0.25);
-        }
-        .table-premium {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-        .table-premium th {
-          font-size: 11px;
-          text-transform: uppercase;
-          color: #8b92a8;
-          font-weight: 600;
-          padding: 14px 18px;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-          text-align: left;
-          letter-spacing: 0.05em;
-        }
-        .table-premium td {
-          padding: 14px 18px;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
-          color: #f0f2f8;
-          vertical-align: middle;
-        }
-        .table-row-clickable {
-          cursor: pointer;
-          transition: background-color 0.15s ease;
-        }
-        .table-row-clickable:hover {
-          background-color: rgba(255, 255, 255, 0.025) !important;
-        }
-        .btn-premium-primary {
-          background: #00d4a0;
-          color: #0d1117;
-          border: none;
-          border-radius: 8px;
-          padding: 10px 18px;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .btn-premium-primary:hover {
-          background: #00b88c;
-          transform: translateY(-1px);
-        }
-        .btn-premium-primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-          transform: none;
-        }
-        .btn-premium-danger {
-          background: #f43f5e;
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          padding: 10px 18px;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .btn-premium-danger:hover {
-          background: #e11d48;
-          transform: translateY(-1px);
-        }
-        .btn-premium-warning {
-          background: #fbbf24;
-          color: #0d1117;
-          border: none;
-          border-radius: 8px;
-          padding: 10px 18px;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .btn-premium-warning:hover {
-          background: #d97706;
-          transform: translateY(-1px);
-        }
-        .btn-premium-secondary {
-          background: transparent;
-          border: 1px solid #00d4a0;
-          color: #00d4a0;
-          border-radius: 8px;
-          padding: 10px 18px;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .btn-premium-secondary:hover {
-          background: rgba(0, 212, 160, 0.05);
-          transform: translateY(-1px);
-        }
-        .btn-premium-ghost {
-          background: transparent;
-          border: none;
-          color: #8b92a8;
-          border-radius: 8px;
-          padding: 10px 16px;
-          font-weight: 500;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .btn-premium-ghost:hover {
-          background: rgba(255,255,255,0.03);
-          color: #f0f2f8;
-        }
-        .pill-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 10px;
-          border-radius: 9999px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-        .pill-badge-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-        }
-        /* animations */
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        @keyframes slideInLeft {
-          from { transform: translateX(30px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes modalScale {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .drawer-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(5, 7, 12, 0.5);
-          backdrop-filter: blur(4px);
-          z-index: 1000;
-          animation: fadeIn 0.2s ease-out;
-        }
-        .drawer-content {
-          position: fixed;
-          top: 0;
-          right: 0;
-          width: 480px;
-          height: 100vh;
-          background: #111318;
-          border-left: 1px solid rgba(255, 255, 255, 0.07);
-          box-shadow: -10px 0 40px rgba(0,0,0,0.5);
-          display: flex;
-          flex-direction: column;
-          z-index: 1001;
-          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .admin-sidebar {
             position: fixed !important;
             left: -240px;
-            top: 0;
-            bottom: 0;
+            top: 0; bottom: 0;
             z-index: 1000 !important;
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           }
-          .admin-sidebar.open {
-            left: 0 !important;
-          }
-          .drawer-content {
-            width: 100% !important;
-          }
-          .admin-main-content {
-            padding: 16px !important;
-          }
-          .mobile-header {
-            display: flex !important;
-          }
-          .sidebar-backdrop {
-            display: block !important;
-          }
-          .floating-bottom-bar {
-            left: 16px !important;
-            right: 16px !important;
-          }
+          .admin-sidebar.open { left: 0 !important; }
+          .mobile-only { display: flex !important; }
+          .desktop-only { display: none !important; }
         }
-        .modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(5, 7, 12, 0.7);
-          backdrop-filter: blur(8px);
-          z-index: 2000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          animation: fadeIn 0.2s ease-out;
-        }
-        .modal-content {
-          background: #111318;
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 16px;
-          padding: 24px;
-          width: 480px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-          animation: modalScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .input-premium {
-          width: 100%;
-          padding: 10px 14px;
-          border-radius: 8px;
-          background: #0a0c12;
-          border: 1px solid rgba(255,255,255,0.07);
-          color: #f0f2f8;
-          font-size: 13px;
-          font-family: var(--font);
-          outline: none;
-          transition: border-color 0.2s ease;
-        }
-        .input-premium:focus {
-          border-color: #00d4a0;
-        }
-        .select-premium {
-          width: 100%;
-          padding: 10px 14px;
-          border-radius: 8px;
-          background: #0a0c12;
-          border: 1px solid rgba(255,255,255,0.07);
-          color: #f0f2f8;
-          font-size: 13px;
-          font-family: var(--font);
-          outline: none;
-          cursor: pointer;
-        }
-        .segmented-btn {
-          flex: 1;
-          padding: 8px;
-          border: none;
-          font-family: var(--font);
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          text-align: center;
-        }
+        .mobile-only { display: none; }
       `}</style>
 
       {/* Toast Alert — Premium Slide-In */}
@@ -1186,7 +925,7 @@ const AdminPanel = ({ user }) => {
           }} 
         />
       )}
-      <div 
+      <aside 
         className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}
         style={{
           width: '240px',
@@ -1202,162 +941,94 @@ const AdminPanel = ({ user }) => {
         }}
       >
         {/* Logo area */}
-        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-          <Logo size={32} showText={true} />
-          <button 
-            onClick={() => setIsSidebarOpen(false)}
-            className="mobile-header"
-            style={{ 
-              display: 'none', 
-              marginLeft: 'auto', 
-              background: 'transparent', 
-              border: 'none', 
-              color: '#8b92a8', 
-              fontSize: '20px',
-              cursor: 'pointer'
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Navigation list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {navTabs.map(t => {
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setActiveTab(t.id);
-                  // Reset subfilters if shifting logs
-                  if (t.id !== 'logs') setLogsSearchQuery('');
-                  // Close sidebar on mobile after selection
-                  setIsSidebarOpen(false);
-                }}
-                className="sidebar-item"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: isActive ? 'rgba(245, 197, 24, 0.08)' : 'transparent',
-                  color: isActive ? '#f5c518' : '#8b92a8',
-                  fontSize: '14px',
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  width: '100%',
-                  position: 'relative',
-                  borderLeft: isActive ? '3px solid #f5c518' : '3px solid transparent'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>{t.em}</span>
-                <span style={{ flex: 1 }}>{t.title}</span>
-                {t.badge > 0 && (
-                  <span style={{
-                    background: '#EF4444',
-                    color: 'white',
-                    borderRadius: '999px',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '1px 6px',
-                    minWidth: '18px',
-                    textAlign: 'center'
-                  }}>
-                    {t.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Sidebar Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '12px', color: '#4e5567' }}>
-          EthioSwap Controls
-        </div>
-      </div>
-
-      {/* ── MAIN WORKSPACE CONTAINER ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        
-        {/* Top Bar: page title left, admin email + verified badge + bell + logout right */}
-        <div 
-          className="desktop-only"
-          style={{
-            height: '64px',
-            background: '#0a0c12',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 28px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 90
-          }}
-        >
-          <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#f0f2f8' }}>
-            {navTabs.find(t => t.id === activeTab)?.title || 'Admin Panel'}
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#8b92a8' }}>{user.email}</span>
-              <span style={{ 
-                background: 'rgba(0, 212, 160, 0.12)', 
-                color: '#00d4a0', 
-                fontSize: '10px', 
-                fontWeight: 700, 
-                padding: '2px 8px', 
-                borderRadius: '99px'
-              }}>✓ Admin</span>
+        <div className="p-5 pb-4 border-b border-[var(--border)] flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 font-[var(--font-heading)] text-lg font-bold text-[var(--gold)]">
+              <i className="ti ti-shield-check text-xl"></i>
+              EthioSwap Admin
             </div>
-            {/* Notification bell would go here if needed, but for now just email/logout */}
-            <button 
-              onClick={() => { if(window.confirm('Sign out of admin?')) window.location.href='/'; }} 
-              style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}
-            >
-              Logout ✕
-            </button>
+            <div className="mt-1 inline-block text-[10px] font-bold text-[var(--teal)] bg-[var(--teal)]/10 border border-[var(--teal)]/30 px-1.5 py-0.5 rounded">
+              COMMAND CENTER
+            </div>
+          </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="mobile-only text-[var(--text-secondary)] text-xl">✕</button>
+        </div>
+
+        <div className="p-4 flex items-center gap-3 border-b border-[var(--border)]">
+          <img src="https://i.pravatar.cc/36?u=admin_ethioswap" className="w-9 h-9 rounded-full border-2 border-[var(--gold)]" alt="Admin" />
+          <div className="min-w-0">
+            <div className="text-[13px] font-bold truncate">@admin_ethioswap</div>
+            <div className="text-[11px] text-[var(--gold)]">Super Admin</div>
           </div>
         </div>
 
-        {/* Mobile Header with Hamburger */}
-        <div 
-          className="mobile-header"
-          style={{ 
-            display: 'none', 
-            alignItems: 'center', 
-            padding: '12px 16px', 
-            background: '#0a0c12', 
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            gap: '12px'
-          }}
-        >
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            style={{ 
-              background: 'transparent', 
-              border: 'none', 
-              color: '#00d4a0', 
-              fontSize: '24px',
-              cursor: 'pointer',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            ☰
-          </button>
-          <Logo size={24} showText={true} />
-        </div>
+        {/* Navigation list */}
+        <nav className="flex-1 overflow-y-auto py-3 sidebar-nav custom-scrollbar">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--text-muted)] px-5 mb-2">Management</div>
+          <div className="space-y-0.5">
+            {navTabs.map(t => {
+              const isActive = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setActiveTab(t.id); if (t.id !== 'logs') setLogsSearchQuery(''); setIsSidebarOpen(false); }}
+                  className={`flex items-center gap-3 px-5 py-2.5 text-[13px] w-full text-left transition-all group ${isActive ? 'nav-item-active rounded-r-lg mr-4' : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]'}`}
+                >
+                  <i className={`ti ${t.icon} text-[17px] ${isActive ? '' : 'group-hover:text-[var(--text-primary)]'}`}></i>
+                  <span className={isActive ? 'font-bold' : 'font-medium'}>{t.title}</span>
+                  {t.badge > 0 && (
+                    <span className="ml-auto bg-[var(--error)] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{t.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-        {/* ── CENTRAL SCROLLABLE WORKSPACE ── */}
-        <div className="admin-main-content" style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>
-          
+        <div className="mt-auto border-t border-[var(--border)] p-2">
+          <button onClick={() => { if(window.confirm('Sign out of admin?')) window.location.reload(); }} className="flex items-center gap-3 px-5 py-3 text-[13px] font-bold text-[var(--error)] hover:bg-red-500/5 transition-all w-full text-left">
+            <i className="ti ti-logout text-[17px]"></i>
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 z-[1000] lg:hidden backdrop-blur-sm" />}
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 flex flex-col min-w-0">
+        
+        <header className="h-[72px] flex-shrink-0 flex items-center justify-between px-8 border-b border-[var(--border)] bg-[var(--bg-page)]">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsSidebarOpen(true)} className="mobile-only text-[var(--teal)] text-2xl">☰</button>
+            <div>
+              <h2 className="text-xl font-bold font-[var(--font-heading)]">
+                {navTabs.find(t => t.id === activeTab)?.title || 'Admin'} <span className="text-[var(--gold)]">Center</span>
+              </h2>
+              <div className="text-xs text-[var(--text-muted)] font-medium mt-0.5">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} · Platform Health: Optimal
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-5 desktop-only">
+            <div className="flex items-center gap-2 bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] px-3 py-1.5 rounded-lg">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--teal)] notif-pulse"></div>
+              <span className="text-xs font-bold text-[var(--teal)]">Live</span>
+            </div>
+            <div className="relative w-9 h-9 flex items-center justify-center bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] rounded-lg cursor-pointer hover:border-[var(--gold)]/40 transition-all">
+              <i className="ti ti-bell text-[var(--text-secondary)] text-lg"></i>
+              <span className="absolute top-2 right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--error)] border border-[var(--bg-page)]"></span>
+            </div>
+            <div className="flex items-center gap-2.5 bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] px-3 py-1.5 rounded-lg">
+              <img src="https://i.pravatar.cc/24?u=admin_ethioswap" className="w-6 h-6 rounded-full border border-[var(--gold)]" alt="Admin" />
+              <span className="text-[13px] font-bold">Admin</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+
           {/* ════ OVERVIEW / STATS DASHBOARD PAGE ════ */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
@@ -1400,108 +1071,74 @@ const AdminPanel = ({ user }) => {
                 ))}
               </div>
 
-              {/* 3x2 Metric Cards Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+              {/* Redesigned Bento Grid Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
-                {/* 1. Total Users */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>👥</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
-                      ▲ {liveTotalUsers > liveNewUsersThisWeek ? ((liveNewUsersThisWeek / Math.max(1, liveTotalUsers - liveNewUsersThisWeek)) * 100).toFixed(1) : '0.0'}%
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Registered Users</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{liveTotalUsers}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    +{liveNewUsersThisWeek} joined in last 7 days
-                  </div>
-                </div>
-
-                {/* 2. New This Week */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📈</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 8px', borderRadius: '20px' }}>
-                      Active
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>New Users This Week</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{liveNewUsersThisWeek}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    Currently awaiting visual verifications
+                {/* 1. Volume */}
+                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
+                        <i className="ti ti-coins text-2xl"></i>
+                      </div>
+                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/viscious-speed/abstract-100.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--gold)' }} alt="abstract" />
+                    </div>
+                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Total Volume</p>
+                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">${realVolume.toFixed(2)}</h3>
+                    <p className="text-[var(--teal)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                      <i className="ti ti-trending-up"></i> +12.5% <span className="text-[var(--text-muted)] font-medium">Filtered</span>
+                    </p>
                   </div>
                 </div>
 
-                {/* 3. Total Deposits */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⬇️</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
-                      ▲ 8.4%
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Approved Deposits</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>${liveTotalDeposit.toFixed(2)}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    ≈ {Math.round(liveTotalDeposit * rate).toLocaleString()} ETB processed
-                  </div>
-                </div>
-
-                {/* 4. P2P Volume */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🔄</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
-                      ▲ 14.2%
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>P2P Escrow Trade Volume</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>${realVolume.toFixed(2)}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    Volume filtered by selected period
+                {/* 2. Users */}
+                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-[var(--teal)]/10 text-[var(--teal)]">
+                        <i className="ti ti-users text-2xl"></i>
+                      </div>
+                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/viscious-speed/abstract-111.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--teal)' }} alt="abstract" />
+                    </div>
+                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Active Users</p>
+                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">{liveTotalUsers}</h3>
+                    <p className="text-[var(--teal)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                      <i className="ti ti-trending-up"></i> +8.2% <span className="text-[var(--text-muted)] font-medium">Growth</span>
+                    </p>
                   </div>
                 </div>
 
-                {/* 5. Total Buys */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🛒</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(52, 211, 153, 0.1)', color: '#34d399', padding: '2px 8px', borderRadius: '20px' }}>
-                      ▲ 6.2%
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Buying Orders Completed</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{m?.buyCount ?? 28}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    Secured transactions by platform escrow
+                {/* 3. Disputes */}
+                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
+                        <i className="ti ti-gavel text-2xl"></i>
+                      </div>
+                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/lorc/spiral-arrow.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--warning)' }} alt="abstract" />
+                    </div>
+                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Open Disputes</p>
+                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">{disputes.length}</h3>
+                    <p className="text-red-400 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                      <i className="ti ti-alert-circle"></i> Requires Action
+                    </p>
                   </div>
                 </div>
 
-                {/* 6. Total Sells */}
-                <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0,212,160,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🏷️</div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', padding: '2px 8px', borderRadius: '20px' }}>
-                      ▼ 1.2%
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 500, marginBottom: '2px' }}>Total Selling Orders Completed</div>
-                    <div style={{ fontSize: '26px', fontWeight: 700, color: '#00d4a0' }}>{m?.sellCount ?? 22}</div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#4e5567', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                    Listings successfully filled and closed
+                {/* 4. Escrow */}
+                <div className="bento-card p-6 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
+                        <i className="ti ti-lock text-2xl"></i>
+                      </div>
+                      <img src="https://cdn.jsdelivr.net/npm/game-icons-transparent@latest/svgs/lorc/steelwing-emblem.svg" className="w-12 h-12 opacity-20 filter invert group-hover:opacity-40 transition-opacity" style={{ color: 'var(--gold)' }} alt="abstract" />
+                    </div>
+                    <p className="text-[var(--text-secondary)] text-sm font-medium mb-1 uppercase tracking-tight">Value Locked</p>
+                    <h3 className="text-3xl font-extrabold font-[var(--font-heading)] leading-none">${(adminEarnings?.walletLocked ?? 0).toFixed(2)}</h3>
+                    <p className="text-[var(--text-muted)] text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                      <i className="ti ti-shield-check"></i> Fully Insured
+                    </p>
                   </div>
                 </div>
 
@@ -2983,12 +2620,9 @@ const AdminPanel = ({ user }) => {
                   {savingSettings ? '⏳ Saving System Configuration...' : '💾 Commit System Changes'}
                 </button>
               </form>
-
             </div>
           )}
-
         </div>
-      </div>
 
       {/* ══════════════════════════════════════════════════════════
          SLIDE-OVER DRAWER OVERLAYS (RIGHT SIDE PANELS)
@@ -3822,6 +3456,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
+      </main>
     </div>
   );
 };

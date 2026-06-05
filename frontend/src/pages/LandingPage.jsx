@@ -3,6 +3,7 @@ import Logo from '../components/Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "convex-api";
+import { convex } from "../convexClient";
 
 // Animated Count-Up component using Intersection Observer
 const AnimatedCounter = ({ value, duration = 1000, prefix = "", suffix = "", isDecimal = false }) => {
@@ -117,32 +118,295 @@ const FeatureIcons = {
   ),
 };
 
+// ── Floating Money Rain Component ──────────────────────────
+// Individual animated money bill that falls from the top
+const FallingBill = ({ style, isBirr = false }) => {
+  const content = isBirr ? (
+    // Ethiopian Birr Bill SVG
+    <svg viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <defs>
+        <linearGradient id={`birr-grad-${Math.random()}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.9"/>
+          <stop offset="100%" stopColor="#16a34a" stopOpacity="0.9"/>
+        </linearGradient>
+      </defs>
+      <rect width="220" height="100" rx="6" fill="#15803d" opacity="0.9"/>
+      <rect x="2" y="2" width="216" height="96" rx="5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
+      <rect x="8" y="8" width="200" height="84" rx="3" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
+      {/* Wavy pattern lines */}
+      <path d="M0 30 Q55 20 110 30 Q165 40 220 30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+      <path d="M0 50 Q55 40 110 50 Q165 60 220 50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+      <path d="M0 70 Q55 60 110 70 Q165 80 220 70" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+      {/* Amount circle */}
+      <circle cx="35" cy="50" r="22" fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
+      <text x="35" y="45" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.7)" fontFamily="sans-serif">ብር</text>
+      <text x="35" y="58" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white" fontFamily="sans-serif">100</text>
+      {/* Right side text */}
+      <text x="140" y="38" textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif" letterSpacing="2">NATIONAL BANK</text>
+      <text x="140" y="52" textAnchor="middle" fontSize="14" fontWeight="bold" fill="rgba(255,255,255,0.9)" fontFamily="sans-serif">ETB 100</text>
+      <text x="140" y="65" textAnchor="middle" fontSize="6" fill="rgba(255,255,255,0.4)" fontFamily="sans-serif">OF ETHIOPIA</text>
+      {/* Serial number */}
+      <text x="18" y="88" fontSize="5" fill="rgba(255,255,255,0.3)" fontFamily="monospace">ET2024-789456</text>
+    </svg>
+  ) : (
+    // US Dollar Bill SVG
+    <svg viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <rect width="220" height="100" rx="6" fill="#166534" opacity="0.9"/>
+      <rect x="2" y="2" width="216" height="96" rx="5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1"/>
+      <rect x="8" y="8" width="200" height="84" rx="3" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
+      {/* Cross-hatch pattern */}
+      <path d="M0 25 L220 25" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+      <path d="M0 50 L220 50" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+      <path d="M0 75 L220 75" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+      {/* Federal Reserve seal */}
+      <circle cx="35" cy="50" r="22" fill="rgba(0,0,0,0.25)" stroke="rgba(255,255,255,0.15)" strokeWidth="1"/>
+      <text x="35" y="46" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">FEDERAL</text>
+      <text x="35" y="57" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.6)" fontFamily="sans-serif">RESERVE</text>
+      {/* Large denomination */}
+      <text x="110" y="42" textAnchor="middle" fontSize="8" fontWeight="bold" fill="rgba(255,255,255,0.4)" fontFamily="sans-serif" letterSpacing="3">THE UNITED STATES</text>
+      <text x="110" y="58" textAnchor="middle" fontSize="22" fontWeight="bold" fill="rgba(255,255,255,0.95)" fontFamily="serif">$100</text>
+      <text x="110" y="72" textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.35)" fontFamily="sans-serif" letterSpacing="1">ONE HUNDRED DOLLARS</text>
+      {/* Portrait oval */}
+      <ellipse cx="180" cy="50" rx="20" ry="26" fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+      {/* Serial */}
+      <text x="18" y="88" fontSize="5" fill="rgba(255,255,255,0.3)" fontFamily="monospace">ML20240001A</text>
+    </svg>
+  );
+
+  return (
+    <div style={{ position: 'absolute', ...style, pointerEvents: 'none' }}>
+      <div style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+        {content}
+      </div>
+    </div>
+  );
+};
+
+// Money Rain Container — renders multiple falling bills
+const MoneyRain = ({ prefersReducedMotion }) => {
+  const bills = [
+    // [id, isBirr, width_px, leftPct, animDuration, animDelay, startRotation]
+    [1,  false, 200, '8%',   '7s',  '0s',   '-12deg'],
+    [2,  true,  170, '18%',  '9s',  '-3s',  '8deg'],
+    [3,  false, 190, '30%',  '6.5s','-5.5s','5deg'],
+    [4,  true,  160, '44%',  '8.5s','-1.5s','-6deg'],
+    [5,  false, 210, '56%',  '7s',  '-7s',  '10deg'],
+    [6,  true,  175, '68%',  '9.5s','-4s',  '-9deg'],
+    [7,  false, 185, '78%',  '6s',  '-2s',  '4deg'],
+    [8,  true,  195, '88%',  '8s',  '-6s',  '-14deg'],
+  ];
+
+  if (prefersReducedMotion) return null;
+
+  return (
+    <>
+      <style>{`
+        @keyframes billFall {
+          0%   { transform: translateY(-160px) rotate(var(--rot)); opacity: 0; }
+          8%   { opacity: 0.6; }
+          85%  { opacity: 0.5; }
+          100% { transform: translateY(calc(100vh + 160px)) rotate(calc(var(--rot) + 30deg)); opacity: 0; }
+        }
+      `}</style>
+      {bills.map(([id, isBirr, w, left, dur, delay, rot]) => (
+        <FallingBill
+          key={id}
+          isBirr={isBirr}
+          style={{
+            left,
+            top: 0,
+            width: `${w}px`,
+            height: `${Math.round(w * 0.455)}px`,
+            '--rot': rot,
+            animation: `billFall ${dur} linear ${delay} infinite`,
+            zIndex: 2,
+            opacity: 0,
+          }}
+        />
+      ))}
+    </>
+  );
+};
+
+// Legacy Bill3D kept as stub (no longer used, replaced by MoneyRain)
+const Bill3D = ({ progress, width }) => {
+  return null; // replaced by MoneyRain
+};
+
+// Premium USD Floating Asset Component (Vertical Connector Style)
+const PremiumUSDCard = ({ offset = '0px', delay = '0s', scrollProgress = 0 }) => {
+  const cardRef = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      setInView(entry.isIntersecting);
+    }, { threshold: 0 });
+    if (cardRef.current) observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Subtle parallax based on scroll
+  const parallaxY = inView ? (scrollProgress * 50) : 0;
+
+  return (
+    <div ref={cardRef} style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      margin: '-120px 0', // Overlap sections
+      position: 'relative',
+      zIndex: 50,
+      pointerEvents: 'none',
+      transform: `translateY(${parallaxY}px)`
+    }}>
+      {/* Upper Connector Line */}
+      <div style={{
+        width: '2px',
+        height: '140px',
+        background: 'linear-gradient(to bottom, transparent, var(--gold), var(--gold-bright))',
+        opacity: 0.4,
+        boxShadow: '0 0 15px var(--gold-muted)'
+      }} />
+
+      <div className="floating" style={{
+        width: '240px',
+        height: '320px',
+        animationDelay: delay,
+        transform: `translateX(${offset})`,
+        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.4))'
+      }}>
+        <div className="glass-panel" style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '40px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(245, 197, 24, 0.3)',
+          background: 'linear-gradient(135deg, rgba(20, 20, 25, 0.9) 0%, rgba(5, 5, 10, 0.95) 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 40px 100px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(245, 197, 24, 0.05)',
+        }}>
+          {/* Animated Glow Background */}
+          <div className="card-glow-pulse" style={{
+            position: 'absolute',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle, rgba(245, 197, 24, 0.1) 0%, transparent 60%)',
+            top: '-50%',
+            left: '-50%',
+            pointerEvents: 'none',
+          }} />
+          
+          {/* Central Connecting Line (Behind Symbol) */}
+          <div style={{
+            position: 'absolute',
+            width: '1px',
+            height: '100%',
+            background: 'linear-gradient(to bottom, var(--gold), transparent, var(--gold))',
+            opacity: 0.2,
+            left: '50%',
+            transform: 'translateX(-50%)'
+          }} />
+
+          {/* Main Symbol with multi-layer glow */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'var(--gold)',
+              filter: 'blur(30px)',
+              opacity: 0.3,
+              borderRadius: '50%'
+            }} />
+            <div style={{
+              fontSize: '110px',
+              fontWeight: 900,
+              background: 'linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 15px rgba(245, 197, 24, 0.5))',
+              marginBottom: '10px',
+              position: 'relative',
+              zIndex: 2
+            }}>$</div>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '0 24px', zIndex: 2 }}>
+            <div style={{ fontSize: '10px', color: 'var(--gold)', fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.8 }}>Secure Asset</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>USD RESERVE</div>
+          </div>
+
+          {/* Bottom detail */}
+          <div style={{ 
+            position: 'absolute', 
+            bottom: '30px', 
+            width: '60%', 
+            height: '1px', 
+            background: 'linear-gradient(90deg, transparent, rgba(245, 197, 24, 0.4), transparent)' 
+          }} />
+        </div>
+      </div>
+
+      {/* Lower Connector Line */}
+      <div style={{
+        width: '2px',
+        height: '140px',
+        background: 'linear-gradient(to top, transparent, var(--gold), var(--gold-bright))',
+        opacity: 0.4,
+        boxShadow: '0 0 15px var(--gold-muted)'
+      }} />
+    </div>
+  );
+};
+
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const { user } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [faqActiveIndex, setFaqActiveIndex] = useState(null);
-  const [openModal, setOpenModal] = useState(null);
+  
+  // Convex Data with manual fetching to prevent crashes if backend is missing
+  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '—', scams: 0 });
+  const [reviews, setReviews] = useState([]);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, reviewsData] = await Promise.all([
+          convex.query(api.stats.get).catch(() => null),
+          convex.query(api.reviews.listApproved).catch(() => [])
+        ]);
+        if (statsData) setStats(statsData);
+        if (reviewsData) setReviews(reviewsData);
+      } catch (err) {
+        console.warn("Convex data fetch failed in LandingPage", err);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Calculator state
-  const [calcMode, setCalcMode] = useState('usd-to-etb');
-  const [calcInput, setCalcInput] = useState('');
-
-  // Reviews state
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewContent, setReviewContent] = useState('');
-  const [reviewError, setReviewError] = useState('');
-  const [reviewSuccess, setReviewSuccess] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
-
-  // Convex Data
-  const convexStats = useQuery(api.stats.get);
-  const convexReviews = useQuery(api.reviews.listApproved);
   const submitReviewMutation = useMutation(api.reviews.create);
 
   const buyRate = systemSettings?.etbRatePerDollar ?? 190.00;
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 186.00;
+  
+  const [scrolled, setScrolled] = useState(false);
+   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
+   const [openModal, setOpenModal] = useState(null);
+
+   // Calculator state
+   const [calcMode, setCalcMode] = useState('usd-to-etb');
+   const [calcInput, setCalcInput] = useState('');
+
+   // Reviews state
+   const [showReviewModal, setShowReviewModal] = useState(false);
+   const [reviewRating, setReviewRating] = useState(5);
+   const [reviewContent, setReviewContent] = useState('');
+   const [reviewError, setReviewError] = useState('');
+   const [reviewSuccess, setReviewSuccess] = useState(false);
+   const [submitLoading, setSubmitLoading] = useState(false);
 
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -170,14 +434,38 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => window.removeEventListener('mousemove', moveCursor);
   }, [prefersReducedMotion]);
 
-  const stats = convexStats || { traders: 0, volume: 0, avg: '—', scams: 0 };
-  const reviews = convexReviews || [];
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Scroll reveal observer
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   // Sync live rate with database configuration
   useEffect(() => {
     setLiveRate(buyRate);
     setRateTimestamp(new Date().toLocaleTimeString());
   }, [buyRate]);
+
+  // Track scroll progress for 3D Bill movement
+  useEffect(() => {
+    const handleScrollProgress = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = window.scrollY / totalHeight;
+      setScrollProgress(progress);
+    };
+    window.addEventListener('scroll', handleScrollProgress);
+    return () => window.removeEventListener('scroll', handleScrollProgress);
+  }, []);
 
   // Intersection Observer for steps timeline
   useEffect(() => {
@@ -324,115 +612,259 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     <div style={{ background: '#0a0a0a', color: '#c8c8c8', fontFamily: "'Inter', sans-serif", overflowX: 'hidden', position: 'relative' }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        .serif-title { font-family: 'Playfair Display', serif; font-weight: 700; }
-        .cursor-trail { position: fixed; width: 12px; height: 12px; background: #f5c518; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: width 0.15s, height 0.15s, background-color 0.15s; }
-        .cursor-trail.hovered { width: 36px; height: 36px; background: rgba(245, 197, 24, 0.15); border: 1px solid #f5c518; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
-        /* 3D tilt floating phone */
-        @keyframes float { 
-          0%,100%{transform:perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(0)} 
-          50% {transform:perspective(1000px) rotateY(-15deg) rotateX(5deg) translateY(-12px)} 
+        :root {
+          --gold: #f5c518;
+          --gold-bright: #ffdf5e;
+          --gold-muted: rgba(245, 197, 24, 0.1);
+          --bg: #020203;
+          --card: #0a0a0b;
+          --card-hover: #111114;
+          --border: rgba(255, 255, 255, 0.05);
+          --border-bright: rgba(255, 255, 255, 0.1);
+          --text-main: #ffffff;
+          --text-dim: #8b92a8;
+          --accent-green: #00d4a0;
+          --glass-bg: rgba(10, 10, 12, 0.7);
         }
-        .phone-mockup-3d { 
-          animation: float 4s ease-in-out infinite; 
+
+        body { 
+          font-family: 'Inter', sans-serif; 
+          background: var(--bg); 
+          color: var(--text-main);
+          margin: 0;
+          overflow-x: hidden;
+        }
+
+        .serif-title { 
+          font-family: 'Plus Jakarta Sans', sans-serif; 
+          font-weight: 800; 
+          letter-spacing: -0.04em; 
+        }
+
+        /* Glassmorphism Fintech Style */
+        .glass-panel {
+          background: var(--glass-bg);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid var(--border);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .premium-card {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+          border: 1px solid var(--border);
+          border-radius: 24px;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .premium-card:hover {
+          border-color: var(--gold-muted);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(245, 197, 24, 0.02) 100%);
+          transform: translateY(-8px);
+        }
+
+        /* Floating elements */
+        @keyframes float-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-20px); }
+        }
+        .floating { animation: float-slow 6s ease-in-out infinite; }
+
+        /* Smooth reveal on scroll */
+        .reveal-on-scroll {
+          opacity: 0;
+          transform: translateY(40px);
+          transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal-on-scroll.active {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* Curved transition */
+        .section-curve {
+          position: absolute;
+          left: 0;
+          width: 100%;
+          height: 100px;
+          background: var(--bg);
+          clip-path: ellipse(60% 100% at 50% 100%);
+          z-index: 5;
+        }
+
+        /* 3D Bill Animation */
+        .bill-scene { perspective: 2000px; width: 100%; height: 100%; }
+        .bill-card { 
+          position: relative; 
+          width: 100%; 
+          height: 100%; 
           transform-style: preserve-3d; 
-          transition: transform 0.3s ease; 
+          will-change: transform; 
+          animation: billFloat 4s ease-in-out infinite; 
+        }
+        .bill-face { 
+          position: absolute; 
+          inset: 0; 
+          width: 100%; 
+          height: 100%; 
+          backface-visibility: hidden; 
+          border-radius: 16px; 
+          overflow: hidden; 
+          background-size: cover; 
+          background-position: center; 
+          box-shadow: 0 40px 80px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08) inset; 
+        }
+        .bill-dollar { background-image: url('/images/dollar-front.jpg'); }
+        .bill-birr { background-image: url('/images/birr-back.jpg'); transform: rotateY(180deg); }
+        
+        @keyframes billFloat { 
+          0%, 100% { transform: rotateY(var(--ry, 0deg)) translateY(0) rotateZ(0deg); } 
+          50% { transform: rotateY(var(--ry, 0deg)) translateY(-20px) rotateZ(1deg); } 
+        }
+
+        /* SaaS Layout Animations */
+        @keyframes revealUp { 
+          from { opacity: 0; transform: translateY(30px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        .reveal { animation: revealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        .btn-saas-primary {
+          background: linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%);
+          color: #000;
+          font-weight: 800;
+          padding: 16px 36px;
+          border-radius: 14px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 20px rgba(245, 197, 24, 0.3);
+        }
+        .btn-saas-primary:hover {
+          transform: translateY(-3px) scale(1.02);
+          box-shadow: 0 15px 40px rgba(245, 197, 24, 0.5);
         }
         
-        @keyframes slideDownMenu { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes usdtOrbit { 0% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } 50% { transform: translate(140px, 50px) translateZ(-50px); z-index: 1; } 100% { transform: translate(-140px, -50px) translateZ(50px); z-index: 10; } }
-        @keyframes etbOrbit { 0% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } 50% { transform: translate(-140px, -60px) translateZ(50px); z-index: 10; } 100% { transform: translate(140px, 60px) translateZ(-50px); z-index: 1; } }
-        .orbit-chip-usdt { animation: usdtOrbit 12s ease-in-out infinite; }
-        .orbit-chip-etb { animation: etbOrbit 12s ease-in-out infinite; }
-        .step-timeline-item { opacity: 0; transform: translateY(20px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .step-timeline-item.visible { opacity: 1; transform: translateY(0); }
-        .cta-btn-gold { background: #f5c518; color: #0a0a0a; border: none; border-radius: 10px; padding: 0 24px; font-weight: 700; font-size: 16px; height: 48px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
-        .cta-btn-gold:hover { background: #fcd34d; transform: translateY(-1px); }
-        .cta-btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.25); color: #f0f2f8; border-radius: 10px; padding: 0 24px; font-weight: 600; font-size: 16px; height: 48px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-        .cta-btn-outline:hover { background: rgba(255,255,255,0.03); border-color: #f5c518; }
-        .badge-live-pulse { width: 8px; height: 8px; background: #00d4a0; border-radius: 50%; display: inline-block; box-shadow: 0 0 10px #00d4a0; }
-        @keyframes livePulse { 0% { transform: scale(0.9); opacity: 0.5; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.5; } }
-        .badge-live-pulse { animation: livePulse 1.8s ease-in-out infinite; }
-        .legal-modal-overlay { position: fixed; inset: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(12px); z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 24px; }
-        .legal-modal-card { background: #111318; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; width: 100%; max-width: 580px; max-height: 80vh; overflow-y: auto; padding: 32px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        .testimonial-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
-        .trust-card { transition: transform 0.2s ease, border-color 0.2s ease; }
-        .trust-card:hover { transform: translateY(-2px); border-color: rgba(245, 197, 24, 0.3); }
-        
-        .card-premium:hover {
-          transform: translateY(-4px) !important;
-          border-color: rgba(245, 197, 24, 0.3) !important;
-          box-shadow: 0 0 0 1px rgba(245,197,24,0.3) !important;
+        .nav-item-saas {
+          color: var(--text-dim);
+          font-weight: 600;
+          font-size: 15px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          padding: 8px 12px;
+          border-radius: 8px;
         }
+        .nav-item-saas:hover { 
+          color: var(--text-main);
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Feature Grid */
+        .feature-card {
+          padding: 40px;
+          border-radius: 24px;
+          background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(10,10,10,0.8) 100%);
+          border: 1px solid var(--border);
+          transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          overflow: hidden;
+        }
+        .feature-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(245,197,24,0.08) 0%, transparent 50%);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        .feature-card:hover {
+          transform: translateY(-10px);
+          border-color: rgba(245, 197, 24, 0.3);
+          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+        .feature-card:hover::before { opacity: 1; }
+
+        /* Floating Glow Orbs */
+        .orb {
+          position: absolute;
+          width: 600px;
+          height: 600px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(245,197,24,0.05) 0%, transparent 70%);
+          filter: blur(80px);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* Ticker Marquee */
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+
+        /* Floating Glow Visual Connectors */
+        .section-glow {
+          position: absolute;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, var(--gold-muted) 0%, transparent 70%);
+          filter: blur(100px);
+          opacity: 0.3;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        @keyframes cardGlowPulse {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        .card-glow-pulse { animation: cardGlowPulse 4s ease-in-out infinite; }
       `}</style>
 
       {!prefersReducedMotion && (
         <div className={`cursor-trail ${cursorHovered ? 'hovered' : ''}`} style={{ left: `${cursorPos.x}px`, top: `${cursorPos.y}px` }} />
       )}
 
+      {/* Money Rain Animation — bills falling from top of hero */}
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh', overflow: 'hidden', pointerEvents: 'none', zIndex: 1 }}>
+        <MoneyRain prefersReducedMotion={prefersReducedMotion} />
+      </div>
+
       {/* ── NAVBAR ── */}
-      <nav className="nav-floating scrolled" style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: scrolled ? '70px' : '80px',
-        background: scrolled ? 'rgba(10, 10, 10, 0.92)' : 'transparent',
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: scrolled ? '1px solid #f5c518' : 'none', zIndex: 1000, transition: 'all 0.3s ease'
+      <nav style={{
+        position: 'fixed', top: width < 768 ? '10px' : '20px', left: '50%', transform: 'translateX(-50%)',
+        width: width < 768 ? 'calc(100% - 24px)' : 'calc(100% - 48px)', maxWidth: '1200px', height: width < 768 ? '60px' : '72px',
+        background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid var(--border)', borderRadius: width < 768 ? '16px' : '24px', zIndex: 1000, transition: 'all 0.3s ease',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: width < 768 ? '0 16px' : '0 32px'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
-          <Logo size={36} showText={true} />
-          {width > 1024 ? (
-            <>
-              <ul style={{ display: 'flex', alignItems: 'center', gap: '24px', listStyle: 'none', margin: 0, padding: 0 }}>
-                {[
-                  { id: 'features', label: 'Features', target: '#features' },
-                  { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
-                  { id: 'market', label: 'Live Rates', target: '#market' },
-                  { id: 'why-us', label: 'Why Us', target: '#why-us' },
-                  { id: 'faq', label: 'FAQ', target: '#faq' },
-                ].map(link => (
-                  <li key={link.id}>
-                    <a href={link.target} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
-                      style={{ color: '#c8c8c8', textDecoration: 'none', fontSize: '14px', fontWeight: 500, transition: 'color 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <button onClick={onSignIn} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
-                className="cta-btn-gold" style={{ height: '36px', fontSize: '14px', padding: '0 16px', borderRadius: '8px' }}>
-                Sign In
-              </button>
-            </>
-          ) : width >= 768 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <ul style={{ display: 'flex', alignItems: 'center', gap: '18px', listStyle: 'none', margin: 0, padding: 0 }}>
-                {[{ id: 'market', label: 'Live Rates', target: '#market' }, { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' }].map(link => (
-                  <li key={link.id}>
-                    <a href={link.target} style={{ color: '#c8c8c8', textDecoration: 'none', fontSize: '13px', fontWeight: 500, transition: 'color 0.2s' }}
-                      onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-                <li>
-                  <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#c8c8c8', cursor: 'pointer', fontSize: '18px', fontWeight: 700, padding: 0 }}
-                    onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
-                    ···
-                  </button>
-                </li>
-              </ul>
-              <button onClick={onSignIn} className="cta-btn-gold" style={{ height: '36px', fontSize: '13px', padding: '0 12px', borderRadius: '8px' }}>Sign In</button>
-            </div>
-          ) : (
-            <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px' }}>
-              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
-              <div style={{ width: '24px', height: '2.5px', background: '#f5c518', borderRadius: '2px' }} />
-            </button>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <Logo size={width < 768 ? 28 : 34} showText={true} />
         </div>
+        
+        {width > 1024 ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {[
+                { id: 'trade', label: 'Trade', target: '#market' },
+                { id: 'p2p', label: 'P2P', target: '#market' },
+                { id: 'rates', label: 'Rates', target: '#market' },
+                { id: 'invite', label: 'Invite & Earn', target: '#invite' },
+              ].map(link => (
+                <a key={link.id} href={link.target} className="nav-item-saas">{link.label}</a>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '10px 20px', fontSize: '15px' }}>Log in</button>
+              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '12px 24px', fontSize: '15px', borderRadius: '12px' }}>Get Started</button>
+            </div>
+          </>
+        ) : (
+          <button onClick={() => setMobileMenuOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+        )}
       </nav>
 
       {/* ── MOBILE MENU OVERLAY (Item 16) ── */}
@@ -476,239 +908,374 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       )}
 
       {/* ── HERO SECTION ── */}
-      <header id="hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '120px 24px 80px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(245,197,24,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,197,24,0.03) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 1 }} />
-        <div style={{ position: 'absolute', top: '30%', left: '10%', width: '450px', height: '450px', background: 'radial-gradient(circle, rgba(0,212,160,0.05) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 1 }} />
+      <header id="hero" style={{ minHeight: '90vh', display: 'flex', alignItems: 'center', padding: width < 768 ? '100px 16px 40px' : '120px 24px 60px', position: 'relative', overflow: 'hidden' }}>
+        <div className="orb" style={{ top: '-100px', left: '-100px', width: '800px', height: '800px' }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
 
-        <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', zIndex: 2 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center' }}>
-
-            <div style={{ flex: 1.5 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '50px', padding: '6px 16px', marginBottom: '24px' }}>
-                <span className="badge-live-pulse" />
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', letterSpacing: '0.08em' }}>ETHIOSWAP v2.4</span>
+        <div style={{ maxWidth: '1300px', margin: '0 auto', width: '100%', zIndex: 10, position: 'relative' }}>
+          <div className="reveal" style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1.1fr 0.9fr', gap: width < 1024 ? '40px' : '80px', alignItems: 'center' }}>
+            
+            {/* Left Content */}
+            <div style={{ textAlign: width < 1024 ? 'center' : 'left' }}>
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '10px', 
+                background: 'rgba(245, 197, 24, 0.05)', 
+                border: '1px solid rgba(245, 197, 24, 0.1)', 
+                borderRadius: '50px', 
+                padding: '8px 20px', 
+                marginBottom: '24px',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <span style={{ width: '8px', height: '8px', background: 'var(--gold)', borderRadius: '50%', boxShadow: '0 0 10px var(--gold)', flexShrink: 0 }} />
+                <span style={{ fontSize: width < 768 ? '11px' : '13px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.2 }}>Ethiopia's trusted USDT ↔ ETB exchange</span>
               </div>
 
-              <h1 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '58px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 16px 0', fontWeight: 700 }}>
-                Ethiopia's Safest Way to<br />
-                Buy & Sell <span style={{ color: '#f5c518' }}>USDT</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', opacity: 0.8 }}>
+                <div style={{ height: '1px', width: '30px', background: 'var(--gold)' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Secure P2P Ecosystem</span>
+              </div>
+
+              <h1 className="serif-title" style={{ fontSize: width < 768 ? '42px' : '82px', lineHeight: 1.1, color: '#ffffff', margin: '0 0 20px 0', fontWeight: 800 }}>
+                Swap dollars to<br />
+                <span style={{ color: 'var(--gold)' }}>Birr</span> in <span style={{ color: 'var(--accent-green)' }}>seconds</span>
               </h1>
 
-              <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, maxWidth: '480px', margin: '0 0 24px 0' }}>
-                Peer-to-peer USDT trading secured by escrow, verified by real ID, and protected by admin oversight. Trade with confidence — your money is safe.
+              <div style={{ height: '4px', width: '100px', background: 'var(--gold)', marginBottom: '32px', borderRadius: '2px', display: width < 1024 ? 'none' : 'block' }} />
+
+              <p style={{ fontSize: width < 768 ? '16px' : '20px', color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: width < 1024 ? '100%' : '580px', marginBottom: '32px' }}>
+                Buy and sell USDT for Ethiopian Birr at the best live rates. Fast P2P trades, secure escrow, and instant local payouts.
               </p>
 
-              {/* Live Rate Ticker */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#111318', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '10px 20px', marginBottom: '28px' }}>
-                <span className="badge-live-pulse" />
-                <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>Live Rate:</span>
-                <span style={{ fontSize: '18px', color: '#00d4a0', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</span>
-                <span style={{ fontSize: '10px', color: '#6b7280' }}>Updated: {rateTimestamp}</span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-                <button onClick={onGetStarted} onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
-                  className="cta-btn-gold" style={{ height: '48px', borderRadius: '10px' }}>
-                  Create Free Account
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start', marginBottom: '48px' }}>
+                <button onClick={onGetStarted} className="btn-saas-primary" style={{ fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 32px' : '18px 44px' }}>
+                  Start trading
                 </button>
-                <a href="#market" onMouseEnter={() => setCursorHovered(true)} onMouseLeave={() => setCursorHovered(false)}
-                  className="cta-btn-outline" style={{ height: '48px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                  View Live Rates
-                </a>
+                <button onClick={() => document.getElementById('market')?.scrollIntoView({ behavior: 'smooth' })} 
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 32px' : '18px 44px', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                  View live rates
+                </button>
               </div>
 
-              {/* Trust Badges */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '50px', padding: '8px 20px', fontSize: '12px', color: '#c8c8c8', fontWeight: 600 }}>
-                <span>🔒 Escrow Protected</span>
-                <span style={{ color: '#f5c518' }}>•</span>
-                <span>🛡️ KYC Verified</span>
-                <span style={{ color: '#f5c518' }}>•</span>
-                <span>⭐ 4.8 Rating</span>
-              </div>
-            </div>
-
-            {/* 3D Phone Mockup (Item 1) */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative', height: '480px' }}>
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '320px', height: '320px', background: 'radial-gradient(circle, rgba(0,212,160,0.12) 0%, transparent 70%)', zIndex: 1, pointerEvents: 'none' }} />
-              <div className="phone-mockup-3d" style={{
-                width: '240px', height: '420px', background: '#111318', border: '4px solid rgba(255, 255, 255, 0.12)', borderRadius: '32px',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.7), 0 0 30px rgba(0, 212, 160, 0.1)', position: 'absolute', zIndex: 3, top: '30px', padding: '16px',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              }}>
-                <div style={{ width: '90px', height: '18px', background: '#000', borderRadius: '0 0 12px 12px', margin: '-16px auto 14px', flexShrink: 0 }} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8b92a8', fontSize: '10px' }}>
-                    <span>EthioSwap</span>
-                    <span style={{ color: '#00d4a0' }}>● Live</span>
-                  </div>
-                  <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '10px', color: '#8b92a8' }}>TRADING VOLUME</div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>$2.8M+</div>
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', border: '1px solid rgba(0, 212, 160, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: '0 0 20px rgba(0, 212, 160, 0.15)' }}>
-                      🔒
-                    </div>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#00d4a0', letterSpacing: '0.04em' }}>ESCROW SECURED</span>
-                  </div>
-                  <div style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#8b92a8', marginBottom: '4px' }}>
-                      <span>Best Buy Rate</span>
-                      <span style={{ color: '#00d4a0' }}>TRC20 / BEP20</span>
-                    </div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518', fontFamily: 'JetBrains Mono, monospace' }}>1 USDT = {liveRate.toFixed(2)} ETB</div>
-                  </div>
+              {/* Stats Row */}
+              <div style={{ display: 'flex', gap: width < 768 ? '24px' : '48px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>24K+</span>
+                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>Active traders</span>
+                </div>
+                <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>฿ 9.2M</span>
+                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>USDT traded</span>
+                </div>
+                <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff' }}>4.9★</span>
+                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>User rating</span>
                 </div>
               </div>
-              <div className="orbit-chip-usdt" style={{
-                position: 'absolute', top: '160px', left: '50%', background: '#111318', border: '1px solid rgba(0,212,160,0.3)',
-                borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#00d4a0', boxShadow: '0 4px 15px rgba(0, 212, 160, 0.1)', pointerEvents: 'none'
-              }}>
-                💵 USDT TRC20
-              </div>
-              <div className="orbit-chip-etb" style={{
-                position: 'absolute', top: '240px', left: '50%', background: '#111318', border: '1px solid rgba(245,197,24,0.3)',
-                borderRadius: '30px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#f5c518', boxShadow: '0 4px 15px rgba(245, 197, 24, 0.1)', pointerEvents: 'none'
-              }}>
-                🇪🇹 CBE / Telebirr
-              </div>
             </div>
+
+            {/* Right Side: Premium Animated Exchange Card */}
+            {width >= 1024 && (
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px' }}>
+                {/* Background glow */}
+                <div style={{ position: 'absolute', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,197,24,0.08) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(40px)' }} />
+                
+                {/* Main exchange card */}
+                <div style={{
+                  width: '340px',
+                  background: 'linear-gradient(145deg, rgba(20,20,24,0.95) 0%, rgba(10,10,14,0.98) 100%)',
+                  border: '1px solid rgba(245,197,24,0.18)',
+                  borderRadius: '28px',
+                  padding: '32px',
+                  boxShadow: '0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,197,24,0.06) inset',
+                  position: 'relative',
+                  zIndex: 3,
+                  backdropFilter: 'blur(20px)',
+                }}>
+                  {/* Card header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Live Rate</div>
+                      <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--gold)', fontFamily: 'JetBrains Mono, monospace', marginTop: '4px' }}>1 USDT = {liveRate.toFixed(0)} ETB</div>
+                    </div>
+                    <div style={{ width: '44px', height: '44px', background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⚡</div>
+                  </div>
+
+                  {/* USD -> ETB flow */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '16px', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginBottom: '6px' }}>You Send</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>100</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(245,197,24,0.08)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(245,197,24,0.15)' }}>
+                        <span style={{ fontSize: '16px' }}>$</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>USDT</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Swap indicator */}
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', color: 'var(--gold)' }}>⇅</div>
+                  </div>
+
+                  {/* ETB output */}
+                  <div style={{ background: 'rgba(0,212,160,0.04)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(0,212,160,0.1)', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginBottom: '6px' }}>You Receive</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-green)', fontFamily: 'JetBrains Mono, monospace' }}>{(liveRate * 100).toLocaleString()}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,212,160,0.08)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(0,212,160,0.15)' }}>
+                        <span style={{ fontSize: '16px' }}>🇪🇹</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-green)' }}>ETB</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trade button */}
+                  <button onClick={onGetStarted} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-bright) 100%)', border: 'none', borderRadius: '14px', fontWeight: 800, fontSize: '15px', color: '#000', cursor: 'pointer', transition: 'all 0.3s', boxShadow: '0 4px 20px rgba(245,197,24,0.3)' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(245,197,24,0.5)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,197,24,0.3)'; }}>
+                    Trade Now →
+                  </button>
+
+                  {/* Security badge */}
+                  <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--text-dim)', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--accent-green)' }}>🔒</span>
+                    <span>Secured by escrow • No hidden fees</span>
+                  </div>
+                </div>
+
+                {/* Floating stat chips */}
+                <div style={{ position: 'absolute', top: '40px', right: '-20px', background: 'rgba(0,212,160,0.1)', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '12px', padding: '10px 14px', backdropFilter: 'blur(10px)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Avg. Trade Time</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-green)' }}>12 min</div>
+                </div>
+                <div style={{ position: 'absolute', bottom: '60px', left: '-30px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '12px', padding: '10px 14px', backdropFilter: 'blur(10px)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Success Rate</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--gold)' }}>99.8%</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* ── LIVE STATS BAR (Item 2) ── */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0d0d0d', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '32px 24px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px' }}>
-          {[
-            { label: 'Verified Traders', value: stats.traders, icon: '👥' },
-            { label: 'Volume Traded', value: stats.volume, prefix: "$", icon: '📊' },
-            { label: 'Average Rating', value: stats.avg, suffix: "★", icon: '⭐', isDecimal: true },
-            { label: 'Scam Reports', value: stats.scams, icon: '🛡️' },
-          ].map((stat, idx) => (
-            <div key={idx} style={{ textAlign: 'center', minWidth: '140px' }}>
-              <div style={{ fontSize: '24px', marginBottom: '4px' }}>{stat.icon}</div>
-              <div className="stat-number" style={{ fontSize: '28px', fontWeight: 800, color: '#f5c518', fontFamily: "JetBrains Mono, monospace" }}>
-                <AnimatedCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} isDecimal={stat.isDecimal} />
-              </div>
-              <div style={{ fontSize: '12px', color: '#8b92a8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Visual Connector: Hero -> Why Us */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="0s" offset={width < 1024 ? '0' : '200px'} />
 
-      {/* ── FEATURES SECTION (Item 4) ── */}
-      <section id="features" style={{ padding: '80px 24px', position: 'relative', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* ── WHY CHOOSE US SECTION ── */}
+      <section id="why-us" style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
+        <div className="section-glow" style={{ top: '-100px', right: '10%' }} />
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHAT YOU CAN DO</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Everything You Need to Trade</h2>
-            <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              From buying your first USDT to sending money home — EthioSwap has you covered with secure, instant, peer-to-peer trading.
-            </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            {[
-              { t: 'Buy USDT', d: 'Purchase USDT from verified sellers using Telebirr, CBE, Dashen Bank, or Awash Bank. Funds are held in escrow until you confirm payment.', code: 'buy' },
-              { t: 'Sell USDT', d: 'List your USDT for sale at your preferred rate. Receive ETB directly to your bank account with buyer verification.', code: 'sell' },
-              { t: 'Send Money', d: 'Send USDT to any EthioSwap user instantly with zero fees. Perfect for splitting bills or sending to friends and family.', code: 'send' },
-              { t: 'Receive Money', d: 'Share your wallet address to receive USDT from anyone, anywhere in the world. Supports TRC20 and ERC20 networks.', code: 'receive' },
-              { t: 'Deposit & Withdraw', d: 'Fund your wallet with on-chain USDT deposits (TRC20/ERC20) and withdraw to external wallets anytime.', code: 'exchange' },
-              { t: 'Track Live Rates', d: 'Monitor real-time USDT/ETB exchange rates, market trends, and best buy/sell offers from verified traders.', code: 'rates' },
-            ].map((ft, idx) => (
-              <div key={idx} className="card-premium" onMouseMove={handleCardMouseMove} onMouseLeave={handleCardMouseLeave}
-                style={{ background: '#161b22', border: '1px solid rgba(245, 197, 24, 0.15)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.2s, box-shadow 0.2s' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                  {FeatureIcons[ft.code]}
-                </div>
-                <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 600, margin: '0 0 10px 0' }}>{ft.t}</h3>
-                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: 0 }}>{ft.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS (Item 4) ── */}
-      <section id="how-it-works" ref={stepsRef} style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>HOW IT WORKS</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Start Trading in 3 Simple Steps</h2>
-            <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              Getting started with EthioSwap is quick and easy. No crypto knowledge required.
-            </p>
-          </div>
-          
-          {/* Dashed connector line between the steps (desktop only) */}
-          {width > 768 && (
-            <div style={{
-              position: 'absolute',
-              top: '196px',
-              left: '12%',
-              right: '12%',
-              height: '0px',
-              borderTop: '2px dashed rgba(245, 197, 24, 0.3)',
-              zIndex: 1,
-              pointerEvents: 'none'
-            }} />
-          )}
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', position: 'relative', padding: '20px 0', zIndex: 2 }}>
-            {[
-              { icon: '👤', t: 'Create Account', d: 'Sign up for free and verify your identity with a National ID and live selfie. Takes just a few minutes.' },
-              { icon: '🔍', t: 'Find a Trade', d: 'Browse live P2P listings or create your own. Filter by payment method, rate, and trade limits.' },
-              { icon: '🛡️', t: 'Trade Safely', d: 'USDT is locked in escrow. Send payment, confirm, and receive your funds. Admin support is always available.' },
-            ].map((step, idx) => (
-              <div key={idx} className={`step-timeline-item ${stepsVisible ? 'visible' : ''}`}
-                style={{ flex: '1 1 280px', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '16px', transitionDelay: `${idx * 150}ms` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid #f5c518', background: '#0d0d0d', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '22px', zIndex: 3 }}>
-                    {step.icon}
+          <div className="reveal-on-scroll" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', 
+            gap: '80px', 
+            alignItems: 'center' 
+          }}>
+            {/* Left side visual - trust stats */}
+            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+              {[
+                { label: 'Zero Scams', val: '0', icon: '🛡️', color: 'var(--accent-green)' },
+                { label: 'Successful Trades', val: '9,200+', icon: '✅', color: 'var(--gold)' },
+                { label: 'Avg. Response', val: '< 2 min', icon: '⚡', color: '#60a5fa' },
+                { label: 'Verified Users', val: '1,400+', icon: '🪪', color: '#a78bfa' },
+              ].map((s, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.3s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,197,24,0.2)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}>
+                  <div style={{ fontSize: '28px' }}>{s.icon}</div>
+                  <div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: s.color }}>{s.val}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-dim)' }}>{s.label}</div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <h4 style={{ fontSize: '18px', color: '#fff', fontWeight: 600, margin: '0 0 8px 0' }}>{step.t}</h4>
-                  <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>{step.d}</p>
+              ))}
+            </div>
+            {/* Right side - why choose content */}
+            <div>
+              <div className="reveal-on-scroll" style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '40px' }}>
+                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>
+                  Why Choose <span style={{ color: 'var(--gold)' }}>EthioSwap</span>
+                </h2>
+                <p style={{ maxWidth: '600px', margin: width < 1024 ? '0 auto' : '0', fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                  The most trusted platform for digital asset exchange in Ethiopia, built with security and speed at its core.
+                </p>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                {[
+                  { t: 'Escrow Protection', d: 'Your funds are held securely.', ic: '🔒' },
+                  { t: 'Verified Community', d: 'Trade with real people.', ic: '🛡️' },
+                  { t: 'Instant Settlement', d: 'Fastest trade times.', ic: '⚡' },
+                  { t: '24/7 Support', d: 'Always here to help.', ic: '🎧' },
+                ].map((ft, idx) => (
+                  <div key={idx} className="premium-card reveal-on-scroll" style={{ padding: '24px', transitionDelay: `${idx * 100}ms` }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--gold-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1px solid var(--gold)', marginBottom: '16px' }}>
+                      {ft.ic}
+                    </div>
+                    <h3 style={{ fontSize: '18px', color: '#fff', fontWeight: 700, margin: '0 0 8px 0' }}>{ft.t}</h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-dim)', lineHeight: 1.4, margin: 0 }}>{ft.d}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Connector: Why Us -> How It Works */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="0.5s" offset={width < 1024 ? '0' : '-200px'} />
+
+      {/* ── HOW IT WORKS TIMELINE ── */}
+      <section id="how-it-works" style={{ padding: '120px 24px', background: 'rgba(255,255,255,0.01)', position: 'relative', zIndex: 10 }}>
+        <div className="section-glow" style={{ top: '20%', left: '5%' }} />
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="reveal-on-scroll" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: width < 1024 ? '1fr' : '1.2fr 0.8fr', 
+            gap: '60px', 
+            alignItems: 'center' 
+          }}>
+            {/* Left side visual - steps illustration */}
+            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: '440px' }}>
+              {/* Vertical timeline line */}
+              <div style={{ position: 'absolute', left: '50%', top: '40px', bottom: '40px', width: '2px', background: 'linear-gradient(to bottom, var(--gold), transparent)', opacity: 0.3, transform: 'translateX(-50%)' }} />
+              {[
+                { num: '01', label: 'Register & Verify KYC', color: 'var(--gold)' },
+                { num: '02', label: 'Deposit USDT to Wallet', color: '#60a5fa' },
+                { num: '03', label: 'Create or Accept P2P Offer', color: 'var(--accent-green)' },
+                { num: '04', label: 'Escrow Locks — Trade Executes', color: '#a78bfa' },
+                { num: '05', label: 'Receive ETB Instantly', color: 'var(--gold)' },
+              ].map((step, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%', padding: '12px 20px', position: 'relative', zIndex: 2 }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `rgba(${step.color === 'var(--gold)' ? '245,197,24' : step.color === '#60a5fa' ? '96,165,250' : step.color === 'var(--accent-green)' ? '0,212,160' : '167,139,250'},0.1)`, border: `1px solid ${step.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: step.color, fontWeight: 800, fontSize: '12px', flexShrink: 0 }}>{step.num}</div>
+                  <div style={{ fontSize: '15px', color: '#c8c8c8', fontWeight: 500 }}>{step.label}</div>
+                </div>
+              ))}
+            </div>
+            
+            <div>
+              <div className="reveal-on-scroll" style={{ textAlign: width < 1024 ? 'center' : 'left', marginBottom: '64px' }}>
+                <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>Simple & Transparent</h2>
+                <p style={{ maxWidth: '500px', margin: width < 1024 ? '0 auto' : '0', fontSize: '18px', color: 'var(--text-dim)' }}>Start your first trade in three easy steps.</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                {[
+                  { step: '01', t: 'Create & Verify', d: 'ID verification in under 2 mins.', icon: '👤' },
+                  { step: '02', t: 'Choose an Offer', d: 'Find the best local rates.', icon: '🔍' },
+                  { step: '03', t: 'Trade Safely', d: 'Instant escrow settlement.', icon: '🛡️' },
+                ].map((step, idx) => (
+                  <div key={idx} className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', gap: '24px', transitionDelay: `${idx * 200}ms` }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, boxShadow: '0 0 20px rgba(245, 197, 24, 0.1)' }}>
+                      {step.icon}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '20px', color: '#fff', fontWeight: 700, marginBottom: '4px' }}>{step.t}</h3>
+                      <p style={{ fontSize: '15px', color: 'var(--text-dim)', margin: 0 }}>{step.d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Connector: How It Works -> Features */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="1s" offset={width < 1024 ? '0' : '200px'} />
+
+      {/* ── FEATURED TRADE SECTIONS (Alternating) ── */}
+      <section style={{ padding: '120px 24px', position: 'relative', zIndex: 10 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          
+          {/* Feature 1: Spacer for Bill on Left, Text on Right */}
+          <div className="reveal-on-scroll" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', 
+            gap: '80px', 
+            alignItems: 'center', 
+            marginBottom: '160px' 
+          }}>
+            {/* Left side: Transfer flow visual */}
+            <div style={{ display: width < 1024 ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', minHeight: '380px' }}>
+              {[
+                { from: '🇺🇸 USD Wallet', to: '→', color: 'var(--gold)', label: '$500.00 USDT' },
+                { from: '⚡ Escrow Lock', to: '→', color: '#a78bfa', label: 'Secured instantly' },
+                { from: '🇪🇹 ETB Transfer', to: '✓', color: 'var(--accent-green)', label: 'ETB 95,000 sent' },
+              ].map((item, i) => (
+                <div key={i} style={{ width: '100%', maxWidth: '320px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${item.color}22`, borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.3s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = item.color}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = `${item.color}22`}>
+                  <div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '4px' }}>{item.from}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: item.color, fontFamily: 'JetBrains Mono, monospace' }}>{item.label}</div>
+                  </div>
+                  <div style={{ fontSize: '20px', color: item.color, fontWeight: 800 }}>{item.to}</div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Lightning Fast</div>
+              <h2 className="serif-title" style={{ fontSize: '48px', color: '#fff', marginBottom: '24px' }}>Instant Peer-to-Peer Transfers</h2>
+              <p style={{ fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '32px' }}>
+                Transfer digital assets to any EthioSwap user instantly. No waiting for blockchain confirmations when trading internally.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {['Zero internal fees', 'Real-time notifications', 'Multi-bank support'].map(item => (
+                  <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#fff', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--accent-green)' }}>✓</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Feature 2: Right Text, Left Card */}
+          <div className="reveal-on-scroll" style={{ display: 'grid', gridTemplateColumns: width < 1024 ? '1fr' : '1fr 1fr', gap: '80px', alignItems: 'center' }}>
+            <div className="floating" style={{ order: width < 1024 ? 2 : 1 }}>
+              <div className="glass-panel" style={{ borderRadius: '32px', padding: '40px', position: 'relative' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '8px' }}>Success Rate</div>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--accent-green)' }}>99.8%</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '8px' }}>Avg. Speed</div>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)' }}>12m</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600 }}>Security Protocol</span>
+                    <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>Active</span>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+            <div style={{ order: width < 1024 ? 1 : 2 }}>
+              <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Unmatched Security</div>
+              <h2 className="serif-title" style={{ fontSize: '48px', color: '#fff', marginBottom: '24px' }}>The Gold Standard of P2P Security</h2>
+              <p style={{ fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '32px' }}>
+                We use multi-layer security protocols and automated escrow systems to ensure your assets are protected at all times. Every transaction is monitored by our security engine.
+              </p>
+              <button onClick={onGetStarted} className="btn-saas-primary">Learn About Security</button>
+            </div>
           </div>
+
         </div>
       </section>
 
-      {/* ── WHY US SECTION ── */}
-      <section id="why-us" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>WHY ETHIOPIANS CHOOSE US</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Built for Ethiopia, by Ethiopians</h2>
-            <p style={{ maxWidth: '560px', margin: '0 auto', fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              We understand the unique challenges of trading in Ethiopia. That's why we built a platform that works the way you need it to.
-            </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            {[
-              { t: 'Escrow Protection', d: 'Every trade is protected by automated escrow. Your USDT is locked until payment is verified. No trust required — the system guarantees safety.', ic: '🔒' },
-              { t: 'Real Identity (KYC)', d: 'Every trader is verified with a National ID and live selfie. No anonymous accounts, no fake profiles. You always know who you are trading with.', ic: '🛡️' },
-              { t: 'Trader Ratings', d: 'See a trader\'s history, rating, and badge level before trading. Top-rated traders earn elite status through consistent, honest trading.', ic: '⭐' },
-              { t: 'Best Rates', d: 'Competitive P2P rates that beat banks and traditional exchange services. Set your own price or accept the best available offer.', ic: '💰' },
-              { t: 'Instant Settlement', d: 'Trades complete in minutes, not days. Escrow releases instantly once payment is confirmed. No waiting for bank processing.', ic: '⚡' },
-              { t: 'Made for Ethiopia', d: 'Supports Telebirr, CBE, Dashen, Awash, and HelloCash. Local support team in Addis Ababa. Available in English and Amharic.', ic: '🇪🇹' },
-            ].map((ft, idx) => (
-              <div key={idx} className="trust-card" onMouseMove={handleCardMouseMove} onMouseLeave={handleCardMouseLeave}
-                style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', cursor: 'default', transition: 'transform 0.2s, border-color 0.2s' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(245,197,24,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', border: '1px solid rgba(245,197,24,0.15)', marginBottom: '20px' }}>{ft.ic}</div>
-                <h3 style={{ fontSize: '17px', color: '#fff', fontWeight: 600, margin: '0 0 10px 0' }}>{ft.t}</h3>
-                <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: 0 }}>{ft.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Visual Connector: Features -> Market */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="1.5s" offset="-30px" />
 
       {/* ── LIVE CALCULATOR SECTION ── */}
-      <section id="market" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="market" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 10 }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -879,6 +1446,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
+      {/* Visual Connector: Security -> Reviews */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="2s" offset="40px" />
+
       {/* ── TESTIMONIALS / REVIEWS (Item 3) ── */}
       <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -941,42 +1511,38 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
-      {/* ── FAQ SECTION (Item 4) ── */}
-      <section id="faq" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* ── FAQ SECTION ── */}
+      <section id="faq" style={{ padding: '120px 24px', background: 'var(--bg)', position: 'relative', zIndex: 10 }}>
+        <div className="section-curve" style={{ bottom: '-50px' }} />
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>FAQ</span>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 0 0', fontWeight: 400 }}>Frequently Asked Questions</h2>
+          <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '48px', color: '#fff', margin: '0 0 16px 0' }}>Common Questions</h2>
+            <p style={{ fontSize: '18px', color: 'var(--text-dim)' }}>Everything you need to know about trading on EthioSwap.</p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {faqItems.map((item, index) => {
               const isActive = faqActiveIndex === index;
               return (
-                <div key={index} style={{ 
-                  background: isActive ? 'rgba(245,197,24,0.03)' : '#111318', 
-                  border: '1px solid rgba(255,255,255,0.07)', 
-                  borderLeft: isActive ? '3px solid #f5c518' : '3px solid transparent',
-                  borderRadius: '12px', 
+                <div key={index} className="reveal-on-scroll" style={{ 
+                  background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent', 
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px', 
                   overflow: 'hidden',
-                  transition: 'all 200ms ease'
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  transitionDelay: `${index * 50}ms`
                 }}>
                   <button onClick={() => setFaqActiveIndex(isActive ? null : index)}
-                    style={{ width: '100%', padding: '18px 24px', background: 'transparent', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}
-                    onMouseOver={e => e.currentTarget.style.background = 'rgba(245,197,24,0.01)'}
-                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                    style={{ width: '100%', padding: '24px', background: 'transparent', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}>
                     <span>{item.q}</span>
                     <span style={{ 
-                      color: '#f5c518', 
-                      fontSize: '20px', 
-                      flexShrink: 0, 
-                      marginLeft: '12px',
+                      color: 'var(--gold)', 
+                      fontSize: '24px', 
                       transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
-                      transition: 'transform 200ms ease',
-                      display: 'inline-block'
+                      transition: 'transform 0.3s ease'
                     }}>+</span>
                   </button>
-                  <div style={{ maxHeight: isActive ? '200px' : '0px', transition: 'max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1)', overflow: 'hidden' }}>
-                    <p style={{ padding: '0 24px 20px', margin: 0, fontSize: '13.5px', color: '#c8c8c8', lineHeight: 1.6 }}>{item.a}</p>
+                  <div style={{ maxHeight: isActive ? '300px' : '0px', transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)', overflow: 'hidden' }}>
+                    <p style={{ padding: '0 24px 24px', margin: 0, fontSize: '15px', color: 'var(--text-dim)', lineHeight: 1.6 }}>{item.a}</p>
                   </div>
                 </div>
               );
@@ -985,116 +1551,74 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
+      {/* Visual Connector: FAQ -> CTA */}
+      <PremiumUSDCard scrollProgress={scrollProgress} delay="2.5s" offset="0px" />
+
       {/* ── FINAL CTA ── */}
-      <section style={{ padding: '80px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 50%, rgba(245,197,24,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: '700px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <h2 className="serif-title" style={{ fontSize: width < 768 ? '32px' : '48px', color: '#fff', margin: '0 0 16px 0', fontWeight: 700 }}>
-            Ready to Start Trading?
-          </h2>
-          <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '32px' }}>
-            Join thousands of Ethiopians already trading USDT safely on EthioSwap. Create your free account in minutes.
-          </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
-            <button onClick={onGetStarted} className="cta-btn-gold cta-shimmer" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
-              Create Free Account →
-            </button>
-            <a href="#market" className="cta-btn-outline" style={{ height: '52px', fontSize: '17px', borderRadius: '12px', padding: '0 32px' }}>
-              View Live Rates
-            </a>
-          </div>
-          <div style={{ fontSize: '13px', color: '#8b92a8' }}>
-            <span style={{ color: '#00d4a0', fontWeight: 700 }}>{stats.traders}</span> traders already joined
+      <section style={{ padding: '120px 24px', textAlign: 'center', position: 'relative' }}>
+        <div className="glass-card" style={{ maxWidth: '1000px', margin: '0 auto', padding: '80px 40px', borderRadius: '32px', position: 'relative', overflow: 'hidden' }}>
+          <div className="orb" style={{ top: '-250px', left: '-250px', opacity: 0.5 }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 24px 0' }}>
+              Join the Future of<br />Trading in Ethiopia
+            </h2>
+            <p style={{ fontSize: '20px', color: 'var(--text-dim)', maxWidth: '600px', margin: '0 auto 48px' }}>
+              Secure your first USDT trade today with 0% fees for the first week.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={onGetStarted} className="btn-saas-primary" style={{ fontSize: '20px', padding: '18px 40px' }}>
+                Create Your Account
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER (Item 5) ── */}
-      <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '80px 24px 40px' }}>
+      {/* ── FOOTER ── */}
+      <footer style={{ background: '#000', borderTop: '1px solid var(--border)', padding: '100px 24px 60px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '48px', marginBottom: '60px' }}>
-            
-            {/* Column 1 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '24px' }}>🛡️</span>
-                <span style={{ fontWeight: 800, fontSize: '20px', color: '#fff' }}>EthioSwap</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '64px', marginBottom: '80px' }}>
+            <div style={{ gridColumn: width > 1024 ? 'span 2' : 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <span style={{ fontSize: '32px' }}>🛡️</span>
+                <span style={{ fontWeight: 800, fontSize: '24px', color: '#fff', letterSpacing: '-0.02em' }}>EthioSwap</span>
               </div>
-              <p style={{ fontSize: '13.5px', color: '#8b92a8', lineHeight: 1.6 }}>
-                Safe. Verified. Ethiopian.
+              <p style={{ fontSize: '16px', color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: '320px' }}>
+                Ethiopia's most trusted peer-to-peer digital asset marketplace. Secure, fast, and local.
               </p>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer"
-                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>✈️</a>
-                <a href="#" style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>📸</a>
-                <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" rel="noreferrer"
-                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', textDecoration: 'none' }}>🎵</a>
-              </div>
             </div>
-
-            {/* Column 2 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Product</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
-                <li><a href="#features" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Features</a></li>
-                <li><a href="#how-it-works" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>How It Works</a></li>
-                <li><a href="#market" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Live Rates</a></li>
-                <li><button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Download App</button></li>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Product</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {['Features', 'How It Works', 'Market Rates', 'Security'].map(item => (
+                  <li key={item}><a href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item}</a></li>
+                ))}
               </ul>
             </div>
-
-            {/* Column 3 */}
             <div>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '20px' }}>Company</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
-                <li><button onClick={() => setOpenModal('about')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>About Us</button></li>
-                <li><a href="#faq" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>FAQ</a></li>
-                <li><a href="https://t.me/EthioSwap1" target="_blank" rel="noreferrer" style={{ color: '#8b92a8', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Contact Support</a></li>
-                <li><button onClick={() => setOpenModal('privacy')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Privacy Policy</button></li>
-                <li><button onClick={() => setOpenModal('terms')} style={{ background: 'none', border: 'none', color: '#8b92a8', cursor: 'pointer', padding: 0, fontSize: 'inherit', textAlign: 'left', transition: 'color 0.2s', fontFamily: 'inherit' }} onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#8b92a8'}>Terms of Service</button></li>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Support</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {['Help Center', 'Community', 'Contact Us', 'Status'].map(item => (
+                  <li key={item}><a href="#" className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item}</a></li>
+                ))}
               </ul>
             </div>
-
-            {/* Column 4 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Download App</h4>
-              <p style={{ fontSize: '13px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
-                Get the native Android app for faster trading on the go.
-              </p>
-              <button onClick={() => setOpenModal('about')} style={{
-                background: '#111318',
-                border: '1.5px solid #f5c518',
-                borderRadius: '10px',
-                height: '46px',
-                color: '#f5c518',
-                fontWeight: 700,
-                fontSize: '13.5px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                width: 'fit-content',
-                padding: '0 20px',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#f5c518'; e.currentTarget.style.color = '#0a0a0a'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#111318'; e.currentTarget.style.color = '#f5c518'; }}>
-                <span>🤖</span> Download Android APK
-              </button>
+            <div>
+              <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Legal</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
+                  <li key={item}><a href="#" className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item}</a></li>
+                ))}
+              </ul>
             </div>
           </div>
-
-          {/* Disclaimer */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '20px 0', marginBottom: '28px' }}>
-            <p style={{ fontSize: '11px', color: '#8b92a8', lineHeight: 1.6, textAlign: 'center', margin: 0 }}>
-              Disclaimer: EthioSwap is a peer-to-peer trading platform. We do not provide financial advice. Cryptocurrency trading involves risk. Users are responsible for compliance with local regulations. All trades are between verified individuals. Escrow protection applies to trades made through the platform.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: '#8b92a8' }}>
-            <span>© 2026 EthioSwap. All rights reserved. Addis Ababa, Ethiopia.</span>
-            <span style={{ color: '#f5c518', fontWeight: 600 }}>Secured by Escrow Technology</span>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px', fontSize: '14px', color: 'var(--text-dim)' }}>
+            <p>© 2026 EthioSwap. All rights reserved. Built with ❤️ for Ethiopia.</p>
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Twitter</a>
+              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
+              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Discord</a>
+            </div>
           </div>
         </div>
       </footer>

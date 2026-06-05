@@ -1,0 +1,171 @@
+{
+  "created": "2026-06-04T17:52:49.573Z",
+  "modified": "2026-06-04T17:52:49.573Z",
+  "canvas": {
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    },
+    "selected": []
+  },
+  "nodes": {
+    "var_bdbbdf73828e": {
+      "type": "variant",
+      "label": "Login / Sign Up — Auth Page",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:53:23.186148+00:00",
+      "modified": "2026-06-04T17:53:23.186148+00:00",
+      "fixedViewport": true,
+      "id": "var_bdbbdf73828e"
+    },
+    "var_6a9687c28b39": {
+      "type": "variant",
+      "label": "P2P Marketplace",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 1380,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:53:23.836947+00:00",
+      "modified": "2026-06-04T17:53:23.836947+00:00",
+      "fixedViewport": true,
+      "id": "var_6a9687c28b39"
+    },
+    "var_e918012bfe2c": {
+      "type": "variant",
+      "label": "Admin Dashboard",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 2760,
+        "y": 0,
+        "w": 1440,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:53:24.378895+00:00",
+      "modified": "2026-06-04T17:53:24.378895+00:00",
+      "fixedViewport": true,
+      "id": "var_e918012bfe2c"
+    },
+    "var_0857797d7a4a": {
+      "type": "variant",
+      "label": "Settings Page",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 4300,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:53:24.812338+00:00",
+      "modified": "2026-06-04T17:53:24.812338+00:00",
+      "fixedViewport": true,
+      "id": "var_0857797d7a4a"
+    },
+    "var_812d93ca4c25": {
+      "type": "variant",
+      "label": "User Dashboard",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 5680,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:56:24.387770+00:00",
+      "modified": "2026-06-04T17:56:24.387770+00:00",
+      "fixedViewport": true,
+      "id": "var_812d93ca4c25"
+    },
+    "var_86f7941bb59e": {
+      "type": "variant",
+      "label": "Login / Sign Up",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 7060,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "\n<style data-kid=\"0\">\n  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');\n  @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');\n</style>\n\n<div style=\"font-family: 'Manrope', sans-serif; background: #010B13; min-height: 100vh; display: flex; margin: 0; padding: 0;\" data-kid=\"1\">\n\n  \n  <div style=\"width: 50%; background: linear-gradient(155deg, #004953 0%, #012a30 40%, #010B13 100%); display: flex; flex-direction: column; justify-content: space-between; padding: 48px 52px; position: relative; overflow: hidden;\" data-kid=\"2\">\n    \n    <div style=\"position: absolute; inset: 0; opacity: 0.04; background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2252%22><polygon points=%2230,2 58,17 58,35 30,50 2,35 2,17%22 fill=%22none%22 stroke=%22%2300d4a0%22 stroke-width=%221.5%22/></svg>'); background-repeat: repeat;\" data-kid=\"3\"></div>\n    \n    <div style=\"position: absolute; top: -80px; left: -80px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(0,212,160,0.18) 0%, transparent 70%); pointer-events: none;\" data-kid=\"4\"></div>\n    <div style=\"position: absolute; bottom: 40px; right: -60px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,215,0,0.08) 0%, transparent 70%); pointer-events: none;\" data-kid=\"5\"></div>\n\n    \n    <div style=\"position: relative; z-index: 1;\" data-kid=\"6\">\n      <div style=\"display: flex; align-items: center; gap: 12px; margin-bottom: 48px;\" data-kid=\"7\">\n        <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #FFD700, #f0a500); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(255,215,0,0.35);\" data-kid=\"8\">\n          <i class=\"ti ti-shield-check\" style=\"font-size: 24px; color: #010B13;\" data-kid=\"9\"></i>\n        </div>\n        <span style=\"font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.5px;\" data-kid=\"10\">EthioSwap</span>\n      </div>\n\n      \n      <h1 style=\"font-family: 'Space Grotesk', sans-serif; font-size: 38px; font-weight: 700; color: #fff; line-height: 1.2; margin: 0 0 16px; letter-spacing: -0.5px;\" data-kid=\"11\">\n        Trade Crypto<br data-kid=\"12\"><span style=\"color: #00d4a0;\" data-kid=\"13\">Securely</span> in<br data-kid=\"14\">Ethiopia\n      </h1>\n      <p style=\"color: rgba(255,255,255,0.55); font-size: 16px; line-height: 1.6; margin: 0 0 48px;\" data-kid=\"15\">Join thousands of Ethiopians trading crypto safely with our escrow-protected P2P platform.</p>\n\n      \n      <div style=\"display: flex; flex-direction: column; gap: 20px;\" data-kid=\"16\">\n        <div style=\"display: flex; align-items: center; gap: 16px;\" data-kid=\"17\">\n          <div style=\"width: 44px; height: 44px; background: rgba(0,212,160,0.12); border: 1px solid rgba(0,212,160,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center; shrink: 0;\" data-kid=\"18\">\n            <i class=\"ti ti-shield-check\" style=\"font-size: 20px; color: #00d4a0;\" data-kid=\"19\"></i>\n          </div>\n          <div data-kid=\"20\">\n            <div style=\"color: #fff; font-weight: 600; font-size: 15px;\" data-kid=\"21\">Escrow Protected</div>\n            <div style=\"color: rgba(255,255,255,0.45); font-size: 13px;\" data-kid=\"22\">Funds locked until both parties confirm</div>\n          </div>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 16px;\" data-kid=\"23\">\n          <div style=\"width: 44px; height: 44px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;\" data-kid=\"24\">\n            <i class=\"ti ti-users\" style=\"font-size: 20px; color: #FFD700;\" data-kid=\"25\"></i>\n          </div>\n          <div data-kid=\"26\">\n            <div style=\"color: #fff; font-weight: 600; font-size: 15px;\" data-kid=\"27\">50K+ Verified Traders</div>\n            <div style=\"color: rgba(255,255,255,0.45); font-size: 13px;\" data-kid=\"28\">KYC-verified community you can trust</div>\n          </div>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 16px;\" data-kid=\"29\">\n          <div style=\"width: 44px; height: 44px; background: rgba(0,212,160,0.12); border: 1px solid rgba(0,212,160,0.25); border-radius: 10px; display: flex; align-items: center; justify-content: center;\" data-kid=\"30\">\n            <i class=\"ti ti-bolt\" style=\"font-size: 20px; color: #00d4a0;\" data-kid=\"31\"></i>\n          </div>\n          <div data-kid=\"32\">\n            <div style=\"color: #fff; font-weight: 600; font-size: 15px;\" data-kid=\"33\">Instant Matching</div>\n            <div style=\"color: rgba(255,255,255,0.45); font-size: 13px;\" data-kid=\"34\">Find a trade partner in seconds</div>\n          </div>\n        </div>\n      </div>\n    </div>\n\n    \n    <div style=\"position: relative; z-index: 1; display: flex; align-items: center; gap: 10px;\" data-kid=\"35\">\n      <div style=\"display: flex; gap: -6px;\" data-kid=\"36\">\n        <img src=\"https://i.pravatar.cc/28?u=a1\" decoding=\"async\" loading=\"lazy\" style=\"width: 28px; height: 28px; border-radius: 50%; border: 2px solid #004953; object-fit: cover;\" data-kid=\"37\">\n        <img src=\"https://i.pravatar.cc/28?u=a2\" decoding=\"async\" loading=\"lazy\" style=\"width: 28px; height: 28px; border-radius: 50%; border: 2px solid #004953; object-fit: cover; margin-left: -8px;\" data-kid=\"38\">\n        <img src=\"https://i.pravatar.cc/28?u=a3\" decoding=\"async\" loading=\"lazy\" style=\"width: 28px; height: 28px; border-radius: 50%; border: 2px solid #004953; object-fit: cover; margin-left: -8px;\" data-kid=\"39\">\n      </div>\n      <span style=\"color: rgba(255,255,255,0.5); font-size: 13px;\" data-kid=\"40\">Trusted by <span style=\"color: #00d4a0; font-weight: 600;\" data-kid=\"41\">thousands</span> of Ethiopians</span>\n    </div>\n  </div>\n\n  \n  <div style=\"width: 50%; display: flex; align-items: center; justify-content: center; padding: 40px 52px; background: #010B13;\" data-kid=\"42\">\n    <div style=\"width: 100%; max-width: 440px;\" data-kid=\"43\">\n\n      \n      <div style=\"background: #0d1520; border: 1px solid rgba(0,212,160,0.15); border-radius: 20px; padding: 36px; box-shadow: 0 0 60px rgba(0,212,160,0.08), 0 20px 60px rgba(0,0,0,0.5);\" data-kid=\"44\">\n\n        \n        <div style=\"display: flex; background: #0a1628; border-radius: 10px; padding: 4px; margin-bottom: 28px;\" data-kid=\"45\">\n          <button style=\"flex: 1; padding: 10px; background: transparent; border: none; border-radius: 7px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; color: #FFD700; cursor: pointer; position: relative; border-bottom: 2px solid #FFD700; margin-bottom: -1px;\" data-kid=\"46\">Sign In</button>\n          <button style=\"flex: 1; padding: 10px; background: transparent; border: none; border-radius: 7px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.4); cursor: pointer;\" data-kid=\"47\">Create Account</button>\n        </div>\n\n        \n        <div style=\"margin-bottom: 24px;\" data-kid=\"48\">\n          <h2 style=\"font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #fff; margin: 0 0 6px;\" data-kid=\"49\">Welcome back 👋</h2>\n          <p style=\"color: rgba(255,255,255,0.45); font-size: 14px; margin: 0;\" data-kid=\"50\">Sign in to your EthioSwap account</p>\n        </div>\n\n        \n        <div style=\"margin-bottom: 16px;\" data-kid=\"51\">\n          <label style=\"display: block; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500; margin-bottom: 7px;\" data-kid=\"52\">Email Address</label>\n          <div style=\"position: relative;\" data-kid=\"53\">\n            <i class=\"ti ti-mail\" style=\"position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 16px;\" data-kid=\"54\"></i>\n            <input type=\"email\" placeholder=\"biruk@example.com\" style=\"width: 100%; background: #0a1628; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 12px 12px 42px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; outline: none; box-sizing: border-box; color: rgba(255,255,255,0.5);\" value=\"biruk@example.com\" data-kid=\"55\">\n          </div>\n        </div>\n\n        \n        <div style=\"margin-bottom: 8px;\" data-kid=\"56\">\n          <label style=\"display: block; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500; margin-bottom: 7px;\" data-kid=\"57\">Password</label>\n          <div style=\"position: relative;\" data-kid=\"58\">\n            <i class=\"ti ti-lock\" style=\"position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #00d4a0; font-size: 16px;\" data-kid=\"59\"></i>\n            <input type=\"password\" placeholder=\"Enter your password\" style=\"width: 100%; background: #0a1628; border: 1.5px solid #00d4a0; border-radius: 10px; padding: 12px 42px 12px 42px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; outline: none; box-sizing: border-box; box-shadow: 0 0 0 3px rgba(0,212,160,0.1);\" value=\"••••••••••\" data-kid=\"60\">\n            <button style=\"position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 0;\" data-kid=\"61\">\n              <i class=\"ti ti-eye-off\" style=\"font-size: 16px;\" data-kid=\"62\"></i>\n            </button>\n          </div>\n        </div>\n\n        \n        <div style=\"text-align: right; margin-bottom: 22px;\" data-kid=\"63\">\n          <a href=\"#\" style=\"color: #00d4a0; font-size: 13px; text-decoration: none; font-weight: 500;\" data-kid=\"64\">Forgot Password?</a>\n        </div>\n\n        \n        <button style=\"width: 100%; padding: 14px; background: linear-gradient(135deg, #FFD700, #f0a500); border: none; border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #010B13; cursor: pointer; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(255,215,0,0.3); letter-spacing: 0.3px;\" data-kid=\"65\">\n          Sign In\n          <i class=\"ti ti-arrow-right\" style=\"margin-left: 6px; font-size: 15px;\" data-kid=\"66\"></i>\n        </button>\n\n        \n        <div style=\"display: flex; align-items: center; gap: 12px; margin-bottom: 18px;\" data-kid=\"67\">\n          <div style=\"flex: 1; height: 1px; background: rgba(255,255,255,0.08);\" data-kid=\"68\"></div>\n          <span style=\"color: rgba(255,255,255,0.3); font-size: 12px; font-weight: 500;\" data-kid=\"69\">OR CONTINUE WITH</span>\n          <div style=\"flex: 1; height: 1px; background: rgba(255,255,255,0.08);\" data-kid=\"70\"></div>\n        </div>\n\n        \n        <button style=\"width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.75); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;\" data-kid=\"71\">\n          <svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" fill=\"none\" data-kid=\"72\"><path d=\"M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z\" fill=\"#4285F4\" data-kid=\"73\"></path><path d=\"M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z\" fill=\"#34A853\" data-kid=\"74\"></path><path d=\"M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z\" fill=\"#FBBC05\" data-kid=\"75\"></path><path d=\"M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58Z\" fill=\"#EA4335\" data-kid=\"76\"></path></svg>\n          Continue with Google\n        </button>\n\n        \n        <p style=\"text-align: center; margin: 20px 0 0; color: rgba(255,255,255,0.4); font-size: 13px;\" data-kid=\"77\">\n          New to EthioSwap? <a href=\"#\" style=\"color: #00d4a0; font-weight: 600; text-decoration: none;\" data-kid=\"78\">Create Account →</a>\n        </p>\n      </div>\n\n      \n      <div style=\"background: #0d1520; border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 28px 36px; margin-top: 16px; opacity: 0.55;\" data-kid=\"79\">\n        <p style=\"color: rgba(255,255,255,0.4); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin: 0 0 16px;\" data-kid=\"80\">Create Account Form Preview</p>\n        <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;\" data-kid=\"81\">\n          <div style=\"background: #0a1628; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 11px 14px;\" data-kid=\"82\">\n            <div style=\"color: rgba(255,255,255,0.25); font-size: 13px;\" data-kid=\"83\">Full Name</div>\n          </div>\n          <div style=\"background: #0a1628; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 11px 14px;\" data-kid=\"84\">\n            <div style=\"color: rgba(255,255,255,0.25); font-size: 13px;\" data-kid=\"85\">Email</div>\n          </div>\n          <div style=\"background: #0a1628; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 11px 14px;\" data-kid=\"86\">\n            <div style=\"color: rgba(255,255,255,0.25); font-size: 13px;\" data-kid=\"87\">Password</div>\n          </div>\n          <div style=\"background: #0a1628; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 11px 14px;\" data-kid=\"88\">\n            <div style=\"color: rgba(255,255,255,0.25); font-size: 13px;\" data-kid=\"89\">Referral Code</div>\n          </div>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 8px; margin-bottom: 14px;\" data-kid=\"90\">\n          <div style=\"width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(0,212,160,0.1);\" data-kid=\"91\"></div>\n          <span style=\"color: rgba(255,255,255,0.3); font-size: 12px;\" data-kid=\"92\">I agree to Terms & Privacy Policy</span>\n        </div>\n        <div style=\"background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.2); border-radius: 8px; padding: 11px; text-align: center;\" data-kid=\"93\">\n          <span style=\"color: rgba(255,215,0,0.5); font-size: 14px; font-weight: 600;\" data-kid=\"94\">Create Account</span>\n        </div>\n      </div>\n\n    </div>\n  </div>\n</div>\n",
+      "comments": [],
+      "created": "2026-06-04T17:56:25.731959+00:00",
+      "modified": "2026-06-04T17:57:21.410759+00:00",
+      "fixedViewport": true,
+      "id": "var_86f7941bb59e"
+    },
+    "var_7179070f1945": {
+      "type": "variant",
+      "label": "Landing Page",
+      "parentId": null,
+      "themeId": null,
+      "rect": {
+        "x": 8440,
+        "y": 0,
+        "w": 1440,
+        "h": 800
+      },
+      "generation": {
+        "prompt": "",
+        "config": {}
+      },
+      "html": "",
+      "comments": [],
+      "created": "2026-06-04T17:56:25.759843+00:00",
+      "modified": "2026-06-04T17:56:25.759843+00:00",
+      "fixedViewport": true,
+      "id": "var_7179070f1945"
+    }
+  },
+  "themes": {},
+  "comments": [],
+  "nextCommentNumber": 1
+}

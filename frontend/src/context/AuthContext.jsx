@@ -16,9 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [initializing, setInitializing] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
 
-  // Convex Queries
-  const settingsFromQuery = useQuery(api.systemSettings.get);
-  const systemSettings = settingsFromQuery || {
+  // --- Robust Data Fetching ---
+  const [systemSettings, setSystemSettings] = useState({
     etbRatePerDollar: 190.0,
     etbRatePerDollarSell: 186.0,
     flatFeePercent: 1.0,
@@ -26,12 +25,39 @@ export const AuthProvider = ({ children }) => {
     commissionType: 'percentage',
     commissionValue: 1.0,
     isP2pFreePeriod: false
-  };
-  
-  const listingsFromQuery = useQuery(api.listings.listActive) || [];
-  const tradesFromQuery = useQuery(api.trades.listForUser, user ? { userId: user._id } : "skip") || [];
-  
-  // Only fetch admin-level data when user is confirmed admin, to avoid server errors for regular users
+  });
+  const [listings, setListings] = useState([]);
+  const [trades, setTrades] = useState([]);
+
+  // Centralized fetching with error handling to prevent app crashes
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch System Settings
+        const settings = await convex.query(api.systemSettings.get).catch(() => null);
+        if (settings) setSystemSettings(settings);
+
+        // Fetch Listings
+        const activeListings = await convex.query(api.listings.listActive).catch(() => []);
+        setListings(activeListings.map(l => ({ ...l, id: l._id })));
+
+        // Fetch User Trades if logged in
+        if (user?._id) {
+          const userTrades = await convex.query(api.trades.listForUser, { userId: user._id }).catch(() => []);
+          setTrades(userTrades.map(t => ({ ...t, id: t._id })));
+        }
+      } catch (err) {
+        console.warn("AuthContext: Convex data synchronization failed. Using local state.", err);
+      }
+    };
+    
+    fetchData();
+    // Re-fetch every 30 seconds for live updates without useQuery hooks
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [user?._id]);
+
+  // Derived queries (using skip pattern to be safe)
   const isAdmin = user?.role === 'admin';
   const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
   const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
@@ -40,10 +66,6 @@ export const AuthProvider = ({ children }) => {
   const userDepositsQuery = useQuery(api.depositRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
   const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
   const inviteRewardsQuery = useQuery(api.inviteRewards.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
-
-  // Add id alias for compatibility across all arrays
-  const listings = listingsFromQuery.map(l => ({ ...l, id: l._id }));
-  const trades = tradesFromQuery.map(t => ({ ...t, id: t._id }));
 
   const myDepositReqs = user ? (isAdmin ? allDepositReqs.filter(r => r.userId === user._id) : userDepositsQuery).map(r => ({ ...r, id: r._id })) : [];
   const myWithdrawalReqs = user ? (isAdmin ? allWithdrawalReqs.filter(r => r.userId === user._id) : userWithdrawalsQuery).map(r => ({ ...r, id: r._id })) : [];
