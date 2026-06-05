@@ -10,16 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "convex": "^1.40.0",
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
+    "convex": "^1.40.0",
     "i18next": "^26.3.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.379.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-i18next": "^17.0.8"
+    "react-i18next": "^17.0.8",
+    "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
