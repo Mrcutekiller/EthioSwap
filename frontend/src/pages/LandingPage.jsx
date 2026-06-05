@@ -123,7 +123,7 @@ const FeatureIcons = {
 // Click to flip. Floats with gentle animation.
 // ═══════════════════════════════════════════════════════════
 
-const PaperMoney3D = ({ size = 'lg', className = '' }) => {
+export const PaperMoney3D = ({ size = 'lg', className = '' }) => {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -235,7 +235,7 @@ const PaperMoney3D = ({ size = 'lg', className = '' }) => {
 };
 
 // Floating wrapper — adds the gentle up/down float + entry animation + scroll parallax
-const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => {
+export const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => {
   const containerRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
 

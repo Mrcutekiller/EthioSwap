@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import LandingPage from './pages/LandingPage.jsx';
+import LandingPage, { FloatingBill } from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import P2PListings from './components/P2PListings.jsx';
@@ -53,6 +53,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [referralCode, setReferralCode] = useState('');
   const [localError, setLocalError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -112,7 +119,33 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,197,24,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
       <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(0,212,160,0.06) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
-      <div className="premium-glow" style={{ background: 'rgba(17, 19, 24, 0.85)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', width: '100%', maxWidth: '440px', padding: '40px 36px', zIndex: 1, backdropFilter: 'blur(20px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Main Flex Wrapper: side-by-side on desktop, stacked on mobile */}
+      <div style={{
+        display: 'flex',
+        flexDirection: width < 1024 ? 'column' : 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: width < 1024 ? '32px' : '64px',
+        width: '100%',
+        maxWidth: '1000px',
+        zIndex: 1,
+        marginTop: width < 1024 ? '16px' : '0',
+        marginBottom: width < 1024 ? '16px' : '0',
+      }}>
+        {/* Left/Top Column: 3D Paper Money (Vertical Note) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: width < 768 ? '300px' : '500px',
+          width: width < 1024 ? '100%' : 'auto',
+          flexShrink: 0
+        }}>
+          <FloatingBill size={width < 768 ? 'sm' : 'lg'} />
+        </div>
+
+        {/* Right/Bottom Column: Auth Form Card */}
+        <div className="premium-glow" style={{ background: 'rgba(17, 19, 24, 0.85)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', width: '100%', maxWidth: '440px', padding: '40px 36px', backdropFilter: 'blur(20px)', display: 'flex', flexDirection: 'column' }}>
         {onBackToHome && (
           <button 
             type="button" 
@@ -420,6 +453,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         </button>
 
         {/* Secure card removed per Item #8 */}
+        </div>
       </div>
     </div>
   );
