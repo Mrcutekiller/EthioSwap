@@ -1608,9 +1608,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px', fontSize: '14px', color: 'var(--text-dim)' }}>
             <p>© 2026 EthioSwap. All rights reserved. Built with ❤️ for Ethiopia.</p>
             <div style={{ display: 'flex', gap: '24px' }}>
-              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Twitter</a>
-              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
-              <a href="#" className="nav-item-saas" style={{ textDecoration: 'none' }}>Discord</a>
+              <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>TikTok</a>
+              <a href="https://www.instagram.com/ethioswap" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Instagram</a>
+              <a href="https://t.me/EthioSwapDev" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
             </div>
           </div>
         </div>
