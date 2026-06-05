@@ -1,6 +1,7 @@
 import { query, mutation, internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { sha256Sync } from "./utils";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -51,7 +52,7 @@ export const create = mutation({
 
     const userId = await ctx.db.insert("users", {
       ...userData,
-      passwordHash: password, // In production, hash this!
+      passwordHash: sha256Sync(password),
       etbBalance: 0,
       ethBalance: 0,
       ethLocked: 0,
@@ -118,7 +119,8 @@ export const authenticate = query({
     }
 
     if (!user) return null;
-    if (user.passwordHash !== args.password) return null;
+    const inputHash = sha256Sync(args.password);
+    if (user.passwordHash !== inputHash && user.passwordHash !== args.password) return null;
 
     // Don't return the password hash to the client
     const { passwordHash, ...safeUser } = user;

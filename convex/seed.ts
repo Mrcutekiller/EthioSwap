@@ -1,4 +1,5 @@
 import { mutation } from "./_generated/server";
+import { sha256Sync } from "./utils";
 
 export const seedAdmin = mutation({
   args: {},
@@ -11,7 +12,7 @@ export const seedAdmin = mutation({
     const adminPayload = {
       username: "ethioswap@gmail.com",
       email: "ethioswap@gmail.com",
-      passwordHash: "Et20sw26#",
+      passwordHash: sha256Sync("Et20sw26#"),
       fullName: "EthioSwap Admin",
       displayName: "System Admin",
       role: "admin",
