@@ -519,7 +519,10 @@ export const listAllDisputes = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.userId);
-    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+    if (!admin || admin.role !== "admin") {
+      console.warn(`Unauthorized listAllDisputes query from userId: ${args.userId}`);
+      return [];
+    }
 
     const allDisputes = await ctx.db.query("disputes").order("desc").collect();
 

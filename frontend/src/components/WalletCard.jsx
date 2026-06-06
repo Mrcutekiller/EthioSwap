@@ -262,133 +262,278 @@ const WalletCard = () => {
     { id: 'withdraw', icon: '⬆️', label: 'Withdraw' },
   ];
 
-  const networkChip = (n, active, setActive) => {
-    const net = NETWORKS.find(x => x.id === n);
-    const isActive = active === n;
-    return (
-      <button key={n} onClick={() => setActive(n)} style={{
-        padding: '6px 14px', borderRadius: '99px', border: '1.5px solid',
-        cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '11px', fontWeight: 700,
-        transition: 'all 0.18s',
-        background: isActive ? net.color + '18' : 'rgba(255,255,255,0.03)',
-        color:      isActive ? net.color : '#6b7280',
-        borderColor: isActive ? net.color + '55' : 'rgba(255,255,255,0.08)',
-        boxShadow: isActive ? `0 0 12px ${net.color}22` : 'none',
-      }}>
-        {net.label} <span style={{ opacity: 0.6 }}>{net.coin}</span>
-      </button>
-    );
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="wallet-container">
+      <style>{`
+        .wallet-container {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+          font-family: var(--font-body);
+        }
+        
+        .wallet-hero {
+          position: relative;
+          border-radius: 20px;
+          padding: 24px;
+          background: linear-gradient(135deg, #0b0f19 0%, #05070c 100%);
+          border: 1px solid rgba(255, 215, 0, 0.16);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.04);
+          overflow: hidden;
+        }
+        
+        .wallet-hero-glow-1 {
+          position: absolute;
+          top: -40px;
+          right: -40px;
+          width: 160px;
+          height: 160px;
+          border-radius: 50%;
+          background: rgba(255, 215, 0, 0.08);
+          filter: blur(50px);
+          pointer-events: none;
+        }
+        
+        .wallet-hero-glow-2 {
+          position: absolute;
+          bottom: -30px;
+          left: 20px;
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          background: rgba(0, 212, 160, 0.06);
+          filter: blur(40px);
+          pointer-events: none;
+        }
+
+        .wallet-hero-badge {
+          background: rgba(255, 215, 0, 0.1);
+          border: 1px solid rgba(255, 215, 0, 0.2);
+          border-radius: 8px;
+          padding: 5px 12px;
+          font-size: 11px;
+          font-weight: 800;
+          color: var(--gold);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .balance-text {
+          font-size: 42px;
+          font-weight: 900;
+          font-family: var(--font-mono);
+          letter-spacing: -0.04em;
+          color: var(--gold);
+          line-height: 1.1;
+        }
+
+        .wallet-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        
+        .wallet-grid-item {
+          background: rgba(1, 11, 19, 0.5);
+          border-radius: 14px;
+          padding: 14px 16px;
+          border: 1px solid rgba(255,255,255,0.04);
+          transition: all 0.2s;
+        }
+        
+        .wallet-grid-item:hover {
+          border-color: rgba(255,255,255,0.08);
+          background: rgba(1, 11, 19, 0.85);
+        }
+
+        .wallet-tabs {
+          display: flex;
+          background: #060f1c;
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 4px;
+          gap: 4px;
+        }
+        
+        .wallet-tab-btn {
+          flex: 1;
+          padding: 10px 4px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          font-family: var(--font-body);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          background: transparent;
+          color: var(--text-muted);
+          transition: all 0.2s ease;
+        }
+        
+        .wallet-tab-btn:hover {
+          color: var(--text-secondary);
+          background: rgba(255,255,255,0.02);
+        }
+        
+        .wallet-tab-btn.active {
+          background: var(--bg-surface-hover);
+          color: var(--gold);
+          border: 1px solid rgba(255,215,0,0.1);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .wallet-card-panel {
+          background: #060f1c;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          padding: 20px;
+        }
+
+        .wallet-deposit-addr-box {
+          background: rgba(1, 11, 19, 0.6);
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          padding: 12px 14px;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          word-break: break-all;
+          color: var(--gold);
+          line-height: 1.6;
+        }
+
+        .form-input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 13px 16px;
+          border-radius: 12px;
+          background: rgba(1, 11, 19, 0.4);
+          border: 1.5px solid var(--border);
+          color: #fff;
+          font-size: 14px;
+          outline: none;
+          transition: all 0.2s;
+        }
+        
+        .form-input:focus {
+          border-color: rgba(255, 215, 0, 0.25);
+          background: rgba(1, 11, 19, 0.65);
+          box-shadow: 0 0 12px rgba(255, 215, 0, 0.06);
+        }
+
+        .wallet-history-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 14px;
+          background: rgba(255,255,255,0.02);
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.04);
+          transition: all 0.2s;
+        }
+        
+        .wallet-history-item:hover {
+          background: rgba(255,255,255,0.04);
+          border-color: rgba(255,255,255,0.06);
+        }
+
+        @media (max-width: 576px) {
+          .wallet-hero {
+            padding: 18px;
+          }
+          .balance-text {
+            font-size: 32px;
+          }
+          .wallet-card-panel {
+            padding: 16px;
+          }
+        }
+      `}</style>
 
       {/* ── HERO BALANCE CARD ─────────────────────────────────── */}
-      <div className="premium-glow" style={{
-        borderRadius: '24px', padding: '24px',
-        background: 'linear-gradient(135deg, #111318 0%, #1a1d26 100%)',
-        border: '1px solid rgba(245,197,24,0.25)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* glow blobs */}
-        <div style={{ position:'absolute',top:'-40px',right:'-40px',width:'160px',height:'160px',borderRadius:'50%',background:'rgba(245,197,24,0.08)',filter:'blur(50px)',pointerEvents:'none' }} />
-        <div style={{ position:'absolute',bottom:'-30px',left:'20px',width:'120px',height:'120px',borderRadius:'50%',background:'rgba(0,212,160,0.07)',filter:'blur(40px)',pointerEvents:'none' }} />
+      <div className="wallet-hero">
+        <div className="wallet-hero-glow-1" />
+        <div className="wallet-hero-glow-2" />
 
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
           <div>
-            <div style={{ fontSize:'10px', fontWeight:700, letterSpacing:'0.1em', color:'#f5c518', textTransform:'uppercase', marginBottom:'4px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', color: '#f5c518', textTransform: 'uppercase', marginBottom: '4px' }}>
               EthioSwap Wallet
             </div>
             {numId && (
-              <div style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600 }}>Account #{numId}</div>
+              <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600 }}>Account #{numId}</div>
             )}
           </div>
-          <div style={{
-            background:'rgba(245,197,24,0.1)', border:'1px solid rgba(245,197,24,0.2)',
-            borderRadius:'10px', padding:'6px 12px', fontSize:'11px', fontWeight:700, color:'#f5c518',
-          }}>USDT</div>
+          <div className="wallet-hero-badge">USDT</div>
         </div>
 
-        <div style={{ marginBottom:'6px' }}>
-          <span style={{ fontSize:'13px', color:'#9ca3af', fontWeight:600 }}>Total Balance</span>
+        <div style={{ marginBottom: '6px' }}>
+          <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>Total Balance</span>
         </div>
-        <div style={{ fontSize:'42px', fontWeight:900, letterSpacing:'-0.04em', lineHeight:1, marginBottom:'4px', fontFamily:'JetBrains Mono, monospace' }}>
-          <span style={{ color:'#f5c518' }}>${fmt(balance)}</span>
-          <span style={{ fontSize:'16px', color:'#4b5563', marginLeft:'8px', fontFamily:'var(--font)', fontWeight:500 }}>USD</span>
+        
+        <div className="balance-text" style={{ marginBottom: '4px' }}>
+          <span>${fmt(balance)}</span>
+          <span style={{ fontSize: '16px', color: '#4b5563', marginLeft: '8px', fontFamily: 'var(--font-body)', fontWeight: 500 }}>USD</span>
         </div>
-        <div style={{ fontSize:'14px', color:'#00d4a0', fontWeight:600, marginBottom:'24px', fontFamily:'JetBrains Mono, monospace' }}>
+        
+        <div style={{ fontSize: '14px', color: '#00d4a0', fontWeight: 600, marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>
           ≈ {fmtEtb(balance * rate)} ETB
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+        <div className="wallet-grid">
           {[
-            { label:'Available', usd: available, etb: available * rate, color:'#00d4a0' },
-            { label:'In Escrow', usd: locked,    etb: locked * rate,    color:'#f5c518' },
+            { label: 'Available', usd: available, etb: available * rate, color: '#00d4a0' },
+            { label: 'In Escrow', usd: locked,    etb: locked * rate,    color: '#f5c518' },
           ].map(c => (
-            <div key={c.label} style={{
-              background:'rgba(10,12,18,0.7)', borderRadius:'14px', padding:'12px 14px',
-              border:`1px solid ${c.color}22`,
-            }}>
-              <div style={{ fontSize:'9px', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'4px' }}>{c.label}</div>
-              <div style={{ fontSize:'18px', fontWeight:800, color:c.color, fontFamily:'JetBrains Mono, monospace' }}>${fmt(c.usd)}</div>
-              <div style={{ fontSize:'10px', color:'#4b5563', marginTop:'2px' }}>≈ {fmtEtb(c.etb)} ETB</div>
+            <div key={c.label} className="wallet-grid-item">
+              <div style={{ fontSize: '9px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontWeight: 700 }}>{c.label}</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: c.color, fontFamily: 'var(--font-mono)' }}>${fmt(c.usd)}</div>
+              <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px' }}>≈ {fmtEtb(c.etb)} ETB</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── TAB BAR ───────────────────────────────────────────── */}
-      <div style={{
-        display:'flex', background:'#0e1117', border:'1px solid rgba(255,255,255,0.07)',
-        borderRadius:'16px', padding:'4px', gap:'3px',
-      }}>
+      <div className="wallet-tabs">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex:1, padding:'10px 4px', borderRadius:'12px', border:'none', cursor:'pointer',
-            fontFamily:'var(--font)', display:'flex', flexDirection:'column', alignItems:'center', gap:'3px',
-            background: tab === t.id ? 'rgba(255,255,255,0.07)' : 'transparent',
-            transition:'all 0.15s',
-          }}>
-            <span style={{ fontSize:'18px', lineHeight:1 }}>{t.icon}</span>
-            <span style={{ fontSize:'10px', fontWeight:700, color: tab === t.id ? '#f5c518' : '#6b7280' }}>{t.label}</span>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`wallet-tab-btn ${tab === t.id ? 'active' : ''}`}>
+            <span style={{ fontSize: '18px', lineHeight: 1 }}>{t.icon}</span>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: tab === t.id ? '#f5c518' : '#6b7280' }}>{t.label}</span>
           </button>
         ))}
       </div>
 
       {/* ══ BALANCE TAB ══════════════════════════════════════════ */}
       {tab === 'balance' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
           {/* Deposit address */}
-          <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'20px' }}>
-            <div style={{ fontSize:'12px', fontWeight:700, color:'#f5c518', marginBottom:'14px', textTransform:'uppercase', letterSpacing:'0.06em' }}>📥 Your Deposit Address</div>
-            <div style={{ display:'flex', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
+          <div className="wallet-card-panel">
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#f5c518', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📥 Your Deposit Address</div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
               {NETWORKS.map(n => networkChip(n.id, qrNet, setQrNet))}
             </div>
-            <div style={{ display:'flex', gap:'16px', alignItems:'center' }}>
-              <div style={{ background:'white', padding:'8px', borderRadius:'12px', flexShrink:0 }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${address}`}
-                  alt="QR" style={{ width:80, height:80, display:'block' }}
+                  alt="QR" style={{ width: 80, height: 80, display: 'block' }}
                 />
               </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:'10px', color:'#9ca3af', fontWeight:600, marginBottom:'6px' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, marginBottom: '6px' }}>
                   Send {qrNet.toUpperCase()} USDT to this address
                 </div>
-                <div style={{
-                  background:'rgba(0,0,0,0.3)', border:'1px solid rgba(255,255,255,0.08)',
-                  borderRadius:'10px', padding:'10px 12px', fontFamily:'JetBrains Mono, monospace',
-                  fontSize:'10.5px', wordBreak:'break-all', color:'#f5c518', lineHeight:1.6,
-                }}>
+                <div className="wallet-deposit-addr-box" style={{ marginBottom: '10px' }}>
                   {address || 'No address assigned'}
                 </div>
                 <button onClick={() => handleCopy(address)} style={{
-                  marginTop:'10px', padding:'7px 16px', borderRadius:'8px',
-                  background:'rgba(245,197,24,0.1)', border:'1px solid rgba(245,197,24,0.2)',
-                  color:'#f5c518', fontSize:'11px', fontWeight:700, cursor:'pointer', fontFamily:'var(--font)',
-                  transition:'all 0.15s',
+                  padding: '7px 16px', borderRadius: '8px',
+                  background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)',
+                  color: '#f5c518', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  transition: 'all 0.15s',
+                  width: '100%'
                 }}>
                   {copied ? '✓ Copied!' : '📋 Copy Address'}
                 </button>
@@ -398,40 +543,45 @@ const WalletCard = () => {
 
           {/* Transaction history */}
           {history.length > 0 ? (
-            <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'20px' }}>
-              <div style={{ fontSize:'12px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'14px' }}>📊 Recent Transactions</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+            <div className="wallet-card-panel">
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>📊 Recent Transactions</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {history.map((item, i) => {
                   const isDep = item._kind === 'dep';
                   const amt   = item.amountUSD ?? item.amountUsd ?? item.amountEth ?? item.amount_usd ?? 0;
                   const date  = item.createdAt ?? item.created_at ?? '';
                   return (
-                    <div key={item._id ?? i} style={{
-                      display:'flex', justifyContent:'space-between', alignItems:'center',
-                      padding:'12px 14px', background:'rgba(255,255,255,0.03)',
-                      borderRadius:'12px', border:'1px solid rgba(255,255,255,0.05)',
-                    }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <div key={item._id ?? i} className="wallet-history-item">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          width:34, height:34, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px',
-                          background: isDep ? 'rgba(0,212,160,0.1)' : 'rgba(245,197,24,0.1)',
+                          width: '32px', height: '32px', borderRadius: '8px',
+                          background: isDep ? 'rgba(0, 212, 160, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '14px', flexShrink: 0
                         }}>
                           {isDep ? '⬇️' : '⬆️'}
                         </div>
                         <div>
-                          <div style={{ fontSize:'13px', fontWeight:700, color:'#e5e7eb' }}>
-                            {isDep ? (item.walletType ?? 'Deposit') : 'Withdrawal'}
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                            {isDep ? 'Deposit Funds' : 'Withdraw Funds'}
                           </div>
-                          <div style={{ fontSize:'10px', color:'#6b7280' }}>
-                            {date ? new Date(date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—'}
+                          <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '1px' }}>
+                            {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                           </div>
                         </div>
                       </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:'14px', fontWeight:800, color: isDep ? '#00d4a0' : '#f87171' }}>
-                          {isDep ? '+' : '-'}${fmt(Math.abs(amt))}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: isDep ? '#00d4a0' : '#f87171', fontFamily: 'var(--font-mono)' }}>
+                          {isDep ? '+' : '-'}${fmt(amt)}
                         </div>
-                        <StatusBadge status={item.status} />
+                        <span style={{
+                          fontSize: '8.5px', fontWeight: 800, padding: '1px 5px', borderRadius: '4px',
+                          textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
+                          background: item.status === 'completed' || item.status === 'approved' ? 'rgba(0,212,160,0.1)' : item.status === 'pending' ? 'rgba(245,197,24,0.1)' : 'rgba(239,68,68,0.1)',
+                          color: item.status === 'completed' || item.status === 'approved' ? '#00d4a0' : item.status === 'pending' ? '#f5c518' : '#f87171',
+                        }}>
+                          {item.status}
+                        </span>
                       </div>
                     </div>
                   );
@@ -439,10 +589,10 @@ const WalletCard = () => {
               </div>
             </div>
           ) : (
-            <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'32px', textAlign:'center' }}>
-              <div style={{ fontSize:'36px', marginBottom:'10px' }}>📭</div>
-              <div style={{ fontSize:'14px', fontWeight:700, color:'#9ca3af' }}>No transactions yet</div>
-              <div style={{ fontSize:'12px', color:'#6b7280', marginTop:'4px' }}>Your deposit & withdrawal history will appear here</div>
+            <div className="wallet-card-panel" style={{ padding: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: '36px', marginBottom: '10px' }}>📭</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#9ca3af' }}>No transactions yet</div>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Your deposit & withdrawal history will appear here</div>
             </div>
           )}
         </div>
@@ -450,12 +600,12 @@ const WalletCard = () => {
 
       {/* ══ DEPOSIT TAB ══════════════════════════════════════════ */}
       {tab === 'deposit' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
           {/* Info banner */}
-          <div style={{ background:'rgba(0,212,160,0.07)', border:'1px solid rgba(0,212,160,0.2)', borderRadius:'14px', padding:'14px 16px' }}>
-            <div style={{ fontSize:'12px', fontWeight:700, color:'#00d4a0', marginBottom:'6px' }}>ℹ️ How to Deposit</div>
-            <ol style={{ fontSize:'12px', color:'#9ca3af', paddingLeft:'16px', margin:0, lineHeight:1.8 }}>
+          <div style={{ background: 'rgba(0,212,160,0.07)', border: '1px solid rgba(0,212,160,0.2)', borderRadius: '14px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#00d4a0', marginBottom: '6px' }}>ℹ️ How to Deposit</div>
+            <ol style={{ fontSize: '12px', color: '#9ca3af', paddingLeft: '16px', margin: 0, lineHeight: 1.8 }}>
               <li>Transfer USDT to the admin address shown above</li>
               <li>Copy your Transaction ID from your wallet/exchange</li>
               <li>Fill in amount & TxID below and submit</li>
@@ -464,76 +614,65 @@ const WalletCard = () => {
           </div>
 
           {/* Form */}
-          <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'20px' }}>
-            <div style={{ fontSize:'13px', fontWeight:700, color:'#e5e7eb', marginBottom:'16px' }}>💳 Submit Deposit</div>
+          <div className="wallet-card-panel">
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#e5e7eb', marginBottom: '16px' }}>💳 Submit Deposit</div>
 
-            <form onSubmit={handleDeposit} style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+            <form onSubmit={handleDeposit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
               {/* Network */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>NETWORK</label>
-                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>NETWORK</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {NETWORKS.map(n => networkChip(n.id, depNet, setDepNet))}
                 </div>
               </div>
 
               {/* Amount */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>
-                  AMOUNT (USD) <span style={{ color:'#6b7280' }}>· min ${minDep}</span>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                  AMOUNT (USD) <span style={{ color: '#6b7280' }}>· min ${minDep}</span>
                 </label>
                 <input
                   type="number" step="0.01" min={minDep} required
                   value={depAmt} onChange={e => setDepAmt(e.target.value)}
                   placeholder={`e.g. 50.00`}
-                  style={{
-                    width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px',
-                    background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)',
-                    color:'#fff', fontSize:'15px', fontFamily:'JetBrains Mono, monospace', fontWeight:700,
-                    outline:'none',
-                  }}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
                 />
               </div>
 
               {/* TxID */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>TRANSACTION ID / REFERENCE</label>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>TRANSACTION ID / REFERENCE</label>
                 <input
                   type="text" required
                   value={depTxId} onChange={e => setDepTxId(e.target.value)}
                   placeholder="Paste your TxID here"
-                  style={{
-                    width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px',
-                    background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)',
-                    color:'#e5e7eb', fontSize:'13px', fontFamily:'JetBrains Mono, monospace',
-                    outline:'none',
-                  }}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
                 />
               </div>
 
               {/* Fee breakdown */}
               {depAmtNum > 0 && (
-                <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
-                  <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Deposit Breakdown</div>
+                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>📊 Deposit Breakdown</div>
                   <FeePill label="USDT to Deposit (on platform)" value={`$${fmt(depAmtNum)} USDT`} color="#fff" />
-                  <FeePill label={`Platform Commission (${platFee}%)`} value={`-$${fmt(depPlatFeeAmt)} USDT`} color="#f87171" />
+                  <FeePill label={`Platform Commission (${depFeePercent}%)`} value={`-$${fmt(depPlatFeeAmt)} USDT`} color="#f87171" />
                   <FeePill label={`Est. Network Fee (${depNet.toUpperCase()})`} value={`+$${fmt(chainFee)} USDT`} color="#fbbf24" />
-                  <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
                   <FeePill label="Total Wallet Cost (incl. network fee)" value={`$${fmt(depAmtNum + chainFee)} USDT`} color="#fbbf24" />
                   <FeePill label="💰 Net Balance You Receive" value={`$${fmt(depYouGet)} USDT`} color="#00d4a0" />
-                  <div style={{ fontSize:'10px', color:'#6b7280', textAlign:'center', marginTop:'2px' }}>
+                  <div style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', marginTop: '2px' }}>
                     ≈ {fmtEtb(depYouGet * rate)} ETB at today's rate
                   </div>
                 </div>
               )}
 
-              <button type="submit" disabled={depLoading} style={{
-                padding:'15px', borderRadius:'14px', border:'none', cursor:'pointer',
-                fontFamily:'var(--font)', fontWeight:800, fontSize:'15px',
+              <button type="submit" disabled={depLoading} className="submit-btn" style={{
                 background: depLoading ? '#374151' : 'linear-gradient(135deg, #00d4a0, #00b389)',
                 color: depLoading ? '#6b7280' : '#fff',
-                transition:'all 0.2s',
-                boxShadow: depLoading ? 'none' : '0 4px 20px rgba(0,212,160,0.3)',
+                boxShadow: depLoading ? 'none' : '0 4px 20px rgba(0,212,160,0.25)',
               }}>
                 {depLoading ? '⏳ Submitting…' : '⬇️ Submit Deposit'}
               </button>
@@ -544,44 +683,45 @@ const WalletCard = () => {
 
       {/* ══ SEND TAB ═════════════════════════════════════════════ */}
       {tab === 'send' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
-          <div style={{ background:'rgba(245,197,24,0.07)', border:'1px solid rgba(245,197,24,0.2)', borderRadius:'14px', padding:'14px 16px' }}>
-            <div style={{ fontSize:'12px', fontWeight:700, color:'#f5c518', marginBottom:'4px' }}>🚧 Internal Transfers</div>
-            <div style={{ fontSize:'12px', color:'#9ca3af' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '14px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#f5c518', marginBottom: '4px' }}>🚧 Internal Transfers</div>
+            <div style={{ fontSize: '12px', color: '#9ca3af' }}>
               Send USD to another EthioSwap user by their account ID. Transfers are instant and free between EthioSwap wallets.
             </div>
           </div>
-          <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'20px' }}>
-            <div style={{ fontSize:'13px', fontWeight:700, color:'#e5e7eb', marginBottom:'16px' }}>↗️ Send to User</div>
-            <form onSubmit={e => { e.preventDefault(); setError('Internal transfers are temporarily disabled.'); }} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div className="wallet-card-panel">
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#e5e7eb', marginBottom: '16px' }}>↗️ Send to User</div>
+            <form onSubmit={e => { e.preventDefault(); setError('Internal transfers are temporarily disabled.'); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>RECIPIENT ACCOUNT ID</label>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>RECIPIENT ACCOUNT ID</label>
                 <input
                   type="text" required value={snTo} onChange={e => setSnTo(e.target.value)}
                   placeholder="e.g. #0042"
-                  style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#e5e7eb', fontSize:'14px', outline:'none', fontFamily:'var(--font)' }}
+                  className="form-input"
                 />
               </div>
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>AMOUNT (USD)</label>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
                 <input
                   type="number" step="0.01" min="1" required value={snAmt} onChange={e => setSnAmt(e.target.value)}
                   placeholder="e.g. 25.00"
-                  style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#fff', fontSize:'15px', fontFamily:'JetBrains Mono, monospace', fontWeight:700, outline:'none' }}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
                 />
               </div>
-               {parseFloat(snAmt) > 0 && (
-                <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
-                  <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Transfer Summary</div>
+              {parseFloat(snAmt) > 0 && (
+                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>📊 Transfer Summary</div>
                   <FeePill label="Amount to Send" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#fff" />
                   <FeePill label="Platform Commission" value="0.00 USDT (Free) ✓" color="#00d4a0" />
                   <FeePill label="Network Transfer Fee" value="0.00 USDT (Free) ✓" color="#00d4a0" />
-                  <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
                   <FeePill label="Total Deducted" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#fbbf24" />
                   <FeePill label="💰 Recipient Gets" value={`$${fmt(parseFloat(snAmt))} USDT`} color="#00d4a0" />
                 </div>
               )}
-              <button type="submit" style={{ padding:'15px', borderRadius:'14px', border:'none', cursor:'pointer', fontFamily:'var(--font)', fontWeight:800, fontSize:'15px', background:'rgba(245,197,24,0.15)', color:'#f5c518', border:'1px solid rgba(245,197,24,0.3)' }}>
+              <button type="submit" className="submit-btn" style={{ background: 'rgba(245,197,24,0.15)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)' }}>
                 ↗️ Send Now
               </button>
             </form>
@@ -591,79 +731,82 @@ const WalletCard = () => {
 
       {/* ══ WITHDRAW TAB ═════════════════════════════════════════ */}
       {tab === 'withdraw' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          <div style={{ background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'14px', padding:'14px 16px' }}>
-            <div style={{ fontSize:'12px', fontWeight:700, color:'#f87171', marginBottom:'6px' }}>⚠️ Before You Withdraw</div>
-            <ul style={{ fontSize:'12px', color:'#9ca3af', paddingLeft:'16px', margin:0, lineHeight:1.8 }}>
+          <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#f87171', marginBottom: '6px' }}>⚠️ Before You Withdraw</div>
+            <ul style={{ fontSize: '12px', color: '#9ca3af', paddingLeft: '16px', margin: 0, lineHeight: 1.8 }}>
               <li>Make sure your wallet address is correct — withdrawals are irreversible</li>
               <li>Processing time: up to 24 hours</li>
               <li>Minimum withdrawal: ${minWd} USD</li>
             </ul>
           </div>
 
-          <div style={{ background:'#111318', borderRadius:'20px', border:'1px solid rgba(255,255,255,0.07)', padding:'20px' }}>
-            <div style={{ fontSize:'13px', fontWeight:700, color:'#e5e7eb', marginBottom:'16px' }}>⬆️ Withdraw Funds</div>
+          <div className="wallet-card-panel">
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#e5e7eb', marginBottom: '16px' }}>⬆️ Withdraw Funds</div>
 
-            <form onSubmit={handleWithdraw} style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+            <form onSubmit={handleWithdraw} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
               {/* Network */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>NETWORK</label>
-                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>NETWORK</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {NETWORKS.map(n => networkChip(n.id, wdNet, setWdNet))}
                 </div>
-                <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'6px' }}>
-                  Network fee: <span style={{ color:'#f5c518', fontWeight:700 }}>${chainFee} USDT</span>
+                <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '6px' }}>
+                  Network fee: <span style={{ color: '#f5c518', fontWeight: 700 }}>${chainFee} USDT</span>
                 </div>
               </div>
 
               {/* Address */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>WALLET ADDRESS</label>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>WALLET ADDRESS</label>
                 <input
                   type="text" required value={wdAddr} onChange={e => setWdAddr(e.target.value)}
                   placeholder={`Your ${wdNet.toUpperCase()} USDT address`}
-                  style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#e5e7eb', fontSize:'12px', fontFamily:'JetBrains Mono, monospace', outline:'none' }}
+                  className="form-input"
+                  style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}
                 />
               </div>
 
               {/* Amount */}
               <div>
-                <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>
-                  AMOUNT (USD) <span style={{ color:'#6b7280' }}>· available ${fmt(available)}</span>
+                <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                  AMOUNT (USD) <span style={{ color: '#6b7280' }}>· available ${fmt(available)}</span>
                 </label>
                 <input
                   type="number" step="0.01" min={minWd} required
                   value={wdAmt} onChange={e => setWdAmt(e.target.value)}
                   placeholder={`Min $${minWd}`}
-                  style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#fff', fontSize:'15px', fontFamily:'JetBrains Mono, monospace', fontWeight:700, outline:'none' }}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
                 />
               </div>
 
               {/* PIN */}
               {user?.transaction_pin && (
                 <div>
-                  <label style={{ fontSize:'11px', color:'#9ca3af', fontWeight:600, display:'block', marginBottom:'8px' }}>🔒 TRANSACTION PIN</label>
+                  <label style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600, display: 'block', marginBottom: '8px' }}>🔒 TRANSACTION PIN</label>
                   <input
                     type="password" maxLength={4} required value={wdPin} onChange={e => setWdPin(e.target.value)}
                     placeholder="••••"
-                    style={{ width:'100%', boxSizing:'border-box', padding:'13px 16px', borderRadius:'12px', background:'rgba(255,255,255,0.04)', border:'1.5px solid rgba(255,255,255,0.09)', color:'#fff', fontSize:'20px', letterSpacing:'0.3em', outline:'none', textAlign:'center' }}
+                    className="form-input"
+                    style={{ fontSize: '20px', letterSpacing: '0.3em', textAlign: 'center' }}
                   />
                 </div>
               )}
 
               {/* Fee breakdown */}
               {wdAmtNum > 0 && (
-                <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:'14px', padding:'14px', border:'1px solid rgba(255,255,255,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
-                  <div style={{ fontSize:'11px', fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>📊 Withdrawal Breakdown</div>
+                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>📊 Withdrawal Breakdown</div>
                   <FeePill label="Amount to Withdraw" value={`$${fmt(wdAmtNum)} USDT`} color="#fff" />
-                  <FeePill label={`Platform Commission (${platFee}%)`} value={`-$${fmt(wdPlatFeeAmt)} USDT`} color="#f87171" />
+                  <FeePill label={`Platform Commission (${wdFeePercent}%)`} value={`-$${fmt(wdPlatFeeAmt)} USDT`} color="#f87171" />
                   <FeePill label={`Network Transfer Fee (${wdNet.toUpperCase()})`} value={`-$${fmt(wdChainFee)} USDT`} color="#f87171" />
-                  <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', margin:'2px 0' }} />
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
                   <FeePill label="💰 Net Received in Your Wallet" value={wdYouGet > 0 ? `$${fmt(wdYouGet)} USDT` : '⚠️ Too Low'} color={wdYouGet > 0 ? '#00d4a0' : '#f87171'} />
                   {wdYouGet > 0 && (
-                    <div style={{ fontSize:'10px', color:'#6b7280', textAlign:'center', marginTop:'2px' }}>
+                    <div style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', marginTop: '2px' }}>
                       ≈ {fmtEtb(wdYouGet * rate)} ETB at today's rate
                     </div>
                   )}

@@ -1178,7 +1178,7 @@ const AppShell = () => {
     <div className="app-shell">
 
       {/* ── TOP BAR ── */}
-      <header className="top-bar" style={{ position: 'relative' }}>
+      <header className="top-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Logo size={28} />
         </div>

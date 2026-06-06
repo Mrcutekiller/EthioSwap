@@ -391,14 +391,14 @@ const AdminPanel = ({ user }) => {
   const allUsersList = useQuery(api.users.listAll) || [];
   const kycQueue = useQuery(api.users.listKycQueue) || [];
   const auditLogs = useQuery(api.adminAuditLogs.list) || [];
-  const adminAnalytics = useQuery(api.stats.getAdminAnalytics, user ? { userId: user._id || user.id } : "skip");
+  const adminAnalytics = useQuery(api.stats.getAdminAnalytics, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip");
   const disputes = useQuery(api.trades.listDisputed) || [];
   const supportTickets = useQuery(api.supportTickets.listAll) || [];
   const allReviews = useQuery(api.reviews.listAll) || [];
   
   // OTP & Notification Logs
-  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs, user ? { userId: user._id || user.id } : "skip") || [];
-  const notificationLogs = useQuery(api.otp.getNotificationLogs, user ? { userId: user._id || user.id } : "skip") || [];
+  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip") || [];
+  const notificationLogs = useQuery(api.otp.getNotificationLogs, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip") || [];
   const resendNotificationAction = useAction(api.otp.resendNotification);
 
   // Mutations
@@ -868,6 +868,29 @@ const AdminPanel = ({ user }) => {
   };
 
   const handleLogout = () => { localStorage.removeItem('ethioswap_user'); window.location.reload(); };
+
+  if (!user || user.role !== 'admin') {
+    return (
+      <div style={{
+        padding: '80px 24px',
+        color: 'var(--text-1)',
+        textAlign: 'center',
+        background: 'var(--bg-base)',
+        minHeight: '80vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px'
+      }}>
+        <div style={{ fontSize: '48px' }}>🚫</div>
+        <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)' }}>Access Denied</h2>
+        <p style={{ color: 'var(--text-3)', maxWidth: '400px', margin: '0 auto', fontSize: '14px', lineHeight: 1.6 }}>
+          You do not have permission to view the Administration Panel. If you believe this is an error, please contact support.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-[var(--font-body)]">

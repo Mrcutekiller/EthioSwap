@@ -370,7 +370,10 @@ export const getOtpAttemptsLogs = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.userId);
-    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+    if (!admin || admin.role !== "admin") {
+      console.warn(`Unauthorized getOtpAttemptsLogs query from userId: ${args.userId}`);
+      return [];
+    }
 
     const logs = await ctx.db.query("otpAttemptsLogs").order("desc").collect();
     
@@ -391,7 +394,10 @@ export const getNotificationLogs = query({
   args: { userId: v.id("users"), channel: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.userId);
-    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+    if (!admin || admin.role !== "admin") {
+      console.warn(`Unauthorized getNotificationLogs query from userId: ${args.userId}`);
+      return [];
+    }
 
     let query = ctx.db.query("notificationLogs");
     const logs = await query.order("desc").collect();

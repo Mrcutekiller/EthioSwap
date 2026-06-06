@@ -850,74 +850,82 @@ const P2PListings = () => {
                   animationDelay: `${index * 50}ms`
                 }}
               >
-                {/* Top Row: User initials avatar + Name + verified check + trades */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    width: '38px', 
-                    height: '38px', 
-                    borderRadius: '50%',
-                    background: isBuyType ? 'rgba(0, 212, 160, 0.1)' : 'rgba(245, 197, 24, 0.1)',
-                    border: `1.5px solid ${isBuyType ? '#00d4a0' : '#f5c518'}`,
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontWeight: 800, 
-                    fontSize: '14px', 
-                    color: isBuyType ? '#00d4a0' : '#f5c518',
-                    boxShadow: `0 0 10px ${isBuyType ? 'rgba(0, 212, 160, 0.15)' : 'rgba(245, 197, 24, 0.15)'}`
-                  }}>
-                    {(listing.sellerName || 'U').charAt(0).toUpperCase()}
+                {/* Top Row: User Avatar and Info (grouped vertically for mobile) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      width: '36px', 
+                      height: '36px', 
+                      borderRadius: '50%',
+                      background: isBuyType ? 'rgba(0, 212, 160, 0.1)' : 'rgba(245, 197, 24, 0.1)',
+                      border: `1.5px solid ${isBuyType ? '#00d4a0' : '#f5c518'}`,
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontWeight: 800, 
+                      fontSize: '13px', 
+                      color: isBuyType ? '#00d4a0' : '#f5c518',
+                      boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 212, 160, 0.1)' : 'rgba(245, 197, 24, 0.1)'}`,
+                      flexShrink: 0
+                    }}>
+                      {(listing.sellerName || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{listing.sellerName}</span>
+                        {listing.sellerKycStatus === 'verified' && (
+                          <span style={{ 
+                            background: 'rgba(0,212,160,0.12)', 
+                            color: '#00d4a0', 
+                            fontSize: '8.5px', 
+                            fontWeight: 700, 
+                            padding: '1px 5px', 
+                            borderRadius: '99px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            🛡️ KYC
+                          </span>
+                        )}
+                        {listing.isSellerVerifiedTrader && (
+                          <span style={{ 
+                            background: 'rgba(245,197,24,0.12)', 
+                            color: '#f5c518', 
+                            fontSize: '8.5px', 
+                            fontWeight: 700, 
+                            padding: '1px 5px', 
+                            borderRadius: '99px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            ★ Pro
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#f5c518', fontWeight: 700 }}>
+                          ★ {(listing.sellerAverageRating || 5.0).toFixed(1)}
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                        <span>{listing.sellerTotalTrades || 0} trades</span>
+                      </div>
+                    </div>
                   </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#ffffff' }}>@{listing.sellerName}</span>
-                      {listing.sellerKycStatus === 'verified' && (
-                        <span style={{ 
-                          background: 'rgba(0,212,160,0.12)', 
-                          color: '#00d4a0', 
-                          fontSize: '9px', 
-                          fontWeight: 700, 
-                          padding: '2px 6px', 
-                          borderRadius: '99px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '2px'
-                        }}>
-                          🛡️ KYC Verified
-                        </span>
-                      )}
-                      {listing.isSellerVerifiedTrader && (
-                        <span style={{ 
-                          background: 'rgba(245,197,24,0.12)', 
-                          color: '#f5c518', 
-                          fontSize: '9px', 
-                          fontWeight: 700, 
-                          padding: '2px 6px', 
-                          borderRadius: '99px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '2px'
-                        }}>
-                          ★ Verified Trader
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: '#f5c518', fontWeight: 700 }}>
-                        ★ {(listing.sellerAverageRating || 5.0).toFixed(1)} rating
-                      </span>
-                      <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                      <span>{listing.sellerTotalTrades || 0} trades</span>
-                    </div>
+
                   <span style={{
-                    fontSize: '10px',
+                    fontSize: '9px',
                     fontWeight: 800,
                     color: isBuyType ? '#00d4a0' : '#f5c518',
                     background: isBuyType ? 'rgba(0, 212, 160, 0.12)' : 'rgba(245, 197, 24, 0.12)',
                     border: `1px solid ${isBuyType ? 'rgba(0, 212, 160, 0.2)' : 'rgba(245, 197, 24, 0.2)'}`,
-                    padding: '4px 10px',
+                    padding: '4px 8px',
                     borderRadius: '6px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.04em'
+                    letterSpacing: '0.04em',
+                    flexShrink: 0
                   }}>
                     {isBuyType ? 'BUYING' : 'SELLING'}
                   </span>

@@ -38,7 +38,10 @@ export const getAdminAnalytics = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.userId);
-    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+    if (!admin || admin.role !== "admin") {
+      console.warn(`Unauthorized getAdminAnalytics query from userId: ${args.userId}`);
+      return null;
+    }
 
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
