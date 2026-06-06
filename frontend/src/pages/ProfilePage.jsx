@@ -971,18 +971,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       </div>
 
-      {/* ─── PROFILE CUSTOMIZATION ───────────────────────────── */}
-      <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Profile Customization</h3>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => setShowAvatarPicker(true)} className="btn btn-ghost" style={{ flex: 1, fontSize: '12px' }}>
-            🎨 Change Avatar
-          </button>
-          <button className="btn btn-ghost" style={{ flex: 1, fontSize: '12px' }}>
-            ✨ Unlock Borders
-          </button>
-        </div>
-      </div>
+
 
       {/* ─── WRITE A REVIEW ──────────────────────────────────── */}
       <div className="card" style={{ padding: '20px' }}>

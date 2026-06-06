@@ -341,13 +341,15 @@ const P2PListings = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            onClick={() => setShowCalculator(!showCalculator)}
-            className="btn btn-ghost"
-            style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, border: '1px solid var(--border)' }}
-          >
-            <span>🧮 {showCalculator ? 'Hide Calc' : 'Calculator'}</span>
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setShowCalculator(!showCalculator)}
+              className="btn btn-ghost"
+              style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, border: '1px solid var(--border)' }}
+            >
+              <span>🧮 {showCalculator ? 'Hide Calc' : 'Calculator'}</span>
+            </button>
+          )}
 
           {kycApproved ? (
             <button 
