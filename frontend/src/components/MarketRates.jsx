@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { api } from 'convex-api';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 

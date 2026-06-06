@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { api } from 'convex-api';
 
 const notifIcons = {
   trade_opened:    { icon: '🔄', bg: 'rgba(200,150,44,0.08)', color: 'var(--gold-light)' },
