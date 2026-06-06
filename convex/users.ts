@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
 import { verifyAndInvalidateOtp } from "./otp";
+import crypto from "crypto";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -74,13 +75,19 @@ export const create = mutation({
 
     // Generate referral code for new user
     const userReferralCode = args.username.toLowerCase() + "_" + Math.floor(1000 + Math.random() * 9000);
+    const telegramLinkToken = args.role !== "admin" 
+      ? "tg_" + crypto.randomBytes(8).toString("hex") 
+      : undefined;
+
     await ctx.db.patch(userId, {
-      referralCode: userReferralCode
+      referralCode: userReferralCode,
+      telegramLinkToken,
+      telegramLinked: false,
     });
 
     if (args.role !== "admin") {
-      // Generate a 6-digit random code for signup OTP
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate a 6-digit cryptographically secure random code for signup OTP
+      const code = crypto.randomInt(100000, 1000000).toString();
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
       await ctx.db.insert("otps", {
@@ -92,6 +99,7 @@ export const create = mutation({
         resends: 0,
         channel: "sms",
         status: "pending",
+        used: false,
         createdAtEpoch: Date.now(),
         createdAt: new Date().toISOString(),
       });
@@ -186,10 +194,12 @@ export const authenticate = query({
       return { status: "success", user: safeUser };
     }
 
+    const preferredMethod = user.telegramLinked ? "telegram" : "sms";
+
     return {
       status: "otp_required",
       userId: user._id,
-      preferredMethod: (user.preferredVerificationMethod === "telegram" && !user.telegramChatId) ? "sms" : (user.preferredVerificationMethod || "sms"),
+      preferredMethod,
       phone: user.phone || "",
       telegramChatId: user.telegramChatId || "",
     };
@@ -543,16 +553,22 @@ export const verifySignupOtp = mutation({
   },
   handler: async (ctx, args) => {
     // 1. Verify OTP using the helper
-    await verifyAndInvalidateOtp(ctx.db, args.userId, "signup", args.code);
+    const verifiedOtp = await verifyAndInvalidateOtp(ctx.db, args.userId, "signup", args.code);
 
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // 2. Mark as active
-    await ctx.db.patch(args.userId, {
+    // 2. Mark as active and link Telegram if it was verified via Telegram
+    const updates: any = {
       status: "active",
-      smsEnabled: true,
-    });
+    };
+    if (verifiedOtp && verifiedOtp.channel === "telegram") {
+      updates.telegramLinked = true;
+      updates.telegramEnabled = true;
+    } else {
+      updates.smsEnabled = true;
+    }
+    await ctx.db.patch(args.userId, updates);
 
     // 3. Process referral rewards now that the user is verified!
     if (user.referredBy) {

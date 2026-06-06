@@ -238,8 +238,11 @@ export const AuthProvider = ({ children }) => {
         return { status: 'success_admin', userId };
       }
 
+      const userObj = await convex.query(api.users.get, { id: userId });
+      const telegramLinkToken = userObj?.telegramLinkToken;
+
       setSuccess('Account created! Verify your phone number via SMS OTP.');
-      return { status: 'otp_required', userId, preferredMethod: 'sms', phone, isSignup: true };
+      return { status: 'otp_required', userId, preferredMethod: 'sms', phone, telegramLinkToken, isSignup: true };
     } catch (err) {
       setError(err.message);
       return null;
@@ -305,7 +308,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const createDepositRequest = async (amountUSD, network, txHash, screenshotUrl) => {
+  const createDepositRequest = async (amountUSD, network, txHash, screenshotUrl, otpCode) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -314,10 +317,13 @@ export const AuthProvider = ({ children }) => {
         amountUsd: amountUSD,
         amountEth: amountUSD / ETH_USD_PRICE, // simplified conversion
         screenshotUrl,
+        otpCode,
       });
       setSuccess('Deposit request submitted!');
+      return { success: true };
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setLoading(false);
     }

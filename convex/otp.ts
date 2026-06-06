@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { DatabaseWriter, DatabaseReader } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import crypto from "crypto";
 
 // Generate a new 6-digit OTP code for a user
 export const generateOtp = mutation({
@@ -15,16 +16,37 @@ export const generateOtp = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Retrieve settings to check if channel is globally disabled
-    const settings = await ctx.db.query("systemSettings").first();
-    if (args.channel === "sms" && settings?.isSmsChannelDisabled) {
-      throw new Error("SMS notifications are currently disabled by administration.");
-    }
-    if (args.channel === "telegram" && settings?.isTelegramChannelDisabled) {
-      throw new Error("Telegram notifications are currently disabled by administration.");
+    // Admin bypass: skip OTP entirely
+    if (user.role === "admin") {
+      return { success: true, skip: true };
     }
 
     const now = Date.now();
+
+    // Check if account is locked out
+    if (user.otpLockedUntil && now < user.otpLockedUntil) {
+      const minutesLeft = Math.ceil((user.otpLockedUntil - now) / (60 * 1000));
+      throw new Error(`Too many failed OTP attempts. Your account is locked. Please try again in ${minutesLeft} minutes.`);
+    }
+
+    // Auto-route channel based on telegramLinked
+    let channel = args.channel;
+    if (args.purpose !== "signup") {
+      if (user.telegramLinked) {
+        channel = "telegram";
+      } else {
+        channel = "sms";
+      }
+    }
+
+    // Retrieve settings to check if channel is globally disabled
+    const settings = await ctx.db.query("systemSettings").first();
+    if (channel === "sms" && settings?.isSmsChannelDisabled) {
+      throw new Error("SMS notifications are currently disabled by administration.");
+    }
+    if (channel === "telegram" && settings?.isTelegramChannelDisabled) {
+      throw new Error("Telegram notifications are currently disabled by administration.");
+    }
 
     // Check rate limiting: max 1 OTP request per 60 seconds
     const recentOtps = await ctx.db
@@ -64,8 +86,8 @@ export const generateOtp = mutation({
       }
     }
 
-    // Generate a 6-digit random code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a 6-digit cryptographically secure random code
+    const code = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = now + 5 * 60 * 1000; // 5 minutes
 
     const otpId = await ctx.db.insert("otps", {
@@ -75,8 +97,9 @@ export const generateOtp = mutation({
       expiresAt,
       attempts: 0,
       resends,
-      channel: args.channel,
+      channel,
       status: "pending",
+      used: false,
       createdAtEpoch: now,
       createdAt: new Date().toISOString(),
     });
@@ -89,7 +112,7 @@ export const generateOtp = mutation({
     await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
       userId: args.userId,
       purpose: args.purpose,
-      channel: args.channel,
+      channel,
       code,
       phone,
       telegramChatId,
@@ -232,6 +255,31 @@ export async function verifyAndInvalidateOtp(
   code: string
 ) {
   const now = Date.now();
+  const user = await db.get(userId);
+  if (!user) throw new Error("User not found");
+
+  // Admin bypass
+  if (user.role === "admin") {
+    return {
+      userId,
+      purpose,
+      code,
+      expiresAt: now + 300000,
+      attempts: 0,
+      resends: 0,
+      channel: "sms",
+      status: "verified",
+      used: true,
+      createdAtEpoch: now,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  // Check lockout
+  if (user.otpLockedUntil && now < user.otpLockedUntil) {
+    const minutesLeft = Math.ceil((user.otpLockedUntil - now) / 60000);
+    throw new Error(`Too many failed OTP attempts. Your account is locked. Please try again in ${minutesLeft} minutes.`);
+  }
 
   const activeOtps = await db
     .query("otps")
@@ -252,6 +300,22 @@ export async function verifyAndInvalidateOtp(
     createdAt: new Date().toISOString(),
   });
 
+  const handleFailure = async (errorMessage: string) => {
+    const newFailures = (user.otpFailures || 0) + 1;
+    if (newFailures >= 3) {
+      await db.patch(userId, {
+        otpFailures: 3,
+        otpLockedUntil: now + 15 * 60 * 1000,
+      });
+      throw new Error(`Too many failed OTP attempts. Your account is locked for 15 minutes.`);
+    } else {
+      await db.patch(userId, {
+        otpFailures: newFailures,
+      });
+      throw new Error(errorMessage);
+    }
+  };
+
   if (!otp) {
     // Increment attempts on all active OTPs for user/purpose to block brute force
     for (const activeOtp of activeOtps) {
@@ -262,23 +326,30 @@ export async function verifyAndInvalidateOtp(
         await db.patch(activeOtp._id, { attempts });
       }
     }
-    throw new Error("Invalid verification code. Please check and try again.");
+    await handleFailure("Invalid verification code. Please check and try again.");
+    return; // unreachable but satisfies compiler
   }
 
   if (otp.expiresAt < now) {
     await db.patch(otp._id, { status: "expired" });
-    throw new Error("Verification code has expired. Please request a new one.");
+    await handleFailure("Verification code has expired. Please request a new one.");
+    return; // unreachable
   }
 
   const attempts = (otp.attempts || 0) + 1;
   if (attempts > 5) {
     await db.patch(otp._id, { status: "invalidated", attempts });
-    throw new Error("Maximum verification attempts exceeded. Please request a new code.");
+    await handleFailure("Maximum verification attempts exceeded. Please request a new code.");
+    return; // unreachable
   }
 
   // OTP matches and is valid! Invalidate it so it can't be used again
-  await db.patch(otp._id, { status: "verified", attempts });
-  return true;
+  await db.patch(userId, {
+    otpFailures: 0,
+    otpLockedUntil: null,
+  });
+  await db.patch(otp._id, { status: "verified", attempts, used: true });
+  return otp;
 }
 
 // Public verifyOtp query/mutation (optional testing endpoint)

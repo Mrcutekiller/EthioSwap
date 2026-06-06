@@ -289,7 +289,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     }
     setSettingsOtpLoading(true);
     try {
-      await disconnectTelegramMutation({ userId: user.id || user._id, otpCode: settingsOtpCode });
+      await disconnectTelegramMutation({ userId: user._id || user.id, otpCode: settingsOtpCode });
       setShowSettingsOtp(false);
       alert('Telegram disconnected successfully.');
     } catch (err) {
@@ -637,10 +637,19 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
                     </div>
                   ) : (
                     <button onClick={async () => {
-                      const res = await generateTelegramCodeMutation({ userId: user.id || user._id });
-                      if (res && res.code) {
-                        setLinkCode(res.code);
-                        setTimeRemaining(10 * 60 * 1000); // 10 mins
+                      try {
+                        const targetId = user._id || user.id;
+                        if (!targetId) {
+                          alert("User ID not found. Please log in again.");
+                          return;
+                        }
+                        const res = await generateTelegramCodeMutation({ userId: targetId });
+                        if (res && res.code) {
+                          setLinkCode(res.code);
+                          setTimeRemaining(10 * 60 * 1000); // 10 mins
+                        }
+                      } catch (err) {
+                        alert("Error generating Telegram link code: " + err.message);
                       }
                     }} className="btn btn-gold btn-full btn-sm" style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}>
                       🔌 Connect Telegram Bot

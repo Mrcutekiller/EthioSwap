@@ -192,6 +192,33 @@ export const handleTelegramWebhook = internalAction({
       });
     };
 
+    if (text.startsWith("/start ")) {
+      const linkToken = text.substring(7).trim();
+      const user = await ctx.runQuery(internal.telegram.getPendingUserByToken, { token: linkToken });
+
+      if (user) {
+        await ctx.runMutation(internal.telegram.updateUserTelegramChatId, {
+          userId: user._id,
+          chatId,
+        });
+
+        await sendReply(
+          `🔄 <b>Linking account...</b>\n\nFound user <b>@${user.username}</b>. Generating your 6-digit OTP code now...`
+        );
+
+        await ctx.runMutation(api.otp.generateOtp, {
+          userId: user._id,
+          purpose: "signup",
+          channel: "telegram",
+        });
+      } else {
+        await sendReply(
+          `❌ <b>Invalid or Expired Token!</b>\n\nPlease make sure you clicked the link from the EthioSwap signup page or verify your registration status.`
+        );
+      }
+      return { ok: true };
+    }
+
     if (/^\d{6}$/.test(text)) {
       const linkResult = await ctx.runMutation(internal.telegram.verifyAndLinkCode, {
         code: text,
@@ -241,5 +268,28 @@ export const handleTelegramWebhook = internalAction({
     );
 
     return { ok: true };
+  },
+});
+
+export const getPendingUserByToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("telegramLinkToken"), args.token))
+      .first();
+  },
+});
+
+export const updateUserTelegramChatId = mutation({
+  args: {
+    userId: v.id("users"),
+    chatId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      telegramChatId: args.chatId,
+      telegramLinked: false,
+    });
   },
 });

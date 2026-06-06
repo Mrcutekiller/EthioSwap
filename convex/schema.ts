@@ -60,6 +60,12 @@ export default defineSchema({
     telegramChatId: v.optional(v.string()),
     telegramLinkCode: v.optional(v.string()),
     telegramLinkExpires: v.optional(v.number()),
+    telegramLinked: v.optional(v.boolean()),
+    telegramLinkToken: v.optional(v.string()),
+    
+    // OTP Lockout status
+    otpFailures: v.optional(v.number()),
+    otpLockedUntil: v.optional(v.number()),
     
     // Notification toggles
     smsEnabled: v.optional(v.boolean()),
@@ -311,6 +317,7 @@ export default defineSchema({
     resends: v.number(),
     channel: v.string(), // "sms" | "telegram"
     status: v.string(), // "pending" | "verified" | "expired" | "invalidated"
+    used: v.optional(v.boolean()),
     createdAtEpoch: v.number(),
     createdAt: v.string(),
   })

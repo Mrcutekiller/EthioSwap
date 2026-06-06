@@ -56,6 +56,13 @@ const WalletCard = () => {
   const [depTxId, setDepTxId]     = useState('');
   const [depLoading, setDepLoading] = useState(false);
 
+  // Deposit OTP
+  const [showDepOtp, setShowDepOtp] = useState(false);
+  const [depOtpCode, setDepOtpCode] = useState('');
+  const [depSendingOtp, setDepSendingOtp] = useState(false);
+  const [depResendTimer, setDepResendTimer] = useState(0);
+  const [depOtpError, setDepOtpError] = useState('');
+
   // Withdraw
   const [wdNet, setWdNet]         = useState('trc20');
   const [wdAmt, setWdAmt]         = useState('');
@@ -122,10 +129,23 @@ const WalletCard = () => {
     e.preventDefault();
     if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
     if (!depTxId.trim())    { setError('Please enter your Transaction ID / Reference'); return; }
-    setDepLoading(true);
-    await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '');
-    setDepLoading(false);
-    setDepAmt(''); setDepTxId('');
+    
+    if (user.telegramLinked === true && user.role !== "admin") {
+      setShowDepOtp(true);
+      setDepOtpCode('');
+      setDepOtpError('');
+      await triggerDepOtp();
+    } else {
+      setDepLoading(true);
+      try {
+        await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
+        setDepAmt(''); setDepTxId('');
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setDepLoading(false);
+      }
+    }
   };
 
   React.useEffect(() => {
@@ -135,6 +155,14 @@ const WalletCard = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [wdResendTimer]);
+
+  React.useEffect(() => {
+    if (depResendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setDepResendTimer(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [depResendTimer]);
 
   const triggerWdOtp = async (channel) => {
     setWdSendingOtp(true);
@@ -146,6 +174,19 @@ const WalletCard = () => {
       setWdOtpError(err.message);
     } finally {
       setWdSendingOtp(false);
+    }
+  };
+
+  const triggerDepOtp = async () => {
+    setDepSendingOtp(true);
+    setDepOtpError('');
+    try {
+      await sendOtp(user._id, 'deposit', 'telegram');
+      setDepResendTimer(60);
+    } catch (err) {
+      setDepOtpError(err.message);
+    } finally {
+      setDepSendingOtp(false);
     }
   };
 
@@ -179,6 +220,27 @@ const WalletCard = () => {
       setWdOtpError(err.message);
     } finally {
       setWdLoading(false);
+    }
+  };
+
+  const handleDepOtpVerifyAndSubmit = async (e) => {
+    e.preventDefault();
+    setDepOtpError('');
+    if (depOtpCode.length !== 6) {
+      setDepOtpError('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setDepLoading(true);
+    try {
+      const res = await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', depOtpCode);
+      if (res && res.success) {
+        setShowDepOtp(false);
+        setDepAmt(''); setDepTxId(''); setDepOtpCode('');
+      }
+    } catch (err) {
+      setDepOtpError(err.message);
+    } finally {
+      setDepLoading(false);
     }
   };
 
@@ -750,6 +812,102 @@ const WalletCard = () => {
             <button
               type="button"
               onClick={() => setShowWdOtp(false)}
+              className="btn btn-ghost btn-sm btn-full"
+              style={{ marginTop: '12px', width: '100%' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Deposit OTP Modal */}
+      {showDepOtp && (
+        <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Deposit Verification</h3>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+              We sent a 6-digit OTP code to your linked Telegram account to authorize deposit of <b>${fmt(depAmtNum)} USDT</b>.
+            </p>
+
+            <form onSubmit={handleDepOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={depOtpCode}
+                onChange={e => setDepOtpCode(e.target.value.replace(/\D/g, ''))}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  color: '#ffffff',
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '6px',
+                  outline: 'none',
+                }}
+                className="input"
+                autoFocus
+              />
+
+              {depOtpError && (
+                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
+                  ⚠ {depOtpError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={depLoading || depSendingOtp}
+                className="btn btn-gold btn-full"
+                style={{
+                  height: '44px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                  color: '#0A0C12',
+                  border: 'none',
+                  borderRadius: '10px',
+                  width: '100%',
+                  cursor: 'pointer',
+                }}
+              >
+                {depLoading ? '⏳ Authorizing...' : 'Confirm & Submit'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '14px' }}>
+              {depResendTimer > 0 ? (
+                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {depResendTimer}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={triggerDepOtp}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold-light)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Resend Code
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowDepOtp(false)}
               className="btn btn-ghost btn-sm btn-full"
               style={{ marginTop: '12px', width: '100%' }}
             >

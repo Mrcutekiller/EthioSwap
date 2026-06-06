@@ -56,13 +56,14 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [width, setWidth] = useState(window.innerWidth);
 
   // OTP State
-  const [otpData, setOtpData] = useState(null); // { status, userId, preferredMethod, phone, telegramChatId }
+  const [otpData, setOtpData] = useState(null); // { status, userId, preferredMethod, phone, telegramChatId, telegramLinkToken }
   const [otpCode, setOtpCode] = useState('');
   const [chosenChannel, setChosenChannel] = useState('sms');
   const [trustDevice, setTrustDevice] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [showTgFallback, setShowTgFallback] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -317,7 +318,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <button 
                 type="button" 
-                onClick={() => { setOtpData(null); setOtpCode(''); setLocalError(''); }} 
+                onClick={() => { setOtpData(null); setOtpCode(''); setLocalError(''); setShowTgFallback(false); }} 
                 style={{ 
                   alignSelf: 'flex-start', 
                   background: 'rgba(255,255,255,0.05)', 
@@ -346,6 +347,71 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   ? `We sent a 6-digit OTP code to ${otpData.phone || 'your phone number'} via SMS.`
                   : 'We sent a 6-digit OTP code to verify your login attempt.'}
               </p>
+
+              {otpData?.isSignup && showTgFallback && (
+                <div style={{
+                  background: 'rgba(0, 212, 160, 0.04)',
+                  border: '1px solid rgba(0, 212, 160, 0.2)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  alignItems: 'center',
+                }}>
+                  <span style={{ fontSize: '24px' }}>✈️</span>
+                  <p style={{ fontSize: '13px', color: 'var(--text-2)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+                    EthioSwap Telegram Bot Verification
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                    Click the button below to open the Telegram Bot, click <b>Start</b>, copy the 6-digit verification code, and enter it below.
+                  </p>
+                  <a
+                    href={`https://t.me/EthioSwapBot?start=${otpData.telegramLinkToken}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-gold w-full"
+                    style={{
+                      height: '42px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Open Bot <i className="ti ti-brand-telegram" style={{ marginLeft: '6px', fontSize: '16px' }}></i>
+                  </a>
+                </div>
+              )}
+
+              {otpData?.isSignup && !showTgFallback && (
+                <button
+                  type="button"
+                  onClick={() => setShowTgFallback(true)}
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    color: 'var(--text-2)',
+                    padding: '12px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease',
+                    width: '100%',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                >
+                  💬 Did not receive SMS? Continue with Telegram
+                </button>
+              )}
 
               {/* Delivery channel selector */}
               {!otpData?.isSignup && (

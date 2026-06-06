@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { verifyAndInvalidateOtp } from "./otp";
 
 export const listAll = query({
   args: {},
@@ -22,10 +23,22 @@ export const create = mutation({
     amountUsd: v.number(),
     amountEth: v.number(),
     screenshotUrl: v.optional(v.string()),
+    otpCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    if (user.telegramLinked === true && user.role !== "admin") {
+      if (!args.otpCode) {
+        throw new Error("OTP code is required to complete deposit.");
+      }
+      await verifyAndInvalidateOtp(ctx.db, args.userId, "deposit", args.otpCode);
+    }
+
+    const { otpCode, ...insertArgs } = args;
     return await ctx.db.insert("depositRequests", {
-      ...args,
+      ...insertArgs,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
