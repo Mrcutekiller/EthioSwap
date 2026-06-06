@@ -1,6 +1,6 @@
 import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 export const sendTelegramAction = internalAction({
   args: {
@@ -111,6 +111,12 @@ export const verifyAndLinkCode = mutation({
       telegramEnabled: true,
       telegramLinkCode: undefined,
       telegramLinkExpires: undefined,
+    });
+
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: user._id,
+      type: "security_alert",
+      extraText: `Telegram account connected. Chat ID: ${args.chatId}`,
     });
 
     return { success: true, username: user.username };

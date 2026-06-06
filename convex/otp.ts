@@ -1,0 +1,398 @@
+import { mutation, internalMutation, action, internalAction, query } from "./_generated/server";
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import { DatabaseWriter, DatabaseReader } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+// Generate a new 6-digit OTP code for a user
+export const generateOtp = mutation({
+  args: {
+    userId: v.id("users"),
+    purpose: v.string(), // "login" | "withdrawal" | "sensitive_change"
+    channel: v.string(), // "sms" | "telegram"
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Retrieve settings to check if channel is globally disabled
+    const settings = await ctx.db.query("systemSettings").first();
+    if (args.channel === "sms" && settings?.isSmsChannelDisabled) {
+      throw new Error("SMS notifications are currently disabled by administration.");
+    }
+    if (args.channel === "telegram" && settings?.isTelegramChannelDisabled) {
+      throw new Error("Telegram notifications are currently disabled by administration.");
+    }
+
+    const now = Date.now();
+
+    // Check rate limiting: max 1 OTP request per 60 seconds
+    const recentOtps = await ctx.db
+      .query("otps")
+      .withIndex("by_user_purpose_status", (q) =>
+        q.eq("userId", args.userId).eq("purpose", args.purpose).eq("status", "pending")
+      )
+      .filter((q) => q.gt(q.field("createdAtEpoch"), now - 60000))
+      .collect();
+
+    if (recentOtps.length > 0) {
+      throw new Error("Please wait 60 seconds before requesting another code.");
+    }
+
+    // Check resend limits: max 3 resends per purpose session
+    const activeOtps = await ctx.db
+      .query("otps")
+      .withIndex("by_user_purpose_status", (q) =>
+        q.eq("userId", args.userId).eq("purpose", args.purpose).eq("status", "pending")
+      )
+      .collect();
+
+    let resends = 0;
+    if (activeOtps.length > 0) {
+      // Find the latest active OTP to inherit resend count
+      const latestActive = activeOtps.reduce((prev, current) =>
+        current.createdAtEpoch > prev.createdAtEpoch ? current : prev
+      );
+      resends = (latestActive.resends || 0) + 1;
+      if (resends > 3) {
+        throw new Error("Maximum resend attempts (3) exceeded for this session. Please log in again.");
+      }
+
+      // Invalidate all previous pending OTPs of this purpose
+      for (const otp of activeOtps) {
+        await ctx.db.patch(otp._id, { status: "invalidated" });
+      }
+    }
+
+    // Generate a 6-digit random code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = now + 5 * 60 * 1000; // 5 minutes
+
+    const otpId = await ctx.db.insert("otps", {
+      userId: args.userId,
+      purpose: args.purpose,
+      code,
+      expiresAt,
+      attempts: 0,
+      resends,
+      channel: args.channel,
+      status: "pending",
+      createdAtEpoch: now,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Determine contact detail
+    const phone = user.phone || "";
+    const telegramChatId = user.telegramChatId || "";
+
+    // Trigger dispatch action to send SMS or Telegram
+    await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
+      userId: args.userId,
+      purpose: args.purpose,
+      channel: args.channel,
+      code,
+      phone,
+      telegramChatId,
+      preferredLanguage: user.preferredLanguage || "en",
+    });
+
+    return { success: true, expiresAt };
+  },
+});
+
+// Action to send OTP via Vonage or Telegram
+export const sendOtpAction = internalAction({
+  args: {
+    userId: v.id("users"),
+    purpose: v.string(),
+    channel: v.string(),
+    code: v.string(),
+    phone: v.string(),
+    telegramChatId: v.string(),
+    preferredLanguage: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const isAm = args.preferredLanguage === "am" || args.preferredLanguage.startsWith("am");
+    const message = isAm
+      ? `EthioSwap: የእርስዎ የማረጋገጫ ኮድ ${args.code} ነው። ይህ ኮድ በ5 ደቂቃ ውስጥ ያልፋል።`
+      : `EthioSwap: Your OTP verification code is ${args.code}. It will expire in 5 minutes.`;
+
+    if (args.channel === "sms") {
+      const apiKey = process.env.VONAGE_API_KEY || "mock_key";
+      const apiSecret = process.env.VONAGE_API_SECRET || "mock_secret";
+      const from = process.env.VONAGE_FROM_NUMBER || "EthioSwap";
+
+      const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
+        userId: args.userId,
+        type: `${args.purpose}_otp`,
+        channel: "sms",
+        message: `OTP Code sent to ${args.phone}`,
+      });
+
+      if (apiKey === "mock_key" || apiSecret === "mock_secret") {
+        console.warn("VONAGE_API_KEY not set. Mock SMS delivery to", args.phone, ":", message);
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "delivered" });
+        return { success: true };
+      }
+
+      try {
+        const response = await fetch("https://rest.nexmo.com/sms/json", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            api_key: apiKey,
+            api_secret: apiSecret,
+            to: args.phone,
+            from,
+            text: message,
+          }),
+        });
+
+        if (!response.ok) throw new Error(`Vonage returned status ${response.status}`);
+        const result = await response.json();
+        const status = result.messages?.[0]?.status === "0" ? "delivered" : "failed";
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
+      } catch (err) {
+        console.error("Vonage OTP send failed:", err);
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
+      }
+    } else if (args.channel === "telegram") {
+      const tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
+
+      const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
+        userId: args.userId,
+        type: `${args.purpose}_otp`,
+        channel: "telegram",
+        message: `OTP Code sent to Telegram chatId: ${args.telegramChatId}`,
+      });
+
+      const token = process.env.TELEGRAM_BOT_TOKEN || "mock_token";
+      if (token === "mock_token") {
+        console.warn("TELEGRAM_BOT_TOKEN not set. Mock Telegram delivery to", args.telegramChatId, ":", tgMsg);
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "delivered" });
+        return { success: true };
+      }
+
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: args.telegramChatId,
+            text: tgMsg,
+            parse_mode: "HTML",
+          }),
+        });
+
+        const status = response.ok ? "delivered" : "failed";
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
+      } catch (err) {
+        console.error("Telegram OTP send failed:", err);
+        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
+      }
+    }
+  },
+});
+
+// Helper mutations for internal operations
+export const createOtpNotificationLog = internalMutation({
+  args: {
+    userId: v.id("users"),
+    type: v.string(),
+    channel: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("notificationLogs", {
+      userId: args.userId,
+      type: args.type,
+      channel: args.channel,
+      message: args.message,
+      status: "pending",
+      sentAt: new Date().toISOString(),
+    });
+  },
+});
+
+export const updateOtpNotificationLogStatus = internalMutation({
+  args: {
+    logId: v.id("notificationLogs"),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.logId, { status: args.status });
+  },
+});
+
+// Shared server-side validation helper
+export async function verifyAndInvalidateOtp(
+  db: DatabaseWriter,
+  userId: Id<"users">,
+  purpose: string,
+  code: string
+) {
+  const now = Date.now();
+
+  const activeOtps = await db
+    .query("otps")
+    .withIndex("by_user_purpose_status", (q) =>
+      q.eq("userId", userId).eq("purpose", purpose).eq("status", "pending")
+    )
+    .collect();
+
+  const otp = activeOtps.find((o) => o.code === code);
+
+  // Insert attempt log
+  await db.insert("otpAttemptsLogs", {
+    userId,
+    purpose,
+    codeEntered: code,
+    channel: otp ? otp.channel : "unknown",
+    status: otp ? (otp.expiresAt < now ? "failed_expired" : "success") : "failed_incorrect",
+    createdAt: new Date().toISOString(),
+  });
+
+  if (!otp) {
+    // Increment attempts on all active OTPs for user/purpose to block brute force
+    for (const activeOtp of activeOtps) {
+      const attempts = (activeOtp.attempts || 0) + 1;
+      if (attempts >= 5) {
+        await db.patch(activeOtp._id, { status: "invalidated", attempts });
+      } else {
+        await db.patch(activeOtp._id, { attempts });
+      }
+    }
+    throw new Error("Invalid verification code. Please check and try again.");
+  }
+
+  if (otp.expiresAt < now) {
+    await db.patch(otp._id, { status: "expired" });
+    throw new Error("Verification code has expired. Please request a new one.");
+  }
+
+  const attempts = (otp.attempts || 0) + 1;
+  if (attempts > 5) {
+    await db.patch(otp._id, { status: "invalidated", attempts });
+    throw new Error("Maximum verification attempts exceeded. Please request a new code.");
+  }
+
+  // OTP matches and is valid! Invalidate it so it can't be used again
+  await db.patch(otp._id, { status: "verified", attempts });
+  return true;
+}
+
+// Public verifyOtp query/mutation (optional testing endpoint)
+export const verifyOtpCode = mutation({
+  args: {
+    userId: v.id("users"),
+    purpose: v.string(),
+    code: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await verifyAndInvalidateOtp(ctx.db, args.userId, args.purpose, args.code);
+  },
+});
+
+// Admin Log Queries
+export const getOtpAttemptsLogs = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+
+    const logs = await ctx.db.query("otpAttemptsLogs").order("desc").collect();
+    
+    // Enrich with username
+    const enriched = [];
+    for (const log of logs) {
+      const u = await ctx.db.get(log.userId);
+      enriched.push({
+        ...log,
+        username: u ? u.username : "unknown",
+      });
+    }
+    return enriched;
+  },
+});
+
+export const getNotificationLogs = query({
+  args: { channel: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email))
+      .first();
+    if (!admin || admin.role !== "admin") throw new Error("Forbidden");
+
+    let query = ctx.db.query("notificationLogs");
+    const logs = await query.order("desc").collect();
+
+    const filtered = args.channel 
+      ? logs.filter(l => l.channel === args.channel)
+      : logs;
+
+    const enriched = [];
+    for (const log of filtered) {
+      const u = await ctx.db.get(log.userId);
+      enriched.push({
+        ...log,
+        username: u ? u.username : "unknown",
+      });
+    }
+    return enriched;
+  },
+});
+
+// Admin command: resend notification
+export const resendNotification = action({
+  args: { logId: v.id("notificationLogs") },
+  handler: async (ctx, args) => {
+    const log = await ctx.runQuery(internal.otp.getNotificationLogInternal, { logId: args.logId });
+    if (!log) throw new Error("Log not found");
+
+    const user = await ctx.runQuery(internal.otp.getUserInternal, { userId: log.userId });
+    if (!user) throw new Error("User not found");
+
+    if (log.channel === "sms") {
+      if (!user.phone) throw new Error("User has no phone number");
+      await ctx.runAction(internal.sms.sendSmsAction, {
+        userId: user._id,
+        phone: user.phone,
+        message: log.message,
+        type: log.type,
+        logId: log._id,
+      });
+    } else if (log.channel === "telegram") {
+      if (!user.telegramChatId) throw new Error("User Telegram not connected");
+      await ctx.runAction(internal.telegram.sendTelegramAction, {
+        userId: user._id,
+        chatId: user.telegramChatId,
+        message: log.message,
+        type: log.type,
+        logId: log._id,
+      });
+    }
+    return { success: true };
+  },
+});
+
+export const getNotificationLogInternal = query({
+  args: { logId: v.id("notificationLogs") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.logId);
+  },
+});
+
+export const getUserInternal = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});

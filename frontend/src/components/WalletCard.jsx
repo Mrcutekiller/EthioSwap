@@ -63,6 +63,14 @@ const WalletCard = () => {
   const [wdPin, setWdPin]         = useState('');
   const [wdLoading, setWdLoading] = useState(false);
 
+  const { sendOtp } = useAuth();
+  const [showWdOtp, setShowWdOtp] = useState(false);
+  const [wdOtpCode, setWdOtpCode] = useState('');
+  const [wdOtpChannel, setWdOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
+  const [wdSendingOtp, setWdSendingOtp] = useState(false);
+  const [wdResendTimer, setWdResendTimer] = useState(0);
+  const [wdOtpError, setWdOtpError] = useState('');
+
   // Send
   const [snAmt, setSnAmt]         = useState('');
   const [snTo, setSnTo]           = useState('');
@@ -120,15 +128,58 @@ const WalletCard = () => {
     setDepAmt(''); setDepTxId('');
   };
 
+  React.useEffect(() => {
+    if (wdResendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setWdResendTimer(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [wdResendTimer]);
+
+  const triggerWdOtp = async (channel) => {
+    setWdSendingOtp(true);
+    setWdOtpError('');
+    try {
+      await sendOtp(user._id, 'withdrawal', channel || wdOtpChannel);
+      setWdResendTimer(60);
+    } catch (err) {
+      setWdOtpError(err.message);
+    } finally {
+      setWdSendingOtp(false);
+    }
+  };
+
   const handleWithdraw = async (e) => {
     e.preventDefault();
     if (wdAmtNum < minWd)     { setError(`Minimum withdrawal is $${minWd}`); return; }
     if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
     if (!wdAddr.trim())       { setError('Enter a wallet address'); return; }
+    
+    setShowWdOtp(true);
+    setWdOtpCode('');
+    setWdOtpError('');
+    await triggerWdOtp(wdOtpChannel);
+  };
+
+  const handleWdOtpVerifyAndSubmit = async (e) => {
+    e.preventDefault();
+    setWdOtpError('');
+    if (wdOtpCode.length !== 6) {
+      setWdOtpError('Please enter the 6-digit OTP code.');
+      return;
+    }
     setWdLoading(true);
-    await withdrawETH(wdAmtNum, wdAddr, user?.transaction_pin ? wdPin : undefined);
-    setWdLoading(false);
-    setWdAmt(''); setWdAddr(''); setWdPin('');
+    try {
+      const res = await withdrawETH(wdAmtNum, wdAddr, wdOtpCode);
+      if (res && res.success) {
+        setShowWdOtp(false);
+        setWdAmt(''); setWdAddr(''); setWdPin(''); setWdOtpCode('');
+      }
+    } catch (err) {
+      setWdOtpError(err.message);
+    } finally {
+      setWdLoading(false);
+    }
   };
 
   /* ─── loading skeleton ─────────────────────────────────────── */
@@ -568,6 +619,142 @@ const WalletCard = () => {
                 {wdLoading ? '⏳ Processing…' : '⬆️ Confirm Withdrawal'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal OTP Modal */}
+      {showWdOtp && (
+        <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Withdrawal Verification</h3>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+              Enter the 6-digit OTP code to authorize withdrawal of <b>${fmt(wdAmtNum)} USDT</b>.
+            </p>
+
+            {/* Delivery channel selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={async () => { setWdOtpChannel('sms'); await triggerWdOtp('sms'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: wdOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
+                  color: wdOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                💬 SMS OTP
+              </button>
+              <button
+                type="button"
+                disabled={!user.telegramChatId}
+                onClick={async () => { setWdOtpChannel('telegram'); await triggerWdOtp('telegram'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
+                  background: wdOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
+                  color: wdOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
+                  opacity: user.telegramChatId ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                ✈️ Telegram
+              </button>
+            </div>
+
+            <form onSubmit={handleWdOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={wdOtpCode}
+                onChange={e => setWdOtpCode(e.target.value.replace(/\D/g, ''))}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  color: '#ffffff',
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '6px',
+                  outline: 'none',
+                }}
+                className="input"
+                autoFocus
+              />
+
+              {wdOtpError && (
+                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
+                  ⚠ {wdOtpError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={wdLoading || wdSendingOtp}
+                className="btn btn-gold btn-full"
+                style={{
+                  height: '44px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                  color: '#0A0C12',
+                  border: 'none',
+                  borderRadius: '10px',
+                  width: '100%',
+                  cursor: 'pointer',
+                }}
+              >
+                {wdLoading ? '⏳ Authorizing...' : 'Confirm & Submit'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '14px' }}>
+              {wdResendTimer > 0 ? (
+                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {wdResendTimer}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => triggerWdOtp(wdOtpChannel)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold-light)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Resend Code
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowWdOtp(false)}
+              className="btn btn-ghost btn-sm btn-full"
+              style={{ marginTop: '12px', width: '100%' }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 export const listForUser = query({
   args: { userId: v.id("users") },
@@ -17,6 +17,21 @@ export const markAsRead = mutation({
   args: { id: v.id("notifications") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { isRead: true });
+  },
+});
+
+export const markAllRead = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const unread = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isRead"), false))
+      .collect();
+    for (const notif of unread) {
+      await ctx.db.patch(notif._id, { isRead: true });
+    }
+    return { success: true };
   },
 });
 
@@ -39,7 +54,7 @@ export const insert = mutation({
 export const dispatchNotification = mutation({
   args: {
     userId: v.id("users"),
-    type: v.string(), // "trade_matched" | "payment_sent" | "usdt_released" | "dispute_opened" | "dispute_resolved" | "kyc_approved" | "kyc_rejected"
+    type: v.string(), // "trade_matched" | "payment_sent" | "usdt_released" | "dispute_opened" | "dispute_resolved" | "kyc_approved" | "kyc_rejected" | "trade_cancelled" | "withdrawal_submitted" | "deposit_received" | "security_alert"
     tradeId: v.optional(v.id("trades")),
     extraText: v.optional(v.string()), // e.g. amount, counterparty
   },
@@ -52,43 +67,92 @@ export const dispatchNotification = mutation({
 
     let smsMsg = "";
     let tgMsg = "";
+    let notifTitle = args.type.replace(/_/g, " ").toUpperCase();
 
     const tradeShort = args.tradeId ? args.tradeId.substring(0, 8) : "";
 
+    // If tradeId is provided, fetch details for rich layout
+    let trade = null;
+    let buyer = null;
+    let seller = null;
+    if (args.tradeId) {
+      trade = await ctx.db.get(args.tradeId);
+      if (trade) {
+        if (trade.buyerId) buyer = await ctx.db.get(trade.buyerId);
+        seller = await ctx.db.get(trade.sellerId);
+      }
+    }
+
     switch (args.type) {
       case "trade_matched":
-        smsMsg = isAm
-          ? `EthioSwap: P2P ስምምነት ተዛምዷል። መታወቂያ: #${tradeShort}። ዝርዝሩን በስልኮ ይከታተሉ።`
-          : `EthioSwap: P2P Trade Matched. ID: #${tradeShort}. Check details on the platform.`;
-        tgMsg = `🤝 <b>P2P Trade Matched!</b>\n\nYour trade has been matched. Click below to proceed.\n<b>Trade ID:</b> #${tradeShort}\n<b>Amount:</b> ${args.extraText || ""}\n<a href="https://ethioswap.com/dashboard/trades?id=${args.tradeId || ""}">View Trade Page</a>`;
+        if (trade) {
+          const isSeller = String(args.userId) === String(trade.sellerId);
+          if (isSeller) {
+            notifTitle = "New Buy Request";
+            smsMsg = isAm
+              ? `EthioSwap: አዲስ የግዢ ጥያቄ ቀርቧል። መታወቂያ: #${tradeShort}። መጠን: ${trade.amountEth} USDT፣ ተመን: ${trade.rate} ETB።`
+              : `EthioSwap: New Buy Request. ID: #${tradeShort}. Amount: ${trade.amountEth} USDT, Rate: ${trade.rate} ETB.`;
+            tgMsg = `🤝 <b>New Buy Request</b>\n\nBuyer: @${buyer?.username || "unknown"}\nAmount: ${trade.amountEth} USDT\nRate: ${trade.rate} ETB\nTrade ID: #${tradeShort}`;
+          } else {
+            notifTitle = "Buy Request Submitted";
+            smsMsg = isAm
+              ? `EthioSwap: የግዢ ጥያቄዎ ቀርቧል። መታወቂያ: #${tradeShort}። መጠን: ${trade.amountEth} USDT፣ ተመን: ${trade.rate} ETB።`
+              : `EthioSwap: Buy Request Submitted. ID: #${tradeShort}. Amount: ${trade.amountEth} USDT, Rate: ${trade.rate} ETB.`;
+            tgMsg = `🛡️ <b>Buy Request Submitted</b>\n\nSeller: @${seller?.username || "unknown"}\nAmount: ${trade.amountEth} USDT\nRate: ${trade.rate} ETB\nTrade ID: #${tradeShort}`;
+          }
+        } else {
+          smsMsg = `EthioSwap: P2P Trade Matched. ID: #${tradeShort}.`;
+          tgMsg = `🤝 <b>P2P Trade Matched</b>\n\nTrade ID: #${tradeShort}`;
+        }
         break;
 
       case "payment_sent":
         smsMsg = isAm
           ? `EthioSwap: ገዢው ክፍያ መፈጸሙን ምልክት አድርጓል። መታወቂያ: #${tradeShort}። እባክዎ ያረጋግጡ።`
           : `EthioSwap: Buyer marked payment sent. ID: #${tradeShort}. Please verify.`;
-        tgMsg = `💰 <b>Payment Marked Sent!</b>\n\nThe buyer has marked the trade as paid.\n<b>Trade ID:</b> #${tradeShort}\n<b>Counterparty:</b> ${args.extraText || ""}\nVerify receipt and release the USDT.`;
+        tgMsg = `💳 <b>Payment Marked Sent</b>\n\nBuyer: @${buyer?.username || "unknown"}\nAmount: ${trade?.amountEth || ""} USDT\nRate: ${trade?.rate || ""} ETB\nTrade ID: #${tradeShort}`;
         break;
 
       case "usdt_released":
         smsMsg = isAm
           ? `EthioSwap: USDT ተለቋል! መታወቂያ: #${tradeShort}። የኪስ ቦርሳዎን ያረጋግጡ።`
           : `EthioSwap: USDT Released! ID: #${tradeShort}. Check your wallet balance.`;
-        tgMsg = `✅ <b>USDT Released!</b>\n\nThe escrow has been released successfully.\n<b>Trade ID:</b> #${tradeShort}\n<b>Volume:</b> ${args.extraText || ""}\nThank you for using EthioSwap!`;
+        tgMsg = `✅ <b>USDT Released & Trade Completed</b>\n\nAmount: ${trade?.amountEth || ""} USDT\nTrade ID: #${tradeShort}\nSuccessfully added to your balance.`;
+        break;
+
+      case "trade_cancelled":
+        smsMsg = isAm
+          ? `EthioSwap: ስምምነት ተሰርዟል። መታወቂያ: #${tradeShort}።`
+          : `EthioSwap: Trade cancelled. ID: #${tradeShort}.`;
+        tgMsg = `❌ <b>Trade Cancelled</b>\n\nTrade ID: #${tradeShort} has been cancelled.`;
         break;
 
       case "dispute_opened":
         smsMsg = isAm
           ? `EthioSwap: በስምምነት #${tradeShort} ላይ አለመግባባት ተከፍቷል። ሒሳብ ታግዷል።`
           : `EthioSwap: Dispute opened on Trade #${tradeShort}. Escrow frozen.`;
-        tgMsg = `⚠️ <b>Trade Disputed!</b>\n\nA dispute has been opened on your trade. Escrow is frozen.\n<b>Trade ID:</b> #${tradeShort}\n<b>Reason:</b> ${args.extraText || ""}\nPlease submit evidence in the trade chat.`;
+        tgMsg = `⚠️ <b>Trade Disputed!</b>\n\nEscrow has been frozen.\nTrade ID: #${tradeShort}\nReason: ${args.extraText || ""}`;
         break;
 
       case "dispute_resolved":
         smsMsg = isAm
-          ? `EthioSwap: አለመግባባት ተፈትቷል! መታወቂያ: #${tradeShort}። መለያዎን ያረጋግጡ።`
+          ? `EthioSwap: አለመግባባት ተፈትቷል! መታወቂያ: #${tradeShort}።`
           : `EthioSwap: Dispute resolved for Trade #${tradeShort}. Check details.`;
-        tgMsg = `⚖️ <b>Dispute Resolved!</b>\n\nThe trade dispute has been resolved by admin.\n<b>Trade ID:</b> #${tradeShort}\n<b>Resolution:</b> ${args.extraText || ""}`;
+        tgMsg = `⚖️ <b>Dispute Resolved</b>\n\nTrade ID: #${tradeShort}\nResolution: ${args.extraText || ""}`;
+        break;
+
+      case "withdrawal_submitted":
+        smsMsg = isAm
+          ? `EthioSwap: የመውጣት ጥያቄ ቀርቧል። መጠን: ${args.extraText} USDT። ሁኔታ: በመጠባበቅ ላይ።`
+          : `EthioSwap: Withdrawal Request Submitted. Amount: ${args.extraText} USDT. Status: Pending Review.`;
+        tgMsg = `📤 <b>Withdrawal Request Submitted</b>\n\nAmount: ${args.extraText} USDT\nStatus: Pending Review`;
+        break;
+
+      case "deposit_received":
+        smsMsg = isAm
+          ? `EthioSwap: ተቀማጭ ተቀብሏል። መጠን: ${args.extraText} USDT። በደስታ መለያዎ ላይ ታክሏል።`
+          : `EthioSwap: Deposit Received. Amount: ${args.extraText} USDT. Successfully added to your balance.`;
+        tgMsg = `📥 <b>Deposit Received</b>\n\nAmount: ${args.extraText} USDT\nSuccessfully added to your balance.`;
         break;
 
       case "kyc_approved":
@@ -102,7 +166,19 @@ export const dispatchNotification = mutation({
         smsMsg = isAm
           ? `EthioSwap: የእርስዎ KYC ማረጋገጫ ውድቅ ተደርጓል። ምክንያት: ${args.extraText || ""}`
           : `EthioSwap: Your KYC was rejected. Reason: ${args.extraText || ""}`;
-        tgMsg = `❌ <b>KYC Rejected!</b>\n\nYour identity verification request was rejected.\n<b>Reason:</b> ${args.extraText || ""}\nPlease update and resubmit.`;
+        tgMsg = `❌ <b>KYC Rejected!</b>\n\nYour identity verification request was rejected.\nReason: ${args.extraText || ""}`;
+        break;
+
+      case "security_alert":
+        smsMsg = `EthioSwap Security Alert: ${args.extraText || ""}`;
+        tgMsg = `🛡️ <b>Security Alert</b>\n\n${args.extraText || ""}`;
+        break;
+
+      case "invite_reward":
+        smsMsg = isAm
+          ? `EthioSwap: የግብዣ ሽልማት ደርሷል! ${args.extraText} ነጥቦች ወደ መለያዎ ታክለዋል።`
+          : `EthioSwap: Invite Reward Received! ${args.extraText} points added to your balance.`;
+        tgMsg = `🏆 <b>Invite Reward Received</b>\n\n${args.extraText} points successfully credited to your referral balance. Thank you for sharing EthioSwap!`;
         break;
 
       default:
@@ -110,8 +186,13 @@ export const dispatchNotification = mutation({
         tgMsg = `🔔 <b>Notification</b>\n\n${args.extraText || ""}`;
     }
 
-    // 1. Send SMS if enabled
-    if (user.smsEnabled && user.phone) {
+    // Fetch system settings to check global disable controls
+    const settings = await ctx.db.query("systemSettings").first();
+    const isSmsChannelDisabled = settings?.isSmsChannelDisabled ?? false;
+    const isTelegramChannelDisabled = settings?.isTelegramChannelDisabled ?? false;
+
+    // 1. Send SMS if enabled globally & user enabled & phone exists
+    if (user.smsEnabled && user.phone && !isSmsChannelDisabled) {
       const logId = await ctx.db.insert("notificationLogs", {
         userId: user._id,
         type: args.type,
@@ -129,8 +210,8 @@ export const dispatchNotification = mutation({
       });
     }
 
-    // 2. Send Telegram if linked
-    if (user.telegramEnabled && user.telegramChatId) {
+    // 2. Send Telegram if linked globally & user enabled & telegramChatId exists
+    if (user.telegramEnabled && user.telegramChatId && !isTelegramChannelDisabled) {
       const logId = await ctx.db.insert("notificationLogs", {
         userId: user._id,
         type: args.type,
@@ -152,7 +233,7 @@ export const dispatchNotification = mutation({
     await ctx.db.insert("notifications", {
       userId: user._id,
       type: args.type,
-      title: args.type.replace(/_/g, " ").toUpperCase(),
+      title: notifTitle,
       message: smsMsg,
       isRead: false,
       createdAt: new Date().toISOString(),

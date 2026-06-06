@@ -1,5 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { verifyAndInvalidateOtp } from "./otp";
+import { api } from "./_generated/api";
 
 export const listAll = query({
   args: {},
@@ -13,8 +15,12 @@ export const create = mutation({
     userId: v.id("users"),
     amountEth: v.number(),
     address: v.string(),
+    otpCode: v.string(),
   },
   handler: async (ctx, args) => {
+    // 1. Verify OTP for withdrawal first!
+    await verifyAndInvalidateOtp(ctx.db, args.userId, "withdrawal", args.otpCode);
+
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
     if ((user.ethBalance || 0) < args.amountEth) {
@@ -27,11 +33,23 @@ export const create = mutation({
       ethLocked: (user.ethLocked || 0) + args.amountEth,
     });
 
-    return await ctx.db.insert("withdrawRequests", {
-      ...args,
+    const request = await ctx.db.insert("withdrawRequests", {
+      userId: args.userId,
+      amountEth: args.amountEth,
+      address: args.address,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
+
+    // Dispatch withdrawal notification
+    const usdAmount = Math.round(args.amountEth * 3000);
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: args.userId,
+      type: "withdrawal_submitted",
+      extraText: `${usdAmount}`,
+    });
+
+    return request;
   },
 });
 

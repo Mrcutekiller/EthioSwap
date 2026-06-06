@@ -11,37 +11,47 @@ export const sendSmsAction = internalAction({
     logId: v.id("notificationLogs"),
   },
   handler: async (ctx, args) => {
-    const username = process.env.AT_USERNAME || "sandbox";
-    const apiKey = process.env.AT_API_KEY || "your_sandbox_api_key";
-    
-    const url = username === "sandbox" 
-      ? "https://api.sandbox.africastalking.com/version1/messaging"
-      : "https://api.africastalking.com/version1/messaging";
+    const apiKey = process.env.VONAGE_API_KEY || "mock_key";
+    const apiSecret = process.env.VONAGE_API_SECRET || "mock_secret";
+    const from = process.env.VONAGE_FROM_NUMBER || "EthioSwap";
 
-    const body = new URLSearchParams();
-    body.append("username", username);
-    body.append("to", args.phone);
-    body.append("message", args.message);
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-          "apiKey": apiKey,
-        },
-        body: body.toString(),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Africa's Talking API returned status ${response.status}`);
-      }
-
+    if (apiKey === "mock_key" || apiSecret === "mock_secret") {
+      console.warn("VONAGE_API_KEY not set. Mock SMS delivery to", args.phone, ":", args.message);
       await ctx.runMutation(internal.sms.updateSmsLogStatus, {
         logId: args.logId,
         status: "delivered",
       });
+      return { success: true };
+    }
+
+    try {
+      const response = await fetch("https://rest.nexmo.com/sms/json", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          api_key: apiKey,
+          api_secret: apiSecret,
+          to: args.phone,
+          from,
+          text: args.message,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vonage API returned status ${response.status}`);
+      }
+
+      const result = await response.json();
+      const status = result.messages?.[0]?.status === "0" ? "delivered" : "failed";
+
+      await ctx.runMutation(internal.sms.updateSmsLogStatus, {
+        logId: args.logId,
+        status,
+      });
+
+      if (status === "failed") {
+        throw new Error(result.messages?.[0]?.["error-text"] || "Vonage delivery failed");
+      }
 
       return { success: true };
     } catch (error) {
@@ -75,33 +85,34 @@ export const retrySmsAction = internalAction({
     logId: v.id("notificationLogs"),
   },
   handler: async (ctx, args) => {
-    const username = process.env.AT_USERNAME || "sandbox";
-    const apiKey = process.env.AT_API_KEY || "your_sandbox_api_key";
-    
-    const url = username === "sandbox" 
-      ? "https://api.sandbox.africastalking.com/version1/messaging"
-      : "https://api.africastalking.com/version1/messaging";
+    const apiKey = process.env.VONAGE_API_KEY || "mock_key";
+    const apiSecret = process.env.VONAGE_API_SECRET || "mock_secret";
+    const from = process.env.VONAGE_FROM_NUMBER || "EthioSwap";
 
-    const body = new URLSearchParams();
-    body.append("username", username);
-    body.append("to", args.phone);
-    body.append("message", args.message + " (Retry)");
+    if (apiKey === "mock_key" || apiSecret === "mock_secret") {
+      console.warn("Mock SMS retry to", args.phone, ":", args.message);
+      return;
+    }
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch("https://rest.nexmo.com/sms/json", {
         method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-          "apiKey": apiKey,
-        },
-        body: body.toString(),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          api_key: apiKey,
+          api_secret: apiSecret,
+          to: args.phone,
+          from,
+          text: args.message + " (Retry)",
+        }),
       });
 
       if (response.ok) {
+        const result = await response.json();
+        const status = result.messages?.[0]?.status === "0" ? "delivered" : "failed";
         await ctx.runMutation(internal.sms.updateSmsLogStatus, {
           logId: args.logId,
-          status: "delivered",
+          status,
         });
       }
     } catch (e) {

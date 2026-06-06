@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "convex-api";
 import { notify } from '../lib/notify';
 
@@ -372,6 +372,13 @@ const AdminPanel = ({ user }) => {
 
   const [logsSearchQuery, setLogsSearchQuery] = useState('');
 
+  // Communications Tab States
+  const [commsSubTab, setCommsSubTab] = useState('settings');
+  const [resendingLogId, setResendingLogId] = useState(null);
+  const [notifSearch, setNotifSearch] = useState('');
+  const [otpSearch, setOtpSearch] = useState('');
+  const [notifFilterChannel, setNotifFilterChannel] = useState('all');
+
   const chatEndRef = useRef(null);
 
   const showAlert = (msg, type = 'success') => {
@@ -388,6 +395,11 @@ const AdminPanel = ({ user }) => {
   const disputes = useQuery(api.trades.listDisputed) || [];
   const supportTickets = useQuery(api.supportTickets.listAll) || [];
   const allReviews = useQuery(api.reviews.listAll) || [];
+  
+  // OTP & Notification Logs
+  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs) || [];
+  const notificationLogs = useQuery(api.otp.getNotificationLogs) || [];
+  const resendNotificationAction = useAction(api.otp.resendNotification);
 
   // Mutations
   const updateSettingsMutation = useMutation(api.systemSettings.update);
@@ -471,6 +483,7 @@ const AdminPanel = ({ user }) => {
     { id: 'disputes',  icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
     { id: 'support',   icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
     { id: 'earnings',  icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
+    { id: 'comms',     icon: 'ti-message-share',    title: 'Comms & OTP Logs', badge: 0 },
     { id: 'settings',  icon: 'ti-settings',         title: 'System Settings', badge: 0 },
     { id: 'logs',      icon: 'ti-history',           title: 'Audit Logs',    badge: 0 },
     { id: 'security',  icon: 'ti-shield-lock',       title: 'Security Center',badge: 0 },
@@ -3421,6 +3434,381 @@ const user = await ctx.db
                     </div>
                   </div>
                 )}
+              </div>
+            );
+          })()}
+
+          {/* ════ COMMUNICATIONS & LOGS SCREEN ════ */}
+          {activeTab === 'comms' && (() => {
+            const handleToggleChannel = async (channelField, currentVal) => {
+              if (!settings) return;
+              try {
+                await updateSettingsMutation({
+                  id: settings._id,
+                  updates: {
+                    [channelField]: !currentVal
+                  }
+                });
+                
+                await addAuditLog({
+                  adminId: user._id,
+                  adminUsername: user.username,
+                  action: 'update_comms_settings',
+                  details: `Toggled global setting ${channelField} to ${!currentVal}`
+                });
+
+                showAlert(`Successfully updated notification settings.`);
+              } catch (err) {
+                showAlert(`Error updating settings: ${err.message}`, 'error');
+              }
+            };
+
+            const handleResendNotif = async (logId) => {
+              setResendingLogId(logId);
+              try {
+                await resendNotificationAction({ logId });
+                showAlert("✓ Notification resent successfully.");
+              } catch (err) {
+                showAlert("Failed to resend: " + err.message, "error");
+              } finally {
+                setResendingLogId(null);
+              }
+            };
+
+            // Filter notifications
+            const filteredNotifs = notificationLogs.filter(log => {
+              const matchesSearch = !notifSearch.trim() || 
+                log.username?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+                log.message?.toLowerCase().includes(notifSearch.toLowerCase()) ||
+                log.type?.toLowerCase().includes(notifSearch.toLowerCase());
+              
+              const matchesChannel = notifFilterChannel === 'all' || log.channel === notifFilterChannel;
+              return matchesSearch && matchesChannel;
+            });
+
+            // Filter OTP logs
+            const filteredOtpLogs = otpAttemptsLogs.filter(log => {
+              return !otpSearch.trim() || 
+                log.username?.toLowerCase().includes(otpSearch.toLowerCase()) ||
+                log.purpose?.toLowerCase().includes(otpSearch.toLowerCase()) ||
+                log.codeEntered?.includes(otpSearch) ||
+                log.status?.toLowerCase().includes(otpSearch.toLowerCase());
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }} className="card-premium">
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Communications Management</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Configure channels globally, view notification logs, and audit OTP validations</p>
+                  </div>
+                </div>
+
+                {/* Sub tabs navigation */}
+                <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
+                  <button 
+                    onClick={() => setCommsSubTab('settings')}
+                    className={`btn-premium-secondary ${commsSubTab === 'settings' ? 'nav-item-active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    ⚙️ Channel Controls
+                  </button>
+                  <button 
+                    onClick={() => setCommsSubTab('notif_logs')}
+                    className={`btn-premium-secondary ${commsSubTab === 'notif_logs' ? 'nav-item-active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    💬 Notification Logs ({notificationLogs.length})
+                  </button>
+                  <button 
+                    onClick={() => setCommsSubTab('otp_logs')}
+                    className={`btn-premium-secondary ${commsSubTab === 'otp_logs' ? 'nav-item-active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: '12px', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    🛡️ OTP Audit Logs ({otpAttemptsLogs.length})
+                  </button>
+                </div>
+
+                {/* SUB TAB: Global settings */}
+                {commsSubTab === 'settings' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                      
+                      {/* SMS Toggle */}
+                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>Vonage SMS Channel</strong>
+                            <span className="pill-badge" style={{ backgroundColor: settings?.isSmsChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isSmsChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
+                              {settings?.isSmsChannelDisabled ? 'MUTED' : 'ACTIVE'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
+                            Allows OTPs to be dispatched via Vonage SMS. Disabling blocks all SMS dispatches globally.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => handleToggleChannel('isSmsChannelDisabled', settings?.isSmsChannelDisabled || false)} 
+                          className="btn-premium"
+                          style={{ 
+                            background: settings?.isSmsChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+                            color: settings?.isSmsChannelDisabled ? '#00d4a0' : '#f43f5e',
+                            border: '1px solid currentColor',
+                            fontSize: '12px', 
+                            padding: '8px', 
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {settings?.isSmsChannelDisabled ? '🔌 Enable SMS Channel' : '🛑 Disable SMS Channel'}
+                        </button>
+                      </div>
+
+                      {/* Telegram Toggle */}
+                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>Telegram Bot Channel</strong>
+                            <span className="pill-badge" style={{ backgroundColor: settings?.isTelegramChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isTelegramChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
+                              {settings?.isTelegramChannelDisabled ? 'MUTED' : 'ACTIVE'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
+                            Allows OTP codes and trade alerts to be dispatched via Telegram. Disabling blocks Telegram bot communications.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => handleToggleChannel('isTelegramChannelDisabled', settings?.isTelegramChannelDisabled || false)} 
+                          className="btn-premium"
+                          style={{ 
+                            background: settings?.isTelegramChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+                            color: settings?.isTelegramChannelDisabled ? '#00d4a0' : '#f43f5e',
+                            border: '1px solid currentColor',
+                            fontSize: '12px', 
+                            padding: '8px', 
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {settings?.isTelegramChannelDisabled ? '🔌 Enable Telegram Bot' : '🛑 Disable Telegram Bot'}
+                        </button>
+                      </div>
+
+                      {/* Email Toggle */}
+                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>Email Alert Channel</strong>
+                            <span className="pill-badge" style={{ backgroundColor: settings?.isEmailChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isEmailChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
+                              {settings?.isEmailChannelDisabled ? 'MUTED' : 'ACTIVE'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
+                            Controls whether transactional emails (Resend API) are dispatched globally. Disabling cuts off all email dispatches.
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => handleToggleChannel('isEmailChannelDisabled', settings?.isEmailChannelDisabled || false)} 
+                          className="btn-premium"
+                          style={{ 
+                            background: settings?.isEmailChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+                            color: settings?.isEmailChannelDisabled ? '#00d4a0' : '#f43f5e',
+                            border: '1px solid currentColor',
+                            fontSize: '12px', 
+                            padding: '8px', 
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {settings?.isEmailChannelDisabled ? '🔌 Enable Email Alerts' : '🛑 Disable Email Alerts'}
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB TAB: Notification Logs */}
+                {commsSubTab === 'notif_logs' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <input 
+                        type="text"
+                        value={notifSearch}
+                        onChange={e => setNotifSearch(e.target.value)}
+                        placeholder="🔍 Filter by username, message text, event..."
+                        className="input-premium"
+                        style={{ flex: 1, minWidth: '200px' }}
+                      />
+                      <select
+                        value={notifFilterChannel}
+                        onChange={e => setNotifFilterChannel(e.target.value)}
+                        className="input-premium"
+                        style={{ width: '150px' }}
+                      >
+                        <option value="all">All Channels</option>
+                        <option value="sms">SMS</option>
+                        <option value="telegram">Telegram</option>
+                      </select>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="table-premium">
+                        <thead>
+                          <tr>
+                            <th>Timestamp</th>
+                            <th>Member</th>
+                            <th>Channel</th>
+                            <th>Event Type</th>
+                            <th>Message Payload</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredNotifs.length === 0 ? (
+                            <tr>
+                              <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#4e5567' }}>
+                                No notification logs found matching search criteria.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredNotifs.map(log => (
+                              <tr key={log._id}>
+                                <td style={{ color: '#8b92a8', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                  {new Date(log.sentAt).toLocaleString()}
+                                </td>
+                                <td style={{ fontWeight: 600 }}>@{log.username}</td>
+                                <td>
+                                  <span style={{ 
+                                    padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+                                    backgroundColor: log.channel === 'sms' ? 'rgba(59,130,246,0.1)' : 'rgba(168,85,247,0.1)',
+                                    color: log.channel === 'sms' ? '#3b82f6' : '#a855f7'
+                                  }}>
+                                    {log.channel.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td style={{ color: 'var(--gold)', fontSize: '11px', textTransform: 'uppercase' }}>
+                                  {log.type.replace('_', ' ')}
+                                </td>
+                                <td style={{ fontSize: '12px', color: '#cbd5e1', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.message}>
+                                  {log.message}
+                                </td>
+                                <td>
+                                  <span style={{ 
+                                    padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+                                    backgroundColor: log.status === 'delivered' ? 'rgba(0,212,160,0.1)' : log.status === 'failed' ? 'rgba(244,63,94,0.1)' : 'rgba(251,191,36,0.1)',
+                                    color: log.status === 'delivered' ? '#00d4a0' : log.status === 'failed' ? '#f43f5e' : '#fbbf24'
+                                  }}>
+                                    {log.status.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    onClick={() => handleResendNotif(log._id)}
+                                    disabled={resendingLogId === log._id}
+                                    className="btn-premium-secondary"
+                                    style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', cursor: 'pointer' }}
+                                  >
+                                    {resendingLogId === log._id ? '⏳' : '🔄 Resend'}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB TAB: OTP Logs */}
+                {commsSubTab === 'otp_logs' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <input 
+                        type="text"
+                        value={otpSearch}
+                        onChange={e => setOtpSearch(e.target.value)}
+                        placeholder="🔍 Filter OTP attempts by username, purpose, status, code..."
+                        className="input-premium"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="table-premium">
+                        <thead>
+                          <tr>
+                            <th>Timestamp</th>
+                            <th>Member</th>
+                            <th>Verification Purpose</th>
+                            <th>Channel Used</th>
+                            <th>Code Entered</th>
+                            <th>Result Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredOtpLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#4e5567' }}>
+                                No OTP attempts logs found.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredOtpLogs.map(log => {
+                              let badgeBg = 'rgba(255,255,255,0.05)';
+                              let badgeColor = '#8b92a8';
+                              if (log.status === 'success') {
+                                badgeBg = 'rgba(0,212,160,0.1)'; badgeColor = '#00d4a0';
+                              } else if (log.status.startsWith('failed_expired')) {
+                                badgeBg = 'rgba(251,191,36,0.1)'; badgeColor = '#fbbf24';
+                              } else if (log.status.startsWith('failed') || log.status === 'invalidated') {
+                                badgeBg = 'rgba(244,63,94,0.1)'; badgeColor = '#f43f5e';
+                              }
+                              return (
+                                <tr key={log._id}>
+                                  <td style={{ color: '#8b92a8', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                    {new Date(log.createdAt).toLocaleString()}
+                                  </td>
+                                  <td style={{ fontWeight: 600 }}>@{log.username}</td>
+                                  <td style={{ textTransform: 'capitalize', fontSize: '12px', color: '#cbd5e1' }}>
+                                    {log.purpose.replace('_', ' ')}
+                                  </td>
+                                  <td>
+                                    <span style={{ 
+                                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+                                      backgroundColor: log.channel === 'sms' ? 'rgba(59,130,246,0.1)' : 'rgba(168,85,247,0.1)',
+                                      color: log.channel === 'sms' ? '#3b82f6' : '#a855f7'
+                                    }}>
+                                      {log.channel.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '13px', color: '#f8fafc' }}>
+                                    {log.codeEntered}
+                                  </td>
+                                  <td>
+                                    <span style={{ 
+                                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+                                      backgroundColor: badgeBg, color: badgeColor
+                                    }}>
+                                      {log.status.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
               </div>
             );
           })()}

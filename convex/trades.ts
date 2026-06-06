@@ -198,6 +198,20 @@ export const cancelTrade = mutation({
       status: "cancelled",
     });
 
+    if (trade.buyerId) {
+      await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+        userId: trade.buyerId,
+        type: "trade_cancelled",
+        tradeId: args.tradeId,
+      });
+    }
+
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: trade.sellerId,
+      type: "trade_cancelled",
+      tradeId: args.tradeId,
+    });
+
     return { success: true };
   },
 });

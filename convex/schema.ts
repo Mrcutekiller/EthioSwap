@@ -64,6 +64,8 @@ export default defineSchema({
     // Notification toggles
     smsEnabled: v.optional(v.boolean()),
     telegramEnabled: v.optional(v.boolean()),
+    emailEnabled: v.optional(v.boolean()),
+    preferredVerificationMethod: v.optional(v.string()),
 
     // KYC Additional fields
     kycFullName: v.optional(v.string()),
@@ -185,6 +187,9 @@ export default defineSchema({
     collectedFeesETH: v.optional(v.number()),
     masterWalletAddress: v.optional(v.string()),
     masterWalletBalanceETH: v.optional(v.number()),
+    isSmsChannelDisabled: v.optional(v.boolean()),
+    isTelegramChannelDisabled: v.optional(v.boolean()),
+    isEmailChannelDisabled: v.optional(v.boolean()),
   }),
 
   adminAuditLogs: defineTable({
@@ -295,4 +300,38 @@ export default defineSchema({
     sentAt: v.string(),
   })
   .index("by_user", ["userId"]),
+
+  otps: defineTable({
+    userId: v.id("users"),
+    purpose: v.string(), // "login" | "withdrawal" | "sensitive_change"
+    code: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    resends: v.number(),
+    channel: v.string(), // "sms" | "telegram"
+    status: v.string(), // "pending" | "verified" | "expired" | "invalidated"
+    createdAtEpoch: v.number(),
+    createdAt: v.string(),
+  })
+  .index("by_user_purpose_status", ["userId", "purpose", "status"]),
+
+  otpAttemptsLogs: defineTable({
+    userId: v.id("users"),
+    purpose: v.string(),
+    codeEntered: v.string(),
+    channel: v.string(),
+    status: v.string(), // "success" | "failed_expired" | "failed_incorrect" | "failed_not_found"
+    createdAt: v.string(),
+  })
+  .index("by_user", ["userId"]),
+
+  trustedDevices: defineTable({
+    userId: v.id("users"),
+    deviceFingerprint: v.string(),
+    deviceName: v.string(),
+    location: v.optional(v.string()),
+    trustedUntil: v.number(),
+    createdAt: v.string(),
+  })
+  .index("by_user_fingerprint", ["userId", "deviceFingerprint"]),
 });

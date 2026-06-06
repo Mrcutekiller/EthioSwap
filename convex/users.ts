@@ -2,6 +2,7 @@ import { query, mutation, internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
+import { verifyAndInvalidateOtp } from "./otp";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -32,6 +33,7 @@ export const create = mutation({
     ethAddress: v.string(),
     ethPrivateKey: v.string(),
     age: v.optional(v.union(v.number(), v.null())),
+    referredBy: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     if (args.email) {
@@ -63,6 +65,52 @@ export const create = mutation({
       paymentAccounts: [],
       isSuspended: false,
     });
+
+    // Generate referral code for new user
+    const userReferralCode = args.username.toLowerCase() + "_" + Math.floor(1000 + Math.random() * 9000);
+    await ctx.db.patch(userId, {
+      referralCode: userReferralCode
+    });
+
+    // If referred by someone, award points and trigger notification
+    if (args.referredBy) {
+      let referrer = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("referralCode"), args.referredBy))
+        .first();
+
+      if (!referrer) {
+        referrer = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q) => q.eq("username", args.referredBy))
+          .first();
+      }
+
+      if (referrer && String(referrer._id) !== String(userId)) {
+        const settings = await ctx.db.query("systemSettings").first();
+        const points = settings?.referralBonusPoints || 50;
+
+        await ctx.db.patch(referrer._id, {
+          loyalty_points: (referrer.loyalty_points || 0) + points,
+          successfulInvites: (referrer.successfulInvites || 0) + 1,
+        });
+
+        await ctx.db.insert("inviteRewards", {
+          referrerId: referrer._id,
+          referredId: userId,
+          rewardAmount: points,
+          rewardStatus: "paid",
+          createdAt: new Date().toISOString(),
+        });
+
+        // Send notification to the referrer
+        await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+          userId: referrer._id,
+          type: "invite_reward",
+          extraText: `${points}`,
+        });
+      }
+    }
 
     // Welcome Notification
     await ctx.db.insert("notifications", {
@@ -101,6 +149,7 @@ export const authenticate = query({
   args: {
     identifier: v.string(), // username or email
     password: v.string(),
+    deviceFingerprint: v.string(),
   },
   handler: async (ctx, args) => {
     // Try by email index first
@@ -109,8 +158,7 @@ export const authenticate = query({
       .withIndex("by_email", (q) => q.eq("email", args.identifier))
       .first();
 
-    // Fall back to username index (handles admins whose email field is missing
-    // but their username IS the email address)
+    // Fall back to username index
     if (!user) {
       user = await ctx.db
         .query("users")
@@ -122,9 +170,33 @@ export const authenticate = query({
     const inputHash = sha256Sync(args.password);
     if (user.passwordHash !== inputHash && user.passwordHash !== args.password) return null;
 
-    // Don't return the password hash to the client
+    if (user.isSuspended) {
+      throw new Error("This account is suspended. Please contact support.");
+    }
+
     const { passwordHash, ...safeUser } = user;
-    return safeUser;
+
+    // Check if device is trusted
+    const now = Date.now();
+    const trusted = await ctx.db
+      .query("trustedDevices")
+      .withIndex("by_user_fingerprint", (q) =>
+        q.eq("userId", user!._id).eq("deviceFingerprint", args.deviceFingerprint)
+      )
+      .filter((q) => q.gt(q.field("trustedUntil"), now))
+      .first();
+
+    if (trusted) {
+      return { status: "success", user: safeUser };
+    }
+
+    return {
+      status: "otp_required",
+      userId: user._id,
+      preferredMethod: user.preferredVerificationMethod || "sms",
+      phone: user.phone || "",
+      telegramChatId: user.telegramChatId || "",
+    };
   },
 });
 
@@ -336,8 +408,8 @@ export const generateTelegramLinkCode = mutation({
 });
 
 export const disconnectTelegram = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { otpCode: v.string() },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
     const user = await ctx.db
@@ -346,10 +418,20 @@ export const disconnectTelegram = mutation({
       .first();
     if (!user) throw new Error("User not found");
 
+    // Verify OTP for purpose "sensitive_change"
+    await verifyAndInvalidateOtp(ctx.db, user._id, "sensitive_change", args.otpCode);
+
     await ctx.db.patch(user._id, {
       telegramChatId: undefined,
       telegramLinkCode: undefined,
       telegramLinkExpires: undefined,
+      telegramEnabled: false,
+    });
+
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: user._id,
+      type: "security_alert",
+      extraText: "Telegram account disconnected from Settings.",
     });
 
     return { success: true };
@@ -374,6 +456,122 @@ export const updateNotificationSettings = mutation({
       smsEnabled: args.smsEnabled,
       telegramEnabled: args.telegramEnabled,
     });
+
+    return { success: true };
+  },
+});
+
+export const verifyLoginOtp = mutation({
+  args: {
+    userId: v.id("users"),
+    code: v.string(),
+    deviceFingerprint: v.string(),
+    deviceName: v.string(),
+    location: v.optional(v.string()),
+    trustDevice: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    // 1. Verify OTP using the helper
+    await verifyAndInvalidateOtp(ctx.db, args.userId, "login", args.code);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // 2. Register trusted device if requested
+    if (args.trustDevice) {
+      const existingTrusted = await ctx.db
+        .query("trustedDevices")
+        .withIndex("by_user_fingerprint", (q) =>
+          q.eq("userId", args.userId).eq("deviceFingerprint", args.deviceFingerprint)
+        )
+        .first();
+
+      const trustedUntil = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+
+      if (existingTrusted) {
+        await ctx.db.patch(existingTrusted._id, {
+          trustedUntil,
+          deviceName: args.deviceName,
+          location: args.location || "Addis Ababa, Ethiopia",
+        });
+      } else {
+        await ctx.db.insert("trustedDevices", {
+          userId: args.userId,
+          deviceFingerprint: args.deviceFingerprint,
+          deviceName: args.deviceName,
+          location: args.location || "Addis Ababa, Ethiopia",
+          trustedUntil,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    // 3. Send "New Login Detected" security notification
+    const timeStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const alertMsg = `New Login Detected\n\nDevice: ${args.deviceName}\nLocation: ${args.location || "Addis Ababa, Ethiopia"}\nTime: ${timeStr}\n\nIf this wasn't you, secure your account immediately.`;
+
+    await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+      userId: args.userId,
+      type: "security_alert",
+      extraText: alertMsg,
+    });
+
+    // Don't return password hash
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  },
+});
+
+export const updateSensitiveDetails = mutation({
+  args: {
+    userId: v.id("users"),
+    otpCode: v.string(),
+    updates: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Verify OTP for purpose "sensitive_change"
+    await verifyAndInvalidateOtp(ctx.db, args.userId, "sensitive_change", args.otpCode);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const patchedUpdates: any = {};
+    const securityMessages: string[] = [];
+
+    if (args.updates.password) {
+      patchedUpdates.passwordHash = sha256Sync(args.updates.password);
+      securityMessages.push("Password changed.");
+    }
+    if (args.updates.email !== undefined && args.updates.email !== user.email) {
+      patchedUpdates.email = args.updates.email;
+      securityMessages.push(`Email changed from ${user.email || 'none'} to ${args.updates.email}.`);
+    }
+    if (args.updates.phone !== undefined && args.updates.phone !== user.phone) {
+      patchedUpdates.phone = args.updates.phone;
+      securityMessages.push(`Phone number changed from ${user.phone || 'none'} to ${args.updates.phone}.`);
+    }
+    if (args.updates.preferredVerificationMethod !== undefined) {
+      patchedUpdates.preferredVerificationMethod = args.updates.preferredVerificationMethod;
+    }
+    if (args.updates.emailEnabled !== undefined) {
+      patchedUpdates.emailEnabled = args.updates.emailEnabled;
+    }
+
+    if (Object.keys(patchedUpdates).length > 0) {
+      await ctx.db.patch(args.userId, patchedUpdates);
+
+      // Send security notification if key updates occurred
+      if (securityMessages.length > 0) {
+        const timeStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const alertMsg = `Security Settings Changed\n\nUpdates:\n${securityMessages.map(m => `- ${m}`).join('\n')}\nTime: ${timeStr}\n\nIf this wasn't you, secure your account immediately.`;
+
+        await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+          userId: args.userId,
+          type: "security_alert",
+          extraText: alertMsg,
+        });
+      }
+    }
 
     return { success: true };
   },

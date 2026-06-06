@@ -207,9 +207,17 @@ const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
 
 const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
   const { t, i18n } = useTranslation();
-  const { updateUser } = useAuth();
+  const { updateUser, sendOtp } = useAuth();
   const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
   const disconnectTelegramMutation = useMutation(api.users.disconnectTelegram);
+
+  const [showSettingsOtp, setShowSettingsOtp] = useState(false);
+  const [settingsOtpCode, setSettingsOtpCode] = useState('');
+  const [settingsOtpChannel, setSettingsOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
+  const [settingsSendingOtp, setSettingsSendingOtp] = useState(false);
+  const [settingsResendTimer, setSettingsResendTimer] = useState(0);
+  const [settingsOtpError, setSettingsOtpError] = useState('');
+  const [settingsOtpLoading, setSettingsOtpLoading] = useState(false);
 
   const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -241,6 +249,55 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeRemaining]);
+
+  useEffect(() => {
+    if (settingsResendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setSettingsResendTimer(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [settingsResendTimer]);
+
+  const triggerSettingsOtp = async (channel) => {
+    setSettingsSendingOtp(true);
+    setSettingsOtpError('');
+    try {
+      await sendOtp(user._id, 'sensitive_change', channel || settingsOtpChannel);
+      setSettingsResendTimer(60);
+    } catch (err) {
+      setSettingsOtpError(err.message);
+    } finally {
+      setSettingsSendingOtp(false);
+    }
+  };
+
+  const handleDisconnectTelegramClick = async () => {
+    if (window.confirm("Are you sure you want to disconnect Telegram? This will disable Telegram alerts and security notifications.")) {
+      setShowSettingsOtp(true);
+      setSettingsOtpCode('');
+      setSettingsOtpError('');
+      await triggerSettingsOtp(settingsOtpChannel);
+    }
+  };
+
+  const handleSettingsOtpSubmit = async (e) => {
+    e.preventDefault();
+    setSettingsOtpError('');
+    if (settingsOtpCode.length !== 6) {
+      setSettingsOtpError('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setSettingsOtpLoading(true);
+    try {
+      await disconnectTelegramMutation({ otpCode: settingsOtpCode });
+      setShowSettingsOtp(false);
+      alert('Telegram disconnected successfully.');
+    } catch (err) {
+      setSettingsOtpError(err.message);
+    } finally {
+      setSettingsOtpLoading(false);
+    }
+  };
 
   const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
   const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
@@ -490,7 +547,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
       </div>
 
 
-      {/* Notification Channels (SMS & Telegram) */}
+      {/* Notification Channels (SMS, Telegram, Email & Preferred OTP) */}
       <div className="card">
         <div className="section-title">{t('Notification Channels')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -511,7 +568,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
           </div>
 
           {/* Telegram Toggle & Connect */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600 }}>Telegram Alerts</div>
@@ -541,28 +598,42 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
                     </span>
                     <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>ID: {user.telegramChatId}</span>
                   </div>
-                  <button onClick={async () => {
-                    if (window.confirm("Disconnect Telegram?")) {
-                      await disconnectTelegramMutation();
-                    }
-                  }} className="btn btn-sm btn-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                  <button onClick={handleDisconnectTelegramClick} className="btn btn-sm btn-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
                     Disconnect
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <p style={{ fontSize: '11px', color: 'var(--text-2)', margin: 0 }}>
-                    Connect to the <b>@EthioSwapBot</b> to get rich alerts and check trade statuses.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--text-2)', margin: 0, lineHeight: 1.4 }}>
+                    Link your account to our Telegram bot <b>@EthioSwap_Bot</b> to get rich alerts and check trade statuses.
                   </p>
                   {linkCode ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '10px', background: 'rgba(245,197,24,0.06)', borderRadius: '8px', border: '1px dashed var(--gold)' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
-                      <strong style={{ fontSize: '20px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'JetBrains Mono, monospace' }}>
-                        {linkCode}
-                      </strong>
-                      <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                        Expires in {Math.max(0, Math.ceil(timeRemaining / 1000))}s. Send this code to bot.
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,197,24,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
+                        <strong style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace' }}>
+                          {linkCode}
+                        </strong>
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>
+                          Expires in {Math.max(0, Math.ceil(timeRemaining / 1000))}s
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-2)', lineHeight: 1.4 }}>
+                          1. Click <b>Open Bot</b> below to open Telegram.
+                          <br />
+                          2. Send the 6-digit code <b>{linkCode}</b> to start receiving alerts.
+                        </div>
+                        <a 
+                          href="https://t.me/EthioSwap_Bot" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-gold btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 600 }}
+                        >
+                          ✈️ Open Bot (@EthioSwap_Bot)
+                        </a>
+                      </div>
                     </div>
                   ) : (
                     <button onClick={async () => {
@@ -571,13 +642,57 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
                         setLinkCode(res.code);
                         setTimeRemaining(10 * 60 * 1000); // 10 mins
                       }
-                    }} className="btn btn-gold btn-full btn-sm" style={{ padding: '8px 12px' }}>
-                      Connect Telegram Bot
+                    }} className="btn btn-gold btn-full btn-sm" style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}>
+                      🔌 Connect Telegram Bot
                     </button>
                   )}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Email Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Email Alerts</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive trade alerts on {user.email || 'your email'}</div>
+            </div>
+            <div
+              onClick={async () => {
+                await updateUser({ emailEnabled: !user.emailEnabled });
+              }}
+              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.emailEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.emailEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+            >
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.emailEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+            </div>
+          </div>
+
+          {/* Preferred OTP Method */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>Preferred OTP Method</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Default channel for 2FA and sensitive updates</div>
+            </div>
+            <select
+              value={user.preferredVerificationMethod || 'sms'}
+              onChange={async (e) => {
+                await updateUser({ preferredVerificationMethod: e.target.value });
+              }}
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                color: '#fff',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontFamily: 'var(--font)',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="sms">💬 SMS OTP</option>
+              <option value="telegram" disabled={!user.telegramChatId}>✈️ Telegram Bot</option>
+            </select>
           </div>
         </div>
       </div>

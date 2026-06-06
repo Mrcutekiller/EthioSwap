@@ -4,6 +4,16 @@ import { api } from "convex-api";
 import { convex } from "../convexClient";
 
 const AuthContext = createContext();
+
+export const getDeviceFingerprint = () => {
+  let fp = localStorage.getItem('ethioswap_device_fingerprint');
+  if (!fp) {
+    fp = 'device_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('ethioswap_device_fingerprint', fp);
+  }
+  return fp;
+};
+
 export const useAuth = () => useContext(AuthContext);
 
 export const ETH_USD_PRICE = 3000.0;
@@ -115,6 +125,10 @@ export const AuthProvider = ({ children }) => {
   const updateReviewMutation = useMutation(api.reviews.update);
   const deleteReviewMutation = useMutation(api.reviews.remove);
 
+  const generateOtpMutation = useMutation(api.otp.generateOtp);
+  const verifyLoginOtpMutation = useMutation(api.users.verifyLoginOtp);
+  const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
+
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
     if (savedUser) {
@@ -151,19 +165,25 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Account does not exist.');
       }
 
+      const deviceFingerprint = getDeviceFingerprint();
+
       // Use the new authenticate query
-      const u = await convex.query(api.users.authenticate, { identifier, password });
+      const res = await convex.query(api.users.authenticate, { identifier, password, deviceFingerprint });
       
-      if (!u) {
+      if (!res) {
         throw new Error('Invalid password.');
       }
 
+      if (res.status === 'otp_required') {
+        return res;
+      }
+
       // Add id alias for compatibility
-      const safeUser = { ...u, id: u._id };
+      const safeUser = { ...res.user, id: res.user._id };
       setUser(safeUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-      setSuccess(`Welcome back, ${u.username}!`);
-      return safeUser;
+      setSuccess(`Welcome back, ${safeUser.username}!`);
+      return { status: 'success', user: safeUser };
     } catch (err) {
       setError(err.message);
       return null;
@@ -271,7 +291,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const withdrawETH = async (amountEth, address) => {
+  const withdrawETH = async (amountEth, address, otpCode) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -279,10 +299,76 @@ export const AuthProvider = ({ children }) => {
         userId: user._id,
         amountEth: amountEth,
         address,
+        otpCode,
       });
       setSuccess('Withdrawal request submitted!');
+      return { success: true };
     } catch (err) {
       setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyLoginOtp = async (userId, code, deviceName, location, trustDevice) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fingerprint = getDeviceFingerprint();
+      const userObj = await verifyLoginOtpMutation({
+        userId,
+        code,
+        deviceFingerprint: fingerprint,
+        deviceName,
+        location,
+        trustDevice,
+      });
+
+      const safeUser = { ...userObj, id: userObj._id };
+      setUser(safeUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
+      setSuccess(`Welcome back, ${safeUser.username}!`);
+      return safeUser;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendOtp = async (userId, purpose, channel) => {
+    setLoading(true);
+    try {
+      const res = await generateOtpMutation({ userId, purpose, channel });
+      return res;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSensitiveDetails = async (otpCode, updates) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const res = await updateSensitiveDetailsMutation({
+        userId: user._id,
+        otpCode,
+        updates,
+      });
+      // Merge updates locally
+      const updatedUser = { ...user, ...updates, id: user._id };
+      setUser(updatedUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+      setSuccess('Security details updated successfully!');
+      return res;
+    } catch (err) {
+      setError(err.message);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -528,6 +614,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
+      verifyLoginOtp, sendOtp, updateSensitiveDetails,
       setError, setSuccess, setIsLocked
     }}>
       {children}

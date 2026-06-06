@@ -253,8 +253,15 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails } = useAuth();
-  const updateProfileMutation = useMutation(api.users.update);
+  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, sendOtp, updateSensitiveDetails, updateUser } = useAuth();
+  
+  const [showProfileOtp, setShowProfileOtp] = useState(false);
+  const [profileOtpCode, setProfileOtpCode] = useState('');
+  const [profileOtpChannel, setProfileOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
+  const [profileSendingOtp, setProfileSendingOtp] = useState(false);
+  const [profileResendTimer, setProfileResendTimer] = useState(0);
+  const [profileOtpError, setProfileOtpError] = useState('');
+
   const deleteAccountMutation = useMutation(api.users.remove);
 
   const [showKYC, setShowKYC] = useState(false);
@@ -361,29 +368,75 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     await savePaymentAccounts(updatedList);
   };
 
+  useEffect(() => {
+    if (profileResendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setProfileResendTimer(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [profileResendTimer]);
+
+  const triggerProfileOtp = async (channel) => {
+    setProfileSendingOtp(true);
+    setProfileOtpError('');
+    try {
+      await sendOtp(user._id, 'sensitive_change', channel || profileOtpChannel);
+      setProfileResendTimer(60);
+    } catch (err) {
+      setProfileOtpError(err.message);
+    } finally {
+      setProfileSendingOtp(false);
+    }
+  };
+
   const handleEditProfile = async (e) => {
     e.preventDefault();
+    const hasSensitive = editPhone !== (user?.phone || '') || editEmail !== (user?.email || '') || editPassword !== '';
+    
+    if (hasSensitive) {
+      setShowProfileOtp(true);
+      setProfileOtpCode('');
+      setProfileOtpError('');
+      await triggerProfileOtp(profileOtpChannel);
+    } else {
+      setEditLoading(true);
+      try {
+        await updateUser({ fullName: editName });
+        alert('✓ Profile updated successfully!');
+        setShowEditProfile(false);
+      } catch (err) {
+        alert('Error updating profile: ' + err.message);
+      } finally {
+        setEditLoading(false);
+      }
+    }
+  };
+
+  const handleProfileOtpVerifyAndSubmit = async (e) => {
+    e.preventDefault();
+    setProfileOtpError('');
+    if (profileOtpCode.length !== 6) {
+      setProfileOtpError('Please enter the 6-digit OTP code.');
+      return;
+    }
     setEditLoading(true);
     try {
-      await updateProfileMutation({
-        userId: user.id,
-        fullName: editName,
-        phone: editPhone,
-        email: editEmail,
-        password: editPassword || undefined
-      });
-      alert('✓ Profile updated successfully!');
-      setShowEditProfile(false);
-      if (onUserUpdate) {
-        onUserUpdate({
-          ...user,
-          fullName: editName,
-          phone: editPhone,
-          email: editEmail
-        });
+      const updates = {};
+      if (editPhone !== (user?.phone || '')) updates.phone = editPhone;
+      if (editEmail !== (user?.email || '')) updates.email = editEmail;
+      if (editPassword !== '') updates.password = editPassword;
+      
+      if (editName !== (user?.fullName || '')) {
+        await updateUser({ fullName: editName });
       }
+
+      await updateSensitiveDetails(profileOtpCode, updates);
+      alert('✓ Profile updated successfully!');
+      setShowProfileOtp(false);
+      setShowEditProfile(false);
+      setEditPassword('');
     } catch (err) {
-      alert('Error updating profile: ' + err.message);
+      setProfileOtpError(err.message);
     } finally {
       setEditLoading(false);
     }
@@ -1200,6 +1253,142 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 {editLoading ? 'Saving Changes...' : 'Save Profile Updates'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Update OTP Modal */}
+      {showProfileOtp && (
+        <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Profile Security Verification</h3>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+              Confirm your identity by entering the 6-digit OTP code to update your profile details.
+            </p>
+
+            {/* Delivery channel selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={async () => { setProfileOtpChannel('sms'); await triggerProfileOtp('sms'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: profileOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
+                  color: profileOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                💬 SMS OTP
+              </button>
+              <button
+                type="button"
+                disabled={!user.telegramChatId}
+                onClick={async () => { setProfileOtpChannel('telegram'); await triggerProfileOtp('telegram'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
+                  background: profileOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
+                  color: profileOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
+                  opacity: user.telegramChatId ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                ✈️ Telegram
+              </button>
+            </div>
+
+            <form onSubmit={handleProfileOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={profileOtpCode}
+                onChange={e => setProfileOtpCode(e.target.value.replace(/\D/g, ''))}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  color: '#ffffff',
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '6px',
+                  outline: 'none',
+                }}
+                className="input"
+                autoFocus
+              />
+
+              {profileOtpError && (
+                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
+                  ⚠ {profileOtpError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={editLoading || profileSendingOtp}
+                className="btn btn-gold btn-full"
+                style={{
+                  height: '44px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                  color: '#0A0C12',
+                  border: 'none',
+                  borderRadius: '10px',
+                  width: '100%',
+                  cursor: 'pointer',
+                }}
+              >
+                {editLoading ? '⏳ Saving...' : 'Verify & Update Profile'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '14px' }}>
+              {profileResendTimer > 0 ? (
+                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {profileResendTimer}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => triggerProfileOtp(profileOtpChannel)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold-light)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Resend Code
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowProfileOtp(false)}
+              className="btn btn-ghost btn-sm btn-full"
+              style={{ marginTop: '12px', width: '100%' }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

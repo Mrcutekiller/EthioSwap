@@ -42,7 +42,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, loading, error } = useAuth();
+  const { login, register, verifyLoginOtp, sendOtp, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,11 +55,50 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
 
+  // OTP State
+  const [otpData, setOtpData] = useState(null); // { status, userId, preferredMethod, phone, telegramChatId }
+  const [otpCode, setOtpCode] = useState('');
+  const [chosenChannel, setChosenChannel] = useState('sms');
+  const [trustDevice, setTrustDevice] = useState(true);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const triggerSendOtp = async (userId, channel) => {
+    setSendingOtp(true);
+    setLocalError('');
+    try {
+      await sendOtp(userId, 'login', channel);
+      setResendTimer(60);
+    } catch (err) {
+      setLocalError(err.message);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleChannelChange = async (channel) => {
+    if (channel === 'telegram' && !otpData.telegramChatId) {
+      setLocalError('Telegram is not linked to this account. Connect via settings first.');
+      return;
+    }
+    setChosenChannel(channel);
+    await triggerSendOtp(otpData.userId, channel);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,7 +109,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         setLocalError('Please enter both username/email and password.');
         return;
       }
-      await login(username, password);
+      const res = await login(username, password);
+      if (res && res.status === 'otp_required') {
+        setOtpData(res);
+        setChosenChannel(res.preferredMethod || 'sms');
+        // Automatically send the first OTP
+        await triggerSendOtp(res.userId, res.preferredMethod || 'sms');
+      }
     } else {
       if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age) {
         setLocalError('Please fill in all registration fields.');
@@ -88,6 +133,29 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result && result.alreadyRegistered) {
         onToggle(); // Switch to login
       }
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    if (otpCode.length !== 6) {
+      setLocalError('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const fallbackDevice = navigator.userAgent;
+      const parsedDevice = fallbackDevice.includes("Windows") ? "Windows PC" : fallbackDevice.includes("Mac") ? "Mac PC" : fallbackDevice.includes("Linux") ? "Linux PC" : "Mobile Device";
+      const deviceName = navigator.userAgentData
+        ? `${navigator.userAgentData?.brands?.[0]?.brand || 'Browser'} on ${navigator.userAgentData?.platform || 'Windows/MacOS'}`
+        : parsedDevice;
+
+      await verifyLoginOtp(otpData.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
+    } catch (err) {
+      setLocalError(err.message);
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -146,277 +214,483 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
         {/* Right/Bottom Column: Auth Form Card */}
         <div className="auth-card" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column' }}>
-        {onBackToHome && (
-          <button 
-            type="button" 
-            onClick={onBackToHome} 
-            style={{ 
-              alignSelf: 'flex-start', 
-              background: 'rgba(255,255,255,0.05)', 
-              border: '1px solid rgba(255,255,255,0.2)', 
-              borderRadius: '50px', 
-              color: '#FFFFFF', 
-              padding: '8px 18px', 
-              fontSize: '12px', 
-              fontWeight: '700',
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              marginBottom: '24px',
-              transition: 'all 0.2s ease',
-              fontFamily: 'var(--font)'
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'translateX(-2px)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.transform = 'none';
-            }}
-          >
-            <i className="ti ti-arrow-left" style={{ fontSize: '13px' }}></i> Back to Home
-          </button>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
-          {/* Logo removed per Item #8 */}
-        </div>
+          
+          {otpData ? (
+            // ── OTP VERIFICATION FORM ──
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <button 
+                type="button" 
+                onClick={() => { setOtpData(null); setOtpCode(''); setLocalError(''); }} 
+                style={{ 
+                  alignSelf: 'flex-start', 
+                  background: 'rgba(255,255,255,0.05)', 
+                  border: '1px solid rgba(255,255,255,0.2)', 
+                  borderRadius: '50px', 
+                  color: '#FFFFFF', 
+                  padding: '8px 18px', 
+                  fontSize: '12px', 
+                  fontWeight: '700',
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  fontFamily: 'var(--font)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <i className="ti ti-arrow-left"></i> Back to Login
+              </button>
 
-        <h2 className="auth-title" style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', textAlign: 'center' }}>
-          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-        </h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center', fontWeight: 500 }}>
-          {mode === 'login' ? 'Sign in to your EthioSwap wallet' : 'Join the most trusted P2P exchange in Ethiopia'}
-        </p>
+              <h2 style={{ fontSize: '26px', fontWeight: 800, textAlign: 'center', margin: '10px 0 2px' }}>
+                Verify Identity
+              </h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', lineHeight: '1.5', margin: '0 0 10px' }}>
+                We sent a 6-digit OTP code to verify your login attempt.
+              </p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {mode === 'login' ? (
-            <>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type="text" 
-                  placeholder="Username or Email" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)} 
-                  autoComplete="username" 
-                />
-                <i className="auth-input-icon ti ti-user"></i>
+              {/* Delivery channel selector */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  onClick={() => handleChannelChange('sms')}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: chosenChannel === 'sms' ? 'var(--gold)' : 'transparent',
+                    color: chosenChannel === 'sms' ? '#0A0C12' : 'var(--text-2)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  💬 SMS OTP
+                </button>
+                <button
+                  type="button"
+                  disabled={!otpData.telegramChatId}
+                  onClick={() => handleChannelChange('telegram')}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: otpData.telegramChatId ? 'pointer' : 'not-allowed',
+                    background: chosenChannel === 'telegram' ? 'var(--gold)' : 'transparent',
+                    color: chosenChannel === 'telegram' ? '#0A0C12' : 'var(--text-2)',
+                    opacity: otpData.telegramChatId ? 1 : 0.5,
+                    transition: 'all 0.2s ease',
+                  }}
+                  title={!otpData.telegramChatId ? 'Telegram account not linked' : ''}
+                >
+                  ✈️ Telegram Bot
+                </button>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type="text" 
-                  placeholder="Full Name" 
-                  value={fullName} 
-                  onChange={e => setFullName(e.target.value)} 
-                  autoComplete="name" 
-                />
-                <i className="auth-input-icon ti ti-id-badge"></i>
-              </div>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type="text" 
-                  placeholder="Username" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)} 
-                  autoComplete="username" 
-                />
-                <i className="auth-input-icon ti ti-at"></i>
-              </div>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type="email" 
-                  placeholder="Email Address" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  autoComplete="email" 
-                />
-                <i className="auth-input-icon ti ti-mail"></i>
-              </div>
-            </>
-          )}
 
-          <div className="auth-input-group">
-            <input 
-              className="auth-input" 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Password" 
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
-              autoCorrect="off" 
-              autoCapitalize="off" 
-              spellCheck="false" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              style={{ paddingRight: '48px' }}
-            />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)} 
-              className="auth-toggle-pwd"
-            >
-              <i className={showPassword ? "ti ti-eye-off" : "ti ti-eye"}></i>
-            </button>
-            <i className="auth-input-icon ti ti-lock"></i>
-          </div>
+              {!otpData.telegramChatId && chosenChannel === 'sms' && (
+                <span style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
+                  Telegram OTP unavailable (not connected in Settings)
+                </span>
+              )}
 
-          {mode === 'register' && (
-            <>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="Confirm Password" 
-                  autoComplete="new-password" 
-                  autoCorrect="off" 
-                  autoCapitalize="off" 
-                  spellCheck="false" 
-                  value={confirmPassword} 
-                  onChange={e => setConfirmPassword(e.target.value)} 
-                  style={{ paddingRight: '48px' }}
-                />
-                <i className="auth-input-icon ti ti-shield-lock"></i>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
-                <div className="auth-input-group">
-                  <input 
-                    className="auth-input" 
-                    type="tel" 
-                    placeholder="Phone (+251...)" 
-                    value={phone} 
-                    onChange={e => setPhone(e.target.value)} 
+              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Enter code"
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    style={{
+                      width: '100%',
+                      height: '52px',
+                      background: '#111318',
+                      border: '1px solid var(--border)',
+                      borderRadius: '14px',
+                      color: '#ffffff',
+                      fontSize: '22px',
+                      fontWeight: 700,
+                      textAlign: 'center',
+                      letterSpacing: '8px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                    className="input"
+                    autoFocus
                   />
-                  <i className="auth-input-icon ti ti-phone"></i>
                 </div>
-                <div className="auth-input-group">
-                  <input 
-                    className="auth-input" 
-                    type="number" 
-                    min="18" 
-                    placeholder="Age" 
-                    value={age} 
-                    onChange={e => setAge(e.target.value)} 
-                  />
-                  <i className="auth-input-icon ti ti-calendar-event"></i>
-                </div>
-              </div>
-              <div className="auth-input-group">
-                <input 
-                  className="auth-input" 
-                  type="text" 
-                  placeholder="Referral Code (Optional)" 
-                  value={referralCode} 
-                  onChange={e => setReferralCode(e.target.value.toUpperCase())} 
-                />
-                <i className="auth-input-icon ti ti-gift"></i>
-              </div>
-            </>
-          )}
 
-          {displayError && (
-            <div style={{ 
-              fontSize: '13px', 
-              color: 'var(--status-danger-text)', 
-              fontWeight: 600, 
-              padding: '14px 16px', 
-              background: 'rgba(239, 68, 68, 0.08)', 
-              border: '1px solid rgba(239, 68, 68, 0.2)', 
-              borderRadius: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              lineHeight: 1.4
-            }}>
-              <i className="ti ti-alert-triangle" style={{ fontSize: '16px', color: '#EF4444' }}></i>
-              <span>{displayError}</span>
+                {/* Trust device checkbox */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: '13px', color: 'var(--text-2)', padding: '4px 0' }}>
+                  <input
+                    type="checkbox"
+                    checked={trustDevice}
+                    onChange={e => setTrustDevice(e.target.checked)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      accentColor: 'var(--gold)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <span>Trust this device for 30 days</span>
+                </label>
+
+                {displayError && (
+                  <div style={{ 
+                    fontSize: '13px', 
+                    color: 'var(--status-danger-text)', 
+                    fontWeight: 600, 
+                    padding: '12px 14px', 
+                    background: 'rgba(239, 68, 68, 0.08)', 
+                    border: '1px solid rgba(239, 68, 68, 0.2)', 
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    lineHeight: 1.4
+                  }}>
+                    <i className="ti ti-alert-triangle" style={{ fontSize: '15px', color: '#EF4444' }}></i>
+                    <span>{displayError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={otpLoading || sendingOtp}
+                  className="btn btn-gold btn-full"
+                  style={{
+                    height: '52px',
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                    color: '#0A0C12',
+                    border: 'none',
+                    borderRadius: '14px',
+                    boxShadow: '0 8px 30px rgba(255, 215, 0, 0.2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {otpLoading ? (
+                    <>
+                      <Spinner />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      Verify & Log In
+                      <i className="ti ti-shield-check" style={{ marginLeft: '8px', fontSize: '18px' }}></i>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Resend actions */}
+              <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                {resendTimer > 0 ? (
+                  <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 500 }}>
+                    Resend code in {resendTimer}s
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={sendingOtp}
+                    onClick={() => triggerSendOtp(otpData.userId, chosenChannel)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--gold-light)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontFamily: 'var(--font)',
+                    }}
+                  >
+                    {sendingOtp ? 'Sending...' : 'Resend Verification Code'}
+                  </button>
+                )}
+              </div>
             </div>
+          ) : (
+            // ── STANDARD LOGIN/REGISTER FORM ──
+            <>
+              {onBackToHome && (
+                <button 
+                  type="button" 
+                  onClick={onBackToHome} 
+                  style={{ 
+                    alignSelf: 'flex-start', 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.2)', 
+                    borderRadius: '50px', 
+                    color: '#FFFFFF', 
+                    padding: '8px 18px', 
+                    fontSize: '12px', 
+                    fontWeight: '700',
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    marginBottom: '24px',
+                    transition: 'all 0.2s ease',
+                    fontFamily: 'var(--font)'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.transform = 'translateX(-2px)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.transform = 'none';
+                  }}
+                >
+                  <i className="ti ti-arrow-left" style={{ fontSize: '13px' }}></i> Back to Home
+                </button>
+              )}
+
+              <h2 className="auth-title" style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', textAlign: 'center' }}>
+                {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              </h2>
+              <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center', fontWeight: 500 }}>
+                {mode === 'login' ? 'Sign in to your EthioSwap wallet' : 'Join the most trusted P2P exchange in Ethiopia'}
+              </p>
+
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {mode === 'login' ? (
+                  <>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type="text" 
+                        placeholder="Username or Email" 
+                        value={username} 
+                        onChange={e => setUsername(e.target.value)} 
+                        autoComplete="username" 
+                      />
+                      <i className="auth-input-icon ti ti-user"></i>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type="text" 
+                        placeholder="Full Name" 
+                        value={fullName} 
+                        onChange={e => setFullName(e.target.value)} 
+                        autoComplete="name" 
+                      />
+                      <i className="auth-input-icon ti ti-id-badge"></i>
+                    </div>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type="text" 
+                        placeholder="Username" 
+                        value={username} 
+                        onChange={e => setUsername(e.target.value)} 
+                        autoComplete="username" 
+                      />
+                      <i className="auth-input-icon ti ti-at"></i>
+                    </div>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type="email" 
+                        placeholder="Email Address" 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
+                        autoComplete="email" 
+                      />
+                      <i className="auth-input-icon ti ti-mail"></i>
+                    </div>
+                  </>
+                )}
+
+                <div className="auth-input-group">
+                  <input 
+                    className="auth-input" 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Password" 
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'} 
+                    autoCorrect="off" 
+                    autoCapitalize="off" 
+                    spellCheck="false" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    style={{ paddingRight: '48px' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="auth-toggle-pwd"
+                  >
+                    <i className={showPassword ? "ti ti-eye-off" : "ti ti-eye"}></i>
+                  </button>
+                  <i className="auth-input-icon ti ti-lock"></i>
+                </div>
+
+                {mode === 'register' && (
+                  <>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="Confirm Password" 
+                        autoComplete="new-password" 
+                        autoCorrect="off" 
+                        autoCapitalize="off" 
+                        spellCheck="false" 
+                        value={confirmPassword} 
+                        onChange={e => setConfirmPassword(e.target.value)} 
+                        style={{ paddingRight: '48px' }}
+                      />
+                      <i className="auth-input-icon ti ti-shield-lock"></i>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                      <div className="auth-input-group">
+                        <input 
+                          className="auth-input" 
+                          type="tel" 
+                          placeholder="Phone (+251...)" 
+                          value={phone} 
+                          onChange={e => setPhone(e.target.value)} 
+                        />
+                        <i className="auth-input-icon ti ti-phone"></i>
+                      </div>
+                      <div className="auth-input-group">
+                        <input 
+                          className="auth-input" 
+                          type="number" 
+                          min="18" 
+                          placeholder="Age" 
+                          value={age} 
+                          onChange={e => setAge(e.target.value)} 
+                        />
+                        <i className="auth-input-icon ti ti-calendar-event"></i>
+                      </div>
+                    </div>
+                    <div className="auth-input-group">
+                      <input 
+                        className="auth-input" 
+                        type="text" 
+                        placeholder="Referral Code (Optional)" 
+                        value={referralCode} 
+                        onChange={e => setReferralCode(e.target.value.toUpperCase())} 
+                      />
+                      <i className="auth-input-icon ti ti-gift"></i>
+                    </div>
+                  </>
+                )}
+
+                {displayError && (
+                  <div style={{ 
+                    fontSize: '13px', 
+                    color: 'var(--status-danger-text)', 
+                    fontWeight: 600, 
+                    padding: '14px 16px', 
+                    background: 'rgba(239, 68, 68, 0.08)', 
+                    border: '1px solid rgba(239, 68, 68, 0.2)', 
+                    borderRadius: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    lineHeight: 1.4
+                  }}>
+                    <i className="ti ti-alert-triangle" style={{ fontSize: '16px', color: '#EF4444' }}></i>
+                    <span>{displayError}</span>
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="btn btn-gold btn-full animate-hover" 
+                  style={{ 
+                    marginTop: '12px', 
+                    height: '52px', 
+                    fontSize: '16px', 
+                    fontWeight: 800, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                    color: '#0A0C12',
+                    border: 'none',
+                    borderRadius: '14px',
+                    width: '100%',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 30px rgba(255, 215, 0, 0.25)',
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    pointerEvents: loading ? 'none' : 'auto',
+                    opacity: loading ? 0.8 : 1
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 12px 35px rgba(255, 215, 0, 0.4)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(255, 215, 0, 0.25)';
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Spinner />
+                      {mode === 'login' ? 'Signing in...' : 'Creating account...'}
+                    </>
+                  ) : (
+                    <>
+                      {mode === 'login' ? 'Sign In' : 'Create Account'}
+                      <i className="ti ti-arrow-right" style={{ marginLeft: '8px', fontSize: '18px' }}></i>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '28px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                <span style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              </div>
+
+              <button 
+                onClick={onToggle} 
+                style={{ 
+                  width: '100%', 
+                  padding: '14px', 
+                  background: 'rgba(255, 215, 0, 0.04)', 
+                  border: '1px solid rgba(255, 215, 0, 0.2)', 
+                  borderRadius: '14px', 
+                  color: '#FFD700', 
+                  fontSize: '14px', 
+                  fontWeight: 700, 
+                  cursor: 'pointer', 
+                  fontFamily: 'var(--font)', 
+                  transition: 'all 0.25s ease',
+                  boxShadow: '0 2px 10px rgba(255, 215, 0, 0.02)'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(255, 215, 0, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
+                }}
+              >
+                {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}
+              </button>
+            </>
           )}
-
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="btn btn-gold btn-full animate-hover" 
-            style={{ 
-              marginTop: '12px', 
-              height: '52px', 
-              fontSize: '16px', 
-              fontWeight: 800, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
-              color: '#0A0C12',
-              border: 'none',
-              borderRadius: '14px',
-              width: '100%',
-              cursor: 'pointer',
-              boxShadow: '0 8px 30px rgba(255, 215, 0, 0.25)',
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              pointerEvents: loading ? 'none' : 'auto',
-              opacity: loading ? 0.8 : 1
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 12px 35px rgba(255, 215, 0, 0.4)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'none';
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(255, 215, 0, 0.25)';
-            }}
-          >
-            {loading ? (
-              <>
-                <Spinner />
-                {mode === 'login' ? 'Signing in...' : 'Creating account...'}
-              </>
-            ) : (
-              <>
-                {mode === 'login' ? 'Sign In' : 'Create Account'}
-                <i className="ti ti-arrow-right" style={{ marginLeft: '8px', fontSize: '18px' }}></i>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '28px 0' }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-        </div>
-
-        <button 
-          onClick={onToggle} 
-          style={{ 
-            width: '100%', 
-            padding: '14px', 
-            background: 'rgba(255, 215, 0, 0.04)', 
-            border: '1px solid rgba(255, 215, 0, 0.2)', 
-            borderRadius: '14px', 
-            color: '#FFD700', 
-            fontSize: '14px', 
-            fontWeight: 700, 
-            cursor: 'pointer', 
-            fontFamily: 'var(--font)', 
-            transition: 'all 0.25s ease',
-            boxShadow: '0 2px 10px rgba(255, 215, 0, 0.02)'
-          }}
-          onMouseOver={e => {
-            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
-            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.04)';
-            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-          }}
-        >
-          {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign In'}
-        </button>
         </div>
       </div>
     </div>

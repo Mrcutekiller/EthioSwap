@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const listAll = query({
   args: {},
@@ -60,6 +61,13 @@ export const updateStatus = mutation({
           collectedFeesETH: (settings.collectedFeesETH || 0) + feeEth,
         });
       }
+
+      // Dispatch deposit notification
+      await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+        userId: request.userId,
+        type: "deposit_received",
+        extraText: `${request.amountUsd ?? Math.round(request.amountEth * 3000)}`,
+      });
     }
 
     await ctx.db.patch(args.id, {
