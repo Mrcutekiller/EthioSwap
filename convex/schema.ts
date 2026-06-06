@@ -202,6 +202,7 @@ export default defineSchema({
     isSmsChannelDisabled: v.optional(v.boolean()),
     isTelegramChannelDisabled: v.optional(v.boolean()),
     isEmailChannelDisabled: v.optional(v.boolean()),
+    referralBonusPoints: v.optional(v.number()),
   }),
 
   adminAuditLogs: defineTable({
