@@ -5,6 +5,26 @@ import { convex } from "../convexClient";
 
 const AuthContext = createContext();
 
+export const cleanConvexError = (message) => {
+  if (!message) return '';
+  let cleaned = message.toString();
+  if (cleaned.startsWith('Error: ')) {
+    cleaned = cleaned.substring(7);
+  }
+  if (cleaned.startsWith('Uncaught Error: ')) {
+    cleaned = cleaned.substring(16);
+  }
+  const requestIdIdx = cleaned.indexOf('(request ID:');
+  if (requestIdIdx !== -1) {
+    cleaned = cleaned.substring(0, requestIdIdx).trim();
+  }
+  const serverErrorIdx = cleaned.indexOf('Server Error:');
+  if (serverErrorIdx !== -1) {
+    cleaned = cleaned.substring(serverErrorIdx + 13).trim();
+  }
+  return cleaned;
+};
+
 export const getDeviceFingerprint = () => {
   let fp = localStorage.getItem('ethioswap_device_fingerprint');
   if (!fp) {
@@ -148,8 +168,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const setError = (message) => {
-    setErrorState(message);
-    if (message) setTimeout(() => setErrorState(null), 5000);
+    const cleaned = cleanConvexError(message);
+    setErrorState(cleaned);
+    if (cleaned) setTimeout(() => setErrorState(null), 5000);
   };
 
   const setSuccess = (message) => {

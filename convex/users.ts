@@ -186,6 +186,37 @@ export const authenticate = query({
   },
 });
 
+export const checkUsernameEmailAvailability = query({
+  args: {
+    username: v.optional(v.string()),
+    email: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let usernameTaken = false;
+    let emailTaken = false;
+
+    if (args.username) {
+      const normalizedUsername = args.username.trim().toLowerCase();
+      const u = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+        .first();
+      if (u) usernameTaken = true;
+    }
+
+    if (args.email) {
+      const normalizedEmail = args.email.trim().toLowerCase();
+      const e = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+        .first();
+      if (e) emailTaken = true;
+    }
+
+    return { usernameTaken, emailTaken };
+  },
+});
+
 export const listAll = query({
   args: {},
   handler: async (ctx) => {

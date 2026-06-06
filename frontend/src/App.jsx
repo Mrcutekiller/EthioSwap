@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { AuthProvider, useAuth, cleanConvexError } from './context/AuthContext.jsx';
 import LandingPage, { FloatingBill } from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -78,6 +78,83 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
+  // Inline validation state
+  const [usernameError, setUsernameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Debounced Username Check
+  useEffect(() => {
+    if (mode === 'login') {
+      setUsernameError('');
+      return;
+    }
+    if (!username) {
+      setUsernameError('');
+      return;
+    }
+    if (username.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameError('Username can only contain letters, numbers, and underscores');
+      return;
+    }
+
+    setCheckingUsername(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await convex.query(api.users.checkUsernameEmailAvailability, { username });
+        if (res.usernameTaken) {
+          setUsernameError('Username is already taken');
+        } else {
+          setUsernameError('');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [username, mode]);
+
+  // Debounced Email Check
+  useEffect(() => {
+    if (mode === 'login') {
+      setEmailError('');
+      return;
+    }
+    if (!email) {
+      setEmailError('');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    setCheckingEmail(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await convex.query(api.users.checkUsernameEmailAvailability, { email });
+        if (res.emailTaken) {
+          setEmailError('Email is already registered');
+        } else {
+          setEmailError('');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setCheckingEmail(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [email, mode]);
+
   const triggerSendOtp = async (userId, channel) => {
     setSendingOtp(true);
     setLocalError('');
@@ -86,7 +163,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       await sendOtp(userId, purpose, channel);
       setResendTimer(60);
     } catch (err) {
-      setLocalError(err.message);
+      setLocalError(cleanConvexError(err.message));
     } finally {
       setSendingOtp(false);
     }
@@ -115,14 +192,16 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         setOtpData(res);
         setChosenChannel(res.preferredMethod || 'sms');
         if (res.isSignup) {
-          // Signup OTP is already sent by the create user call, so we don't triggerSendOtp
           setResendTimer(60);
         } else {
-          // Automatically send the first OTP for login
           await triggerSendOtp(res.userId, res.preferredMethod || 'sms');
         }
       }
     } else {
+      if (usernameError || emailError) {
+        setLocalError('Please resolve the errors on the form before submitting.');
+        return;
+      }
       if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age) {
         setLocalError('Please fill in all registration fields.');
         return;
@@ -140,9 +219,9 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         if (result.status === 'otp_required') {
           setOtpData(result);
           setChosenChannel('sms');
-          setResendTimer(60); // Already generated and sent by create mutation
+          setResendTimer(60);
         } else if (result.alreadyRegistered) {
-          onToggle(); // Switch to login
+          onToggle();
         }
       }
     }
@@ -169,7 +248,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         await verifyLoginOtp(otpData.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
       }
     } catch (err) {
-      setLocalError(err.message);
+      setLocalError(cleanConvexError(err.message));
     } finally {
       setOtpLoading(false);
     }
@@ -522,8 +601,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                         value={username} 
                         onChange={e => setUsername(e.target.value)} 
                         autoComplete="username" 
+                        style={usernameError ? { borderColor: 'rgba(239, 68, 68, 0.5)' } : {}}
                       />
                       <i className="auth-input-icon ti ti-at"></i>
+                      {checkingUsername && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-3)', fontSize: '11px', marginTop: '4px', paddingLeft: '4px' }}>
+                          <div style={{ width: '10px', height: '10px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                          <span>Checking availability...</span>
+                        </div>
+                      )}
+                      {usernameError && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#EF4444', fontSize: '11px', fontWeight: 600, marginTop: '4px', paddingLeft: '4px' }}>
+                          <i className="ti ti-alert-circle" style={{ fontSize: '12px' }}></i>
+                          <span>{usernameError}</span>
+                        </div>
+                      )}
+                      {!checkingUsername && !usernameError && username.length >= 3 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '11px', fontWeight: 600, marginTop: '4px', paddingLeft: '4px' }}>
+                          <i className="ti ti-circle-check" style={{ fontSize: '12px' }}></i>
+                          <span>Username is available</span>
+                        </div>
+                      )}
                     </div>
                     <div className="auth-input-group">
                       <input 
@@ -533,8 +631,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                         value={email} 
                         onChange={e => setEmail(e.target.value)} 
                         autoComplete="email" 
+                        style={emailError ? { borderColor: 'rgba(239, 68, 68, 0.5)' } : {}}
                       />
                       <i className="auth-input-icon ti ti-mail"></i>
+                      {checkingEmail && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-3)', fontSize: '11px', marginTop: '4px', paddingLeft: '4px' }}>
+                          <div style={{ width: '10px', height: '10px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                          <span>Checking availability...</span>
+                        </div>
+                      )}
+                      {emailError && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#EF4444', fontSize: '11px', fontWeight: 600, marginTop: '4px', paddingLeft: '4px' }}>
+                          <i className="ti ti-alert-circle" style={{ fontSize: '12px' }}></i>
+                          <span>{emailError}</span>
+                        </div>
+                      )}
+                      {!checkingEmail && !emailError && email && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '11px', fontWeight: 600, marginTop: '4px', paddingLeft: '4px' }}>
+                          <i className="ti ti-circle-check" style={{ fontSize: '12px' }}></i>
+                          <span>Email is available</span>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
