@@ -291,18 +291,25 @@ export const listAllTradeRatings = query({
 
     const allRatings = await ctx.db.query("tradeRatings").order("desc").take(200);
 
-    // Enrich ratings with usernames
-    const enrichedRatings = await Promise.all(
-      allRatings.map(async (r) => {
-        const rater = await ctx.db.get(r.raterId);
-        const rated = await ctx.db.get(r.ratedId);
-        return {
+    // Enrich ratings with usernames (handle deleted/missing users)
+    const enrichedRatings: any[] = [];
+    for (const r of allRatings) {
+      try {
+        const rater = r.raterId ? await ctx.db.get(r.raterId) : null;
+        const rated = r.ratedId ? await ctx.db.get(r.ratedId) : null;
+        enrichedRatings.push({
           ...r,
           raterUsername: rater?.username || "unknown",
           ratedUsername: rated?.username || "unknown",
-        };
-      })
-    );
+        });
+      } catch {
+        enrichedRatings.push({
+          ...r,
+          raterUsername: "unknown",
+          ratedUsername: "unknown",
+        });
+      }
+    }
 
     // Calculate Platform Averages
     const totalRatings = allRatings.length;
@@ -313,7 +320,13 @@ export const listAllTradeRatings = query({
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const todayCount = allRatings.filter(
-      r => new Date(r.createdAt).getTime() >= startOfToday.getTime()
+      r => {
+        try {
+          return new Date(r.createdAt).getTime() >= startOfToday.getTime();
+        } catch {
+          return false;
+        }
+      }
     ).length;
 
     return {
