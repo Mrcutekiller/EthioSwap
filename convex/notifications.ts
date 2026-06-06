@@ -148,6 +148,20 @@ export const dispatchNotification = mutation({
         tgMsg = `📤 <b>Withdrawal Request Submitted</b>\n\nAmount: ${args.extraText} USDT\nStatus: Pending Review`;
         break;
 
+      case "withdrawal_approved":
+        smsMsg = isAm
+          ? `EthioSwap: የመውጣት ጥያቄዎ ጸድቋል! መጠን: ${args.extraText} USDT።`
+          : `EthioSwap: Your withdrawal request has been approved! Amount: ${args.extraText} USDT.`;
+        tgMsg = `✅ <b>Withdrawal Request Approved</b>\n\nAmount: ${args.extraText} USDT\nStatus: Approved and processed successfully.`;
+        break;
+
+      case "withdrawal_rejected":
+        smsMsg = isAm
+          ? `EthioSwap: የመውጣት ጥያቄዎ ውድቅ ተደርጓል። ምክንያት: ${args.extraText || ""}`
+          : `EthioSwap: Your withdrawal request was rejected. Reason: ${args.extraText || ""}`;
+        tgMsg = `❌ <b>Withdrawal Request Rejected</b>\n\nReason: ${args.extraText || ""}`;
+        break;
+
       case "deposit_received":
         smsMsg = isAm
           ? `EthioSwap: ተቀማጭ ተቀብሏል። መጠን: ${args.extraText} USDT። በደስታ መለያዎ ላይ ታክሏል።`

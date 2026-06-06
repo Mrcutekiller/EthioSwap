@@ -221,6 +221,8 @@ export const handleTelegramWebhook = internalAction({
     }
 
     if (/^\d{6}$/.test(text)) {
+      await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
+
       const linkResult = await ctx.runMutation(internal.telegram.verifyAndLinkCode, {
         code: text,
         chatId,
@@ -228,11 +230,11 @@ export const handleTelegramWebhook = internalAction({
 
       if (linkResult.success) {
         await sendReply(
-          `🎉 <b>Success!</b> Your Telegram account has been linked to EthioSwap user <b>@${linkResult.username}</b>. You will now receive real-time trade alerts!`
+          `🎉 <b>Successfully Connected!</b> Your Telegram account has been linked to EthioSwap user <b>@${linkResult.username}</b>.\n\nYou will now receive instant alerts for all your deposits, withdrawals, invites, and P2P trades!`
         );
       } else {
         await sendReply(
-          `❌ <b>Linking Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from Profile Settings on EthioSwap.`
+          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from Profile Settings on EthioSwap.`
         );
       }
       return { ok: true };
@@ -265,7 +267,7 @@ export const handleTelegramWebhook = internalAction({
     }
 
     await sendReply(
-      `👋 <b>EthioSwap Notification Bot</b>\n\nUse this bot to receive instant alerts for your P2P trades on EthioSwap.\n\n<b>Commands:</b>\n/status - View profile and active trades\n\n<b>Linking:</b>\nIf you want to link your account, please send your 6-digit one-time code generated from EthioSwap Profile Settings.`
+      `👋 <b>Welcome to EthioSwap Bot!</b>\n\nTo link this Telegram account to your EthioSwap account:\n1. Open the EthioSwap website/app and go to <b>Profile Settings</b>.\n2. Click <b>🔌 Connect Telegram Bot</b> to get your 6-digit verification code.\n3. Send that 6-digit code here to connect your account and start receiving alerts!`
     );
 
     return { ok: true };

@@ -82,11 +82,26 @@ export const updateStatus = mutation({
           collectedFeesETH: (settings.collectedFeesETH || 0) + feeEth,
         });
       }
+
+      // Dispatch approval notification
+      const usdAmount = Math.round(request.amountEth * 3000);
+      await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+        userId: request.userId,
+        type: "withdrawal_approved",
+        extraText: `${usdAmount}`,
+      });
     } else if (args.status === "rejected") {
       // Return to available balance
       await ctx.db.patch(request.userId, {
         ethBalance: (user.ethBalance || 0) + request.amountEth,
         ethLocked: (user.ethLocked || 0) - request.amountEth,
+      });
+
+      // Dispatch rejection notification
+      await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+        userId: request.userId,
+        type: "withdrawal_rejected",
+        extraText: args.adminNote || "Rejected by administration",
       });
     }
 
