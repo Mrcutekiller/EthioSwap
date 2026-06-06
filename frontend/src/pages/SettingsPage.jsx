@@ -289,7 +289,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     }
     setSettingsOtpLoading(true);
     try {
-      await disconnectTelegramMutation({ otpCode: settingsOtpCode });
+      await disconnectTelegramMutation({ userId: user.id || user._id, otpCode: settingsOtpCode });
       setShowSettingsOtp(false);
       alert('Telegram disconnected successfully.');
     } catch (err) {
@@ -637,7 +637,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
                     </div>
                   ) : (
                     <button onClick={async () => {
-                      const res = await generateTelegramCodeMutation();
+                      const res = await generateTelegramCodeMutation({ userId: user.id || user._id });
                       if (res && res.code) {
                         setLinkCode(res.code);
                         setTimeRemaining(10 * 60 * 1000); // 10 mins

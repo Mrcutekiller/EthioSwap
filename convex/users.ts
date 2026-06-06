@@ -149,6 +149,11 @@ export const authenticate = query({
       throw new Error("This account is suspended. Please contact support.");
     }
 
+    if (user.role === "admin") {
+      const { passwordHash, ...safeUser } = user;
+      return { status: "success", user: safeUser };
+    }
+
     if (user.status === "pending_verification") {
       return {
         status: "otp_required",
@@ -179,7 +184,7 @@ export const authenticate = query({
     return {
       status: "otp_required",
       userId: user._id,
-      preferredMethod: user.preferredVerificationMethod || "sms",
+      preferredMethod: (user.preferredVerificationMethod === "telegram" && !user.telegramChatId) ? "sms" : (user.preferredVerificationMethod || "sms"),
       phone: user.phone || "",
       telegramChatId: user.telegramChatId || "",
     };
@@ -286,18 +291,14 @@ export const updateKycStatus = mutation({
 
 export const submitKyc = mutation({
   args: {
+    userId: v.id("users"),
     fullName: v.string(),
     dob: v.string(),
     idFront: v.string(),
     selfie: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const rejectedCount = user.kycRejectedCount || 0;
@@ -402,14 +403,9 @@ export const getByIdentifier = query({
 });
 
 export const generateTelegramLinkCode = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -425,14 +421,12 @@ export const generateTelegramLinkCode = mutation({
 });
 
 export const disconnectTelegram = mutation({
-  args: { otpCode: v.string() },
+  args: {
+    userId: v.id("users"),
+    otpCode: v.string(),
+  },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     // Verify OTP for purpose "sensitive_change"
@@ -457,16 +451,12 @@ export const disconnectTelegram = mutation({
 
 export const updateNotificationSettings = mutation({
   args: {
+    userId: v.id("users"),
     smsEnabled: v.boolean(),
     telegramEnabled: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     await ctx.db.patch(user._id, {

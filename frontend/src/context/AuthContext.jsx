@@ -572,8 +572,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const submitKycDetails = async (fullName, dob, idFront, selfie) => {
+    if (!user) return;
     try {
-      await submitKycMutation({ fullName, dob, idFront, selfie });
+      await submitKycMutation({ userId: user._id, fullName, dob, idFront, selfie });
       setSuccess('KYC submitted successfully!');
       await updateUser({ kycStatus: 'pending' });
     } catch (err) {
