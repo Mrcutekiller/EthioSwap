@@ -40,7 +40,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, loading, error } = useAuth();
+  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, generateTelegramLinkCode, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,6 +61,17 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [showTgFallback, setShowTgFallback] = useState(false);
+  const [tgLinkCode, setTgLinkCode] = useState('');
+  const [tgLinking, setTgLinking] = useState(false);
+  const [tgLinked, setTgLinked] = useState(false);
+
+  const signupUser = useQuery(api.users.get, otpData?.userId && otpData?.isSignup ? { id: otpData.userId } : "skip");
+
+  useEffect(() => {
+    if (signupUser && signupUser.status === "active" && otpData?.isSignup) {
+      setTgLinked(true);
+    }
+  }, [signupUser, otpData]);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -75,6 +86,31 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  const handleConnectTelegram = async () => {
+    if (!otpData?.userId) return;
+    setTgLinking(true);
+    setLocalError('');
+    try {
+      const res = await generateTelegramLinkCode(otpData.userId);
+      if (res?.code) {
+        setTgLinkCode(res.code);
+        setShowTgFallback(true);
+      }
+    } catch (err) {
+      setLocalError(cleanConvexError(err.message));
+    } finally {
+      setTgLinking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!tgLinked || !otpData?.userId) return;
+    const timer = setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [tgLinked, otpData]);
 
   // Inline validation state
   const [usernameError, setUsernameError] = useState('');
@@ -345,7 +381,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   : 'We sent a 6-digit OTP code to verify your login attempt.'}
               </p>
 
-              {otpData?.isSignup && showTgFallback && (
+              {otpData?.isSignup && showTgFallback && !tgLinked && (
                 <div style={{
                   background: 'rgba(0, 212, 160, 0.04)',
                   border: '1px solid rgba(0, 212, 160, 0.2)',
@@ -358,13 +394,26 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 }}>
                   <span style={{ fontSize: '24px' }}>✈️</span>
                   <p style={{ fontSize: '13px', color: 'var(--text-2)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-                    EthioSwap Telegram Bot Verification
+                    Connect via Telegram
                   </p>
                   <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-                    Click the button below to open the Telegram Bot, click <b>Start</b>, copy the 6-digit verification code, and enter it below.
+                    Copy the code below, open the Telegram Bot, click <b>Start</b>, and send the code.
                   </p>
+                  <div style={{
+                    background: 'rgba(255, 215, 0, 0.1)',
+                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                    borderRadius: '12px',
+                    padding: '12px 20px',
+                    fontSize: '24px',
+                    fontWeight: 800,
+                    color: 'var(--gold)',
+                    letterSpacing: '8px',
+                    fontFamily: 'monospace',
+                  }}>
+                    {tgLinkCode}
+                  </div>
                   <a
-                    href={`https://t.me/EthioSwap_Bot?start=${otpData.telegramLinkToken}`}
+                    href="https://t.me/EthioSwap_Bot"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-gold w-full"
@@ -378,15 +427,40 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       textDecoration: 'none',
                     }}
                   >
-                    Open Bot <i className="ti ti-brand-telegram" style={{ marginLeft: '6px', fontSize: '16px' }}></i>
+                    Open Telegram Bot <i className="ti ti-brand-telegram" style={{ marginLeft: '6px', fontSize: '16px' }}></i>
                   </a>
+                  <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
+                    Waiting for you to send the code in Telegram...
+                  </p>
+                </div>
+              )}
+
+              {otpData?.isSignup && tgLinked && (
+                <div style={{
+                  background: 'rgba(0, 212, 160, 0.08)',
+                  border: '1px solid rgba(0, 212, 160, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  alignItems: 'center',
+                }}>
+                  <span style={{ fontSize: '28px' }}>✅</span>
+                  <p style={{ fontSize: '14px', color: 'var(--text-1)', textAlign: 'center', margin: 0, fontWeight: 700 }}>
+                    Telegram Connected!
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
+                    Your account is now active. Redirecting...
+                  </p>
                 </div>
               )}
 
               {otpData?.isSignup && !showTgFallback && (
                 <button
                   type="button"
-                  onClick={() => setShowTgFallback(true)}
+                  disabled={tgLinking}
+                  onClick={handleConnectTelegram}
                   style={{
                     background: 'rgba(255,255,255,0.02)',
                     border: '1px solid var(--border)',
@@ -395,18 +469,19 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     padding: '12px',
                     fontSize: '13px',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: tgLinking ? 'wait' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
                     transition: 'all 0.2s ease',
                     width: '100%',
+                    opacity: tgLinking ? 0.6 : 1,
                   }}
-                  onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
+                  onMouseOver={(e) => { if (!tgLinking) e.currentTarget.style.borderColor = 'var(--gold)'; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
-                  💬 Did not receive SMS? Continue with Telegram
+                  {tgLinking ? '⏳ Generating code...' : '💬 Did not receive SMS? Connect via Telegram'}
                 </button>
               )}
 

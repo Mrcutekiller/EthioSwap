@@ -149,6 +149,7 @@ export const AuthProvider = ({ children }) => {
   const verifySignupOtpMutation = useMutation(api.users.verifySignupOtp);
   const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
   const logoutUserMutation = useMutation(api.users.logoutUser);
+  const generateTelegramLinkCodeMutation = useMutation(api.users.generateTelegramLinkCode);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
@@ -222,7 +223,8 @@ export const AuthProvider = ({ children }) => {
       const address = new ethers.Wallet(privateKey).address;
       
       const isAdminRole = email.toLowerCase().includes('admin');
-      const userId = await createUser({
+      
+      const result = await createUser({
         username,
         email,
         password,
@@ -234,16 +236,21 @@ export const AuthProvider = ({ children }) => {
         ethPrivateKey: privateKey,
       });
 
-      if (isAdminRole) {
-        setSuccess('Admin account created successfully! Please sign in.');
-        return { status: 'success_admin', userId };
+      if (result?.pendingVerification) {
+        const userObj = await convex.query(api.users.get, { id: result.userId });
+        return { status: 'otp_required', userId: result.userId, preferredMethod: 'sms', phone: userObj?.phone || phone, telegramLinkToken: userObj?.telegramLinkToken, isSignup: true };
       }
 
-      const userObj = await convex.query(api.users.get, { id: userId });
+      if (isAdminRole) {
+        setSuccess('Admin account created successfully! Please sign in.');
+        return { status: 'success_admin', userId: result };
+      }
+
+      const userObj = await convex.query(api.users.get, { id: result });
       const telegramLinkToken = userObj?.telegramLinkToken;
 
       setSuccess('Account created! Verify your phone number via SMS OTP.');
-      return { status: 'otp_required', userId, preferredMethod: 'sms', phone, telegramLinkToken, isSignup: true };
+      return { status: 'otp_required', userId: result, preferredMethod: 'sms', phone, telegramLinkToken, isSignup: true };
     } catch (err) {
       setError(err.message);
       return null;
@@ -414,6 +421,16 @@ export const AuthProvider = ({ children }) => {
       throw err;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateTelegramLinkCode = async (userId) => {
+    try {
+      const res = await generateTelegramLinkCodeMutation({ userId });
+      return res;
+    } catch (err) {
+      setError(err.message);
+      throw err;
     }
   };
 
@@ -685,7 +702,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails,
+      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode,
       setError, setSuccess, setIsLocked
     }}>
       {children}

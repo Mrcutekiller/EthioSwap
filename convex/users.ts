@@ -40,14 +40,24 @@ export const create = mutation({
         .query("users")
         .withIndex("by_email", (q) => q.eq("email", args.email))
         .first();
-      if (existing) throw new Error("Email already registered");
+      if (existing) {
+        if (existing.status === "pending_verification") {
+          return { userId: existing._id, pendingVerification: true };
+        }
+        throw new Error("Email already registered");
+      }
     }
 
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
       .first();
-    if (existingUser) throw new Error("Username already taken");
+    if (existingUser) {
+      if (existingUser.status === "pending_verification") {
+        return { userId: existingUser._id, pendingVerification: true };
+      }
+      throw new Error("Username already taken");
+    }
 
     const { password, ...userData } = args;
 
@@ -174,6 +184,7 @@ export const authenticate = query({
         preferredMethod: "sms",
         phone: user.phone || "",
         telegramChatId: "",
+        telegramLinkToken: user.telegramLinkToken || "",
         isSignup: true,
       };
     }

@@ -111,6 +111,8 @@ export const verifyAndLinkCode = mutation({
       return { success: false };
     }
 
+    const isSignup = user.status === "pending_verification";
+
     await ctx.db.patch(user._id, {
       telegramChatId: args.chatId,
       telegramEnabled: true,
@@ -130,6 +132,8 @@ export const verifyAndLinkCode = mutation({
 
     return {
       success: true,
+      userId: user._id,
+      isSignup,
       username: user.username,
       numericId: user.numericId || String(user._id),
       email: user.email || "Not set",
@@ -138,6 +142,38 @@ export const verifyAndLinkCode = mutation({
       etbBalance: user.etbBalance || 0,
       totalTrades: user.totalTrades || 0,
     };
+  },
+});
+
+export const activateUserAfterTelegramLink = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    if (user.status !== "pending_verification") return { alreadyActive: true };
+
+    await ctx.db.patch(args.userId, {
+      status: "active",
+      smsEnabled: true,
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: "welcome",
+      title: "Welcome to EthioSwap!",
+      message: "Your account has been activated via Telegram. Complete your ID verification to unlock all features.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    if (user.email) {
+      await ctx.scheduler.runAfter(0, api.users.sendWelcomeEmailAction, {
+        email: user.email,
+        username: user.username,
+      });
+    }
+
+    return { success: true };
   },
 });
 
@@ -237,6 +273,24 @@ export const handleTelegramWebhook = internalAction({
       return { ok: true };
     }
 
+    if (text === "/start") {
+      const user = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
+      if (user) {
+        await sendReply(
+          `👋 <b>Welcome back, @${user.username}!</b>\n\n` +
+          `Your Telegram is already connected to EthioSwap.\n\n` +
+          `Type /help to see available commands.`
+        );
+      } else {
+        await sendReply(
+          `👋 <b>Welcome to EthioSwap Bot!</b>\n\n` +
+          `I'm your EthioSwap trading assistant. To connect your account, please send me the <b>6-digit linking code</b> from the EthioSwap website.\n\n` +
+          `If you haven't signed up yet, visit <b>ethioswap.com</b> to create an account.`
+        );
+      }
+      return { ok: true };
+    }
+
     if (/^\d{6}$/.test(text)) {
       await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
 
@@ -246,18 +300,30 @@ export const handleTelegramWebhook = internalAction({
       });
 
       if (linkResult.success) {
-        await sendReply(
-          `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
-          `You will receive:\n` +
-          `🔐 Login OTP codes\n` +
-          `💰 Deposit confirmations\n` +
-          `📤 Withdrawal alerts\n` +
-          `🔔 Trade notifications\n\n` +
-          `Type /help for commands`
-        );
+        if (linkResult.isSignup) {
+          await ctx.runMutation(api.telegram.activateUserAfterTelegramLink, {
+            userId: linkResult.userId,
+          });
+          await sendReply(
+            `🎉 <b>Account Activated!</b>\n\n` +
+            `Your EthioSwap account has been created and linked to Telegram successfully!\n\n` +
+            `You can now log in on the website using your username and password.\n\n` +
+            `Type /help for commands`
+          );
+        } else {
+          await sendReply(
+            `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
+            `You will receive:\n` +
+            `🔐 Login OTP codes\n` +
+            `💰 Deposit confirmations\n` +
+            `📤 Withdrawal alerts\n` +
+            `🔔 Trade notifications\n\n` +
+            `Type /help for commands`
+          );
+        }
       } else {
         await sendReply(
-          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from Profile Settings on EthioSwap.`
+          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website.`
         );
       }
       return { ok: true };
