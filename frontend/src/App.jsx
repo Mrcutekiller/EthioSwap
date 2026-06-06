@@ -220,6 +220,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
           setOtpData(result);
           setChosenChannel('sms');
           setResendTimer(60);
+        } else if (result.status === 'success_admin') {
+          onToggle();
         } else if (result.alreadyRegistered) {
           onToggle();
         }
@@ -1101,6 +1103,7 @@ const AppShell = () => {
         { id: 'invite',   label: 'Invite',   icon: Icons.gift },
         { id: 'leaderboard', label: 'Ranks', icon: Icons.leaderboard },
         { id: 'profile',  label: 'Profile',  icon: Icons.person },
+        { id: 'settings', label: 'Settings', icon: Icons.settings },
       ];
 
   if (user.role === 'admin' && tab !== 'admin') setTab('admin');

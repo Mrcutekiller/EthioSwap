@@ -52,6 +52,9 @@ export const create = mutation({
 
     const { password, ...userData } = args;
 
+    const status = args.role === "admin" ? "active" : "pending_verification";
+    const kycStatus = args.role === "admin" ? "approved" : "none";
+
     const userId = await ctx.db.insert("users", {
       ...userData,
       passwordHash: sha256Sync(password),
@@ -61,10 +64,10 @@ export const create = mutation({
       reputation: 100,
       totalTrades: 0,
       joinedAt: new Date().toISOString(),
-      kycStatus: "none",
+      kycStatus,
       paymentAccounts: [],
       isSuspended: false,
-      status: "pending_verification",
+      status,
       smsEnabled: true,
       preferredVerificationMethod: "sms",
     });
@@ -75,34 +78,36 @@ export const create = mutation({
       referralCode: userReferralCode
     });
 
-    // Generate a 6-digit random code for signup OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    if (args.role !== "admin") {
+      // Generate a 6-digit random code for signup OTP
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-    await ctx.db.insert("otps", {
-      userId,
-      purpose: "signup",
-      code,
-      expiresAt,
-      attempts: 0,
-      resends: 0,
-      channel: "sms",
-      status: "pending",
-      createdAtEpoch: Date.now(),
-      createdAt: new Date().toISOString(),
-    });
-
-    // Send OTP via Vonage SMS
-    if (args.phone) {
-      await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
+      await ctx.db.insert("otps", {
         userId,
         purpose: "signup",
-        channel: "sms",
         code,
-        phone: args.phone,
-        telegramChatId: "",
-        preferredLanguage: "en",
+        expiresAt,
+        attempts: 0,
+        resends: 0,
+        channel: "sms",
+        status: "pending",
+        createdAtEpoch: Date.now(),
+        createdAt: new Date().toISOString(),
       });
+
+      // Send OTP via Vonage SMS
+      if (args.phone) {
+        await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
+          userId,
+          purpose: "signup",
+          channel: "sms",
+          code,
+          phone: args.phone,
+          telegramChatId: "",
+          preferredLanguage: "en",
+        });
+      }
     }
 
     return userId;
@@ -295,6 +300,7 @@ export const submitKyc = mutation({
     fullName: v.string(),
     dob: v.string(),
     idFront: v.string(),
+    idBack: v.string(),
     selfie: v.string(),
   },
   handler: async (ctx, args) => {
@@ -311,8 +317,9 @@ export const submitKyc = mutation({
       kycFullName: args.fullName,
       kycDob: args.dob,
       kycIdFront: args.idFront,
+      kycIdBack: args.idBack,
       kycSelfie: args.selfie,
-      kycRejectionReason: undefined,
+      kycRejectionReason: null,
     });
 
     return { success: true };

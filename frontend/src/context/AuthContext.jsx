@@ -219,6 +219,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      const isAdminRole = email.toLowerCase().includes('admin');
       const userId = await createUser({
         username,
         email,
@@ -226,11 +227,16 @@ export const AuthProvider = ({ children }) => {
         fullName,
         phone,
         age: age ? Number(age) : null,
-        role: email.toLowerCase().includes('admin') ? 'admin' : 'user',
+        role: isAdminRole ? 'admin' : 'user',
         ethAddress: '0x' + Math.random().toString(16).slice(2, 42),
         ethPrivateKey: '0x' + Math.random().toString(16).slice(2, 66),
         referredBy: referralCode || null,
       });
+
+      if (isAdminRole) {
+        setSuccess('Admin account created successfully! Please sign in.');
+        return { status: 'success_admin', userId };
+      }
 
       setSuccess('Account created! Verify your phone number via SMS OTP.');
       return { status: 'otp_required', userId, preferredMethod: 'sms', phone, isSignup: true };
@@ -571,10 +577,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const submitKycDetails = async (fullName, dob, idFront, selfie) => {
+  const submitKycDetails = async (fullName, dob, idFront, idBack, selfie) => {
     if (!user) return;
     try {
-      await submitKycMutation({ userId: user._id, fullName, dob, idFront, selfie });
+      await submitKycMutation({ userId: user._id, fullName, dob, idFront, idBack, selfie });
       setSuccess('KYC submitted successfully!');
       await updateUser({ kycStatus: 'pending' });
     } catch (err) {

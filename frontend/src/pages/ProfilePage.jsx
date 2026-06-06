@@ -263,6 +263,38 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [profileOtpError, setProfileOtpError] = useState('');
 
   const deleteAccountMutation = useMutation(api.users.remove);
+  
+  const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
+  const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
+  const [timeRemaining, setTimeRemaining] = useState(0);
+
+  useEffect(() => {
+    if (user?.telegramLinkCode && user?.telegramLinkExpires) {
+      const remaining = user.telegramLinkExpires - Date.now();
+      if (remaining > 0) {
+        setLinkCode(user.telegramLinkCode);
+        setTimeRemaining(remaining);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (timeRemaining <= 0) {
+      setLinkCode('');
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1000) {
+          clearInterval(timer);
+          setLinkCode('');
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
 
   const [showKYC, setShowKYC] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -896,6 +928,88 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       )}
 
+      {/* ─── TELEGRAM BOT CONNECTION ─────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(42, 171, 238, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#2AABEE' }}>
+            ✈️
+          </div>
+          <div>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-1)', margin: 0 }}>Telegram Bot Connection</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0 }}>Receive trade alerts and secure OTP codes on Telegram</p>
+          </div>
+        </div>
+
+        {user.telegramChatId ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,212,160,0.03)', border: '1px solid rgba(0,212,160,0.15)', padding: '12px 16px', borderRadius: '12px' }}>
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🟢 Connected
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>Chat ID: {user.telegramChatId}</span>
+            </div>
+            <button 
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'settings' }));
+              }} 
+              className="btn btn-sm btn-ghost" 
+              style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'underline', color: 'var(--gold-light)' }}
+            >
+              Configure
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: 0, lineHeight: 1.4 }}>
+              Link your account to our Telegram bot <b>@EthioSwap_Bot</b> to get rich alerts and check trade statuses even before your account is verified.
+            </p>
+            {linkCode ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,197,24,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
+                  <strong style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace' }}>
+                    {linkCode}
+                  </strong>
+                  <span style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>
+                    Expires in {Math.max(0, Math.ceil(timeRemaining / 1000))}s
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.4 }}>
+                    1. Click <b>Open Bot</b> below to open Telegram.
+                    <br />
+                    2. Send the 6-digit code <b>{linkCode}</b> to the bot to link it.
+                  </div>
+                  <a 
+                    href="https://t.me/EthioSwap_Bot" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn btn-gold btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 600 }}
+                  >
+                    ✈️ Open Bot (@EthioSwap_Bot)
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <button 
+                onClick={async () => {
+                  const res = await generateTelegramCodeMutation({ userId: user.id || user._id });
+                  if (res && res.code) {
+                    setLinkCode(res.code);
+                    setTimeRemaining(10 * 60 * 1000); // 10 mins
+                  }
+                }} 
+                className="btn btn-gold btn-full btn-sm" 
+                style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}
+              >
+                🔌 Connect Telegram Bot
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
       <div className="card" style={{ padding: '20px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Performance Stats</h3>
@@ -1134,6 +1248,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               updatedUser.fullName,
               updatedUser.kycData.birthDate,
               updatedUser.kycIdFront,
+              updatedUser.kycIdBack,
               updatedUser.kycSelfie
             );
           }}
