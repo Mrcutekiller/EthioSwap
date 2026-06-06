@@ -42,7 +42,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, verifyLoginOtp, sendOtp, loading, error } = useAuth();
+  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -82,7 +82,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     setSendingOtp(true);
     setLocalError('');
     try {
-      await sendOtp(userId, 'login', channel);
+      const purpose = otpData?.isSignup ? 'signup' : 'login';
+      await sendOtp(userId, purpose, channel);
       setResendTimer(60);
     } catch (err) {
       setLocalError(err.message);
@@ -113,8 +114,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (res && res.status === 'otp_required') {
         setOtpData(res);
         setChosenChannel(res.preferredMethod || 'sms');
-        // Automatically send the first OTP
-        await triggerSendOtp(res.userId, res.preferredMethod || 'sms');
+        if (res.isSignup) {
+          // Signup OTP is already sent by the create user call, so we don't triggerSendOtp
+          setResendTimer(60);
+        } else {
+          // Automatically send the first OTP for login
+          await triggerSendOtp(res.userId, res.preferredMethod || 'sms');
+        }
       }
     } else {
       if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age) {
@@ -130,8 +136,14 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         return;
       }
       const result = await register(username, password, phone, email, fullName, age, referralCode);
-      if (result && result.alreadyRegistered) {
-        onToggle(); // Switch to login
+      if (result) {
+        if (result.status === 'otp_required') {
+          setOtpData(result);
+          setChosenChannel('sms');
+          setResendTimer(60); // Already generated and sent by create mutation
+        } else if (result.alreadyRegistered) {
+          onToggle(); // Switch to login
+        }
       }
     }
   };
@@ -151,7 +163,11 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         ? `${navigator.userAgentData?.brands?.[0]?.brand || 'Browser'} on ${navigator.userAgentData?.platform || 'Windows/MacOS'}`
         : parsedDevice;
 
-      await verifyLoginOtp(otpData.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
+      if (otpData?.isSignup) {
+        await verifySignupOtp(otpData.userId, otpCode);
+      } else {
+        await verifyLoginOtp(otpData.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
+      }
     } catch (err) {
       setLocalError(err.message);
     } finally {
@@ -238,61 +254,67 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   transition: 'all 0.2s ease',
                 }}
               >
-                <i className="ti ti-arrow-left"></i> Back to Login
+                <i className="ti ti-arrow-left"></i> {otpData?.isSignup ? 'Back to Sign Up' : 'Back to Login'}
               </button>
 
               <h2 style={{ fontSize: '26px', fontWeight: 800, textAlign: 'center', margin: '10px 0 2px' }}>
-                Verify Identity
+                {otpData?.isSignup ? 'Verify Phone Number' : 'Verify Identity'}
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', lineHeight: '1.5', margin: '0 0 10px' }}>
-                We sent a 6-digit OTP code to verify your login attempt.
+                {otpData?.isSignup 
+                  ? `We sent a 6-digit OTP code to ${otpData.phone || 'your phone number'} via SMS.`
+                  : 'We sent a 6-digit OTP code to verify your login attempt.'}
               </p>
 
               {/* Delivery channel selector */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                <button
-                  type="button"
-                  onClick={() => handleChannelChange('sms')}
-                  style={{
-                    padding: '8px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    background: chosenChannel === 'sms' ? 'var(--gold)' : 'transparent',
-                    color: chosenChannel === 'sms' ? '#0A0C12' : 'var(--text-2)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  💬 SMS OTP
-                </button>
-                <button
-                  type="button"
-                  disabled={!otpData.telegramChatId}
-                  onClick={() => handleChannelChange('telegram')}
-                  style={{
-                    padding: '8px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: otpData.telegramChatId ? 'pointer' : 'not-allowed',
-                    background: chosenChannel === 'telegram' ? 'var(--gold)' : 'transparent',
-                    color: chosenChannel === 'telegram' ? '#0A0C12' : 'var(--text-2)',
-                    opacity: otpData.telegramChatId ? 1 : 0.5,
-                    transition: 'all 0.2s ease',
-                  }}
-                  title={!otpData.telegramChatId ? 'Telegram account not linked' : ''}
-                >
-                  ✈️ Telegram Bot
-                </button>
-              </div>
+              {!otpData?.isSignup && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleChannelChange('sms')}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        background: chosenChannel === 'sms' ? 'var(--gold)' : 'transparent',
+                        color: chosenChannel === 'sms' ? '#0A0C12' : 'var(--text-2)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      💬 SMS OTP
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!otpData.telegramChatId}
+                      onClick={() => handleChannelChange('telegram')}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: otpData.telegramChatId ? 'pointer' : 'not-allowed',
+                        background: chosenChannel === 'telegram' ? 'var(--gold)' : 'transparent',
+                        color: chosenChannel === 'telegram' ? '#0A0C12' : 'var(--text-2)',
+                        opacity: otpData.telegramChatId ? 1 : 0.5,
+                        transition: 'all 0.2s ease',
+                      }}
+                      title={!otpData.telegramChatId ? 'Telegram account not linked' : ''}
+                    >
+                      ✈️ Telegram Bot
+                    </button>
+                  </div>
 
-              {!otpData.telegramChatId && chosenChannel === 'sms' && (
-                <span style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
-                  Telegram OTP unavailable (not connected in Settings)
-                </span>
+                  {!otpData.telegramChatId && chosenChannel === 'sms' && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
+                      Telegram OTP unavailable (not connected in Settings)
+                    </span>
+                  )}
+                </>
               )}
 
               <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -323,20 +345,22 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 </div>
 
                 {/* Trust device checkbox */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: '13px', color: 'var(--text-2)', padding: '4px 0' }}>
-                  <input
-                    type="checkbox"
-                    checked={trustDevice}
-                    onChange={e => setTrustDevice(e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      accentColor: 'var(--gold)',
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <span>Trust this device for 30 days</span>
-                </label>
+                {!otpData?.isSignup && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: '13px', color: 'var(--text-2)', padding: '4px 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={trustDevice}
+                      onChange={e => setTrustDevice(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        accentColor: 'var(--gold)',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <span>Trust this device for 30 days</span>
+                  </label>
+                )}
 
                 {displayError && (
                   <div style={{ 

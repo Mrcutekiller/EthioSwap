@@ -64,6 +64,9 @@ export const create = mutation({
       kycStatus: "none",
       paymentAccounts: [],
       isSuspended: false,
+      status: "pending_verification",
+      smsEnabled: true,
+      preferredVerificationMethod: "sms",
     });
 
     // Generate referral code for new user
@@ -72,61 +75,33 @@ export const create = mutation({
       referralCode: userReferralCode
     });
 
-    // If referred by someone, award points and trigger notification
-    if (args.referredBy) {
-      let referrer = await ctx.db
-        .query("users")
-        .filter((q) => q.eq(q.field("referralCode"), args.referredBy))
-        .first();
+    // Generate a 6-digit random code for signup OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-      if (!referrer) {
-        referrer = await ctx.db
-          .query("users")
-          .withIndex("by_username", (q) => q.eq("username", args.referredBy))
-          .first();
-      }
-
-      if (referrer && String(referrer._id) !== String(userId)) {
-        const settings = await ctx.db.query("systemSettings").first();
-        const points = settings?.referralBonusPoints || 50;
-
-        await ctx.db.patch(referrer._id, {
-          loyalty_points: (referrer.loyalty_points || 0) + points,
-          successfulInvites: (referrer.successfulInvites || 0) + 1,
-        });
-
-        await ctx.db.insert("inviteRewards", {
-          referrerId: referrer._id,
-          referredId: userId,
-          rewardAmount: points,
-          rewardStatus: "paid",
-          createdAt: new Date().toISOString(),
-        });
-
-        // Send notification to the referrer
-        await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
-          userId: referrer._id,
-          type: "invite_reward",
-          extraText: `${points}`,
-        });
-      }
-    }
-
-    // Welcome Notification
-    await ctx.db.insert("notifications", {
+    await ctx.db.insert("otps", {
       userId,
-      type: "welcome",
-      title: "Welcome to EthioSwap! 🇪🇹",
-      message: "We're thrilled to have you! Complete your ID verification to unlock all trading features and start swapping.",
-      isRead: false,
+      purpose: "signup",
+      code,
+      expiresAt,
+      attempts: 0,
+      resends: 0,
+      channel: "sms",
+      status: "pending",
+      createdAtEpoch: Date.now(),
       createdAt: new Date().toISOString(),
     });
 
-    // Send Welcome Email via Action
-    if (args.email) {
-      await ctx.scheduler.runAfter(0, internal.users.sendWelcomeEmailAction, {
-        email: args.email,
-        username: args.username,
+    // Send OTP via Vonage SMS
+    if (args.phone) {
+      await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
+        userId,
+        purpose: "signup",
+        channel: "sms",
+        code,
+        phone: args.phone,
+        telegramChatId: "",
+        preferredLanguage: "en",
       });
     }
 
@@ -172,6 +147,17 @@ export const authenticate = query({
 
     if (user.isSuspended) {
       throw new Error("This account is suspended. Please contact support.");
+    }
+
+    if (user.status === "pending_verification") {
+      return {
+        status: "otp_required",
+        userId: user._id,
+        preferredMethod: "sms",
+        phone: user.phone || "",
+        telegramChatId: "",
+        isSignup: true,
+      };
     }
 
     const { passwordHash, ...safeUser } = user;
@@ -522,6 +508,88 @@ export const verifyLoginOtp = mutation({
   },
 });
 
+export const verifySignupOtp = mutation({
+  args: {
+    userId: v.id("users"),
+    code: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // 1. Verify OTP using the helper
+    await verifyAndInvalidateOtp(ctx.db, args.userId, "signup", args.code);
+
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // 2. Mark as active
+    await ctx.db.patch(args.userId, {
+      status: "active",
+      smsEnabled: true,
+    });
+
+    // 3. Process referral rewards now that the user is verified!
+    if (user.referredBy) {
+      let referrer = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("referralCode"), user.referredBy))
+        .first();
+
+      if (!referrer) {
+        referrer = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q) => q.eq("username", user.referredBy))
+          .first();
+      }
+
+      if (referrer && String(referrer._id) !== String(args.userId)) {
+        const settings = await ctx.db.query("systemSettings").first();
+        const points = settings?.referralBonusPoints || 50;
+
+        await ctx.db.patch(referrer._id, {
+          loyalty_points: (referrer.loyalty_points || 0) + points,
+          successfulInvites: (referrer.successfulInvites || 0) + 1,
+        });
+
+        await ctx.db.insert("inviteRewards", {
+          referrerId: referrer._id,
+          referredId: args.userId,
+          rewardAmount: points,
+          rewardStatus: "paid",
+          createdAt: new Date().toISOString(),
+        });
+
+        // Send notification to the referrer
+        await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
+          userId: referrer._id,
+          type: "invite_reward",
+          extraText: `${points}`,
+        });
+      }
+    }
+
+    // 4. Welcome Notification
+    await ctx.db.insert("notifications", {
+      userId: args.userId,
+      type: "welcome",
+      title: "Welcome to EthioSwap! 🇪🇹",
+      message: "We're thrilled to have you! Complete your ID verification to unlock all trading features and start swapping.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    // 5. Send Welcome Email via Action
+    if (user.email) {
+      await ctx.scheduler.runAfter(0, internal.users.sendWelcomeEmailAction, {
+        email: user.email,
+        username: user.username,
+      });
+    }
+
+    // 6. Return safe user
+    const { passwordHash, ...safeUser } = user;
+    return { ...safeUser, status: "active", id: user._id };
+  },
+});
+
 export const updateSensitiveDetails = mutation({
   args: {
     userId: v.id("users"),
@@ -573,6 +641,26 @@ export const updateSensitiveDetails = mutation({
       }
     }
 
+    return { success: true };
+  },
+});
+
+export const logoutUser = mutation({
+  args: {
+    userId: v.id("users"),
+    deviceFingerprint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const trusted = await ctx.db
+      .query("trustedDevices")
+      .withIndex("by_user_fingerprint", (q) =>
+        q.eq("userId", args.userId).eq("deviceFingerprint", args.deviceFingerprint)
+      )
+      .first();
+
+    if (trusted) {
+      await ctx.db.delete(trusted._id);
+    }
     return { success: true };
   },
 });

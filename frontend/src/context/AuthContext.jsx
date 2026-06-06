@@ -127,7 +127,9 @@ export const AuthProvider = ({ children }) => {
 
   const generateOtpMutation = useMutation(api.otp.generateOtp);
   const verifyLoginOtpMutation = useMutation(api.users.verifyLoginOtp);
+  const verifySignupOtpMutation = useMutation(api.users.verifySignupOtp);
   const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
+  const logoutUserMutation = useMutation(api.users.logoutUser);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
@@ -206,14 +208,11 @@ export const AuthProvider = ({ children }) => {
         role: email.toLowerCase().includes('admin') ? 'admin' : 'user',
         ethAddress: '0x' + Math.random().toString(16).slice(2, 42),
         ethPrivateKey: '0x' + Math.random().toString(16).slice(2, 66),
+        referredBy: referralCode || null,
       });
 
-      const newUser = await convex.query(api.users.get, { id: userId });
-      const safeUser = { ...newUser, id: newUser._id };
-      setUser(safeUser);
-      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-      setSuccess('Account created successfully!');
-      return safeUser;
+      setSuccess('Account created! Verify your phone number via SMS OTP.');
+      return { status: 'otp_required', userId, preferredMethod: 'sms', phone, isSignup: true };
     } catch (err) {
       setError(err.message);
       return null;
@@ -223,6 +222,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    if (user?._id) {
+      const fingerprint = getDeviceFingerprint();
+      logoutUserMutation({ userId: user._id, deviceFingerprint: fingerprint }).catch((err) => {
+        console.error("Failed to revoke trusted device on logout:", err);
+      });
+    }
     setUser(null);
     localStorage.removeItem('ethioswap_user');
     setSuccess('Signed out successfully.');
@@ -329,6 +334,28 @@ export const AuthProvider = ({ children }) => {
       setUser(safeUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
       setSuccess(`Welcome back, ${safeUser.username}!`);
+      return safeUser;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifySignupOtp = async (userId, code) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const userObj = await verifySignupOtpMutation({
+        userId,
+        code,
+      });
+
+      const safeUser = { ...userObj, id: userObj._id };
+      setUser(safeUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
+      setSuccess(`Welcome to EthioSwap, ${safeUser.username}! Your account is now active.`);
       return safeUser;
     } catch (err) {
       setError(err.message);
@@ -614,7 +641,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      verifyLoginOtp, sendOtp, updateSensitiveDetails,
+      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails,
       setError, setSuccess, setIsLocked
     }}>
       {children}

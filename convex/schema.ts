@@ -66,6 +66,7 @@ export default defineSchema({
     telegramEnabled: v.optional(v.boolean()),
     emailEnabled: v.optional(v.boolean()),
     preferredVerificationMethod: v.optional(v.string()),
+    status: v.optional(v.string()), // "pending_verification" | "active"
 
     // KYC Additional fields
     kycFullName: v.optional(v.string()),
