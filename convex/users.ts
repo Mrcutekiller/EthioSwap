@@ -282,14 +282,20 @@ export const updateKycStatus = mutation({
     if (!user) throw new Error("User not found");
 
     const rejectedCount = user.kycRejectedCount || 0;
+    const isApproved = args.status === "verified" || args.status === "approved";
     const isRejected = args.status === "rejected";
     const updates: any = {
-      kycStatus: args.status,
+      kycStatus: isApproved ? "approved" : args.status,
       kycRejectionReason: isRejected ? args.rejectionReason : undefined,
     };
 
+    if (isApproved) {
+      updates.is_verified_trader = true;
+    }
+
     if (isRejected) {
       updates.kycRejectedCount = rejectedCount + 1;
+      updates.is_verified_trader = false;
       
       if (rejectedCount + 1 >= 2) {
         updates.isFlagged = true;
@@ -302,8 +308,8 @@ export const updateKycStatus = mutation({
     // Trigger notification dispatcher
     await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
       userId: args.id,
-      type: args.status === "verified" ? "kyc_approved" : "kyc_rejected",
-      extraText: args.status === "verified" ? undefined : args.rejectionReason,
+      type: isApproved ? "kyc_approved" : "kyc_rejected",
+      extraText: isApproved ? undefined : args.rejectionReason,
     });
   },
 });
