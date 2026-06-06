@@ -549,7 +549,7 @@ export const AuthProvider = ({ children }) => {
 
   const submitRating = async (tradeId, rating, comment) => {
     try {
-      await submitTradeRatingMutation({ tradeId, rating, comment });
+      await submitTradeRatingMutation({ tradeId, rating, comment, userId: user._id || user.id });
       setSuccess('Rating submitted successfully!');
     } catch (err) {
       setError(err.message);
@@ -558,7 +558,7 @@ export const AuthProvider = ({ children }) => {
 
   const openDispute = async (tradeId, reason) => {
     try {
-      await openDisputeMutation({ tradeId, reason });
+      await openDisputeMutation({ tradeId, reason, userId: user._id || user.id });
       setSuccess('Dispute opened successfully. Escrow has been frozen.');
     } catch (err) {
       setError(err.message);
@@ -567,7 +567,7 @@ export const AuthProvider = ({ children }) => {
 
   const resolveDispute = async (disputeId, resolution, splitBuyerPercent, adminNote) => {
     try {
-      await resolveDisputeMutation({ disputeId, resolution, splitBuyerPercent, adminNote });
+      await resolveDisputeMutation({ disputeId, resolution, splitBuyerPercent, adminNote, userId: user._id || user.id });
       setSuccess('Dispute resolved successfully.');
     } catch (err) {
       setError(err.message);
@@ -576,7 +576,7 @@ export const AuthProvider = ({ children }) => {
 
   const uploadDisputeEvidence = async (tradeId, storageId) => {
     try {
-      await uploadDisputeEvidenceMutation({ tradeId, storageId });
+      await uploadDisputeEvidenceMutation({ tradeId, storageId, userId: user._id || user.id });
       setSuccess('Dispute evidence uploaded successfully.');
     } catch (err) {
       setError(err.message);

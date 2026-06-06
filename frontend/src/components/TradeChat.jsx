@@ -25,7 +25,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const isActive = ['payment_pending', 'paid', 'disputed'].includes(tradeStatus);
   const isFinished = ['completed', 'cancelled'].includes(tradeStatus);
 
-  const messagesFromQuery = useQuery(api.messages.listForTrade, { tradeId }) || [];
+  const messagesFromQuery = useQuery(api.messages.listForTrade, user ? { tradeId, userId: user._id || user.id } : "skip") || [];
   const sendMessageMutation = useMutation(api.messages.send);
   const markAsReadMutation = useMutation(api.messages.markAsRead);
 
@@ -48,7 +48,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     if (messages.length > 0 && user?.id) {
       const hasUnread = messages.some(m => m.sender_id !== user.id && !m.is_read);
       if (hasUnread) {
-        markAsReadMutation({ tradeId }).catch(console.error);
+        markAsReadMutation({ tradeId, userId: user.id || user._id }).catch(console.error);
       }
     }
   }, [messages, tradeId, user?.id, markAsReadMutation]);
@@ -67,6 +67,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
         senderUsername: user.username,
         messageText: msgText,
         messageType: 'text',
+        userId: user.id || user._id,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error sending message');
@@ -97,6 +98,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
           senderUsername: user.username,
           messageText: base64Data,
           messageType: 'image',
+          userId: user.id || user._id,
         });
       };
       reader.onerror = () => {

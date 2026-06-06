@@ -243,6 +243,7 @@ export const submitTradeRating = mutation({
     tradeId: v.id("trades"),
     rating: v.number(),
     comment: v.optional(v.string()),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
     const trade = await ctx.db.get(args.tradeId);
@@ -250,12 +251,7 @@ export const submitTradeRating = mutation({
     if (trade.status !== "completed") throw new Error("Trade is not completed yet");
 
     // Authenticate user
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     if (user._id !== trade.buyerId && user._id !== trade.sellerId) {
@@ -309,6 +305,7 @@ export const openDispute = mutation({
   args: {
     tradeId: v.id("trades"),
     reason: v.string(),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
     const trade = await ctx.db.get(args.tradeId);
@@ -323,12 +320,7 @@ export const openDispute = mutation({
       throw new Error("You must wait 30 minutes since trade start to open a dispute");
     }
 
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     if (user._id !== trade.buyerId && user._id !== trade.sellerId) {
@@ -371,14 +363,10 @@ export const uploadDisputeEvidence = mutation({
   args: {
     tradeId: v.id("trades"),
     storageId: v.string(),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const trade = await ctx.db.get(args.tradeId);
@@ -420,14 +408,10 @@ export const resolveDispute = mutation({
     resolution: v.string(), // "release_to_buyer" | "refund_to_seller" | "split"
     splitBuyerPercent: v.optional(v.number()),
     adminNote: v.string(),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const admin = await ctx.db.get(args.userId);
     if (!admin || admin.role !== "admin") throw new Error("Only admins can resolve disputes");
 
     const dispute = await ctx.db.get(args.disputeId);
@@ -532,14 +516,9 @@ export const resolveDispute = mutation({
 });
 
 export const listAllDisputes = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.userId);
     if (!admin || admin.role !== "admin") throw new Error("Forbidden");
 
     const allDisputes = await ctx.db.query("disputes").order("desc").collect();

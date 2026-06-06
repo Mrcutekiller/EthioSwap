@@ -3,17 +3,12 @@ import { v } from "convex/values";
 import { encryptText, decryptText } from "./utils";
 
 export const listForTrade = query({
-  args: { tradeId: v.id("trades") },
+  args: { tradeId: v.id("trades"), userId: v.id("users") },
   handler: async (ctx, args) => {
     const trade = await ctx.db.get(args.tradeId);
     if (!trade) return [];
 
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const isBuyer = user._id === trade.buyerId;
@@ -67,6 +62,7 @@ export const send = mutation({
     senderUsername: v.optional(v.string()),
     messageText: v.string(),
     messageType: v.string(), // "text" | "image" | "system"
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
     const trade = await ctx.db.get(args.tradeId);
@@ -76,12 +72,7 @@ export const send = mutation({
       throw new Error("Chat is locked because the trade has finished");
     }
 
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const isBuyer = user._id === trade.buyerId;
@@ -109,14 +100,9 @@ export const send = mutation({
 });
 
 export const markAsRead = mutation({
-  args: { tradeId: v.id("trades") },
+  args: { tradeId: v.id("trades"), userId: v.id("users") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
     const trade = await ctx.db.get(args.tradeId);

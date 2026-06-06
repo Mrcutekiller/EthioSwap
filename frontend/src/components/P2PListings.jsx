@@ -331,6 +331,35 @@ const P2PListings = () => {
           height: 0px;
           width: 0px;
         }
+
+        .p2p-listings-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        @media (min-width: 768px) {
+          .p2p-listings-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (min-width: 1200px) {
+          .p2p-listings-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        .search-sort-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          width: 100%;
+        }
+        @media (min-width: 576px) {
+          .search-sort-panel {
+            flex-direction: row;
+            align-items: center;
+          }
+        }
       `}</style>
 
       {/* ── Header ──────────────────────────────────────────── */}
@@ -546,7 +575,7 @@ const P2PListings = () => {
       </div>
 
       {/* ── Search & Sorting Control Panel ── */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div className="search-sort-panel">
         <div style={{ position: 'relative', flex: 1 }}>
           <span style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-secondary)', fontSize: '13px' }}>🔍</span>
           <input
@@ -799,7 +828,7 @@ const P2PListings = () => {
           }}
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="p2p-listings-grid">
           {filtered.map((listing, index) => {
             const effectiveRate = listing.customRateEtb || rate;
             const isOwnListing = listing.sellerId === user?._id || listing.sellerId === user?.id;

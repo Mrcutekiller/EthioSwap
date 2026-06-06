@@ -367,14 +367,9 @@ export const verifyOtpCode = mutation({
 
 // Admin Log Queries
 export const getOtpAttemptsLogs = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.userId);
     if (!admin || admin.role !== "admin") throw new Error("Forbidden");
 
     const logs = await ctx.db.query("otpAttemptsLogs").order("desc").collect();
@@ -393,14 +388,9 @@ export const getOtpAttemptsLogs = query({
 });
 
 export const getNotificationLogs = query({
-  args: { channel: v.optional(v.string()) },
+  args: { userId: v.id("users"), channel: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email))
-      .first();
+    const admin = await ctx.db.get(args.userId);
     if (!admin || admin.role !== "admin") throw new Error("Forbidden");
 
     let query = ctx.db.query("notificationLogs");

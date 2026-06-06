@@ -391,14 +391,14 @@ const AdminPanel = ({ user }) => {
   const allUsersList = useQuery(api.users.listAll) || [];
   const kycQueue = useQuery(api.users.listKycQueue) || [];
   const auditLogs = useQuery(api.adminAuditLogs.list) || [];
-  const adminAnalytics = useQuery(api.stats.getAdminAnalytics);
+  const adminAnalytics = useQuery(api.stats.getAdminAnalytics, user ? { userId: user._id || user.id } : "skip");
   const disputes = useQuery(api.trades.listDisputed) || [];
   const supportTickets = useQuery(api.supportTickets.listAll) || [];
   const allReviews = useQuery(api.reviews.listAll) || [];
   
   // OTP & Notification Logs
-  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs) || [];
-  const notificationLogs = useQuery(api.otp.getNotificationLogs) || [];
+  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs, user ? { userId: user._id || user.id } : "skip") || [];
+  const notificationLogs = useQuery(api.otp.getNotificationLogs, user ? { userId: user._id || user.id } : "skip") || [];
   const resendNotificationAction = useAction(api.otp.resendNotification);
 
   // Mutations
