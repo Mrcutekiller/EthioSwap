@@ -35,9 +35,14 @@ export const get = query({
 });
 
 export const getAdminAnalytics = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const admin = await ctx.db.get(args.userId);
+    const adminId = ctx.db.normalizeId("users", args.userId);
+    if (!adminId) {
+      console.warn(`Invalid userId in getAdminAnalytics: ${args.userId}`);
+      return null;
+    }
+    const admin = await ctx.db.get(adminId);
     if (!admin || admin.role !== "admin") {
       console.warn(`Unauthorized getAdminAnalytics query from userId: ${args.userId}`);
       return null;

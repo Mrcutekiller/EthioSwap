@@ -268,9 +268,18 @@ export const getTraderProfileStats = query({
 
 // Admin Query: List recent P2P trade ratings and statistics
 export const listAllTradeRatings = query({
-  args: { adminId: v.id("users") },
+  args: { adminId: v.string() },
   handler: async (ctx, args) => {
-    const admin = await ctx.db.get(args.adminId);
+    const adminId = ctx.db.normalizeId("users", args.adminId);
+    if (!adminId) {
+      return {
+        ratings: [],
+        totalRatings: 0,
+        averagePlatformRating: 5.0,
+        todayCount: 0,
+      };
+    }
+    const admin = await ctx.db.get(adminId);
     if (!admin || admin.role !== "admin") {
       return {
         ratings: [],
@@ -280,7 +289,7 @@ export const listAllTradeRatings = query({
       };
     }
 
-    const allRatings = await ctx.db.query("tradeRatings").order("desc").collect();
+    const allRatings = await ctx.db.query("tradeRatings").order("desc").take(200);
 
     // Enrich ratings with usernames
     const enrichedRatings = await Promise.all(
@@ -318,21 +327,26 @@ export const listAllTradeRatings = query({
 
 // Admin Query: Get given/received ratings history for a user drawer
 export const getUserRatingsHistory = query({
-  args: { adminId: v.id("users"), targetUserId: v.id("users") },
+  args: { adminId: v.string(), targetUserId: v.string() },
   handler: async (ctx, args) => {
-    const admin = await ctx.db.get(args.adminId);
+    const adminId = ctx.db.normalizeId("users", args.adminId);
+    const targetUserId = ctx.db.normalizeId("users", args.targetUserId);
+    if (!adminId || !targetUserId) {
+      return { received: [], given: [] };
+    }
+    const admin = await ctx.db.get(adminId);
     if (!admin || admin.role !== "admin") {
       return { received: [], given: [] };
     }
 
     const received = await ctx.db
       .query("tradeRatings")
-      .withIndex("by_rated", (q) => q.eq("ratedId", args.targetUserId))
+      .withIndex("by_rated", (q) => q.eq("ratedId", targetUserId))
       .collect();
 
     const given = await ctx.db
       .query("tradeRatings")
-      .withIndex("by_rater", (q) => q.eq("raterId", args.targetUserId))
+      .withIndex("by_rater", (q) => q.eq("raterId", targetUserId))
       .collect();
 
     const enrichedReceived = await Promise.all(
