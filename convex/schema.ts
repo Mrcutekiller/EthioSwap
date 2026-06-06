@@ -19,14 +19,11 @@ export default defineSchema({
     tradeCount: v.optional(v.union(v.number(), v.null())),
     isBanned: v.optional(v.union(v.boolean(), v.null())),
     isSuspended: v.optional(v.union(v.boolean(), v.null())),
-    successfulInvites: v.optional(v.union(v.number(), v.null())),
     totalTrades: v.optional(v.union(v.number(), v.null())),
     totalVolume: v.optional(v.union(v.number(), v.null())),
     loyalty_points: v.optional(v.union(v.number(), v.null())),
     longest_streak: v.optional(v.union(v.number(), v.null())),
     is_verified_trader: v.optional(v.union(v.boolean(), v.null())),
-    referralCode: v.optional(v.union(v.string(), v.null())),
-    referredBy: v.optional(v.union(v.string(), v.null())),
     numericId: v.optional(v.union(v.number(), v.null())),
     twoFaEnabled: v.optional(v.union(v.boolean(), v.null())),
     twoFaMethod: v.optional(v.union(v.string(), v.null())),
@@ -55,6 +52,11 @@ export default defineSchema({
     
     // Ratings & Verification
     averageRating: v.optional(v.number()),
+    avg_rating: v.optional(v.number()),
+    total_ratings: v.optional(v.number()),
+    total_completed_trades: v.optional(v.number()),
+    positive_percentage: v.optional(v.number()),
+    reputationBadge: v.optional(v.string()),
     
     // Telegram Connection
     telegramChatId: v.optional(v.string()),
@@ -62,6 +64,9 @@ export default defineSchema({
     telegramLinkExpires: v.optional(v.number()),
     telegramLinked: v.optional(v.boolean()),
     telegramLinkToken: v.optional(v.string()),
+    telegram_chat_id: v.optional(v.union(v.string(), v.null())),
+    telegram_connected: v.optional(v.union(v.boolean(), v.null())),
+    telegram_connected_at: v.optional(v.union(v.string(), v.null())),
     
     // OTP Lockout status
     otpFailures: v.optional(v.union(v.number(), v.null())),
@@ -187,9 +192,9 @@ export default defineSchema({
     withdrawalFeePercent: v.optional(v.number()),
     minDepositUSD: v.optional(v.number()),
     minWithdrawalUSD: v.optional(v.number()),
+    minP2pListingUSD: v.optional(v.number()),
     maxDailyWithdrawalUSD: v.optional(v.number()),
     pointsPerTrade: v.optional(v.number()),
-    referralBonusPoints: v.optional(v.number()),
     isLeaderboardEnabled: v.optional(v.boolean()),
     collectedFeesETH: v.optional(v.number()),
     masterWalletAddress: v.optional(v.string()),
@@ -250,13 +255,7 @@ export default defineSchema({
     network: v.optional(v.string()),
   }),
 
-  inviteRewards: defineTable({
-    referrerId: v.id("users"),
-    referredId: v.id("users"),
-    rewardAmount: v.optional(v.number()),
-    rewardStatus: v.optional(v.string()),
-    createdAt: v.string(),
-  }),
+
 
   messages: defineTable({
     tradeId: v.id("trades"),
@@ -273,12 +272,30 @@ export default defineSchema({
     tradeId: v.id("trades"),
     raterId: v.id("users"),
     ratedId: v.id("users"),
-    rating: v.number(),
-    comment: v.optional(v.string()),
+    rating: v.number(), // stars: 1 to 5
+    comment: v.optional(v.string()), // short review text (max 200 chars)
+    raterType: v.string(), // "buyer" | "seller"
+    lowRatingReason: v.optional(v.string()), // saved if stars < 3
+    isFlagged: v.optional(v.boolean()), // flag/delete fake reviews
+    flaggedReason: v.optional(v.string()),
     createdAt: v.string(),
   })
   .index("by_trade", ["tradeId"])
-  .index("by_rated", ["ratedId"]),
+  .index("by_rated", ["ratedId"])
+  .index("by_rater", ["raterId"]),
+
+  login_otps: defineTable({
+    userId: v.id("users"),
+    otpCode: v.string(), // hashed
+    telegramChatId: v.optional(v.string()),
+    expiresAt: v.number(),
+    isUsed: v.boolean(),
+    attemptCount: v.number(),
+    createdAt: v.string(),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_otpCode", ["otpCode"])
+  .index("by_expiresAt", ["expiresAt"]),
 
   disputeAuditLogs: defineTable({
     adminId: v.id("users"),

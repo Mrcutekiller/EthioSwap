@@ -21,6 +21,8 @@ export const listActive = query({
           sellerAverageRating: seller?.averageRating || 5.0,
           isSellerVerifiedTrader: seller?.is_verified_trader || false,
           sellerKycStatus: seller?.kycStatus || "unverified",
+          sellerPositivePercentage: seller?.positive_percentage || 0,
+          sellerReputationBadge: seller?.reputationBadge || "none",
         };
       })
     );

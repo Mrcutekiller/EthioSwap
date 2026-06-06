@@ -7,8 +7,6 @@ import P2PListings from './components/P2PListings.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import TradeRoom from './components/TradeRoom.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
-import Leaderboard from './components/Leaderboard.jsx';
-import InviteEarn from './components/InviteEarn.jsx';
 import TransactionHistory from './pages/TransactionHistory.jsx';
 import AppLockScreen from './components/AppLockScreen.jsx';
 import { NotificationCenter, useNotifCount } from './components/NotificationCenter.jsx';
@@ -50,7 +48,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
-  const [referralCode, setReferralCode] = useState('');
   const [localError, setLocalError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
@@ -215,7 +212,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         setLocalError('You must be at least 18 years old to join.');
         return;
       }
-      const result = await register(username, password, phone, email, fullName, age, referralCode);
+      const result = await register(username, password, phone, email, fullName, age);
       if (result) {
         if (result.status === 'otp_required') {
           setOtpData(result);
@@ -787,16 +784,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                         <i className="auth-input-icon ti ti-calendar-event"></i>
                       </div>
                     </div>
-                    <div className="auth-input-group">
-                      <input 
-                        className="auth-input" 
-                        type="text" 
-                        placeholder="Referral Code (Optional)" 
-                        value={referralCode} 
-                        onChange={e => setReferralCode(e.target.value.toUpperCase())} 
-                      />
-                      <i className="auth-input-icon ti ti-gift"></i>
-                    </div>
+
                   </>
                 )}
 
@@ -1168,8 +1156,6 @@ const AppShell = () => {
         { id: 'wallet',   label: 'Wallet',   icon: Icons.wallet },
         { id: 'trades',   label: 'Trades',   icon: Icons.trades,   badge: activeTrades },
         { id: 'history',  label: 'History',  icon: Icons.history },
-        { id: 'invite',   label: 'Invite',   icon: Icons.gift },
-        { id: 'leaderboard', label: 'Ranks', icon: Icons.leaderboard },
         { id: 'profile',  label: 'Profile',  icon: Icons.person },
         { id: 'settings', label: 'Settings', icon: Icons.settings },
       ];
@@ -1372,8 +1358,7 @@ const AppShell = () => {
         {tab === 'wallet'   && <WalletCard />}
         {tab === 'trades'   && <TradeRoom />}
         {tab === 'history'  && <TransactionHistory />}
-        {tab === 'invite'   && <InviteEarn user={user} systemSettings={systemSettings} />}
-        {tab === 'leaderboard' && <Leaderboard user={user} />}
+
         {tab === 'profile'  && <ProfilePage user={user} wallet={wallet} onUserUpdate={updateUser} systemSettings={systemSettings} />}
         {tab === 'settings' && <SettingsPage user={user} onLogout={logout} />}
         {tab === 'admin'    && <AdminPanel user={user} />}

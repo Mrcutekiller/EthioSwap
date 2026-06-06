@@ -9,37 +9,104 @@ import { api } from "convex-api";
 const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   const [stars, setStars] = useState(5);
   const [review, setReview] = useState('');
+  const [lowRatingReason, setLowRatingReason] = useState('');
   const { t } = useTranslation();
 
+  const handleRatingSubmit = () => {
+    if (stars < 3 && !lowRatingReason) {
+      alert("Please select a reason for the low rating.");
+      return;
+    }
+    onSubmit(stars, review, lowRatingReason);
+  };
+
+  const partnerName = trade.buyerId === ratedUserId ? trade.buyerName : trade.sellerName;
+
   return (
-    <div className="modal-overlay">
-      <div className="card glass-card" style={{ maxWidth: '400px', width: '90%', padding: '24px', textAlign: 'center' }}>
-        <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>Rate your trade!</h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>How was your experience with @{trade.buyerId === ratedUserId ? trade.buyerName : trade.sellerName}?</p>
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px'
+    }}>
+      <div className="card glass-card" style={{ maxWidth: '420px', width: '100%', padding: '28px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+          <CheckCircle size={32} />
+        </div>
+        <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Trade Complete!</h3>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+          Rate your experience with <strong style={{ color: 'var(--gold)' }}>@{partnerName}</strong>
+        </p>
         
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
+        {/* Avatar */}
+        <div style={{
+          width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '22px', fontWeight: 800, color: 'var(--gold)', margin: '0 auto 24px auto'
+        }}>
+          {partnerName ? partnerName.charAt(0).toUpperCase() : 'U'}
+        </div>
+
+        {/* Stars */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
           {[1, 2, 3, 4, 5].map(s => (
             <Star 
               key={s} 
-              size={32} 
+              size={36} 
               fill={s <= stars ? '#f5c518' : 'none'} 
-              color={s <= stars ? '#f5c518' : 'var(--text-3)'} 
-              style={{ cursor: 'pointer' }}
+              color={s <= stars ? '#f5c518' : 'rgba(255,255,255,0.15)'} 
+              style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
               onClick={() => setStars(s)}
             />
           ))}
         </div>
 
+        {/* Low rating handling */}
+        {stars < 3 && (
+          <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+            <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#f43f5e', display: 'block', marginBottom: '8px' }}>
+              Why the low rating? (Required)
+            </label>
+            <select 
+              value={lowRatingReason} 
+              onChange={e => setLowRatingReason(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: '8px', background: '#0d1117',
+                border: '1px solid rgba(244,63,94,0.3)', color: '#f0f2f8', fontSize: '13px', outline: 'none'
+              }}
+            >
+              <option value="">-- Select a reason --</option>
+              <option value="Slow response or payment delay">Extremely slow response / payment delay</option>
+              <option value="Unprofessional or rude communication">Unprofessional or rude communication</option>
+              <option value="Stale or expired payment details">Stale / expired payment details provided</option>
+              <option value="Suspicious behavior or payment mismatch">Suspicious behavior / payment mismatch</option>
+              <option value="Other">Other</option>
+            </select>
+            {lowRatingReason === 'Other' && (
+              <input 
+                type="text"
+                placeholder="Specify reason..."
+                onChange={e => setLowRatingReason(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: '8px', background: '#0d1117',
+                  border: '1px solid rgba(255,255,255,0.08)', color: '#f0f2f8', fontSize: '13px', marginTop: '8px', outline: 'none'
+                }}
+              />
+            )}
+          </div>
+        )}
+
         <textarea 
           className="input" 
-          placeholder="Write a review (optional)..." 
-          style={{ height: '80px', marginBottom: '20px' }}
+          placeholder="Write a review (optional, max 200 chars)..." 
+          maxLength={200}
+          style={{ height: '80px', marginBottom: '24px', background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}
           value={review}
           onChange={e => setReview(e.target.value)}
         ></textarea>
 
-        <button className="btn btn-gold btn-full" onClick={() => onSubmit(stars, review)}>Submit Rating</button>
-        <button className="btn btn-ghost btn-full" style={{ marginTop: '10px' }} onClick={onClose}>Skip</button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-ghost" style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)' }} onClick={onClose}>Skip</button>
+          <button className="btn btn-gold" style={{ flex: 1 }} onClick={handleRatingSubmit}>Submit Rating</button>
+        </div>
       </div>
     </div>
   );
@@ -154,9 +221,28 @@ const TradeRoom = () => {
   const { t } = useTranslation();
   const [selectedTradeId, setSelectedTradeId] = useState(null);
   const [showRating, setShowRating] = useState(false);
+  const [skippedTrades, setSkippedTrades] = useState({});
   const [timeRemaining, setTimeRemaining] = useState('');
 
   const activeTrade = trades.find(t => t._id === selectedTradeId);
+
+  useEffect(() => {
+    if (activeTrade && activeTrade.status === 'completed' && activeTrade.ratingGiven === null) {
+      if (skippedTrades[activeTrade._id]) {
+        setShowRating(false);
+        return;
+      }
+      const completedTime = activeTrade.completedAt ? new Date(activeTrade.completedAt).getTime() : Date.now();
+      const expired = Date.now() - completedTime > 48 * 60 * 60 * 1000;
+      if (!expired) {
+        setShowRating(true);
+      } else {
+        setShowRating(false);
+      }
+    } else {
+      setShowRating(false);
+    }
+  }, [activeTrade?._id, activeTrade?.status, activeTrade?.ratingGiven, skippedTrades]);
 
   useEffect(() => {
     if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') {
@@ -191,7 +277,6 @@ const TradeRoom = () => {
   const handleRelease = async () => {
     if (!window.confirm("Confirm that you have received the payment? This will release the ETH to the buyer.")) return;
     await releaseEscrow(activeTrade._id);
-    setShowRating(true);
   };
 
   const handleCancel = async () => {
@@ -211,9 +296,13 @@ const TradeRoom = () => {
     if (reason) await openDispute(activeTrade._id, reason);
   };
 
-  const handleRatingSubmit = async (stars, review) => {
-    await submitRating(activeTrade._id, stars, review);
-    setShowRating(false);
+  const handleRatingSubmit = async (stars, review, lowRatingReason) => {
+    try {
+      await submitRating(activeTrade._id, stars, review, lowRatingReason);
+      setShowRating(false);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   if (trades.length === 0) {
@@ -302,7 +391,10 @@ const TradeRoom = () => {
             <RatingModal 
               trade={activeTrade} 
               ratedUserId={user._id === activeTrade.buyerId ? activeTrade.sellerId : activeTrade.buyerId} 
-              onClose={() => setShowRating(false)}
+              onClose={() => {
+                setSkippedTrades(prev => ({ ...prev, [activeTrade._id]: true }));
+                setShowRating(false);
+              }}
               onSubmit={handleRatingSubmit}
             />
           )}

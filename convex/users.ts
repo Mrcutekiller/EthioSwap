@@ -33,7 +33,6 @@ export const create = mutation({
     ethAddress: v.string(),
     ethPrivateKey: v.string(),
     age: v.optional(v.union(v.number(), v.null())),
-    referredBy: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     if (args.email) {
@@ -72,8 +71,6 @@ export const create = mutation({
       preferredVerificationMethod: "sms",
     });
 
-    // Generate referral code for new user
-    const userReferralCode = args.username.toLowerCase() + "_" + Math.floor(1000 + Math.random() * 9000);
     const randomBytes = new Uint8Array(8);
     crypto.getRandomValues(randomBytes);
     const tokenHex = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -82,7 +79,6 @@ export const create = mutation({
       : undefined;
 
     await ctx.db.patch(userId, {
-      referralCode: userReferralCode,
       telegramLinkToken,
       telegramLinked: false,
     });
@@ -497,7 +493,8 @@ export const updateNotificationSettings = mutation({
 
 export const verifyLoginOtp = mutation({
   args: {
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
+    email: v.optional(v.string()),
     code: v.string(),
     deviceFingerprint: v.string(),
     deviceName: v.string(),
@@ -505,18 +502,119 @@ export const verifyLoginOtp = mutation({
     trustDevice: v.boolean(),
   },
   handler: async (ctx, args) => {
-    // 1. Verify OTP using the helper
-    await verifyAndInvalidateOtp(ctx.db, args.userId, "login", args.code);
+    let user = null;
+    if (args.userId) {
+      user = await ctx.db.get(args.userId);
+    }
+    if (!user && args.email) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first();
+      if (!user) {
+        user = await ctx.db
+          .query("users")
+          .withIndex("by_username", (q) => q.eq("username", args.email))
+          .first();
+      }
+    }
 
-    const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
+    const userId = user._id;
+
+    // Admin bypass: skip OTP entirely
+    if (user.role !== "admin") {
+      const now = Date.now();
+
+      // Check lockout
+      if (user.otpLockedUntil && now < user.otpLockedUntil) {
+        const minutesLeft = Math.ceil((user.otpLockedUntil - now) / 60000);
+        throw new Error(`Too many failed OTP attempts. Your account is locked. Please try again in ${minutesLeft} minutes.`);
+      }
+
+      // Hash code to verify
+      const hashedCode = sha256Sync(args.code);
+
+      // Find valid OTP record
+      const otpRecord = await ctx.db
+        .query("login_otps")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("otpCode"), hashedCode),
+            q.eq(q.field("isUsed"), false),
+            q.gt(q.field("expiresAt"), now)
+          )
+        )
+        .first();
+
+      // Insert log
+      await ctx.db.insert("otpAttemptsLogs", {
+        userId,
+        purpose: "login",
+        codeEntered: args.code,
+        channel: otpRecord ? "telegram" : "unknown",
+        status: otpRecord ? "success" : "failed_incorrect",
+        createdAt: new Date().toISOString(),
+      });
+
+      const handleFailure = async (errorMessage: string) => {
+        const newFailures = (user.otpFailures || 0) + 1;
+        if (newFailures >= 3) {
+          await ctx.db.patch(userId, {
+            otpFailures: 3,
+            otpLockedUntil: now + 15 * 60 * 1000,
+          });
+          throw new Error("Too many attempts. Please wait 15 minutes.");
+        } else {
+          await ctx.db.patch(userId, {
+            otpFailures: newFailures,
+          });
+          throw new Error(errorMessage);
+        }
+      };
+
+      if (!otpRecord) {
+        // Increment attempts on active OTPs
+        const activeOtps = await ctx.db
+          .query("login_otps")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .filter((q) => q.eq(q.field("isUsed"), false))
+          .collect();
+
+        for (const activeOtp of activeOtps) {
+          const attempts = (activeOtp.attemptCount || 0) + 1;
+          if (attempts >= 5) {
+            await ctx.db.patch(activeOtp._id, { isUsed: true, attemptCount: attempts });
+          } else {
+            await ctx.db.patch(activeOtp._id, { attemptCount: attempts });
+          }
+        }
+        await handleFailure("Invalid or expired code. Please request a new one.");
+        return; // satisfy typescript
+      }
+
+      const attempts = (otpRecord.attemptCount || 0) + 1;
+      if (attempts > 5) {
+        await ctx.db.patch(otpRecord._id, { isUsed: true, attemptCount: attempts });
+        await handleFailure("Code expired. Please request a new code.");
+        return;
+      }
+
+      // Invalidate this OTP and reset failures
+      await ctx.db.patch(userId, {
+        otpFailures: 0,
+        otpLockedUntil: null,
+      });
+      await ctx.db.patch(otpRecord._id, { isUsed: true, attemptCount: attempts });
+    }
 
     // 2. Register trusted device if requested
     if (args.trustDevice) {
       const existingTrusted = await ctx.db
         .query("trustedDevices")
         .withIndex("by_user_fingerprint", (q) =>
-          q.eq("userId", args.userId).eq("deviceFingerprint", args.deviceFingerprint)
+          q.eq("userId", userId).eq("deviceFingerprint", args.deviceFingerprint)
         )
         .first();
 
@@ -530,7 +628,7 @@ export const verifyLoginOtp = mutation({
         });
       } else {
         await ctx.db.insert("trustedDevices", {
-          userId: args.userId,
+          userId,
           deviceFingerprint: args.deviceFingerprint,
           deviceName: args.deviceName,
           location: args.location || "Addis Ababa, Ethiopia",
@@ -545,7 +643,7 @@ export const verifyLoginOtp = mutation({
     const alertMsg = `New Login Detected\n\nDevice: ${args.deviceName}\nLocation: ${args.location || "Addis Ababa, Ethiopia"}\nTime: ${timeStr}\n\nIf this wasn't you, secure your account immediately.`;
 
     await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
-      userId: args.userId,
+      userId,
       type: "security_alert",
       extraText: alertMsg,
     });
@@ -580,45 +678,7 @@ export const verifySignupOtp = mutation({
     }
     await ctx.db.patch(args.userId, updates);
 
-    // 3. Process referral rewards now that the user is verified!
-    if (user.referredBy) {
-      let referrer = await ctx.db
-        .query("users")
-        .filter((q) => q.eq(q.field("referralCode"), user.referredBy))
-        .first();
 
-      if (!referrer) {
-        referrer = await ctx.db
-          .query("users")
-          .withIndex("by_username", (q) => q.eq("username", user.referredBy))
-          .first();
-      }
-
-      if (referrer && String(referrer._id) !== String(args.userId)) {
-        const settings = await ctx.db.query("systemSettings").first();
-        const points = settings?.referralBonusPoints || 50;
-
-        await ctx.db.patch(referrer._id, {
-          loyalty_points: (referrer.loyalty_points || 0) + points,
-          successfulInvites: (referrer.successfulInvites || 0) + 1,
-        });
-
-        await ctx.db.insert("inviteRewards", {
-          referrerId: referrer._id,
-          referredId: args.userId,
-          rewardAmount: points,
-          rewardStatus: "paid",
-          createdAt: new Date().toISOString(),
-        });
-
-        // Send notification to the referrer
-        await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
-          userId: referrer._id,
-          type: "invite_reward",
-          extraText: `${points}`,
-        });
-      }
-    }
 
     // 4. Welcome Notification
     await ctx.db.insert("notifications", {
@@ -632,7 +692,7 @@ export const verifySignupOtp = mutation({
 
     // 5. Send Welcome Email via Action
     if (user.email) {
-      await ctx.scheduler.runAfter(0, internal.users.sendWelcomeEmailAction, {
+      await ctx.scheduler.runAfter(0, api.users.sendWelcomeEmailAction, {
         email: user.email,
         username: user.username,
       });

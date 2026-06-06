@@ -23,6 +23,7 @@ const repColor = (rep) => rep >= 95 ? '#10B981' : rep >= 80 ? '#E8B84B' : '#EF44
 const P2PListings = () => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings } = useAuth();
 
+  const [viewingTraderId, setViewingTraderId] = useState(null);
   const [p2pTab, setP2pTabState] = useState(() => {
     return localStorage.getItem(`ethioswap_active_p2p_tab_${user?.id}`) || 'buy';
   });
@@ -107,14 +108,15 @@ const P2PListings = () => {
       alert('Please fill in all fields.');
       return;
     }
-    if (parseFloat(amountEth) < 1) {
-      alert('Minimum ad amount is $1.00 USD.');
+    const minP2pListing = systemSettings?.minP2pListingUSD ?? 1.0;
+    if (parseFloat(amountEth) < minP2pListing) {
+      alert(`Minimum ad amount is $${minP2pListing.toFixed(2)} USD.`);
       return;
     }
     const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : rate;
     const minUSD = parseFloat(minLimit) / effectiveRate;
-    if (minUSD < 0.99) {
-      alert(`Minimum transaction limit must be at least $1.00 USD equivalent (≈ ${Math.round(effectiveRate)} ETB).`);
+    if (minUSD < (minP2pListing - 0.01)) {
+      alert(`Minimum transaction limit must be at least $${minP2pListing.toFixed(2)} USD equivalent (≈ ${Math.round(minP2pListing * effectiveRate)} ETB).`);
       return;
     }
 
@@ -146,7 +148,8 @@ const P2PListings = () => {
     }
     setTradeError('');
     const amt = parseFloat(tradeamountEth);
-    if (isNaN(amt) || amt < 1) { setTradeError('Minimum transaction amount is $1.00 USD.'); return; }
+    const minP2pListingVal = systemSettings?.minP2pListingUSD ?? 1.0;
+    if (isNaN(amt) || amt < minP2pListingVal) { setTradeError(`Minimum transaction amount is $${minP2pListingVal.toFixed(2)} USD.`); return; }
     if (amt > selectedListing.amountEth) {
       setTradeError(`Maximum available is $${(selectedListing.amountEth ?? 0).toFixed(2)} USD.`);
       return;
@@ -873,20 +876,26 @@ const P2PListings = () => {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>@{listing.sellerName}</span>
-                        {listing.sellerKycStatus === 'verified' && (
+                        <span 
+                          onClick={(e) => { e.stopPropagation(); setViewingTraderId(listing.sellerId); }}
+                          style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        >
+                          @{listing.sellerName}
+                        </span>
+                        {(listing.sellerKycStatus === 'verified' || listing.sellerKycStatus === 'approved') && (
                           <span style={{ 
                             background: 'rgba(0,212,160,0.12)', 
                             color: '#00d4a0', 
                             fontSize: '8.5px', 
                             fontWeight: 700, 
-                            padding: '1px 5px', 
+                            padding: '2px 6px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            border: '1px solid rgba(0,212,160,0.2)'
                           }}>
-                            🛡️ KYC
+                            ✅ Verified
                           </span>
                         )}
                         {listing.isSellerVerifiedTrader && (
@@ -895,22 +904,29 @@ const P2PListings = () => {
                             color: '#f5c518', 
                             fontSize: '8.5px', 
                             fontWeight: 700, 
-                            padding: '1px 5px', 
+                            padding: '2px 6px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            border: '1px solid rgba(245,197,24,0.2)'
                           }}>
                             ★ Pro
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                        <span style={{ color: '#f5c518', fontWeight: 700 }}>
-                          ★ {(listing.sellerAverageRating || 5.0).toFixed(1)}
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span style={{ color: '#f5c518', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          ⭐ {(listing.sellerAverageRating || 5.0).toFixed(1)}
+                        </span>
+                        <span style={{ color: 'var(--text-3)' }}>
+                          ({listing.sellerTotalTrades || 0} trades)
                         </span>
                         <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                        <span>{listing.sellerTotalTrades || 0} trades</span>
+                        <span style={{ color: '#00d4a0', fontWeight: 600 }}>
+                          👍 {listing.sellerPositivePercentage || 100}% positive
+                        </span>
+
                       </div>
                     </div>
                   </div>
@@ -1267,12 +1283,26 @@ const P2PListings = () => {
             {/* Partner info */}
             <div style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-              borderRadius: '10px', padding: '12px', marginBottom: '16px',
+              borderRadius: '12px', padding: '16px', marginBottom: '16px',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>@{selectedListing.sellerName}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{selectedListing.sellerReputation}% reputation</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setShowBuyModal(false); setViewingTraderId(selectedListing.sellerId); }}>
+                    @{selectedListing.sellerName}
+                  </span>
+                  {(selectedListing.sellerKycStatus === 'verified' || selectedListing.sellerKycStatus === 'approved') && (
+                    <span style={{ background: 'rgba(0,212,160,0.12)', color: '#00d4a0', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
+                      ✅ Verified
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span>⭐ {(selectedListing.sellerAverageRating || 5.0).toFixed(1)}</span>
+                  <span>({selectedListing.sellerTotalTrades || 0} trades)</span>
+                  <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
+                  <span style={{ color: '#00d4a0' }}>👍 {selectedListing.sellerPositivePercentage || 100}% positive</span>
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
@@ -1457,6 +1487,129 @@ const P2PListings = () => {
           </div>
         </div>
       )}
+      {/* Trader Profile Modal */}
+      {(() => {
+        if (!viewingTraderId) return null;
+        return <TraderProfileModal viewingTraderId={viewingTraderId} setViewingTraderId={setViewingTraderId} />;
+      })()}
+    </div>
+  );
+};
+
+// Helper Trader Profile Modal Component to query Convex and display stats
+const TraderProfileModal = ({ viewingTraderId, setViewingTraderId }) => {
+  const traderStats = useQuery(api.tradeRatings.getTraderProfileStats, { userId: viewingTraderId });
+
+  if (!traderStats) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100
+      }}>
+        <div className="card glass-card" style={{ padding: '28px', textAlign: 'center', color: '#fff' }}>
+          Loading Trader Reputation...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px'
+    }} onClick={() => setViewingTraderId(null)}>
+      <div className="card glass-card custom-scrollbar" style={{ maxWidth: '480px', width: '100%', padding: '28px', border: '1px solid rgba(255,255,255,0.08)', animation: 'fadeIn 0.2s ease', overflowY: 'auto', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#8b92a8', letterSpacing: '0.08em' }}>TRADER REPUTATION</h3>
+          <button onClick={() => setViewingTraderId(null)} className="btn btn-sm btn-ghost" style={{ padding: '4px 8px', fontSize: '16px', color: 'var(--text-3)' }}>✕</button>
+        </div>
+
+        {/* User Card */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--gold)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 800 }}>
+            {traderStats.username.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              @{traderStats.username}
+              {traderStats.kycApproved && (
+                <span style={{ fontSize: '12px', color: '#00d4a0' }} title="KYC Verified">✅</span>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* Major Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase' }}>AVERAGE RATING</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--gold)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ⭐ {Number(traderStats.averageRating || 0).toFixed(1)} <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>/ 5.0</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>Based on {traderStats.totalRatings} ratings</div>
+          </div>
+          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase' }}>POSITIVE FEEDBACK</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#00d4a0', marginTop: '4px' }}>
+              👍 {traderStats.positivePercentage}% <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>Positive</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>{traderStats.totalCompletedTrades} completed trades</div>
+          </div>
+        </div>
+
+        {/* Disputes count */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.12)', padding: '12px 16px', borderRadius: '10px', marginBottom: '24px', fontSize: '13px' }}>
+          <span style={{ color: '#f43f5e', fontWeight: 600 }}>⚠️ Disputes History</span>
+          <span style={{ fontWeight: 700, color: '#f43f5e' }}>{traderStats.totalDisputes} Disputes ({traderStats.resolvedDisputes} resolved)</span>
+        </div>
+
+        {/* Rating breakdown bars */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RATING BREAKDOWN</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {traderStats.breakdown.map((row) => (
+              <div key={row.stars} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
+                <span style={{ width: '50px', color: 'var(--text-secondary)', textAlign: 'right' }}>{row.stars} ★</span>
+                <div style={{ flex: 1, height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '99px', overflow: 'hidden' }}>
+                  <div style={{ width: `${row.pct}%`, height: '100%', background: 'var(--gold)', borderRadius: '99px' }} />
+                </div>
+                <span style={{ width: '30px', color: 'var(--text-muted)', textAlign: 'right', fontSize: '11px' }}>{row.count}</span>
+                <span style={{ width: '35px', color: 'var(--text-secondary)', textAlign: 'right', fontWeight: 600 }}>{row.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent reviews list */}
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RECENT REVIEWS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {traderStats.recentReviews.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-3)', fontSize: '13px' }}>No reviews yet</div>
+            ) : traderStats.recentReviews.map((rev) => (
+              <div key={rev._id} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ color: 'var(--gold)', letterSpacing: '1px', fontSize: '12px' }}>
+                    {'★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating)}
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                    {new Date(rev.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {rev.comment && (
+                  <p style={{ margin: '0 0 6px 0', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
+                    "{rev.comment}"
+                  </p>
+                )}
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                  By @{rev.raterName} ({rev.raterType})
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -183,17 +183,18 @@ export const dispatchNotification = mutation({
         tgMsg = `❌ <b>KYC Rejected!</b>\n\nYour identity verification request was rejected.\nReason: ${args.extraText || ""}`;
         break;
 
+      case "low_rating":
+        notifTitle = "Low Rating Received";
+        smsMsg = "EthioSwap Alert: You received a low rating. Provide great service to maintain your reputation.";
+        tgMsg = `⚠️ <b>Low Rating Alert</b>\n\n${args.extraText || "You received a low rating. Provide great service to maintain your reputation."}`;
+        break;
+
       case "security_alert":
         smsMsg = `EthioSwap Security Alert: ${args.extraText || ""}`;
         tgMsg = `🛡️ <b>Security Alert</b>\n\n${args.extraText || ""}`;
         break;
 
-      case "invite_reward":
-        smsMsg = isAm
-          ? `EthioSwap: የግብዣ ሽልማት ደርሷል! ${args.extraText} ነጥቦች ወደ መለያዎ ታክለዋል።`
-          : `EthioSwap: Invite Reward Received! ${args.extraText} points added to your balance.`;
-        tgMsg = `🏆 <b>Invite Reward Received</b>\n\n${args.extraText} points successfully credited to your referral balance. Thank you for sharing EthioSwap!`;
-        break;
+
 
       default:
         smsMsg = `EthioSwap Alert: ${args.extraText || ""}`;

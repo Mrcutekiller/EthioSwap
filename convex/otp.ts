@@ -1,8 +1,9 @@
 import { mutation, internalMutation, action, internalAction, query } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { DatabaseWriter, DatabaseReader } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { sha256Sync } from "./utils";
 
 // Generate a new 6-digit OTP code for a user
 export const generateOtp = mutation({
@@ -93,7 +94,22 @@ export const generateOtp = mutation({
     const randomBuffer = new Uint32Array(1);
     crypto.getRandomValues(randomBuffer);
     const code = (100000 + (randomBuffer[0] % 900000)).toString();
-    const expiresAt = now + 5 * 60 * 1000; // 5 minutes
+    const duration = args.purpose === "login" ? 10 * 60 * 1000 : 5 * 60 * 1000;
+    const expiresAt = now + duration;
+
+    // Save to the login_otps table if it's a login OTP
+    if (args.purpose === "login") {
+      const hashedCode = sha256Sync(code);
+      await ctx.db.insert("login_otps", {
+        userId: args.userId,
+        otpCode: hashedCode,
+        telegramChatId: user.telegramChatId || user.telegram_chat_id || undefined,
+        expiresAt,
+        isUsed: false,
+        attemptCount: 0,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     const otpId = await ctx.db.insert("otps", {
       userId: args.userId,
@@ -185,7 +201,11 @@ export const sendOtpAction = internalAction({
         await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
       }
     } else if (args.channel === "telegram") {
-      const tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
+      let tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
+      
+      if (args.purpose === "login") {
+        tgMsg = `🔐 <b>EthioSwap Login Code</b>\n\nYour code: <code>${args.code}</code>\n\n⏰ Expires in 10 minutes\n❌ Never share this code\n\nNot you? Secure your account:\n<a href="https://ethioswap.com/profile">Security Settings</a>`;
+      }
 
       const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
         userId: args.userId,
@@ -426,10 +446,10 @@ export const getNotificationLogs = query({
 export const resendNotification = action({
   args: { logId: v.id("notificationLogs") },
   handler: async (ctx, args) => {
-    const log = await ctx.runQuery(internal.otp.getNotificationLogInternal, { logId: args.logId });
+    const log = await ctx.runQuery(api.otp.getNotificationLogInternal, { logId: args.logId });
     if (!log) throw new Error("Log not found");
 
-    const user = await ctx.runQuery(internal.otp.getUserInternal, { userId: log.userId });
+    const user = await ctx.runQuery(api.otp.getUserInternal, { userId: log.userId });
     if (!user) throw new Error("User not found");
 
     if (log.channel === "sms") {

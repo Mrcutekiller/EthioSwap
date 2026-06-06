@@ -3,209 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useMutation } from "convex/react";
 import { api } from "convex-api";
-import { Globe, Shield, Bell, Info, LogOut, Smartphone, Mail, Lock, Moon, Sun, Monitor } from 'lucide-react';
+import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
-/* ── Interactive 3x3 SVG Pattern Lock Drawing Grid ──────────────── */
-const PatternLock = ({ onPatternComplete, error, isSetup, step }) => {
-  const [activeDots, setActiveDots] = useState([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPos, setCurrentPos] = useState(null);
-  const containerRef = React.useRef(null);
-
-  const dots = [
-    { id: 0, x: 40, y: 40 },
-    { id: 1, x: 140, y: 40 },
-    { id: 2, x: 240, y: 40 },
-    { id: 3, x: 40, y: 140 },
-    { id: 4, x: 140, y: 140 },
-    { id: 5, x: 240, y: 140 },
-    { id: 6, x: 40, y: 240 },
-    { id: 7, x: 140, y: 240 },
-    { id: 8, x: 240, y: 240 },
-  ];
-
-  const handleStart = (id) => {
-    setIsDrawing(true);
-    setActiveDots([id]);
-  };
-
-  const checkDotCollision = (clientX, clientY) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    setCurrentPos({ x, y });
-
-    for (const dot of dots) {
-      const dx = x - dot.x;
-      const dy = y - dot.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 24) {
-        if (!activeDots.includes(dot.id)) {
-          setActiveDots((prev) => [...prev, dot.id]);
-        }
-      }
-    }
-  };
-
-  const handleMove = (e) => {
-    if (!isDrawing) return;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    checkDotCollision(clientX, clientY);
-  };
-
-  const handleEnd = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    setCurrentPos(null);
-    if (activeDots.length >= 3) {
-      onPatternComplete(activeDots.join('-'));
-    } else if (activeDots.length > 0) {
-      setActiveDots([]);
-    }
-  };
-
-  React.useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setActiveDots([]), 850);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
-
-  React.useEffect(() => {
-    setActiveDots([]);
-  }, [step]);
-
-  return (
-    <div
-      ref={containerRef}
-      onMouseMove={handleMove}
-      onTouchMove={handleMove}
-      onMouseUp={handleEnd}
-      onTouchEnd={handleEnd}
-      onMouseLeave={handleEnd}
-      style={{
-        position: 'relative',
-        width: '280px',
-        height: '280px',
-        background: 'rgba(255,255,255,0.015)',
-        border: '1px solid var(--border)',
-        borderRadius: '24px',
-        margin: '0 auto 20px',
-        touchAction: 'none',
-        userSelect: 'none',
-      }}
-    >
-      <svg
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-        }}
-      >
-        {activeDots.map((dotId, index) => {
-          if (index === 0) return null;
-          const prevDot = dots[activeDots[index - 1]];
-          const currDot = dots[dotId];
-          return (
-            <line
-              key={index}
-              x1={prevDot.x}
-              y1={prevDot.y}
-              x2={currDot.x}
-              y2={currDot.y}
-              stroke={error ? 'var(--status-danger-text)' : 'var(--gold)'}
-              strokeWidth="4"
-              strokeLinecap="round"
-              style={{ filter: error ? 'none' : 'drop-shadow(0 0 5px var(--gold))' }}
-            />
-          );
-        })}
-
-        {isDrawing && activeDots.length > 0 && currentPos && (
-          <line
-            x1={dots[activeDots[activeDots.length - 1]].x}
-            y1={dots[activeDots[activeDots.length - 1]].y}
-            x2={currentPos.x}
-            y2={currentPos.y}
-            stroke="rgba(200,150,44,0.45)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        )}
-      </svg>
-
-      {dots.map((dot) => {
-        const isActive = activeDots.includes(dot.id);
-        return (
-          <div
-            key={dot.id}
-            onMouseDown={() => handleStart(dot.id)}
-            onTouchStart={() => handleStart(dot.id)}
-            style={{
-              position: 'absolute',
-              left: `${dot.x - 22}px`,
-              top: `${dot.y - 22}px`,
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                border: `2px solid ${
-                  isActive
-                    ? error
-                      ? 'var(--status-danger-text)'
-                      : 'var(--gold)'
-                    : 'var(--border-hover)'
-                }`,
-                background: isActive
-                  ? error
-                    ? 'rgba(239,68,68,0.1)'
-                    : 'var(--gold-bg)'
-                  : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.15s ease',
-                transform: isActive ? 'scale(1.15)' : 'scale(1)',
-                boxShadow: isActive && !error ? 'var(--shadow-gold)' : 'none',
-              }}
-            >
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: isActive
-                    ? error
-                      ? 'var(--status-danger-text)'
-                      : 'var(--gold-light)'
-                    : 'rgba(255,255,255,0.2)',
-                  transition: 'all 0.15s ease',
-                }}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
+const SettingsPage = ({ user, onLogout }) => {
   const { t, i18n } = useTranslation();
   const { updateUser, sendOtp } = useAuth();
   const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
@@ -299,10 +99,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     }
   };
 
-  const [lockMethod, setLockMethod] = useState(localStorage.getItem('ethioswap_lock_method') || 'pin');
-  const [lockEnabled, setLockEnabled] = useState(localStorage.getItem('ethioswap_lock_enabled') !== 'false');
   const [lang, setLang] = useState(i18n.language || 'en');
-  const [theme, setTheme] = useState(localStorage.getItem('ethioswap_theme') || 'system');
 
   const changeLanguage = async (newLang) => {
     i18n.changeLanguage(newLang);
@@ -313,41 +110,9 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     }
   };
 
-  const changeTheme = async (newTheme) => {
-    setTheme(newTheme);
-    localStorage.setItem('ethioswap_theme', newTheme);
-    if (user) {
-      await updateUser({ themePreference: newTheme });
-    }
-  };
-
-  const toggleLockEnabled = () => {
-    const next = !lockEnabled;
-    setLockEnabled(next);
-    localStorage.setItem('ethioswap_lock_enabled', next ? 'true' : 'false');
-  };
   const [notifPrefs, setNotifPrefs] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ethioswap_notif_prefs') || '{}'); } catch { return {}; }
   });
-  const [settingPin, setSettingPin] = useState(false);
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinStep, setPinStep] = useState('new'); // 'new' | 'confirm'
-  const [pinError, setPinError] = useState('');
-  const [pinSuccess, setPinSuccess] = useState('');
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricRegistered, setBiometricRegistered] = useState(!!localStorage.getItem('ethioswap_webauthn_credId'));
-  const [biometricLoading, setBiometricLoading] = useState(false);
-  const [settingPattern, setSettingPattern] = useState(false);
-  const [patternStep, setPatternStep] = useState('new');
-  const [firstPattern, setFirstPattern] = useState('');
-  const [patternError, setPatternError] = useState('');
-
-  useEffect(() => {
-    if (window.PublicKeyCredential) {
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(v => setBiometricAvailable(v)).catch(() => {});
-    }
-  }, []);
 
   const notifTypes = [
     { key: 'trades',      label: 'Trade Updates',       desc: 'When a buyer opens a trade or seller releases' },
@@ -363,101 +128,6 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
     setNotifPrefs(updated);
     localStorage.setItem('ethioswap_notif_prefs', JSON.stringify(updated));
   };
-
-  const handleLockMethodChange = (method) => {
-    setLockMethod(method);
-    localStorage.setItem('ethioswap_lock_method', method);
-    if (onLockMethodChange) onLockMethodChange(method);
-  };
-
-  const handlePatternComplete = (patternString) => {
-    setPatternError('');
-    if (patternStep === 'new') {
-      setFirstPattern(patternString);
-      setPatternStep('confirm');
-    } else {
-      if (patternString === firstPattern) {
-        localStorage.setItem('ethioswap_lock_pattern', patternString);
-        localStorage.setItem('ethioswap_lock_method', 'pattern');
-        setLockMethod('pattern');
-        if (onLockMethodChange) onLockMethodChange('pattern');
-        setPinSuccess('Pattern lock set successfully!');
-        setSettingPattern(false);
-        setFirstPattern(''); setPatternStep('new');
-      } else {
-        setPatternError('Patterns do not match. Try again.');
-      }
-    }
-  };
-
-  // PIN numpad entry
-  const handlePinKey = (key) => {
-    setPinError('');
-    if (key === 'del') {
-      if (pinStep === 'new') setNewPin(p => p.slice(0,-1));
-      else setConfirmPin(p => p.slice(0,-1));
-      return;
-    }
-    if (pinStep === 'new') {
-      const updated = newPin + key;
-      setNewPin(updated);
-      if (updated.length === 6) {
-        setTimeout(() => { setPinStep('confirm'); }, 200);
-      }
-    } else {
-      const updated = confirmPin + key;
-      setConfirmPin(updated);
-      if (updated.length === 6) {
-        setTimeout(() => {
-          if (updated === newPin) {
-            localStorage.setItem('ethioswap_lock_pin', newPin);
-            if (onPinChange) onPinChange(newPin);
-            setPinSuccess('PIN set successfully!');
-            setSettingPin(false);
-            setNewPin(''); setConfirmPin(''); setPinStep('new');
-          } else {
-            setPinError('PINs do not match. Try again.');
-            setConfirmPin('');
-          }
-        }, 150);
-      }
-    }
-  };
-
-  // Register WebAuthn credential
-  const registerBiometric = async () => {
-    setBiometricLoading(true);
-    setPinError('');
-    try {
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
-      const userId = new TextEncoder().encode(user.id);
-
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: 'EthioSwap', id: window.location.hostname },
-          user: { id: userId, name: user.username, displayName: user.username },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-          timeout: 60000,
-          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-        }
-      });
-
-      // Store credential ID for future auth
-      const credId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      localStorage.setItem('ethioswap_webauthn_credId', credId);
-      setBiometricRegistered(true);
-      handleLockMethodChange('biometric');
-      setPinSuccess('Biometric lock enabled!');
-    } catch (err) {
-      setPinError(err.name === 'NotAllowedError' ? 'Biometric registration cancelled.' : 'Could not register biometric. Try PIN instead.');
-    } finally {
-      setBiometricLoading(false);
-    }
-  };
-
-  const currentPin = localStorage.getItem('ethioswap_lock_pin') || '123456';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
@@ -486,24 +156,6 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
             style={{ flex: 1 }}
           >
             አማርኛ
-          </button>
-        </div>
-      </div>
-
-      {/* Theme Selector */}
-      <div className="card">
-        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Moon size={16} /> Theme
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => changeTheme('dark')} className={`btn ${theme === 'dark' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Moon size={14} /> Dark
-          </button>
-          <button onClick={() => changeTheme('light')} className={`btn ${theme === 'light' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Sun size={14} /> Light
-          </button>
-          <button onClick={() => changeTheme('system')} className={`btn ${theme === 'system' ? 'btn-gold' : 'btn-ghost'}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Monitor size={14} /> System
           </button>
         </div>
       </div>
@@ -546,8 +198,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
         </div>
       </div>
 
-
-      {/* Notification Channels (SMS, Telegram, Email & Preferred OTP) */}
+      {/* Notification Channels */}
       <div className="card">
         <div className="section-title">{t('Notification Channels')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -737,7 +388,7 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
             'Never share your login password or PIN with anyone.',
             'Admins will NEVER ask for your private key or payment outside the app.',
             'Always verify bank transfers in your bank app before releasing USD.',
-            'Use Biometric lock if your device supports it for maximum security.'
+            'Use secure PIN lock to protect your wallet access.'
           ].map((tip, i) => (
             <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '11px', color: 'var(--text-2)', lineHeight: '1.4' }}>
               <span style={{ color: 'var(--gold-light)' }}>•</span>
@@ -769,73 +420,142 @@ const SettingsPage = ({ user, onLogout, onLockMethodChange, onPinChange }) => {
         Sign Out
       </button>
 
-      {/* SET PIN SHEET */}
-      {settingPin && (
-        <div className="overlay modal-center">
-          <div className="modal-box" style={{ textAlign: 'center', maxWidth: '320px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>
-              {pinStep === 'new' ? 'Enter New PIN' : 'Confirm PIN'}
-            </h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '24px' }}>
-              {pinStep === 'new' ? 'Choose a 6-digit PIN to lock your app' : 'Re-enter your PIN to confirm'}
+      {/* Settings OTP Modal */}
+      {showSettingsOtp && (
+        <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Security Verification</h3>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+              Enter the 6-digit OTP code to verify disconnection request.
             </p>
 
-            {/* Dots */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '28px' }}>
-              {[...Array(6)].map((_, i) => {
-                const current = pinStep === 'new' ? newPin : confirmPin;
-                return (
-                  <div key={i} style={{ width: '14px', height: '14px', borderRadius: '50%', background: i < current.length ? 'var(--gold)' : 'transparent', border: `2px solid ${i < current.length ? 'var(--gold)' : 'var(--border-hover)'}`, transition: 'all 0.15s ease', boxShadow: i < current.length ? 'var(--shadow-gold)' : 'none' }} />
-                );
-              })}
+            {/* Delivery channel selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={async () => { setSettingsOtpChannel('sms'); await triggerSettingsOtp('sms'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: settingsOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
+                  color: settingsOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                💬 SMS OTP
+              </button>
+              <button
+                type="button"
+                disabled={!user.telegramChatId}
+                onClick={async () => { setSettingsOtpChannel('telegram'); await triggerSettingsOtp('telegram'); }}
+                style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
+                  background: settingsOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
+                  color: settingsOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
+                  opacity: user.telegramChatId ? 1 : 0.5,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                ✈️ Telegram
+              </button>
             </div>
 
-            {pinError && <p style={{ color: 'var(--status-danger-text)', fontSize: '12px', marginBottom: '12px' }}>⚠ {pinError}</p>}
+            <form onSubmit={handleSettingsOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={settingsOtpCode}
+                onChange={e => setSettingsOtpCode(e.target.value.replace(/\D/g, ''))}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  color: '#ffffff',
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '6px',
+                  outline: 'none',
+                }}
+                className="input"
+                autoFocus
+              />
 
-            {/* Numpad */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', maxWidth: '260px', margin: '0 auto 16px' }}>
-              {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k, i) => (
-                k === '' ? <div key={i} /> :
-                <button key={i} onClick={() => handlePinKey(k === '⌫' ? 'del' : k)}
-                  style={{ aspectRatio: '1', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: k === '⌫' ? '18px' : '20px', fontWeight: 600, color: 'var(--text-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.1s ease' }}
-                  onMouseDown={e => e.currentTarget.style.background = 'var(--gold-bg)'}
-                  onMouseUp={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-                >{k}</button>
-              ))}
+              {settingsOtpError && (
+                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
+                  ⚠ {settingsOtpError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={settingsOtpLoading || settingsSendingOtp}
+                className="btn btn-gold btn-full"
+                style={{
+                  height: '44px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                  color: '#0A0C12',
+                  border: 'none',
+                  borderRadius: '10px',
+                  width: '100%',
+                  cursor: 'pointer',
+                }}
+              >
+                {settingsOtpLoading ? '⏳ Disconnecting...' : 'Verify & Disconnect'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '14px' }}>
+              {settingsResendTimer > 0 ? (
+                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {settingsResendTimer}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => triggerSettingsOtp(settingsOtpChannel)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold-light)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Resend Code
+                </button>
+              )}
             </div>
 
-            <button onClick={() => { setSettingPin(false); setNewPin(''); setConfirmPin(''); setPinStep('new'); setPinError(''); }} className="btn btn-ghost btn-sm btn-full">
+            <button
+              type="button"
+              onClick={() => setShowSettingsOtp(false)}
+              className="btn btn-ghost btn-sm btn-full"
+              style={{ marginTop: '12px', width: '100%' }}
+            >
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      {/* SET PATTERN SHEET */}
-      {settingPattern && (
-        <div className="overlay modal-center">
-          <div className="modal-box" style={{ textAlign: 'center', maxWidth: '320px', padding: '24px 20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-1)' }}>
-              {patternStep === 'new' ? 'Draw New Pattern' : 'Confirm Pattern'}
-            </h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '24px' }}>
-              {patternStep === 'new' ? 'Connect at least 3 dots to set a secure pattern' : 'Draw the pattern again to confirm and save'}
-            </p>
-
-            <PatternLock
-              onPatternComplete={handlePatternComplete}
-              error={!!patternError}
-              step={patternStep}
-            />
-
-            {patternError && <p style={{ color: 'var(--status-danger-text)', fontSize: '12px', marginBottom: '16px', fontWeight: 500 }}>⚠ {patternError}</p>}
-
-            <button onClick={() => { setSettingPattern(false); setFirstPattern(''); setPatternStep('new'); setPatternError(''); }} className="btn btn-ghost btn-sm btn-full" style={{ padding: '10px' }}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

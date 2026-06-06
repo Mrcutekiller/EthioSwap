@@ -109,14 +109,12 @@ export const AuthProvider = ({ children }) => {
   const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
   const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
 
-  // Fetch user-specific deposits, withdrawals, and invite rewards defensively
+  // Fetch user-specific deposits and withdrawals defensively
   const userDepositsQuery = useQuery(api.depositRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
   const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
-  const inviteRewardsQuery = useQuery(api.inviteRewards.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
 
   const myDepositReqs = user ? (isAdmin ? allDepositReqs.filter(r => r.userId === user._id) : userDepositsQuery).map(r => ({ ...r, id: r._id })) : [];
   const myWithdrawalReqs = user ? (isAdmin ? allWithdrawalReqs.filter(r => r.userId === user._id) : userWithdrawalsQuery).map(r => ({ ...r, id: r._id })) : [];
-  const referrals = inviteRewardsQuery.map(r => ({ ...r, id: r._id }));
   const myTransactions = trades; 
 
   const createUser = useMutation(api.users.create);
@@ -134,7 +132,7 @@ export const AuthProvider = ({ children }) => {
   const markPaidMutation = useMutation(api.trades.markPaid);
   const releaseEthMutation = useMutation(api.trades.releaseEth);
   const cancelTradeMutation = useMutation(api.trades.cancelTrade);
-  const submitTradeRatingMutation = useMutation(api.trades.submitTradeRating);
+  const submitTradeRatingMutation = useMutation(api.tradeRatings.submitTradeRating);
   const openDisputeMutation = useMutation(api.trades.openDispute);
   const resolveDisputeMutation = useMutation(api.trades.resolveDispute);
   const uploadDisputeEvidenceMutation = useMutation(api.trades.uploadDisputeEvidence);
@@ -215,22 +213,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, password, phone, email, fullName, age, referralCode) => {
+  const register = async (username, password, phone, email, fullName, age) => {
     setLoading(true);
     setError(null);
     try {
+      const privateKey = ethers.Wallet.createRandom().privateKey;
+      const address = new ethers.Wallet(privateKey).address;
+      
       const isAdminRole = email.toLowerCase().includes('admin');
       const userId = await createUser({
         username,
         email,
-        password, // Pass password for storage
+        password,
         fullName,
         phone,
         age: age ? Number(age) : null,
         role: isAdminRole ? 'admin' : 'user',
-        ethAddress: '0x' + Math.random().toString(16).slice(2, 42),
-        ethPrivateKey: '0x' + Math.random().toString(16).slice(2, 66),
-        referredBy: referralCode || null,
+        ethAddress: address,
+        ethPrivateKey: privateKey,
       });
 
       if (isAdminRole) {
@@ -318,6 +318,8 @@ export const AuthProvider = ({ children }) => {
         amountEth: amountUSD / ETH_USD_PRICE, // simplified conversion
         screenshotUrl,
         otpCode,
+        walletType: network,
+        senderReference: txHash,
       });
       setSuccess('Deposit request submitted!');
       return { success: true };
@@ -329,15 +331,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const withdrawETH = async (amountEth, address, otpCode) => {
+  const withdrawETH = async (amountUSD, address, otpCode, network) => {
     if (!user) return;
     setLoading(true);
     try {
       await createWithdrawMutation({
         userId: user._id,
-        amountEth: amountEth,
+        amountEth: amountUSD / ETH_USD_PRICE,
+        amountUSD,
         address,
         otpCode,
+        network,
+        walletType: network,
       });
       setSuccess('Withdrawal request submitted!');
       return { success: true };
@@ -547,12 +552,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const submitRating = async (tradeId, rating, comment) => {
+  const submitRating = async (tradeId, rating, comment, lowRatingReason) => {
     try {
-      await submitTradeRatingMutation({ tradeId, rating, comment, userId: user._id || user.id });
+      await submitTradeRatingMutation({ tradeId, rating, comment, lowRatingReason, userId: user._id || user.id });
       setSuccess('Rating submitted successfully!');
     } catch (err) {
       setError(err.message);
+      throw err;
     }
   };
 
@@ -667,7 +673,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, wallet, listings, trades, systemSettings,
       allDepositReqs, allWithdrawalReqs,
-      myDepositReqs, myWithdrawalReqs, myTransactions, referrals,
+      myDepositReqs, myWithdrawalReqs, myTransactions,
       error, success, loading, initializing, isLocked,
       login, register, logout, createListing, initiateTrade,
       createDepositRequest, withdrawETH, savePaymentAccounts, sendById,

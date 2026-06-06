@@ -35,7 +35,12 @@ export const sendTelegramAction = internalAction({
       });
 
       if (!response.ok) {
-        throw new Error(`Telegram API returned status ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const desc = errorData.description || "";
+        if (response.status === 403 || desc.toLowerCase().includes("blocked")) {
+          await ctx.runMutation(api.telegram.disconnectTelegramInternal, { userId: args.userId });
+        }
+        throw new Error(`Telegram API returned status ${response.status}: ${desc}`);
       }
 
       await ctx.runMutation(internal.telegram.updateTelegramLogStatus, {
@@ -112,6 +117,9 @@ export const verifyAndLinkCode = mutation({
       telegramLinked: true,
       telegramLinkCode: undefined,
       telegramLinkExpires: undefined,
+      telegram_chat_id: args.chatId,
+      telegram_connected: true,
+      telegram_connected_at: new Date().toISOString(),
     });
 
     await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
@@ -129,8 +137,6 @@ export const verifyAndLinkCode = mutation({
       ethBalance: user.ethBalance || 0,
       etbBalance: user.etbBalance || 0,
       totalTrades: user.totalTrades || 0,
-      referralCode: user.referralCode || "None",
-      successfulInvites: user.successfulInvites || 0,
     };
   },
 });
@@ -206,10 +212,10 @@ export const handleTelegramWebhook = internalAction({
 
     if (text.startsWith("/start ")) {
       const linkToken = text.substring(7).trim();
-      const user = await ctx.runQuery(internal.telegram.getPendingUserByToken, { token: linkToken });
+      const user = await ctx.runQuery(api.telegram.getPendingUserByToken, { token: linkToken });
 
       if (user) {
-        await ctx.runMutation(internal.telegram.updateUserTelegramChatId, {
+        await ctx.runMutation(api.telegram.updateUserTelegramChatId, {
           userId: user._id,
           chatId,
         });
@@ -234,28 +240,20 @@ export const handleTelegramWebhook = internalAction({
     if (/^\d{6}$/.test(text)) {
       await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
 
-      const linkResult = await ctx.runMutation(internal.telegram.verifyAndLinkCode, {
+      const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
         code: text,
         chatId,
       });
 
       if (linkResult.success) {
-        const kycText = linkResult.kycStatus === "approved" ? "✅ Verified" : "❌ Unverified";
         await sendReply(
-          `🎉 <b>Successfully Connected!</b> Your Telegram account has been linked to EthioSwap.\n\n` +
-          `👤 <b>Profile Details:</b>\n` +
-          `• <b>User ID:</b> #${linkResult.numericId}\n` +
-          `• <b>Username:</b> @${linkResult.username}\n` +
-          `• <b>Email:</b> ${linkResult.email}\n` +
-          `• <b>Verification Status:</b> ${kycText}\n\n` +
-          `💰 <b>Balances:</b>\n` +
-          `• <b>USDT Balance:</b> ${linkResult.ethBalance.toFixed(2)} USDT\n` +
-          `• <b>ETB Balance:</b> ${linkResult.etbBalance.toLocaleString()} ETB\n\n` +
-          `📈 <b>Stats & Referrals:</b>\n` +
-          `• <b>Total P2P Trades:</b> ${linkResult.totalTrades}\n` +
-          `• <b>Invite Code:</b> <code>${linkResult.referralCode}</code>\n` +
-          `• <b>Successful Invites:</b> ${linkResult.successfulInvites}\n\n` +
-          `You will now receive instant alerts for all your deposits, withdrawals, invites, and P2P trades!`
+          `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
+          `You will receive:\n` +
+          `🔐 Login OTP codes\n` +
+          `💰 Deposit confirmations\n` +
+          `📤 Withdrawal alerts\n` +
+          `🔔 Trade notifications\n\n` +
+          `Type /help for commands`
         );
       } else {
         await sendReply(
@@ -266,15 +264,15 @@ export const handleTelegramWebhook = internalAction({
     }
 
     if (text === "/status") {
-      const user = await ctx.runQuery(internal.telegram.getUserByTelegramId, { chatId });
+      const user = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
       if (!user) {
         await sendReply(
-          `⚠️ <b>Unlinked Account</b>\n\nYour Telegram is not connected to any EthioSwap account. Please link your account first:\n1. Open EthioSwap Profile Settings\n2. Click "Connect Telegram" to get a 6-digit code\n3. Send the 6-digit code here.`
+          `⚠️ <b>Unlinked Account</b>\n\nYour Telegram is not connected to any EthioSwap account.`
         );
         return { ok: true };
       }
 
-      const activeTrades = await ctx.runQuery(internal.telegram.getActiveTradesForUser, { userId: user._id });
+      const activeTrades = await ctx.runQuery(api.telegram.getActiveTradesForUser, { userId: user._id });
       
       let tradesText = "";
       if (activeTrades.length === 0) {
@@ -291,8 +289,92 @@ export const handleTelegramWebhook = internalAction({
       return { ok: true };
     }
 
+    if (text === "/help") {
+      await sendReply(
+        `📚 <b>EthioSwap Bot Commands</b>\n\n` +
+        `• /start - Connect/Link your account\n` +
+        `• /help - Show this guide\n` +
+        `• /otp - Request a fresh login OTP code\n` +
+        `• /balance - Check your wallet balance\n` +
+        `• /rates - Check live USDT rates\n` +
+        `• /stop - Disconnect Telegram notifications`
+      );
+      return { ok: true };
+    }
+
+    if (text === "/otp") {
+      const user = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
+      if (!user) {
+        await sendReply(
+          `❌ <b>Telegram not connected.</b> Please login with password first on the website, then connect Telegram.`
+        );
+        return { ok: true };
+      }
+
+      await sendReply(`🔄 <b>Generating fresh login OTP...</b>`);
+
+      await ctx.runMutation(api.otp.generateOtp, {
+        userId: user._id,
+        purpose: "login",
+        channel: "telegram",
+      });
+
+      return { ok: true };
+    }
+
+    if (text === "/balance") {
+      const user = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
+      if (!user) {
+        await sendReply(
+          `❌ <b>Telegram not connected.</b> Please connect your account first.`
+        );
+        return { ok: true };
+      }
+
+      await sendReply(
+        `💰 <b>EthioSwap Balances</b>\n\n` +
+        `• <b>USDT Balance:</b> ${(user.ethBalance || 0).toFixed(2)} USDT\n` +
+        `• <b>ETB Balance:</b> ${(user.etbBalance || 0).toLocaleString()} ETB\n` +
+        `• <b>Locked Escrow:</b> ${(user.ethLocked || 0).toFixed(2)} USDT`
+      );
+      return { ok: true };
+    }
+
+    if (text === "/rates") {
+      const settings = await ctx.db.query("systemSettings").first();
+      const buyRate = settings?.etbRatePerDollar || 110;
+      const sellRate = settings?.etbRatePerDollarSell || settings?.etbRatePerDollar || 108;
+
+      await sendReply(
+        `📈 <b>Live USDT Rates</b>\n\n` +
+        `• <b>Buy Rate:</b> ${buyRate} ETB per USDT\n` +
+        `• <b>Sell Rate:</b> ${sellRate} ETB per USDT`
+      );
+      return { ok: true };
+    }
+
+    if (text === "/stop") {
+      const user = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
+      if (!user) {
+        await sendReply(`❌ <b>Telegram not connected.</b>`);
+        return { ok: true };
+      }
+
+      await ctx.runMutation(api.telegram.disconnectTelegramInternal, { userId: user._id });
+
+      await sendReply(
+        `🔌 <b>Telegram Disconnected!</b> You will no longer receive alerts or OTP codes on Telegram. Log in with password to reconnect.`
+      );
+      return { ok: true };
+    }
+
     await sendReply(
-      `👋 <b>Welcome to EthioSwap Bot!</b>\n\nTo link this Telegram account to your EthioSwap account:\n1. Open the EthioSwap website/app and go to <b>Profile Settings</b>.\n2. Click <b>🔌 Connect Telegram Bot</b> to get your 6-digit verification code.\n3. Send that 6-digit code here to connect your account and start receiving alerts!`
+      `👋 <b>Welcome to EthioSwap Bot!</b>\n\n` +
+      `Type /help to see all available commands.\n\n` +
+      `To link this Telegram account to your EthioSwap account:\n` +
+      `1. Open the EthioSwap website/app and go to <b>Profile Settings</b>.\n` +
+      `2. Click <b>🔌 Connect Telegram Bot</b> to get your 6-digit verification code.\n` +
+      `3. Send that 6-digit code here to connect your account and start receiving alerts!`
     );
 
     return { ok: true };
@@ -338,6 +420,33 @@ export const registerWebhook = action({
     });
     const result = await response.json();
     return result;
+  },
+});
+
+export const disconnectTelegramInternal = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return;
+
+    await ctx.db.patch(args.userId, {
+      telegramChatId: undefined,
+      telegramLinkCode: undefined,
+      telegramLinkExpires: undefined,
+      telegramLinked: false,
+      telegramEnabled: false,
+      telegram_chat_id: undefined,
+      telegram_connected: false,
+      telegram_connected_at: undefined,
+    });
+
+    if (user.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendNotification, {
+        to: user.email,
+        subject: "Telegram Disconnected 🔌",
+        text: `Hi ${user.username},\n\nYour Telegram bot connection has been disconnected.\n\nPlease log in with your password to reconnect your Telegram account.\n\nBest regards,\nThe EthioSwap Team`,
+      });
+    }
   },
 });
 

@@ -24,164 +24,28 @@ import {
   Lock
 } from 'lucide-react';
 
-// 6 Premium, custom-illustrated inline SVG avatar templates
-const AVATAR_TEMPLATES = [
-  {
-    id: 'cyberpunk_coder',
-    name: 'Cyberpunk Coder',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#4f46e5" />
-          <stop offset="100%" stop-color="#06b6d4" />
-        </linearGradient>
-        <linearGradient id="hair1" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#06b6d4" />
-          <stop offset="100%" stop-color="#3b82f6" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg1)" />
-      <path d="M 25 85 C 25 72, 35 68, 50 68 C 65 68, 75 72, 75 85 Z" fill="#1e293b" />
-      <path d="M 38 68 L 50 82 L 62 68" stroke="#06b6d4" stroke-width="2" fill="none" />
-      <rect x="44" y="55" width="12" height="15" fill="#e2e8f0" rx="3" />
-      <circle cx="50" cy="45" r="18" fill="#f8fafc" />
-      <path d="M 32 40 C 32 24, 45 20, 50 20 C 58 20, 68 24, 68 40 C 66 38, 64 36, 60 38 C 55 40, 52 32, 48 35 C 44 38, 38 35, 32 40 Z" fill="url(#hair1)" />
-      <rect x="35" y="38" width="30" height="10" rx="5" fill="#f43f5e" opacity="0.9" />
-      <rect x="37" y="40" width="26" height="6" rx="3" fill="#ff7e93" />
-      <line x1="32" y1="43" x2="68" y2="43" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="2,2" />
-    </svg>`
-  },
-  {
-    id: 'crypto_guru',
-    name: 'Crypto Guru',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#b45309" />
-          <stop offset="100%" stop-color="#f5c518" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg2)" />
-      <circle cx="50" cy="30" r="24" stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.3" />
-      <path d="M 22 90 C 22 75, 32 70, 50 70 C 68 70, 78 75, 78 90 Z" fill="#0f172a" />
-      <path d="M 45 70 L 50 85 L 55 70" stroke="#f5c518" stroke-width="2" fill="none" />
-      <rect x="42" y="76" width="16" height="15" fill="#ffffff" />
-      <rect x="44" y="58" width="12" height="14" fill="#f59e0b" rx="2" />
-      <circle cx="50" cy="45" r="17" fill="#facc15" />
-      <path d="M 33 45 C 33 58, 40 64, 50 64 C 60 64, 67 58, 67 45" fill="none" stroke="#e2e8f0" stroke-width="4.5" stroke-linecap="round" />
-      <path d="M 44 54 C 47 56, 53 56, 56 54" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round" />
-      <path d="M 33 40 C 31 30, 38 25, 50 25 C 62 25, 69 30, 67 40 C 62 38, 58 35, 50 35 C 42 35, 38 38, 33 40 Z" fill="#f1f5f9" />
-      <circle cx="42" cy="43" r="6" stroke="#ffffff" stroke-width="1.5" fill="none" />
-      <circle cx="58" cy="43" r="6" stroke="#ffffff" stroke-width="1.5" fill="none" />
-      <line x1="48" y1="43" x2="52" y2="43" stroke="#ffffff" stroke-width="1.5" />
-    </svg>`
-  },
-  {
-    id: 'defi_nomad',
-    name: 'DeFi Nomad',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#064e3b" />
-          <stop offset="100%" stop-color="#10b981" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg3)" />
-      <path d="M 23 88 C 23 74, 33 70, 50 70 C 67 70, 77 74, 77 88 Z" fill="#0f172a" />
-      <path d="M 40 70 L 50 79 L 60 70" stroke="#f43f5e" stroke-width="3" fill="none" />
-      <rect x="44" y="58" width="12" height="15" fill="#fcd34d" rx="2" />
-      <path d="M 33 60 C 33 72, 67 72, 67 60" stroke="#10b981" stroke-width="4.5" fill="none" stroke-linecap="round" />
-      <rect x="30" y="52" width="6" height="10" rx="3" fill="#10b981" />
-      <rect x="64" y="52" width="6" height="10" rx="3" fill="#10b981" />
-      <circle cx="50" cy="45" r="17" fill="#fcd34d" />
-      <path d="M 33 38 C 33 24, 40 22, 50 22 C 60 22, 67 24, 67 38 Z" fill="#f97316" />
-      <rect x="31" y="34" width="38" height="6" rx="2" fill="#ea580c" />
-      <path d="M 34 46 C 34 56, 40 61, 50 61 C 60 61, 66 56, 66 46" stroke="#451a03" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.65" />
-      <rect x="36" y="40" width="10" height="7" rx="2" stroke="#1e293b" stroke-width="1.5" fill="none" />
-      <rect x="54" y="40" width="10" height="7" rx="2" stroke="#1e293b" stroke-width="1.5" fill="none" />
-      <line x1="46" y1="43" x2="54" y2="43" stroke="#1e293b" stroke-width="1.5" />
-    </svg>`
-  },
-  {
-    id: 'alpha_trader',
-    name: 'Alpha Trader',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#1e3a8a" />
-          <stop offset="100%" stop-color="#3b82f6" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg4)" />
-      <path d="M 22 92 C 22 76, 32 72, 50 72 C 68 72, 78 76, 78 92 Z" fill="#1e293b" />
-      <path d="M 40 76 C 45 80, 55 80, 60 76" stroke="#f5c518" stroke-width="2.5" fill="none" stroke-linecap="round" />
-      <rect x="44" y="58" width="12" height="15" fill="#fca5a5" rx="2" />
-      <circle cx="50" cy="45" r="17" fill="#fca5a5" />
-      <path d="M 33 38 C 32 23, 44 20, 50 20 C 58 20, 67 24, 67 36 C 60 33, 52 35, 45 38 C 38 41, 35 40, 33 38 Z" fill="#0f172a" />
-      <path d="M 37 38 Q 42 36 45 39" stroke="#0f172a" stroke-width="1.5" fill="none" />
-      <path d="M 63 38 Q 58 36 55 39" stroke="#0f172a" stroke-width="1.5" fill="none" />
-      <circle cx="41" cy="42" r="1.5" fill="#0f172a" />
-      <circle cx="59" cy="42" r="1.5" fill="#0f172a" />
-      <path d="M 46 52 Q 52 56 55 51" stroke="#0f172a" stroke-linecap="round" stroke-width="1.5" fill="none" />
-    </svg>`
-  },
-  {
-    id: 'solidity_wizard',
-    name: 'Solidity Wizard',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#4c1d95" />
-          <stop offset="100%" stop-color="#d946ef" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg5)" />
-      <path d="M 23 90 C 23 75, 33 70, 50 70 C 67 70, 77 75, 77 90 Z" fill="#1e1b4b" />
-      <path d="M 50 78 L 52 82 L 56 82 L 53 84 L 54 88 L 50 85 L 46 88 L 47 84 L 44 82 L 48 82 Z" fill="#d946ef" />
-      <rect x="44" y="58" width="12" height="14" fill="#fed7aa" rx="2" />
-      <path d="M 33 48 C 33 75, 50 82, 50 82 C 50 82, 67 75, 67 48" fill="#e9d5ff" />
-      <circle cx="50" cy="45" r="16" fill="#fed7aa" />
-      <path d="M 32 42 C 30 25, 45 18, 50 18 C 55 18, 70 25, 68 42 C 64 45, 60 40, 50 40 C 40 40, 36 45, 32 42 Z" fill="#3b0764" />
-      <path d="M 50 22 L 51 25 L 54 25 L 52 27 L 53 30 L 50 28 L 47 30 L 48 27 L 46 25 L 49 25 Z" fill="#facc15" />
-      <circle cx="43" cy="43" r="5" stroke="#facc15" stroke-width="1.2" fill="none" />
-      <circle cx="57" cy="43" r="5" stroke="#facc15" stroke-width="1.2" fill="none" />
-      <line x1="48" y1="43" x2="52" y2="43" stroke="#facc15" stroke-width="1.2" />
-    </svg>`
-  },
-  {
-    id: 'meme_astronaut',
-    name: 'Meme Astronaut',
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#0f172a" />
-          <stop offset="100%" stop-color="#0284c7" />
-        </linearGradient>
-        <linearGradient id="visor6" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#fbbf24" />
-          <stop offset="100%" stop-color="#f59e0b" />
-        </linearGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill="url(#bg6)" />
-      <circle cx="20" cy="25" r="1" fill="#ffffff" opacity="0.8" />
-      <circle cx="80" cy="30" r="0.8" fill="#ffffff" opacity="0.6" />
-      <circle cx="35" cy="70" r="1.2" fill="#ffffff" opacity="0.9" />
-      <path d="M 22 92 C 22 75, 32 72, 50 72 C 68 72, 78 75, 78 92 Z" fill="#e2e8f0" />
-      <rect x="40" y="72" width="20" height="20" fill="#cbd5e1" rx="4" />
-      <circle cx="50" cy="80" r="4" fill="#ef4444" />
-      <circle cx="50" cy="46" r="23" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" />
-      <path d="M 33 46 C 33 34, 67 34, 67 46 C 67 56, 33 56, 33 46 Z" fill="url(#visor6)" />
-      <ellipse cx="50" cy="46" r="10" fill="#ea580c" />
-      <ellipse cx="50" cy="47" r="8" fill="#fed7aa" />
-      <path d="M 42 39 L 38 33 L 44 36 Z" fill="#ea580c" />
-      <path d="M 58 39 L 62 33 L 56 36 Z" fill="#ea580c" />
-      <circle cx="46" cy="44" r="1" fill="#000000" />
-      <circle cx="54" cy="44" r="1" fill="#000000" />
-      <polygon points="50,47 48,46 52,46" fill="#000000" />
-      <path d="M 37 42 C 40 37, 48 36, 52 36" stroke="#ffffff" stroke-dasharray="none" stroke-linecap="round" stroke-width="2.5" fill="none" opacity="0.6" />
-    </svg>`
-  }
-];
+// Default premium inline SVG avatar template
+const DEFAULT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="hair1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="url(#bg1)" />
+  <path d="M 25 85 C 25 72, 35 68, 50 68 C 65 68, 75 72, 75 85 Z" fill="#1e293b" />
+  <path d="M 38 68 L 50 82 L 62 68" stroke="#06b6d4" stroke-width="2" fill="none" />
+  <rect x="44" y="55" width="12" height="15" fill="#e2e8f0" rx="3" />
+  <circle cx="50" cy="45" r="18" fill="#f8fafc" />
+  <path d="M 32 40 C 32 24, 45 20, 50 20 C 58 20, 68 24, 68 40 C 66 38, 64 36, 60 38 C 55 40, 52 32, 48 35 C 44 38, 38 35, 32 40 Z" fill="url(#hair1)" />
+  <rect x="35" y="38" width="30" height="10" rx="5" fill="#f43f5e" opacity="0.9" />
+  <rect x="37" y="40" width="26" height="6" rx="3" fill="#ff7e93" />
+  <line x1="32" y1="43" x2="68" y2="43" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="2,2" />
+</svg>`;
 
 // Helper to convert SVG strings safely into standard UTF-8/base64 encoded data URIs
 const getAvatarUrl = (svgString) => {
@@ -301,8 +165,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [showAddAcc, setShowAddAcc] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurityLock, setShowSecurityLock] = useState(false);
-  const [securityAction, setSecurityAction] = useState(null); // 'view_docs' | 'withdraw'
-  const [showLoyaltyHistory, setShowLoyaltyHistory] = useState(false);
   const [showReferralDash, setShowReferralDash] = useState(false);
 
   useEffect(() => {
@@ -322,8 +184,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [newBank, setNewBank] = useState('CBE');
   const [newAccNum, setNewAccNum] = useState('');
   const [newHolder, setNewHolder] = useState('');
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [activeLightboxImage, setActiveLightboxImage] = useState(null);
 
   // Review state
@@ -765,18 +625,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       </div>
 
       {/* ─── BALANCE & POINTS ──────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
         <div className="stat-card">
           <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Available Balance</span>
           <div style={{ fontSize: '24px', fontWeight: 900, color: '#00d4a0' }}>${(user.ethBalance ?? 0).toFixed(2)}</div>
           <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>USD Escrow Wallet</span>
-        </div>
-        <div className="stat-card" onClick={() => setShowLoyaltyHistory(true)} style={{ cursor: 'pointer' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Loyalty Points</span>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#f5c518' }}>{user.loyalty_points || 0} pts</div>
-          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '6px' }}>
-            <div style={{ width: `${Math.min(100, ((user.loyalty_points || 0) % 1000) / 10)}%`, height: '100%', background: '#f5c518', borderRadius: '2px' }} />
-          </div>
         </div>
       </div>
 
@@ -1011,17 +864,22 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       </div>
 
       {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
-      <div className="card" style={{ padding: '20px' }}>
+      <div className="card glass-card" style={{ padding: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Performance Stats</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Total Completed Trades</span>
-            <span style={{ fontWeight: 700 }}>{user.totalTrades || 0} trades</span>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Average Star Rating</span>
+            <span style={{ fontWeight: 700, color: 'var(--gold)' }}>⭐ {(user.avg_rating || user.averageRating || 5.0).toFixed(1)} / 5.0</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Trust Reputation</span>
-            <span style={{ fontWeight: 700, color: '#00d4a0' }}>{user.reputation || 100}% Rating</span>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Positive Feedback</span>
+            <span style={{ fontWeight: 700, color: '#00d4a0' }}>👍 {user.positive_percentage || 100}% positive</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Total Completed Trades</span>
+            <span style={{ fontWeight: 700 }}>{user.totalCompletedTrades || user.totalTrades || 0} trades</span>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Member Since</span>
             <span style={{ fontWeight: 700 }}>{joinDate}</span>
@@ -1051,39 +909,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       </div>
 
-      {/* ─── BADGES & ACHIEVEMENTS ───────────────────────────── */}
-      <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '20px', color: 'var(--text-1)' }}>Badges & Achievements</h3>
-        <div className="badge-grid">
-          {[
-            { id: 'bronze', icon: '🥉', label: 'Bronze' },
-            { id: 'silver', icon: '🥈', label: 'Silver' },
-            { id: 'gold', icon: '🥇', label: 'Gold' },
-            { id: 'diamond', icon: '💎', label: 'Diamond' },
-            { id: 'legend', icon: '👑', label: 'Legend' },
-            { id: 'verified', icon: '✅', label: 'Verified' },
-            { id: 'streak_7', icon: '🔥', label: '7 Day' },
-            { id: 'streak_30', icon: '⚡', label: '30 Day' },
-          ].map(b => {
-            const isUnlocked = 
-              (b.id === 'bronze' && (user.totalTrades || 0) >= 5) ||
-              (b.id === 'silver' && (user.totalTrades || 0) >= 20) ||
-              (b.id === 'gold' && (user.totalTrades || 0) >= 50) ||
-              (b.id === 'diamond' && (user.totalTrades || 0) >= 100) ||
-              (b.id === 'legend' && (user.totalTrades || 0) >= 500) ||
-              (b.id === 'verified' && user.is_verified_trader) ||
-              (b.id === 'streak_7' && (user.longest_streak || 0) >= 7) ||
-              (b.id === 'streak_30' && (user.longest_streak || 0) >= 30);
-            
-            return (
-              <div key={b.id} className={`badge-item ${isUnlocked ? 'unlocked' : ''}`}>
-                <div style={{ fontSize: '32px' }}>{b.icon}</div>
-                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)' }}>{b.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+
 
 
 
@@ -1206,36 +1032,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       )}
 
-      {/* ─── LOYALTY HISTORY MODAL ─────────────────────────────── */}
-      {showLoyaltyHistory && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <button onClick={() => setShowLoyaltyHistory(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '4px', color: 'var(--text-1)' }}>Loyalty Points History</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Your earned and spent points log.</p>
-            
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {loyaltyInfo?.history?.length > 0 ? loyaltyInfo.history.map((h, i) => (
-                <div key={i} style={{ padding: '12px', background: 'var(--bg-base)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700 }}>{h.reason}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{new Date(h.createdAt).toLocaleDateString()}</div>
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: h.points > 0 ? '#00d4a0' : '#ef4444' }}>
-                    {h.points > 0 ? '+' : ''}{h.points}
-                  </div>
-                </div>
-              )) : (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>No history yet.</div>
-              )}
-            </div>
 
-            <button onClick={() => {/* open rewards shop */}} className="btn btn-gold btn-full" style={{ marginTop: '20px' }}>
-              Redeem Points for Rewards
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ─── KYC WIZARD MODAL ──────────────────────────────────── */}
       {showKYC && (
@@ -1519,54 +1316,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       )}
 
-      {/* ─── AVATAR PICKER MODAL ───────────────────────────────── */}
-      {showAvatarPicker && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '24px', position: 'relative' }}>
-            <button onClick={() => setShowAvatarPicker(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '16px' }}>✕</button>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-1)' }}>Choose Avatar</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Select one of our premium illustrated avatars.</p>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '24px' }}>
-              {AVATAR_TEMPLATES.map(avatar => {
-                const isSelected = user.kycSelfie === avatar.svg;
-                return (
-                  <button 
-                    key={avatar.id}
-                    onClick={async () => {
-                      try {
-                        await updateProfileMutation({ id: user._id, updates: { kycSelfie: avatar.svg } });
-                        if (onUserUpdate) onUserUpdate({ ...user, kycSelfie: avatar.svg, id: user._id });
-                        setShowAvatarPicker(false);
-                      } catch (err) {
-                        alert("Error saving avatar: " + err.message);
-                      }
-                    }}
-                    style={{
-                      background: 'var(--bg-base)',
-                      border: `2px solid ${isSelected ? 'var(--gold)' : 'transparent'}`,
-                      borderRadius: '16px',
-                      padding: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <div 
-                      style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden' }}
-                      dangerouslySetInnerHTML={{ __html: avatar.svg }}
-                    />
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-2)' }}>{avatar.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+
 
     </div>
   );

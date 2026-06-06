@@ -376,6 +376,9 @@ const AdminPanel = ({ user }) => {
   const [kycFilterStatus, setKycFilterStatus] = useState('all');
 
   const [reviewFilterStatus, setReviewFilterStatus] = useState('all');
+  const [reviewsSubTab, setReviewsSubTab] = useState('p2p');
+  const [p2pRatingSearch, setP2pRatingSearch] = useState('');
+  const [p2pRatingStarsFilter, setP2pRatingStarsFilter] = useState('all');
 
   const [logsSearchQuery, setLogsSearchQuery] = useState('');
 
@@ -431,6 +434,12 @@ const AdminPanel = ({ user }) => {
   const [selectedUserTxs, setSelectedUserTxs] = useState([]);
   const userTxs = useQuery(api.trades.listForUser, selectedUserDetailId ? { userId: selectedUserDetailId } : "skip");
   
+  const p2pRatingsData = useQuery(api.tradeRatings.listAllTradeRatings, user?._id ? { adminId: user._id } : "skip");
+  const userRatingsHistory = useQuery(api.tradeRatings.getUserRatingsHistory, selectedUserDetailId && user?._id ? { adminId: user._id, targetUserId: selectedUserDetailId } : "skip");
+
+  const flagFakeRatingMutation = useMutation(api.tradeRatings.flagFakeRating);
+  const deleteTradeRatingMutation = useMutation(api.tradeRatings.deleteTradeRating);
+  
   useEffect(() => {
     if (userTxs) setSelectedUserTxs(userTxs);
   }, [userTxs]);
@@ -441,12 +450,10 @@ const AdminPanel = ({ user }) => {
   const [commissionValue,  setCommissionValue]  = useState('1.0');
   const [depositFee,       setDepositFee]       = useState('1.0');
   const [withdrawFee,      setWithdrawFee]      = useState('1.0');
-  const [minDeposit,       setMinDeposit]       = useState('5');
-  const [minWithdraw,      setMinWithdraw]      = useState('5');
+  const [minDeposit,       setMinDeposit]       = useState('1');
+  const [minWithdraw,      setMinWithdraw]      = useState('10');
+  const [minP2pListing,    setMinP2pListing]    = useState('1');
   const [maxDailyWithdraw, setMaxDailyWithdraw] = useState('1000');
-  const [pointsPerTrade,   setPointsPerTrade]   = useState('10');
-  const [referralPoints,   setReferralPoints]   = useState('50');
-  const [isLeaderboard,    setIsLeaderboard]    = useState(true);
 
   useEffect(() => {
     if (settings) {
@@ -455,12 +462,10 @@ const AdminPanel = ({ user }) => {
       setCommissionValue(settings.commissionValue?.toString() || '1.0');
       setDepositFee(settings.depositFeePercent?.toString() || '1.0');
       setWithdrawFee(settings.withdrawalFeePercent?.toString() || '1.0');
-      setMinDeposit(settings.minDepositUSD?.toString() || '5');
-      setMinWithdraw(settings.minWithdrawalUSD?.toString() || '5');
+      setMinDeposit(settings.minDepositUSD?.toString() || '1');
+      setMinWithdraw(settings.minWithdrawalUSD?.toString() || '10');
+      setMinP2pListing(settings.minP2pListingUSD?.toString() || '1');
       setMaxDailyWithdraw(settings.maxDailyWithdrawalUSD?.toString() || '1000');
-      setPointsPerTrade(settings.pointsPerTrade?.toString() || '10');
-      setReferralPoints(settings.referralBonusPoints?.toString() || '50');
-      setIsLeaderboard(settings.isLeaderboardEnabled ?? true);
     }
   }, [settings]);
 
@@ -694,12 +699,10 @@ const AdminPanel = ({ user }) => {
           commissionValue: parseFloat(commissionValue) || 1.0,
           depositFeePercent: parseFloat(depositFee) || 1.0,
           withdrawalFeePercent: parseFloat(withdrawFee) || 1.0,
-          minDepositUSD: parseFloat(minDeposit) || 5,
-          minWithdrawalUSD: parseFloat(minWithdraw) || 10,
+          minDepositUSD: parseFloat(minDeposit) || 1.0,
+          minWithdrawalUSD: parseFloat(minWithdraw) || 10.0,
+          minP2pListingUSD: parseFloat(minP2pListing) || 1.0,
           maxDailyWithdrawalUSD: parseFloat(maxDailyWithdraw) || 1000,
-          pointsPerTrade: parseFloat(pointsPerTrade) || 10,
-          referralBonusPoints: parseFloat(referralPoints) || 50,
-          isLeaderboardEnabled: !!isLeaderboard,
         }
       });
       showAlert('✓ Settings saved successfully!');
@@ -3034,124 +3037,294 @@ const AdminPanel = ({ user }) => {
 
           {/* ════ REVIEWS MANAGEMENT PAGE per Item #12 ════ */}
           {activeTab === 'reviews' && (() => {
-            const filteredReviews = allReviews.filter(r => {
+            const testimonialsReviews = allReviews.filter(r => {
               if (reviewFilterStatus === 'pending') return !r.isApproved;
               if (reviewFilterStatus === 'approved') return r.isApproved;
               return true;
+            });
+
+            const p2pRatings = p2pRatingsData?.ratings || [];
+            const filteredP2pRatings = p2pRatings.filter(r => {
+              const matchesSearch = p2pRatingSearch.trim() === '' || 
+                r.raterUsername.toLowerCase().includes(p2pRatingSearch.toLowerCase()) ||
+                r.ratedUsername.toLowerCase().includes(p2pRatingSearch.toLowerCase()) ||
+                (r.comment && r.comment.toLowerCase().includes(p2pRatingSearch.toLowerCase()));
+              
+              const matchesStars = p2pRatingStarsFilter === 'all' || r.rating === Number(p2pRatingStarsFilter);
+              return matchesSearch && matchesStars;
             });
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>⭐ Review Management</h2>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#8b92a8' }}>Moderate verified trader reviews for the landing page</p>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>⭐ Rating & Review Management</h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#8b92a8' }}>Moderate testimonials and P2P trade ratings</p>
                   </div>
                 </div>
 
-                <div className="card-premium">
-                  <div style={{ display: 'flex', background: '#0a0c12', borderRadius: '12px', padding: '4px', width: 'fit-content', gap: '4px', marginBottom: '24px' }}>
-                    {[{id:'all',l:'All'},{id:'pending',l:'Pending'},{id:'approved',l:'Approved'}].map(s => (
-                      <button
-                        key={s.id}
-                        onClick={() => setReviewFilterStatus(s.id)}
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', gap: '16px', marginBottom: '8px' }}>
+                  <button 
+                    onClick={() => setReviewsSubTab('p2p')}
+                    style={{
+                      padding: '12px 8px', border: 'none', background: 'transparent',
+                      color: reviewsSubTab === 'p2p' ? 'var(--gold)' : '#8b92a8',
+                      fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                      borderBottom: reviewsSubTab === 'p2p' ? '3px solid var(--gold)' : '3px solid transparent',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    🤝 P2P Trade Ratings
+                  </button>
+                  <button 
+                    onClick={() => setReviewsSubTab('testimonials')}
+                    style={{
+                      padding: '12px 8px', border: 'none', background: 'transparent',
+                      color: reviewsSubTab === 'testimonials' ? 'var(--gold)' : '#8b92a8',
+                      fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                      borderBottom: reviewsSubTab === 'testimonials' ? '3px solid var(--gold)' : '3px solid transparent',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    ⭐ Website Testimonials
+                  </button>
+                </div>
+
+                {reviewsSubTab === 'p2p' ? (
+                  <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                      <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Ratings Given</div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#f0f2f8', marginTop: '6px' }}>{p2pRatingsData?.totalRatings || 0}</div>
+                      </div>
+                      <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase' }}>Average Platform Rating</div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)', marginTop: '6px' }}>⭐ {Number(p2pRatingsData?.averagePlatformRating || 0.0).toFixed(1)} / 5.0</div>
+                      </div>
+                      <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase' }}>Ratings Given Today</div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#00d4a0', marginTop: '6px' }}>{p2pRatingsData?.todayCount || 0}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Search trader, rater, or comment..." 
+                        value={p2pRatingSearch}
+                        onChange={e => setP2pRatingSearch(e.target.value)}
+                        className="input"
+                        style={{ flex: 1, minWidth: '200px' }}
+                      />
+                      <select 
+                        value={p2pRatingStarsFilter}
+                        onChange={e => setP2pRatingStarsFilter(e.target.value)}
                         style={{
-                          padding: '8px 20px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          background: reviewFilterStatus === s.id ? 'var(--gold)' : 'transparent',
-                          color: reviewFilterStatus === s.id ? '#0d1117' : '#8b92a8',
-                          minWidth: '100px',
-                          transition: 'all 0.2s'
+                          padding: '10px 16px', borderRadius: '8px', background: '#0a0c12',
+                          border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', outline: 'none'
                         }}
                       >
-                        {s.l}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="table-premium">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>User</th>
-                          <th>Rating</th>
-                          <th>Review Text</th>
-                          <th>Date</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredReviews.length === 0 ? (
-                          <tr>
-                            <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No reviews found</td>
-                          </tr>
-                        ) : filteredReviews.map((rev, idx) => (
-                          <tr key={rev._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.userId)}>
-                            <td style={{ fontWeight: 600 }}>{idx + 1}</td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{
-                                  width: '28px', height: '28px', borderRadius: '50%', background: 'var(--gold)', color: '#000',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800
-                                }}>
-                                  {(rev.username || 'U').charAt(0).toUpperCase()}
-                                </div>
-                                <span style={{ fontWeight: 600 }}>@{rev.username}</span>
-                              </div>
-                            </td>
-                            <td style={{ color: 'var(--gold)', letterSpacing: '2px' }}>
-                              {(() => {
-                                const rating = Math.max(0, Math.min(5, Math.round(Number(rev.rating) || 5)));
-                                return '★'.repeat(rating) + '☆'.repeat(5 - rating);
-                              })()}
-                            </td>
-                            <td style={{ maxWidth: '300px', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
-                              "{rev.content}"
-                            </td>
-                            <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-                              {(() => {
-                                const dateVal = rev.createdAt || rev.created_at || rev._creationTime;
-                                if (!dateVal) return 'N/A';
-                                const d = new Date(dateVal);
-                                return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
-                              })()}
-                            </td>
-                            <td>
-                              <StatusBadge status={rev.isApproved ? 'approved' : 'pending'} />
-                            </td>
-                            <td onClick={e => e.stopPropagation()}>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                {!rev.isApproved && (
-                                  <button 
-                                    onClick={() => handleApproveReview(rev._id)} 
-                                    className="btn-premium-primary" 
-                                    style={{ padding: '6px 12px', fontSize: '11px', background: '#00d4a0', color: '#000' }}
-                                  >
-                                    ✓ Approve
-                                  </button>
-                                )}
-                                <button 
-                                  onClick={() => handleRejectReview(rev._id)} 
-                                  className="btn-premium-danger" 
-                                  style={{ padding: '6px 12px', fontSize: '11px' }}
-                                >
-                                  ✗ Reject
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                        <option value="all">All Stars</option>
+                        {[5, 4, 3, 2, 1].map(s => (
+                          <option key={s} value={s}>{s} Stars</option>
                         ))}
-                      </tbody>
-                    </table>
+                      </select>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="table-premium">
+                        <thead>
+                          <tr>
+                            <th>Trader (Rated)</th>
+                            <th>Rater (Author)</th>
+                            <th>Type</th>
+                            <th>Rating</th>
+                            <th>Review Text</th>
+                            <th>Date</th>
+                            <th>Low Reason</th>
+                            <th>Abuse Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredP2pRatings.length === 0 ? (
+                            <tr>
+                              <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No trade ratings found</td>
+                            </tr>
+                          ) : filteredP2pRatings.map((rating) => (
+                            <tr key={rating._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rating.ratedId)}>
+                              <td>
+                                <strong style={{ color: 'var(--gold)' }}>@{rating.ratedUsername}</strong>
+                              </td>
+                              <td>@{rating.raterUsername}</td>
+                              <td style={{ textTransform: 'uppercase', fontSize: '11px', color: '#8b92a8' }}>{rating.raterType}</td>
+                              <td style={{ color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+                                {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
+                              </td>
+                              <td style={{ maxWidth: '200px', fontSize: '13px', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {rating.comment ? `"${rating.comment}"` : '—'}
+                              </td>
+                              <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+                                {new Date(rating.createdAt).toLocaleDateString()}
+                              </td>
+                              <td style={{ fontSize: '12.5px', color: '#f43f5e', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {rating.lowRatingReason || '—'}
+                              </td>
+                              <td>
+                                {rating.isFlagged ? (
+                                  <span style={{ color: '#f43f5e', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700 }}>
+                                    🚩 FLAGGED
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#00d4a0', background: 'rgba(0,212,160,0.1)', border: '1px solid rgba(0,212,160,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700 }}>
+                                    ✓ CLEAN
+                                  </span>
+                                )}
+                              </td>
+                              <td onClick={e => e.stopPropagation()}>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {!rating.isFlagged && (
+                                    <button 
+                                      onClick={() => {
+                                        const reason = prompt("Enter reason for flagging this rating:");
+                                        if (reason) {
+                                          flagFakeRatingMutation({ adminId: user._id, ratingId: rating._id, flaggedReason: reason })
+                                            .then(() => alert("Rating flagged successfully."))
+                                            .catch(err => alert("Error: " + err.message));
+                                        }
+                                      }}
+                                      className="btn-premium-primary"
+                                      style={{ padding: '6px 12px', fontSize: '11px', background: '#eab308', color: '#000' }}
+                                    >
+                                      🚩 Flag Fake
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => {
+                                      if (window.confirm("Are you sure you want to permanently delete this rating?")) {
+                                        deleteTradeRatingMutation({ adminId: user._id, ratingId: rating._id })
+                                          .then(() => alert("Rating deleted successfully."))
+                                          .catch(err => alert("Error: " + err.message));
+                                      }
+                                    }}
+                                    className="btn-premium-danger"
+                                    style={{ padding: '6px 12px', fontSize: '11px' }}
+                                  >
+                                    ✗ Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="card-premium">
+                    <div style={{ display: 'flex', background: '#0a0c12', borderRadius: '12px', padding: '4px', width: 'fit-content', gap: '4px', marginBottom: '24px' }}>
+                      {[{id:'all',l:'All'},{id:'pending',l:'Pending'},{id:'approved',l:'Approved'}].map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => setReviewFilterStatus(s.id)}
+                          style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            background: reviewFilterStatus === s.id ? 'var(--gold)' : 'transparent',
+                            color: reviewFilterStatus === s.id ? '#0d1117' : '#8b92a8',
+                            minWidth: '100px',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {s.l}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="table-premium">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>Rating</th>
+                            <th>Review Text</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {testimonialsReviews.length === 0 ? (
+                            <tr>
+                              <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No reviews found</td>
+                            </tr>
+                          ) : testimonialsReviews.map((rev, idx) => (
+                            <tr key={rev._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.userId)}>
+                              <td style={{ fontWeight: 600 }}>{idx + 1}</td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{
+                                    width: '28px', height: '28px', borderRadius: '50%', background: 'var(--gold)', color: '#000',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800
+                                  }}>
+                                    {(rev.username || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <span style={{ fontWeight: 600 }}>@{rev.username}</span>
+                                </div>
+                              </td>
+                              <td style={{ color: 'var(--gold)', letterSpacing: '2px' }}>
+                                {(() => {
+                                  const rating = Math.max(0, Math.min(5, Math.round(Number(rev.rating) || 5)));
+                                  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                                })()}
+                              </td>
+                              <td style={{ maxWidth: '300px', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
+                                "{rev.content}"
+                              </td>
+                              <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+                                {(() => {
+                                  const dateVal = rev.createdAt || rev.created_at || rev._creationTime;
+                                  if (!dateVal) return 'N/A';
+                                  const d = new Date(dateVal);
+                                  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+                                })()}
+                              </td>
+                              <td>
+                                <StatusBadge status={rev.isApproved ? 'approved' : 'pending'} />
+                              </td>
+                              <td onClick={e => e.stopPropagation()}>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {!rev.isApproved && (
+                                    <button 
+                                      onClick={() => handleApproveReview(rev._id)} 
+                                      className="btn-premium-primary" 
+                                      style={{ padding: '6px 12px', fontSize: '11px', background: '#00d4a0', color: '#000' }}
+                                    >
+                                      ✓ Approve
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => handleRejectReview(rev._id)} 
+                                    className="btn-premium-danger" 
+                                    style={{ padding: '6px 12px', fontSize: '11px' }}
+                                  >
+                                    ✗ Reject
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -3190,9 +3363,9 @@ const AdminPanel = ({ user }) => {
                   </div>
                 </div>
 
-                {/* Column 2: Limits & Rewards */}
+                {/* Column 2: Limits & Security */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#f5c518', textTransform: 'uppercase' }}>🎁 Limits & Reward Settings</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#f5c518', textTransform: 'uppercase' }}>🛡️ Limits & Security Settings</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Min Deposit ($)</label>
@@ -3204,20 +3377,12 @@ const AdminPanel = ({ user }) => {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Min P2P Listing ($)</label>
+                    <input type="number" className="input-premium" value={minP2pListing} onChange={e => setMinP2pListing(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Max Daily Withdraw ($)</label>
                     <input type="number" className="input-premium" value={maxDailyWithdraw} onChange={e => setMaxDailyWithdraw(e.target.value)} required />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Points per Trade</label>
-                    <input type="number" className="input-premium" value={pointsPerTrade} onChange={e => setPointsPerTrade(e.target.value)} required />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Referral Points</label>
-                    <input type="number" className="input-premium" value={referralPoints} onChange={e => setReferralPoints(e.target.value)} required />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                    <input type="checkbox" checked={isLeaderboard} onChange={e => setIsLeaderboard(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#00d4a0' }} />
-                    <label style={{ fontSize: '13px', fontWeight: 600 }}>Enable Monthly Leaderboard</label>
                   </div>
                 </div>
 
@@ -4233,7 +4398,7 @@ const user = await ctx.db
                   { id: 'profile', l: 'Profile Summary' },
                   { id: 'transactions', l: 'Transactions' },
                   { id: 'kyc', l: 'KYC Document' },
-                  { id: 'invites', l: 'Invites' },
+                  { id: 'ratings', l: 'Ratings & Reviews' },
                   { id: 'activity', l: 'Actions / Warnings' }
                 ].map(tb => (
                   <button
@@ -4412,80 +4577,96 @@ const user = await ctx.db
                   </div>
                 )}
 
-                {/* ── TAB: Invites ── */}
-                {userDrawerTab === 'invites' && (() => {
-                  const [uStats, setUStats] = useState(null);
-                  React.useEffect(() => {
-                    if (u?._id) {
-                      // Mocked for Convex migration
-                      setUStats({ totalInvited: 0, activeFriends: 0, pendingFriends: 0, totalEarned: 0, earningsMonth: 0, referralList: [] });
-                    }
-                  }, [u?._id]);
+                {/* ── TAB: Ratings & Reviews Drawer ── */}
+                {userDrawerTab === 'ratings' && (() => {
+                  const received = userRatingsHistory?.received || [];
+                  const given = userRatingsHistory?.given || [];
+
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Invite Stats</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ratings Received ({received.length})</div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Invited</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#f0f2f8', marginTop: '2px' }}>{uStats?.totalInvited || 0} friends</div>
-                        </div>
-                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Active Friends</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>{uStats?.activeFriends || 0}</div>
-                        </div>
-                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Pending Friends</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>{uStats?.pendingFriends || 0}</div>
-                        </div>
-                        <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Earned</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${(uStats?.totalEarned || 0).toFixed(2)} 💰</div>
-                        </div>
-                      </div>
-
-                      <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: '#8b92a8' }}>Referral Code:</span>
-                          <strong style={{ color: '#f5c518', letterSpacing: '1px' }}>{u.referral_code || u.referralCode || '—'}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: '#8b92a8' }}>Referred By:</span>
-                          <strong style={{ color: '#f0f2f8' }}>{u.referred_by || 'Organic'}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: '#8b92a8' }}>This Month Earned:</span>
-                          <strong style={{ color: '#00d4a0' }}>${(uStats?.earningsMonth || 0).toFixed(2)}</strong>
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '10px' }}>Referral List</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(!uStats?.referralList || uStats.referralList.length === 0) ? (
-                          <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No referrals yet</div>
-                        ) : uStats.referralList.map((ref, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>👤</div>
-                              <div>
-                                <div style={{ fontSize: '13px', fontWeight: 600 }}>@{ref.username}</div>
-                                <div style={{ fontSize: '10px', color: '#4e5567' }}>{new Date(ref.date).toLocaleDateString()}</div>
-                              </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {received.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No ratings received yet</div>
+                        ) : received.map((rating) => (
+                          <div key={rating._id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--gold)', letterSpacing: '1px', fontSize: '12px' }}>
+                                {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                                {new Date(rating.createdAt).toLocaleDateString()}
+                              </span>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: ref.status === 'paid' ? '#00d4a0' : '#fbbf24' }}>
-                                {ref.status === 'paid' ? '✓ ACTIVE' : '⏳ PENDING'}
-                              </div>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: ref.status === 'paid' ? '#00d4a0' : '#8b92a8' }}>
-                                ${(ref.earned ?? 0).toFixed(2)}
+                            {rating.comment && (
+                              <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
+                                "{rating.comment}"
+                              </p>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '11px', color: 'var(--text-3)' }}>
+                              <span>From @{rating.partnerUsername} ({rating.raterType})</span>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {rating.isFlagged ? (
+                                  <span style={{ color: '#f43f5e', fontWeight: 700 }}>🚩 FLAGGED</span>
+                                ) : (
+                                  <button 
+                                    onClick={() => {
+                                      const reason = prompt("Enter flag reason:");
+                                      if (reason) {
+                                        flagFakeRatingMutation({ adminId: user._id, ratingId: rating._id, flaggedReason: reason })
+                                          .then(() => alert("Rating flagged."))
+                                          .catch(err => alert(err.message));
+                                      }
+                                    }}
+                                    style={{ background: 'transparent', border: 'none', color: '#eab308', cursor: 'pointer', fontWeight: 700, padding: 0 }}
+                                  >
+                                    🚩 Flag Fake
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    if (window.confirm("Delete this rating permanently?")) {
+                                      deleteTradeRatingMutation({ adminId: user._id, ratingId: rating._id })
+                                        .then(() => alert("Rating deleted."))
+                                        .catch(err => alert(err.message));
+                                    }
+                                  }}
+                                  style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', fontWeight: 700, padding: 0 }}
+                                >
+                                  Delete
+                                </button>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                        <button className="btn-premium-ghost" style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}>Export CSV</button>
-                        <button className="btn-premium-danger" style={{ flex: 1, background: 'rgba(244,63,94,0.1)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)', fontSize: '12px' }}>Flag for Review</button>
+
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '10px' }}>Ratings Given ({given.length})</div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {given.length === 0 ? (
+                          <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No ratings given yet</div>
+                        ) : given.map((rating) => (
+                          <div key={rating._id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--gold)', letterSpacing: '1px', fontSize: '12px' }}>
+                                {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                                {new Date(rating.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {rating.comment && (
+                              <p style={{ margin: 0, fontSize: '13px', fontStyle: 'italic', color: 'var(--text-1)' }}>
+                                "{rating.comment}"
+                              </p>
+                            )}
+                            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                              To @{rating.partnerUsername}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );

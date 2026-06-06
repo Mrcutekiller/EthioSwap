@@ -1313,7 +1313,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               { t: 'Escrow Lock', d: 'Every trade amount is locked in escrow before payment. Funds are cryptographically secured and can only be released by the platform.', ic: '🔐' },
               { t: 'Identity Verification', d: 'Mandatory KYC with National ID + live selfie. Every trader is a real, verified person. No anonymity, no fraud.', ic: '🪪' },
               { t: 'Dispute Resolution', d: 'Dedicated support team reviews evidence and resolves disputes fairly. Your funds are safe throughout.', ic: '⚖️' },
-              { t: '2FA & Biometric Lock', d: 'Secure your account with two-factor authentication, fingerprint lock, or Face ID. Your keys stay on your device.', ic: '🔑' },
+              { t: '2FA & PIN Lock', d: 'Secure your account with two-factor authentication and a secure 6-digit PIN lock. Your keys stay on your device.', ic: '🔑' },
             ].map((ft, idx) => (
               <div key={idx} className="trust-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '28px', transition: 'transform 0.2s, border-color 0.2s' }}>
                 <div style={{ fontSize: '32px', marginBottom: '16px' }}>{ft.ic}</div>

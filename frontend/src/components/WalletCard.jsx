@@ -117,7 +117,7 @@ const WalletCard = () => {
   const rate        = systemSettings?.etbRatePerDollar ?? 190;
   const depFeePercent = systemSettings?.depositFeePercent ?? 1.0;  // %
   const wdFeePercent  = systemSettings?.withdrawalFeePercent ?? 1.0; // %
-  const minDep      = systemSettings?.minDepositUSD   ?? 5;
+  const minDep      = systemSettings?.minDepositUSD   ?? 1;
   const minWd       = systemSettings?.minWithdrawalUSD ?? 10;
 
   const balance     = wallet?.ethBalance  ?? wallet?.eth_balance  ?? 0;
@@ -242,7 +242,7 @@ const WalletCard = () => {
     }
     setWdLoading(true);
     try {
-      const res = await withdrawETH(wdAmtNum, wdAddr, wdOtpCode);
+      const res = await withdrawETH(wdAmtNum, wdAddr, wdOtpCode, wdNet.toUpperCase());
       if (res && res.success) {
         setShowWdOtp(false);
         setWdAmt(''); setWdAddr(''); setWdPin(''); setWdOtpCode('');

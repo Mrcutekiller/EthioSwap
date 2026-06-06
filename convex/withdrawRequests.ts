@@ -16,6 +16,9 @@ export const create = mutation({
     amountEth: v.number(),
     address: v.string(),
     otpCode: v.string(),
+    amountUSD: v.optional(v.number()),
+    network: v.optional(v.string()),
+    walletType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // 1. Verify OTP for withdrawal first!
@@ -24,25 +27,32 @@ export const create = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
     if ((user.ethBalance || 0) < args.amountEth) {
-      throw new Error("Insufficient ETH balance for withdrawal");
+      throw new Error("Insufficient balance for withdrawal");
     }
 
-    // Lock the ETH
+    // Enforce minimum withdrawal limit
+    const settings = await ctx.db.query("systemSettings").first();
+    const minWithdraw = settings?.minWithdrawalUSD ?? 10; // Default to $10
+    const checkUsdAmount = args.amountUSD ?? (args.amountEth * 3000);
+    if (checkUsdAmount < minWithdraw) {
+      throw new Error(`Withdrawal amount $${checkUsdAmount.toFixed(2)} is below the minimum limit of $${minWithdraw}`);
+    }
+
+    // Lock the ETH (USD balance)
     await ctx.db.patch(args.userId, {
       ethBalance: user.ethBalance - args.amountEth,
       ethLocked: (user.ethLocked || 0) + args.amountEth,
     });
 
+    const { otpCode, ...insertArgs } = args;
     const request = await ctx.db.insert("withdrawRequests", {
-      userId: args.userId,
-      amountEth: args.amountEth,
-      address: args.address,
+      ...insertArgs,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
 
     // Dispatch withdrawal notification
-    const usdAmount = Math.round(args.amountEth * 3000);
+    const usdAmount = Math.round(checkUsdAmount);
     await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
       userId: args.userId,
       type: "withdrawal_submitted",

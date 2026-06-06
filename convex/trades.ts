@@ -126,11 +126,14 @@ export const releaseEth = mutation({
     // 1. Deduct from seller's locked balance and update volume
     const sellerVolume = (seller.totalVolume || 0) + (trade.amountEth || 0);
     const sellerTrades = (seller.totalTrades || 0) + 1;
+    const sellerCompleted = (seller.totalCompletedTrades || 0) + 1;
     const sellerAvgRating = seller.averageRating || 5;
     const isSellerVerified = sellerTrades >= 50 && sellerAvgRating >= 4.5;
     await ctx.db.patch(trade.sellerId, {
       ethLocked: seller.ethLocked - totalLocked,
       totalTrades: sellerTrades,
+      totalCompletedTrades: sellerCompleted,
+      total_completed_trades: sellerCompleted,
       totalVolume: sellerVolume,
       is_verified_trader: isSellerVerified,
     });
@@ -138,11 +141,14 @@ export const releaseEth = mutation({
     // 2. Add to buyer's balance and update volume
     const buyerVolume = (buyer.totalVolume || 0) + (trade.amountEth || 0);
     const buyerTrades = (buyer.totalTrades || 0) + 1;
+    const buyerCompleted = (buyer.totalCompletedTrades || 0) + 1;
     const buyerAvgRating = buyer.averageRating || 5;
     const isBuyerVerified = buyerTrades >= 50 && buyerAvgRating >= 4.5;
     await ctx.db.patch(trade.buyerId, {
       ethBalance: (buyer.ethBalance || 0) + trade.amountEth,
       totalTrades: buyerTrades,
+      totalCompletedTrades: buyerCompleted,
+      total_completed_trades: buyerCompleted,
       totalVolume: buyerVolume,
       is_verified_trader: isBuyerVerified,
     });
@@ -238,68 +244,7 @@ export const listDisputed = query({
   },
 });
 
-export const submitTradeRating = mutation({
-  args: {
-    tradeId: v.id("trades"),
-    rating: v.number(),
-    comment: v.optional(v.string()),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const trade = await ctx.db.get(args.tradeId);
-    if (!trade) throw new Error("Trade not found");
-    if (trade.status !== "completed") throw new Error("Trade is not completed yet");
 
-    // Authenticate user
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    if (user._id !== trade.buyerId && user._id !== trade.sellerId) {
-      throw new Error("You are not part of this trade");
-    }
-
-    const raterId = user._id;
-    const ratedId = raterId === trade.buyerId ? trade.sellerId : trade.buyerId!;
-
-    // Check duplicate rating
-    const existing = await ctx.db
-      .query("tradeRatings")
-      .withIndex("by_trade", (q) => q.eq("tradeId", args.tradeId))
-      .filter((q) => q.eq(q.field("raterId"), raterId))
-      .first();
-    if (existing) throw new Error("You have already rated this trade");
-
-    await ctx.db.insert("tradeRatings", {
-      tradeId: args.tradeId,
-      raterId,
-      ratedId,
-      rating: args.rating,
-      comment: args.comment,
-      createdAt: new Date().toISOString(),
-    });
-
-    // Update rated user average rating and badge
-    const allRatings = await ctx.db
-      .query("tradeRatings")
-      .withIndex("by_rated", (q) => q.eq("ratedId", ratedId))
-      .collect();
-
-    const sum = allRatings.reduce((acc, curr) => acc + curr.rating, 0);
-    const avg = sum / allRatings.length;
-
-    const ratedUser = await ctx.db.get(ratedId);
-    if (ratedUser) {
-      const completedTradesCount = ratedUser.totalTrades || 0;
-      const isVerified = completedTradesCount >= 50 && avg >= 4.5;
-      await ctx.db.patch(ratedId, {
-        averageRating: avg,
-        is_verified_trader: isVerified,
-      });
-    }
-
-    return { success: true };
-  },
-});
 
 export const openDispute = mutation({
   args: {
@@ -428,14 +373,20 @@ export const resolveDispute = mutation({
     if (!buyer || !seller) throw new Error("Trade counterparties not found");
 
     if (args.resolution === "release_to_buyer") {
+      const sellerCompleted = (seller.totalCompletedTrades || 0) + 1;
+      const buyerCompleted = (buyer.totalCompletedTrades || 0) + 1;
       await ctx.db.patch(sellerId, {
         ethLocked: seller.ethLocked - totalLocked,
         totalTrades: (seller.totalTrades || 0) + 1,
+        totalCompletedTrades: sellerCompleted,
+        total_completed_trades: sellerCompleted,
         totalVolume: (seller.totalVolume || 0) + trade.amountEth,
       });
       await ctx.db.patch(buyerId, {
         ethBalance: (buyer.ethBalance || 0) + trade.amountEth,
         totalTrades: (buyer.totalTrades || 0) + 1,
+        totalCompletedTrades: buyerCompleted,
+        total_completed_trades: buyerCompleted,
         totalVolume: (buyer.totalVolume || 0) + trade.amountEth,
       });
       await ctx.db.patch(trade._id, {
@@ -458,16 +409,23 @@ export const resolveDispute = mutation({
       const buyerShare = (trade.amountEth * buyerPct) / 100;
       const sellerShare = (totalLocked * sellerPct) / 100;
 
+      const sellerCompleted = (seller.totalCompletedTrades || 0) + 1;
+      const buyerCompleted = (buyer.totalCompletedTrades || 0) + 1;
+
       await ctx.db.patch(sellerId, {
         ethBalance: seller.ethBalance + sellerShare,
         ethLocked: seller.ethLocked - totalLocked,
         totalTrades: (seller.totalTrades || 0) + 1,
+        totalCompletedTrades: sellerCompleted,
+        total_completed_trades: sellerCompleted,
         totalVolume: (seller.totalVolume || 0) + (trade.amountEth - buyerShare),
       });
 
       await ctx.db.patch(buyerId, {
         ethBalance: (buyer.ethBalance || 0) + buyerShare,
         totalTrades: (buyer.totalTrades || 0) + 1,
+        totalCompletedTrades: buyerCompleted,
+        total_completed_trades: buyerCompleted,
         totalVolume: (buyer.totalVolume || 0) + buyerShare,
       });
 

@@ -24,10 +24,19 @@ export const create = mutation({
     amountEth: v.number(),
     screenshotUrl: v.optional(v.string()),
     otpCode: v.optional(v.string()),
+    walletType: v.optional(v.string()),
+    senderReference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
+
+    // Enforce minimum deposit limit
+    const settings = await ctx.db.query("systemSettings").first();
+    const minDeposit = settings?.minDepositUSD ?? 1; // Default to $1
+    if (args.amountUsd < minDeposit) {
+      throw new Error(`Deposit amount $${args.amountUsd} is below the minimum limit of $${minDeposit}`);
+    }
 
     if (user.telegramLinked === true && user.role !== "admin") {
       if (!args.otpCode) {
