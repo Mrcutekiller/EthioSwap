@@ -120,7 +120,18 @@ export const verifyAndLinkCode = mutation({
       extraText: `Telegram account connected. Chat ID: ${args.chatId}`,
     });
 
-    return { success: true, username: user.username };
+    return {
+      success: true,
+      username: user.username,
+      numericId: user.numericId || String(user._id),
+      email: user.email || "Not set",
+      kycStatus: user.kycStatus || "unverified",
+      ethBalance: user.ethBalance || 0,
+      etbBalance: user.etbBalance || 0,
+      totalTrades: user.totalTrades || 0,
+      referralCode: user.referralCode || "None",
+      successfulInvites: user.successfulInvites || 0,
+    };
   },
 });
 
@@ -229,8 +240,22 @@ export const handleTelegramWebhook = internalAction({
       });
 
       if (linkResult.success) {
+        const kycText = linkResult.kycStatus === "approved" ? "✅ Verified" : "❌ Unverified";
         await sendReply(
-          `🎉 <b>Successfully Connected!</b> Your Telegram account has been linked to EthioSwap user <b>@${linkResult.username}</b>.\n\nYou will now receive instant alerts for all your deposits, withdrawals, invites, and P2P trades!`
+          `🎉 <b>Successfully Connected!</b> Your Telegram account has been linked to EthioSwap.\n\n` +
+          `👤 <b>Profile Details:</b>\n` +
+          `• <b>User ID:</b> #${linkResult.numericId}\n` +
+          `• <b>Username:</b> @${linkResult.username}\n` +
+          `• <b>Email:</b> ${linkResult.email}\n` +
+          `• <b>Verification Status:</b> ${kycText}\n\n` +
+          `💰 <b>Balances:</b>\n` +
+          `• <b>USDT Balance:</b> ${linkResult.ethBalance.toFixed(2)} USDT\n` +
+          `• <b>ETB Balance:</b> ${linkResult.etbBalance.toLocaleString()} ETB\n\n` +
+          `📈 <b>Stats & Referrals:</b>\n` +
+          `• <b>Total P2P Trades:</b> ${linkResult.totalTrades}\n` +
+          `• <b>Invite Code:</b> <code>${linkResult.referralCode}</code>\n` +
+          `• <b>Successful Invites:</b> ${linkResult.successfulInvites}\n\n` +
+          `You will now receive instant alerts for all your deposits, withdrawals, invites, and P2P trades!`
         );
       } else {
         await sendReply(

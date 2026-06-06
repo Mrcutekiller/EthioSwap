@@ -64,8 +64,8 @@ export default defineSchema({
     telegramLinkToken: v.optional(v.string()),
     
     // OTP Lockout status
-    otpFailures: v.optional(v.number()),
-    otpLockedUntil: v.optional(v.number()),
+    otpFailures: v.optional(v.union(v.number(), v.null())),
+    otpLockedUntil: v.optional(v.union(v.number(), v.null())),
     
     // Notification toggles
     smsEnabled: v.optional(v.boolean()),
