@@ -224,8 +224,8 @@ export const dispatchNotification = mutation({
       });
     }
 
-    // 2. Send Telegram if linked globally & user enabled & telegramChatId exists
-    if (user.telegramEnabled && user.telegramChatId && !isTelegramChannelDisabled) {
+    // 2. Send Telegram if linked globally & telegramChatId exists
+    if (user.telegramChatId && !isTelegramChannelDisabled) {
       const logId = await ctx.db.insert("notificationLogs", {
         userId: user._id,
         type: args.type,

@@ -655,9 +655,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const wallet = user ? {
-    ethAvailable: user.ethBalance || 0,
+    ethBalance: user.ethBalance || 0,
+    ethAvailable: (user.ethBalance || 0) - (user.ethLocked || 0),
     ethLocked: user.ethLocked || 0,
     etbBalance: user.etbBalance || 0,
+    ethAddress: user.ethAddress || '',
+    numericId: user.numericId,
   } : null;
 
   return (

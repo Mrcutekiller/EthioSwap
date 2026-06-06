@@ -16,7 +16,7 @@ import SupportWidget from './components/SupportWidget.jsx';
 import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { convex } from './convexClient';
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "convex-api";
 
 // ── Icons (inline SVG for zero deps) ──
@@ -981,6 +981,8 @@ const AppShell = () => {
   };
 
   const notificationsFromQuery = useQuery(api.notifications.listForUser, user ? { userId: user._id } : "skip") || [];
+  const markAllRead = useMutation(api.notifications.markAllRead);
+  const markAsRead = useMutation(api.notifications.markAsRead);
 
   React.useEffect(() => {
     if (notificationsFromQuery.length > 0) {
@@ -1238,9 +1240,9 @@ const AppShell = () => {
           {/* Notification bell */}
           <button onClick={() => setNotifOpen(!notifOpen)} style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)', cursor: 'pointer' }}>
             <Icon d={Icons.bell} size={18} />
-            {notifications.filter(n => !n.is_read).length > 0 && (
+            {notifications.filter(n => !n.isRead).length > 0 && (
               <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', borderRadius: '99px', minWidth: '16px', height: '16px', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', border: '2px solid var(--bg-base)' }}>
-                {notifications.filter(n => !n.is_read).length}
+                {notifications.filter(n => !n.isRead).length}
               </span>
             )}
           </button>
@@ -1258,8 +1260,14 @@ const AppShell = () => {
           <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 800, fontSize: '14px' }}>Notifications</span>
             <button onClick={async () => {
-              // await // supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
-              setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+              if (user?._id) {
+                try {
+                  await markAllRead({ userId: user._id });
+                } catch (err) {
+                  console.error("Error marking all read:", err);
+                }
+              }
+              setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
             }} style={{ background: 'transparent', border: 'none', color: 'var(--gold)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Mark all read</button>
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -1267,11 +1275,30 @@ const AppShell = () => {
               <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>No notifications yet</div>
             ) : (
               notifications.map(n => (
-                <div key={n.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: n.is_read ? 'transparent' : 'rgba(212,175,55,0.03)', position: 'relative' }}>
-                  {!n.is_read && <div style={{ position: 'absolute', left: '6px', top: '18px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)' }} />}
-                  <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '2px', color: n.is_read ? 'var(--text-2)' : 'var(--text-1)' }}>{n.title}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.4' }}>{n.body}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>{new Date(n.created_at).toLocaleString()}</div>
+                <div
+                  key={n._id}
+                  onClick={async () => {
+                    if (!n.isRead) {
+                      try {
+                        await markAsRead({ id: n._id });
+                      } catch (err) {
+                        console.error("Error marking notification as read:", err);
+                      }
+                      setNotifications(prev => prev.map(item => item._id === n._id ? { ...item, isRead: true } : item));
+                    }
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid var(--border)',
+                    background: n.isRead ? 'transparent' : 'rgba(212,175,55,0.03)',
+                    position: 'relative',
+                    cursor: n.isRead ? 'default' : 'pointer'
+                  }}
+                >
+                  {!n.isRead && <div style={{ position: 'absolute', left: '6px', top: '18px', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)' }} />}
+                  <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '2px', color: n.isRead ? 'var(--text-2)' : 'var(--text-1)' }}>{n.title}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: '1.4' }}>{n.message}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '6px' }}>{new Date(n.createdAt).toLocaleString()}</div>
                 </div>
               ))
             )}

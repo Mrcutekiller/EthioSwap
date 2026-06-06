@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation, internalAction } from "./_generated/server";
+import { query, mutation, internalMutation, internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 
@@ -296,3 +296,23 @@ export const updateUserTelegramChatId = mutation({
     });
   },
 });
+
+export const registerWebhook = action({
+  args: {},
+  handler: async (ctx) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) throw new Error("TELEGRAM_BOT_TOKEN environment variable is not set");
+    const siteUrl = process.env.CONVEX_SITE_URL;
+    if (!siteUrl) throw new Error("CONVEX_SITE_URL environment variable is not set");
+    const webhookUrl = `${siteUrl}/telegram-webhook`;
+    console.log(`Setting Telegram webhook to: ${webhookUrl}`);
+    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: webhookUrl }),
+    });
+    const result = await response.json();
+    return result;
+  },
+});
+

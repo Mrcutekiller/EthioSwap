@@ -38,6 +38,37 @@ const FeePill = ({ label, value, color = '#f5c518' }) => (
   </div>
 );
 
+/* ─── networkChip selection helper ───────────────────────────────── */
+const networkChip = (networkId, selectedId, setSelectedId) => {
+  const n = NETWORKS.find(item => item.id === networkId);
+  if (!n) return null;
+  const isActive = selectedId === networkId;
+  return (
+    <button
+      key={networkId}
+      type="button"
+      onClick={() => setSelectedId(networkId)}
+      style={{
+        padding: '6px 12px',
+        borderRadius: '8px',
+        border: `1.5px solid ${isActive ? n.color : 'rgba(255,255,255,0.06)'}`,
+        background: isActive ? 'rgba(255,255,255,0.03)' : 'transparent',
+        color: isActive ? '#fff' : '#8b92a8',
+        fontSize: '11px',
+        fontWeight: 700,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.color }} />
+      {n.label}
+    </button>
+  );
+};
+
 /* ─── Main component ──────────────────────────────────────────── */
 const WalletCard = () => {
   const {
