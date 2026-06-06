@@ -367,7 +367,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     Click the button below to open the Telegram Bot, click <b>Start</b>, copy the 6-digit verification code, and enter it below.
                   </p>
                   <a
-                    href={`https://t.me/EthioSwapBot?start=${otpData.telegramLinkToken}`}
+                    href={`https://t.me/EthioSwap_Bot?start=${otpData.telegramLinkToken}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-gold w-full"

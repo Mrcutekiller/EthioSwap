@@ -109,6 +109,7 @@ export const verifyAndLinkCode = mutation({
     await ctx.db.patch(user._id, {
       telegramChatId: args.chatId,
       telegramEnabled: true,
+      telegramLinked: true,
       telegramLinkCode: undefined,
       telegramLinkExpires: undefined,
     });

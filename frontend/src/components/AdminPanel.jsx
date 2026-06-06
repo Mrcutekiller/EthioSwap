@@ -307,6 +307,13 @@ const AdminPanel = ({ user }) => {
     resolveDispute
   } = useAuth();
 
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab,   setActiveTab]   = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar toggle
   const [chartType,   setChartType]   = useState('volume'); // 'volume' | 'users'
@@ -1017,7 +1024,39 @@ const AdminPanel = ({ user }) => {
         .text-orange-400 { color: #fb923c; }
         .bg-red-500\\/5 { background-color: rgba(239, 68, 68, 0.05); }
         .border-2.border-\\[var\\(--gold\\)\\] { border: 2px solid var(--gold); }
-        .text-\\[var\\(--text-muted\\)\\] { color: var(--text-muted); }
+        .text-[var(--text-muted)] { color: var(--text-muted); }
+
+        .drawer-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 1000;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .drawer-content {
+          position: fixed;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 520px;
+          max-width: 100%;
+          height: 100vh;
+          background: #0d1117;
+          border-left: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+          z-index: 1001;
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+          animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @media (max-width: 768px) {
+          .drawer-content {
+            width: 100%;
+          }
+        }
       `}</style>
 
       {/* Toast Alert — Premium Slide-In */}

@@ -57,7 +57,11 @@ export const generateOtp = mutation({
       .collect();
 
     if (recentOtps.length > 0) {
-      throw new Error("Please wait 60 seconds before requesting another code.");
+      // If switching from sms to telegram during signup, bypass the 60-second rate limit
+      const isSwitchingToTelegram = args.purpose === "signup" && channel === "telegram" && recentOtps.some((o) => o.channel === "sms");
+      if (!isSwitchingToTelegram) {
+        throw new Error("Please wait 60 seconds before requesting another code.");
+      }
     }
 
     // Check resend limits: max 3 resends per purpose session
