@@ -165,7 +165,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [showAddAcc, setShowAddAcc] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurityLock, setShowSecurityLock] = useState(false);
-  const [showReferralDash, setShowReferralDash] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -992,44 +991,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
           onVerify={handleSecurityVerify} 
           onClose={() => setShowSecurityLock(false)} 
         />
-      )}
-
-      {/* ─── REFERRAL DASHBOARD MODAL ──────────────────────────── */}
-      {showReferralDash && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
-            <button onClick={() => setShowReferralDash(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-1)' }}>Referral Dashboard</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '20px' }}>Invite friends and earn points + free trades!</p>
-            
-            <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700 }}>Your Unique Code</span>
-              <div style={{ fontSize: '24px', fontWeight: 900, color: '#f5c518', margin: '4px 0' }}>{user.referral_code}</div>
-              <button 
-                onClick={() => { navigator.clipboard.writeText(user.referral_code); alert('Copied!'); }}
-                className="btn btn-sm btn-gold" style={{ marginTop: '8px' }}
-              >
-                <Copy size={14} /> Copy Code
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-base)', borderRadius: '12px' }}>
-                <div style={{ fontSize: '18px', fontWeight: 800 }}>{referralStats?.totalReferrals || 0}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Total Referrals</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-base)', borderRadius: '12px' }}>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#00d4a0' }}>{referralStats?.completedReferrals || 0}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Completed</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn btn-full" style={{ background: '#25D366', color: '#fff', fontSize: '12px' }}>WhatsApp</button>
-              <button className="btn btn-full" style={{ background: '#0088cc', color: '#fff', fontSize: '12px' }}>Telegram</button>
-            </div>
-          </div>
-        </div>
       )}
 
 

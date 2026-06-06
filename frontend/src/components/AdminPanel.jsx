@@ -134,165 +134,6 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
   );
 };
 
-/* ── Invite Helper Components ────────────────────────────── */
-const InviteStatusCard = ({ user, settings, showAlert }) => {
-  const updateSettings = useMutation(api.systemSettings.update);
-  const manualUnlock = async () => {
-    if (window.confirm("Are you sure you want to manually unlock the Invite & Earn program for ALL users?")) {
-      try {
-        await updateSettings({ id: settings._id, updates: { inviteEarnStatus: 'active' } });
-        showAlert("✓ Program unlocked successfully!");
-      } catch (e) { showAlert(e.message, "error"); }
-    }
-  };
-  return (
-    <div className="card-premium" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Program Status</h3>
-        <span className="pill-badge" style={{ 
-          background: settings?.inviteEarnStatus === 'active' ? 'rgba(0, 212, 160, 0.1)' : 'rgba(244, 63, 94, 0.1)', 
-          color: settings?.inviteEarnStatus === 'active' ? '#00d4a0' : '#f43f5e' 
-        }}>
-          <span className="pill-badge-dot" style={{ background: settings?.inviteEarnStatus === 'active' ? '#00d4a0' : '#f43f5e' }} />
-          {settings?.inviteEarnStatus?.toUpperCase() || 'LOCKED'}
-        </span>
-      </div>
-
-      {settings?.inviteEarnStatus !== 'active' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-            <span style={{ color: '#8b92a8' }}>Progress to Auto-Unlock</span>
-            <span style={{ fontWeight: 700 }}>{settings?.currentVerifiedUsers || 0} / {settings?.inviteUnlockTarget || 200} users</span>
-          </div>
-          <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ 
-              width: `${Math.min(100, ((settings?.currentVerifiedUsers || 0) / (settings?.inviteUnlockTarget || 200)) * 100)}%`, 
-              height: '100%', 
-              background: '#00d4a0',
-              transition: 'width 0.5s ease'
-            }} />
-          </div>
-          <p style={{ fontSize: '12px', color: '#4e5567', fontStyle: 'italic' }}>
-            ⚠️ Auto-unlocks at {settings?.inviteUnlockTarget || 200} verified & active users.
-          </p>
-          <button 
-            onClick={manualUnlock}
-            className="btn-premium-danger" 
-            style={{ marginTop: '10px' }}
-          >
-            🔓 MANUALLY UNLOCK NOW
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const InviteGlobalStatsCard = ({ user }) => {
-  const stats = useQuery(api.inviteRewards.getStats);
-
-  return (
-    <div className="card-premium">
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Global Stats</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Total Invites Made</div>
-          <div style={{ fontSize: '20px', fontWeight: 700 }}>{stats?.totalInvites || 0}</div>
-        </div>
-        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Total Rewards Paid</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#00d4a0' }}>${stats?.totalRewardsPaid?.toFixed(2) || '0.00'}</div>
-        </div>
-        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Active Referrals</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#00d4a0' }}>{stats?.totalActive || 0}</div>
-        </div>
-        <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Pending Referrals</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fbbf24' }}>{stats?.totalPending || 0}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TopInvitersTable = ({ user }) => {
-  const topInviters = useQuery(api.inviteRewards.listTopInviters, { limit: 5 }) || [];
-
-  return (
-    <div className="card-premium">
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Top Inviters This Month</h3>
-      <table className="table-premium">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>User</th>
-            <th>Invites</th>
-            <th>Earned</th>
-          </tr>
-        </thead>
-        <tbody>
-          {topInviters.map((inv, i) => (
-            <tr key={i}>
-              <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
-              <td style={{ fontWeight: 600 }}>@{inv.username}</td>
-              <td>{inv.successfulInvites || 0}</td>
-              <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(inv.totalInviteEarnings || 0).toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-const InviteSettingsCard = ({ settings, updateSettings }) => {
-  return (
-    <div className="card-premium">
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 600 }}>Reward Settings</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', color: '#8b92a8' }}>Reward Per Invite (USD)</label>
-          <input 
-            type="number" 
-            step="0.01" 
-            className="input-premium" 
-            value={settings?.inviteRewardAmount || 0.50} 
-            onChange={async (e) => await updateSettings({ id: settings._id, updates: { inviteRewardAmount: parseFloat(e.target.value) } })}
-          />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', color: '#8b92a8' }}>Min Trade to Qualify (USD)</label>
-          <input 
-            type="number" 
-            className="input-premium" 
-            defaultValue="10.00"
-          />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', color: '#8b92a8' }}>P2P Commission (%)</label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input 
-              type="number" 
-              step="0.1" 
-              className="input-premium" 
-              value={settings?.p2pCommission || 0} 
-              onChange={async (e) => await updateSettings({ id: settings._id, updates: { p2pCommission: parseFloat(e.target.value) } })}
-            />
-            <button 
-              onClick={async () => await updateSettings({ id: settings._id, updates: { isP2pFreePeriod: !settings?.isP2pFreePeriod } })}
-              className={settings?.isP2pFreePeriod ? "btn-premium-primary" : "btn-premium-ghost"}
-              style={{ whiteSpace: 'nowrap' }}
-            >
-              {settings?.isP2pFreePeriod ? "Free Period ON" : "Free Period OFF"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 /* ══════════════════════════════════════════════════════════════
    ADMIN PANEL MAIN REDESIGNED COMPONENT
    ══════════════════════════════════════════════════════════════ */
@@ -454,6 +295,7 @@ const AdminPanel = ({ user }) => {
   const [minWithdraw,      setMinWithdraw]      = useState('10');
   const [minP2pListing,    setMinP2pListing]    = useState('1');
   const [maxDailyWithdraw, setMaxDailyWithdraw] = useState('1000');
+  const [isP2pFreePeriod,  setIsP2pFreePeriod]  = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -466,6 +308,7 @@ const AdminPanel = ({ user }) => {
       setMinWithdraw(settings.minWithdrawalUSD?.toString() || '10');
       setMinP2pListing(settings.minP2pListingUSD?.toString() || '1');
       setMaxDailyWithdraw(settings.maxDailyWithdrawalUSD?.toString() || '1000');
+      setIsP2pFreePeriod(settings.isP2pFreePeriod ?? false);
     }
   }, [settings]);
 
@@ -703,6 +546,7 @@ const AdminPanel = ({ user }) => {
           minWithdrawalUSD: parseFloat(minWithdraw) || 10.0,
           minP2pListingUSD: parseFloat(minP2pListing) || 1.0,
           maxDailyWithdrawalUSD: parseFloat(maxDailyWithdraw) || 1000,
+          isP2pFreePeriod: isP2pFreePeriod,
         }
       });
       showAlert('✓ Settings saved successfully!');
@@ -2752,28 +2596,6 @@ const AdminPanel = ({ user }) => {
             </div>
           )}
 
-          {/* ════ INVITE & EARN MANAGEMENT ════ */}
-          {activeTab === 'invite' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>🤝 Invite & Earn Control</h2>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#8b92a8' }}>Manage referral program and rewards</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-                <InviteStatusCard user={user} settings={settings} showAlert={showAlert} />
-                <InviteGlobalStatsCard user={user} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-                <TopInvitersTable user={user} />
-                <InviteSettingsCard settings={settings} updateSettings={updateSettingsMutation} />
-              </div>
-            </div>
-          )}
-
           {/* ════ MEMBERS DIRECTORY SCREEN (USERS) ════ */}
           {activeTab === 'users' && (() => {
             const filteredUsers = (allUsersList || []).filter(u => {
@@ -3360,6 +3182,18 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Withdrawal Fee (%)</label>
                     <input type="number" step="0.01" className="input-premium" value={withdrawFee} onChange={e => setWithdrawFee(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="isP2pFreePeriod" 
+                      checked={isP2pFreePeriod} 
+                      onChange={e => setIsP2pFreePeriod(e.target.checked)} 
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }} 
+                    />
+                    <label htmlFor="isP2pFreePeriod" style={{ fontSize: '13px', fontWeight: 600, color: '#f0f2f8', cursor: 'pointer' }}>
+                      Enable Zero-Fee P2P Trading (P2P Free Period)
+                    </label>
                   </div>
                 </div>
 

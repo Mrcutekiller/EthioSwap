@@ -271,7 +271,14 @@ export const listAllTradeRatings = query({
   args: { adminId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.adminId);
-    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+    if (!admin || admin.role !== "admin") {
+      return {
+        ratings: [],
+        totalRatings: 0,
+        averagePlatformRating: 5.0,
+        todayCount: 0,
+      };
+    }
 
     const allRatings = await ctx.db.query("tradeRatings").order("desc").collect();
 
@@ -314,7 +321,9 @@ export const getUserRatingsHistory = query({
   args: { adminId: v.id("users"), targetUserId: v.id("users") },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.adminId);
-    if (!admin || admin.role !== "admin") throw new Error("Unauthorized");
+    if (!admin || admin.role !== "admin") {
+      return { received: [], given: [] };
+    }
 
     const received = await ctx.db
       .query("tradeRatings")

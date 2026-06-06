@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import { useQuery, useMutation } from "convex/react";
 import { api } from "convex-api";
 import { convex } from "../convexClient";
+import { ethers } from "ethers";
 
 const AuthContext = createContext();
 

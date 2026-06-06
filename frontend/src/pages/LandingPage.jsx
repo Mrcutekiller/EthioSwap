@@ -659,7 +659,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     }
   };
 
-  const goalProgress = stats.traders ? Math.min((stats.traders / 200) * 100, 100) : 0;
 
   return (
     <div style={{ background: '#0a0a0a', color: '#c8c8c8', fontFamily: "'Inter', sans-serif", overflowX: 'hidden', position: 'relative' }}>
@@ -900,7 +899,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 { id: 'trade', label: 'Trade', target: '#market' },
                 { id: 'p2p', label: 'P2P', target: '#market' },
                 { id: 'rates', label: 'Rates', target: '#market' },
-                { id: 'invite', label: 'Invite & Earn', target: '#invite' },
               ].map(link => (
                 <a key={link.id} href={link.target} className="nav-item-saas">{link.label}</a>
               ))}
@@ -1269,32 +1267,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
           <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
             <MarketRates isLoggedIn={false} onSelectOffer={() => onGetStarted()} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── INVITE & EARN PROGRAM ── */}
-      <section id="invite" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ fontSize: '11px', color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, background: 'rgba(245,197,24,0.1)', padding: '4px 12px', borderRadius: '20px' }}>COMING SOON</span>
-          <h2 className="serif-title" style={{ fontSize: '36px', color: '#fff', margin: '16px 0 12px 0', fontWeight: 400 }}>Invite & Earn Program</h2>
-          <p style={{ fontSize: '16px', color: '#c8c8c8', lineHeight: 1.7, marginBottom: '8px', maxWidth: '560px', margin: '0 auto 8px' }}>
-            Invite your friends to EthioSwap and earn <span style={{ color: '#f5c518', fontWeight: 700 }}>$0.50 USDT</span> for every user who completes their first trade after signing up with your referral code.
-          </p>
-          <p style={{ fontSize: '13px', color: '#8b92a8', marginBottom: '32px' }}>
-            The more you invite, the more you earn. Start sharing your referral code today.
-          </p>
-          <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '32px', maxWidth: '480px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#c8c8c8' }}>
-              <span>Community Goal</span>
-              <span style={{ color: '#f5c518', fontWeight: 700 }}>{goalProgress.toFixed(0)}%</span>
-            </div>
-            <div style={{ background: '#0a0a0a', borderRadius: '8px', height: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ width: `${goalProgress}%`, height: '100%', background: 'linear-gradient(90deg, #f5c518, #00d4a0)', borderRadius: '8px', transition: 'width 1s ease' }} />
-            </div>
-            <div style={{ marginTop: '12px', fontSize: '12px', color: '#8b92a8', fontWeight: 600 }}>
-              {stats.traders} / 200 verified traders
-            </div>
           </div>
         </div>
       </section>
