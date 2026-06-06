@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { DatabaseWriter, DatabaseReader } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import crypto from "crypto";
 
 // Generate a new 6-digit OTP code for a user
 export const generateOtp = mutation({
@@ -87,7 +86,9 @@ export const generateOtp = mutation({
     }
 
     // Generate a 6-digit cryptographically secure random code
-    const code = crypto.randomInt(100000, 1000000).toString();
+    const randomBuffer = new Uint32Array(1);
+    crypto.getRandomValues(randomBuffer);
+    const code = (100000 + (randomBuffer[0] % 900000)).toString();
     const expiresAt = now + 5 * 60 * 1000; // 5 minutes
 
     const otpId = await ctx.db.insert("otps", {

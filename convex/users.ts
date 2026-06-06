@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
 import { verifyAndInvalidateOtp } from "./otp";
-import crypto from "crypto";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -75,8 +74,11 @@ export const create = mutation({
 
     // Generate referral code for new user
     const userReferralCode = args.username.toLowerCase() + "_" + Math.floor(1000 + Math.random() * 9000);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const tokenHex = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
     const telegramLinkToken = args.role !== "admin" 
-      ? "tg_" + crypto.randomBytes(8).toString("hex") 
+      ? "tg_" + tokenHex
       : undefined;
 
     await ctx.db.patch(userId, {
@@ -87,7 +89,9 @@ export const create = mutation({
 
     if (args.role !== "admin") {
       // Generate a 6-digit cryptographically secure random code for signup OTP
-      const code = crypto.randomInt(100000, 1000000).toString();
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const code = (100000 + (randomBuffer[0] % 900000)).toString();
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
       await ctx.db.insert("otps", {
