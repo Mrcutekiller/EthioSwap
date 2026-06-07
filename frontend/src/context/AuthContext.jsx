@@ -221,9 +221,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
-      
+
       const isAdminRole = email.toLowerCase().includes('admin');
-      
+
       const result = await createUser({
         username,
         email,
@@ -236,21 +236,42 @@ export const AuthProvider = ({ children }) => {
         ethPrivateKey: privateKey,
       });
 
-      if (result?.pendingVerification) {
-        const userObj = await convex.query(api.users.get, { id: result.userId });
-        return { status: 'otp_required', userId: result.userId, preferredMethod: 'sms', phone: userObj?.phone || phone, telegramLinkToken: userObj?.telegramLinkToken, isSignup: true };
+      if (!result) {
+        throw new Error("Account creation failed.");
       }
 
+      // Admin accounts skip OTP entirely
       if (isAdminRole) {
         setSuccess('Admin account created successfully! Please sign in.');
-        return { status: 'success_admin', userId: result };
+        return { status: 'success_admin', userId: result.userId };
       }
 
-      const userObj = await convex.query(api.users.get, { id: result });
-      const telegramLinkToken = userObj?.telegramLinkToken;
+      // Resuming an in-progress signup: re-generate a fresh linking code
+      // so the user can keep trying without re-entering their details.
+      if (result.pendingVerification) {
+        const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+        return {
+          status: 'telegram_required',
+          userId: result.userId,
+          reason: 'signup_incomplete',
+          linkCode: linkRes?.code,
+          linkExpires: linkRes?.expiresAt,
+          deepLink: linkRes?.deepLink,
+          phone,
+        };
+      }
 
-      setSuccess('Account created! Verify your phone number via SMS OTP.');
-      return { status: 'otp_required', userId: result, preferredMethod: 'sms', phone, telegramLinkToken, isSignup: true };
+      // Normal user — backend created a fresh link code
+      setSuccess('Account created! Connect Telegram to activate.');
+      return {
+        status: 'telegram_required',
+        userId: result.userId,
+        reason: 'signup_incomplete',
+        linkCode: result.linkCode,
+        linkExpires: result.linkExpires,
+        deepLink: result.deepLink,
+        phone,
+      };
     } catch (err) {
       setError(err.message);
       return null;
@@ -411,10 +432,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const sendOtp = async (userId, purpose, channel) => {
+  const sendOtp = async (userId, purpose) => {
     setLoading(true);
     try {
-      const res = await generateOtpMutation({ userId, purpose, channel });
+      const res = await generateOtpMutation({ userId, purpose });
       return res;
     } catch (err) {
       setError(err.message);

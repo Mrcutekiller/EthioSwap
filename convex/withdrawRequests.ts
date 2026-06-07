@@ -21,11 +21,18 @@ export const create = mutation({
     walletType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Telegram is the only OTP channel. Without it the user cannot
+    // receive the withdrawal code, so we reject the request.
+    if (user.role !== "admin" && (!user.telegramLinked || !user.telegramChatId)) {
+      throw new Error("Telegram is not connected. Please reconnect Telegram in Settings before withdrawing.");
+    }
+
     // 1. Verify OTP for withdrawal first!
     await verifyAndInvalidateOtp(ctx.db, args.userId, "withdrawal", args.otpCode);
 
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
     if ((user.ethBalance || 0) < args.amountEth) {
       throw new Error("Insufficient balance for withdrawal");
     }

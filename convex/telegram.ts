@@ -154,7 +154,6 @@ export const activateUserAfterTelegramLink = mutation({
 
     await ctx.db.patch(args.userId, {
       status: "active",
-      smsEnabled: true,
     });
 
     await ctx.db.insert("notifications", {

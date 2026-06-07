@@ -104,7 +104,6 @@ const WalletCard = () => {
   const { sendOtp } = useAuth();
   const [showWdOtp, setShowWdOtp] = useState(false);
   const [wdOtpCode, setWdOtpCode] = useState('');
-  const [wdOtpChannel, setWdOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
   const [wdSendingOtp, setWdSendingOtp] = useState(false);
   const [wdResendTimer, setWdResendTimer] = useState(0);
   const [wdOtpError, setWdOtpError] = useState('');
@@ -160,8 +159,13 @@ const WalletCard = () => {
     e.preventDefault();
     if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
     if (!depTxId.trim())    { setError('Please enter your Transaction ID / Reference'); return; }
-    
-    if (user.telegramLinked === true && user.role !== "admin") {
+
+    if (user.role !== "admin" && (!user.telegramLinked || !user.telegramChatId)) {
+      setError('Please connect Telegram in Settings before making a deposit.');
+      return;
+    }
+
+    if (user.role !== "admin") {
       setShowDepOtp(true);
       setDepOtpCode('');
       setDepOtpError('');
@@ -195,11 +199,11 @@ const WalletCard = () => {
     return () => clearInterval(interval);
   }, [depResendTimer]);
 
-  const triggerWdOtp = async (channel) => {
+  const triggerWdOtp = async () => {
     setWdSendingOtp(true);
     setWdOtpError('');
     try {
-      await sendOtp(user._id, 'withdrawal', channel || wdOtpChannel);
+      await sendOtp(user._id, 'withdrawal');
       setWdResendTimer(60);
     } catch (err) {
       setWdOtpError(err.message);
@@ -212,7 +216,7 @@ const WalletCard = () => {
     setDepSendingOtp(true);
     setDepOtpError('');
     try {
-      await sendOtp(user._id, 'deposit', 'telegram');
+      await sendOtp(user._id, 'deposit');
       setDepResendTimer(60);
     } catch (err) {
       setDepOtpError(err.message);
@@ -226,11 +230,15 @@ const WalletCard = () => {
     if (wdAmtNum < minWd)     { setError(`Minimum withdrawal is $${minWd}`); return; }
     if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
     if (!wdAddr.trim())       { setError('Enter a wallet address'); return; }
-    
+    if (user.role !== "admin" && (!user.telegramLinked || !user.telegramChatId)) {
+      setError('Please connect Telegram in Settings before withdrawing.');
+      return;
+    }
+
     setShowWdOtp(true);
     setWdOtpCode('');
     setWdOtpError('');
-    await triggerWdOtp(wdOtpChannel);
+    await triggerWdOtp();
   };
 
   const handleWdOtpVerifyAndSubmit = async (e) => {
@@ -868,44 +876,21 @@ const WalletCard = () => {
               Enter the 6-digit OTP code to authorize withdrawal of <b>${fmt(wdAmtNum)} USDT</b>.
             </p>
 
-            {/* Delivery channel selector */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={async () => { setWdOtpChannel('sms'); await triggerWdOtp('sms'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: wdOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
-                  color: wdOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                💬 SMS OTP
-              </button>
-              <button
-                type="button"
-                disabled={!user.telegramChatId}
-                onClick={async () => { setWdOtpChannel('telegram'); await triggerWdOtp('telegram'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
-                  background: wdOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
-                  color: wdOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
-                  opacity: user.telegramChatId ? 1 : 0.5,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                ✈️ Telegram
-              </button>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              background: 'rgba(42,171,238,0.08)',
+              border: '1px solid rgba(42,171,238,0.25)',
+              borderRadius: '10px',
+              marginBottom: '16px',
+            }}>
+              <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE' }}></i>
+              <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
+                Code sent to @EthioSwap_Bot
+              </span>
             </div>
 
             <form onSubmit={handleWdOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -967,7 +952,7 @@ const WalletCard = () => {
               ) : (
                 <button
                   type="button"
-                  onClick={() => triggerWdOtp(wdOtpChannel)}
+                  onClick={() => triggerWdOtp()}
                   style={{
                     background: 'none',
                     border: 'none',

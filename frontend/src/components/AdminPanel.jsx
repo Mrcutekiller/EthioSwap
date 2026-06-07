@@ -3595,37 +3595,6 @@ const user = await ctx.db
                 {commsSubTab === 'settings' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                      
-                      {/* SMS Toggle */}
-                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <strong style={{ fontSize: '14px', color: '#fff' }}>Vonage SMS Channel</strong>
-                            <span className="pill-badge" style={{ backgroundColor: settings?.isSmsChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isSmsChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
-                              {settings?.isSmsChannelDisabled ? 'MUTED' : 'ACTIVE'}
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '12px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
-                            Allows OTPs to be dispatched via Vonage SMS. Disabling blocks all SMS dispatches globally.
-                          </p>
-                        </div>
-                        <button 
-                          onClick={() => handleToggleChannel('isSmsChannelDisabled', settings?.isSmsChannelDisabled || false)} 
-                          className="btn-premium"
-                          style={{ 
-                            background: settings?.isSmsChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
-                            color: settings?.isSmsChannelDisabled ? '#00d4a0' : '#f43f5e',
-                            border: '1px solid currentColor',
-                            fontSize: '12px', 
-                            padding: '8px', 
-                            borderRadius: '8px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {settings?.isSmsChannelDisabled ? '🔌 Enable SMS Channel' : '🛑 Disable SMS Channel'}
-                        </button>
-                      </div>
 
                       {/* Telegram Toggle */}
                       <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
@@ -3637,18 +3606,18 @@ const user = await ctx.db
                             </span>
                           </div>
                           <p style={{ fontSize: '12px', color: '#8b92a8', margin: 0, lineHeight: 1.5 }}>
-                            Allows OTP codes and trade alerts to be dispatched via Telegram. Disabling blocks Telegram bot communications.
+                            Telegram is the only OTP channel — every login, withdrawal, and deposit verification is sent here. Disabling blocks all logins.
                           </p>
                         </div>
-                        <button 
-                          onClick={() => handleToggleChannel('isTelegramChannelDisabled', settings?.isTelegramChannelDisabled || false)} 
+                        <button
+                          onClick={() => handleToggleChannel('isTelegramChannelDisabled', settings?.isTelegramChannelDisabled || false)}
                           className="btn-premium"
-                          style={{ 
-                            background: settings?.isTelegramChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+                          style={{
+                            background: settings?.isTelegramChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)',
                             color: settings?.isTelegramChannelDisabled ? '#00d4a0' : '#f43f5e',
                             border: '1px solid currentColor',
-                            fontSize: '12px', 
-                            padding: '8px', 
+                            fontSize: '12px',
+                            padding: '8px',
                             borderRadius: '8px',
                             fontWeight: '600',
                             cursor: 'pointer'

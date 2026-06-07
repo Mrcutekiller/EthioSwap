@@ -121,7 +121,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   
   const [showProfileOtp, setShowProfileOtp] = useState(false);
   const [profileOtpCode, setProfileOtpCode] = useState('');
-  const [profileOtpChannel, setProfileOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
   const [profileSendingOtp, setProfileSendingOtp] = useState(false);
   const [profileResendTimer, setProfileResendTimer] = useState(0);
   const [profileOtpError, setProfileOtpError] = useState('');
@@ -297,11 +296,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     return () => clearInterval(interval);
   }, [profileResendTimer]);
 
-  const triggerProfileOtp = async (channel) => {
+  const triggerProfileOtp = async () => {
     setProfileSendingOtp(true);
     setProfileOtpError('');
     try {
-      await sendOtp(user._id, 'sensitive_change', channel || profileOtpChannel);
+      await sendOtp(user._id, 'sensitive_change');
       setProfileResendTimer(60);
     } catch (err) {
       setProfileOtpError(err.message);
@@ -313,12 +312,16 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const handleEditProfile = async (e) => {
     e.preventDefault();
     const hasSensitive = editPhone !== (user?.phone || '') || editEmail !== (user?.email || '') || editPassword !== '';
-    
+
     if (hasSensitive) {
+      if (!user.telegramLinked || !user.telegramChatId) {
+        alert('Please connect Telegram in Settings before editing sensitive profile details.');
+        return;
+      }
       setShowProfileOtp(true);
       setProfileOtpCode('');
       setProfileOtpError('');
-      await triggerProfileOtp(profileOtpChannel);
+      await triggerProfileOtp();
     } else {
       setEditLoading(true);
       try {
@@ -1173,44 +1176,21 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               Confirm your identity by entering the 6-digit OTP code to update your profile details.
             </p>
 
-            {/* Delivery channel selector */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={async () => { setProfileOtpChannel('sms'); await triggerProfileOtp('sms'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: profileOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
-                  color: profileOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                💬 SMS OTP
-              </button>
-              <button
-                type="button"
-                disabled={!user.telegramChatId}
-                onClick={async () => { setProfileOtpChannel('telegram'); await triggerProfileOtp('telegram'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
-                  background: profileOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
-                  color: profileOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
-                  opacity: user.telegramChatId ? 1 : 0.5,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                ✈️ Telegram
-              </button>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              background: 'rgba(42,171,238,0.08)',
+              border: '1px solid rgba(42,171,238,0.25)',
+              borderRadius: '10px',
+              marginBottom: '16px',
+            }}>
+              <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE' }}></i>
+              <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
+                Code sent to @EthioSwap_Bot
+              </span>
             </div>
 
             <form onSubmit={handleProfileOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1272,7 +1252,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               ) : (
                 <button
                   type="button"
-                  onClick={() => triggerProfileOtp(profileOtpChannel)}
+                  onClick={() => triggerProfileOtp()}
                   style={{
                     background: 'none',
                     border: 'none',

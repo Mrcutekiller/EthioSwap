@@ -40,7 +40,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, generateTelegramLinkCode, resendSignupOtpWithFallback, loading, error } = useAuth();
+  const { login, register, verifyLoginOtp, sendOtp, generateTelegramLinkCode, resendSignupOtpWithFallback, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,14 +52,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
 
-  // OTP State
-  const [otpData, setOtpData] = useState(null); // { status, userId, preferredMethod, phone, telegramChatId, telegramLinkToken }
+  // Flow State
+  // For signup: { stage: 'telegram_required', userId, reason: 'signup_incomplete' | 'telegram_disconnected', linkCode, linkExpires, deepLink }
+  // For login OTP: { stage: 'otp_required', userId, telegramChatId, phone }
+  const [flow, setFlow] = useState(null);
   const [otpCode, setOtpCode] = useState('');
   const [trustDevice, setTrustDevice] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
-  const [showTgFallback, setShowTgFallback] = useState(false);
   const [tgLinkCode, setTgLinkCode] = useState('');
   const [tgDeepLink, setTgDeepLink] = useState('');
   const [tgCodeExpiresAt, setTgCodeExpiresAt] = useState(0);
@@ -68,16 +69,25 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [tgLinked, setTgLinked] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [autoOpenedBot, setAutoOpenedBot] = useState(false);
-  const [resendWithFallback, setResendWithFallback] = useState(false);
-  const [smsDeliveryFailed, setSmsDeliveryFailed] = useState(false);
 
-  const signupUser = useQuery(api.users.get, otpData?.userId && otpData?.isSignup ? { id: otpData.userId } : "skip");
+  const pendingUser = useQuery(
+    api.users.get,
+    flow?.stage === 'telegram_required' && flow?.userId ? { id: flow.userId } : "skip"
+  );
 
+  // When the user links Telegram, the bot activates the user (status: 'active').
+  // Detect that and move them to the login OTP step.
   useEffect(() => {
-    if (signupUser && signupUser.status === "active" && otpData?.isSignup) {
+    if (pendingUser && pendingUser.status === "active" && flow?.stage === 'telegram_required' && flow?.reason === 'signup_incomplete') {
       setTgLinked(true);
     }
-  }, [signupUser, otpData]);
+  }, [pendingUser, flow]);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -114,16 +124,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   };
 
   const handleConnectTelegram = async (autoOpen = false) => {
-    if (!otpData?.userId) return;
+    if (!flow?.userId) return;
     setTgLinking(true);
     setLocalError('');
     try {
-      const res = await generateTelegramLinkCode(otpData.userId);
+      const res = await generateTelegramLinkCode(flow.userId);
       if (res?.code) {
         setTgLinkCode(res.code);
         setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
         setTgCodeExpiresAt(res.expiresAt || (Date.now() + 10 * 60 * 1000));
-        setShowTgFallback(true);
         if (autoOpen && res.deepLink) {
           setAutoOpenedBot(true);
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
@@ -136,13 +145,14 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     }
   };
 
+  // After the bot activates the user, auto-redirect to the app
   useEffect(() => {
-    if (!tgLinked || !otpData?.userId) return;
+    if (!tgLinked || !flow?.userId) return;
     const timer = setTimeout(() => {
       window.location.reload();
     }, 2000);
     return () => clearTimeout(timer);
-  }, [tgLinked, otpData]);
+  }, [tgLinked, flow]);
 
   // Inline validation state
   const [usernameError, setUsernameError] = useState('');
@@ -221,22 +231,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     return () => clearTimeout(timer);
   }, [email, mode]);
 
-  const triggerSendOtp = async (userId, channel) => {
+  const triggerSendOtp = async (userId) => {
     setSendingOtp(true);
     setLocalError('');
     try {
-      const purpose = otpData?.isSignup ? 'signup' : 'login';
-      const res = await sendOtp(userId, purpose, channel);
+      await sendOtp(userId, 'login');
       setResendTimer(60);
-      // For signup: if SMS could not be delivered, pre-stage the Telegram fallback
-      if (purpose === 'signup' && channel === 'sms' && res && res.success === false) {
-        setSmsDeliveryFailed(true);
-        if (!showTgFallback) {
-          await handleConnectTelegram(false);
-        }
-      } else if (res?.success !== false) {
-        setSmsDeliveryFailed(false);
-      }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
     } finally {
@@ -244,47 +244,71 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     }
   };
 
-  const handleResendWithFallback = async () => {
-    if (!otpData?.userId) return;
-    setSendingOtp(true);
+  const handleResendTelegramCode = async () => {
+    if (!flow?.userId) return;
+    setTgLinking(true);
     setLocalError('');
     try {
-      const result = await resendSignupOtpWithFallback(otpData.userId);
-      setResendTimer(60);
+      const result = await resendSignupOtpWithFallback(flow.userId);
       if (result?.telegramCode) {
         setTgLinkCode(result.telegramCode.code);
         setTgDeepLink(result.telegramCode.deepLink);
         setTgCodeExpiresAt(result.telegramCode.expiresAt);
-        setShowTgFallback(true);
-        setSmsDeliveryFailed(true);
-      } else if (result?.smsSuccess === false) {
-        setSmsDeliveryFailed(true);
-        setLocalError("SMS could not be delivered. Please use Telegram below to continue.");
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
     } finally {
-      setSendingOtp(false);
+      setTgLinking(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
-    
+
     if (mode === 'login') {
       if (!username || !password) {
         setLocalError('Please enter both username/email and password.');
         return;
       }
       const res = await login(username, password);
-      if (res && res.status === 'otp_required') {
-        setOtpData(res);
-        if (res.isSignup) {
-          setResendTimer(60);
-        } else {
-          await triggerSendOtp(res.userId, res.preferredMethod || 'sms');
+      if (!res) return;
+
+      if (res.status === 'success') {
+        return; // AuthContext already set the user
+      }
+
+      if (res.status === 'telegram_required') {
+        // User needs to (re)connect Telegram before they can log in
+        setFlow({
+          stage: 'telegram_required',
+          userId: res.userId,
+          reason: res.reason,
+          phone: '',
+        });
+        // Pre-generate a link code so the user can act immediately
+        try {
+          const link = await generateTelegramLinkCode(res.userId);
+          if (link?.code) {
+            setTgLinkCode(link.code);
+            setTgDeepLink(link.deepLink || `https://t.me/EthioSwap_Bot?start=${link.code}`);
+            setTgCodeExpiresAt(link.expiresAt || (Date.now() + 10 * 60 * 1000));
+          }
+        } catch (e) {
+          // non-fatal — UI will offer a "generate new code" button
         }
+        return;
+      }
+
+      if (res.status === 'otp_required') {
+        // Telegram is linked — send the login OTP to the bot
+        setFlow({
+          stage: 'otp_required',
+          userId: res.userId,
+          telegramChatId: res.telegramChatId,
+          phone: res.phone,
+        });
+        await triggerSendOtp(res.userId);
       }
     } else {
       if (usernameError || emailError) {
@@ -304,14 +328,22 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         return;
       }
       const result = await register(username, password, phone, email, fullName, age);
-      if (result) {
-        if (result.status === 'otp_required') {
-          setOtpData(result);
-          setResendTimer(60);
-        } else if (result.status === 'success_admin') {
-          onToggle();
-        } else if (result.alreadyRegistered) {
-          onToggle();
+      if (!result) return;
+      if (result.status === 'success_admin') {
+        onToggle();
+        return;
+      }
+      if (result.status === 'telegram_required') {
+        setFlow({
+          stage: 'telegram_required',
+          userId: result.userId,
+          reason: result.reason,
+          phone: result.phone,
+        });
+        if (result.linkCode) {
+          setTgLinkCode(result.linkCode);
+          setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${result.linkCode}`);
+          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 10 * 60 * 1000));
         }
       }
     }
@@ -332,10 +364,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         ? `${navigator.userAgentData?.brands?.[0]?.brand || 'Browser'} on ${navigator.userAgentData?.platform || 'Windows/MacOS'}`
         : parsedDevice;
 
-      if (otpData?.isSignup) {
-        await verifySignupOtp(otpData.userId, otpCode);
-      } else {
-        await verifyLoginOtp(otpData.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
+      if (flow?.stage === 'otp_required') {
+        await verifyLoginOtp(flow.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
@@ -400,390 +430,305 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         {/* Right/Bottom Column: Auth Form Card */}
         <div className="auth-card" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column' }}>
           
-          {otpData ? (
-            // ── OTP VERIFICATION FORM ──
+          {flow ? (
+            // ── POST-SUBMIT FLOW: Telegram connect (signup) or OTP code (login) ──
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <button 
-                type="button" 
-                onClick={() => { setOtpData(null); setOtpCode(''); setLocalError(''); setShowTgFallback(false); }} 
-                style={{ 
-                  alignSelf: 'flex-start', 
-                  background: 'rgba(255,255,255,0.05)', 
-                  border: '1px solid rgba(255,255,255,0.2)', 
-                  borderRadius: '50px', 
-                  color: '#FFFFFF', 
-                  padding: '8px 18px', 
-                  fontSize: '12px', 
+              <button
+                type="button"
+                onClick={() => { setFlow(null); setOtpCode(''); setTgLinkCode(''); setTgDeepLink(''); setTgCodeExpiresAt(0); setTgLinked(false); setLocalError(''); }}
+                style={{
+                  alignSelf: 'flex-start',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '50px',
+                  color: '#FFFFFF',
+                  padding: '8px 18px',
+                  fontSize: '12px',
                   fontWeight: '700',
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '6px',
                   fontFamily: 'var(--font)',
                   transition: 'all 0.2s ease',
                 }}
               >
-                <i className="ti ti-arrow-left"></i> {otpData?.isSignup ? 'Back to Sign Up' : 'Back to Login'}
+                <i className="ti ti-arrow-left"></i> Back
               </button>
 
-              <h2 style={{ fontSize: '26px', fontWeight: 800, textAlign: 'center', margin: '10px 0 2px' }}>
-                {otpData?.isSignup ? 'Verify Phone Number' : 'Verify Identity'}
-              </h2>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', textAlign: 'center', lineHeight: '1.5', margin: '0 0 10px' }}>
-                {otpData?.isSignup 
-                  ? `We sent a 6-digit OTP code to ${otpData.phone || 'your phone number'} via SMS.`
-                  : 'We sent a 6-digit OTP code to verify your login attempt.'}
-              </p>
-
-              {otpData?.isSignup && showTgFallback && !tgLinked && (
-                <div style={{
-                  background: 'rgba(0, 212, 160, 0.04)',
-                  border: '1px solid rgba(0, 212, 160, 0.2)',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: '24px' }}>✈️</span>
-                  <p style={{ fontSize: '13px', color: 'var(--text-2)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-                    Connect via Telegram
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-                    Tap the button below to open Telegram with the code pre-filled. Just hit <b>Send</b> and your account is verified instantly.
-                  </p>
-                  <div
-                    onClick={() => {
-                      if (tgLinkCode) {
-                        navigator.clipboard.writeText(tgLinkCode).then(() => {
-                          setCodeCopied(true);
-                          setTimeout(() => setCodeCopied(false), 2000);
-                        }).catch(() => {});
-                      }
-                    }}
-                    style={{
-                      background: 'rgba(255, 215, 0, 0.1)',
-                      border: '1px solid rgba(255, 215, 0, 0.3)',
-                      borderRadius: '12px',
-                      padding: '12px 20px',
-                      fontSize: '24px',
-                      fontWeight: 800,
-                      color: 'var(--gold)',
-                      letterSpacing: '8px',
-                      fontFamily: 'monospace',
-                      cursor: 'pointer',
-                      userSelect: 'all',
-                      transition: 'all 0.2s ease',
-                    }}
-                    title="Click to copy code"
-                  >
-                    {tgLinkCode}
+              {flow.stage === 'telegram_required' && (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '4px' }}>✈️</div>
+                    <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '8px 0 6px' }}>
+                      {flow.reason === 'telegram_disconnected'
+                        ? 'Reconnect Your Telegram'
+                        : 'Connect Telegram to Activate'}
+                    </h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.5, margin: 0 }}>
+                      {flow.reason === 'telegram_disconnected'
+                        ? 'For your security, all logins go through the @EthioSwap_Bot. Re-link your Telegram to continue.'
+                        : 'All accounts must be linked to our Telegram bot. Open the bot, send the code below, and your account is activated instantly.'}
+                    </p>
                   </div>
-                  <span style={{ fontSize: '11px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: codeCopied ? 700 : 400 }}>
-                    {codeCopied ? '✓ Code copied! Paste it in the Telegram chat' : 'Tap code to copy manually'}
-                  </span>
-                  <a
-                    href={tgDeepLink || 'https://t.me/EthioSwap_Bot'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-gold w-full"
+
+                  {tgLinked ? (
+                    <div style={{
+                      background: 'rgba(0, 212, 160, 0.08)',
+                      border: '1px solid rgba(0, 212, 160, 0.3)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: '32px' }}>✅</span>
+                      <p style={{ fontSize: '14px', color: 'var(--text-1)', textAlign: 'center', margin: 0, fontWeight: 700 }}>
+                        Telegram Connected!
+                      </p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
+                        {flow.reason === 'telegram_disconnected'
+                          ? 'Now log in with your username and password.'
+                          : 'Your account is now active. Redirecting...'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: 'rgba(0, 212, 160, 0.04)',
+                      border: '1px solid rgba(0, 212, 160, 0.2)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      alignItems: 'center',
+                    }}>
+                      <div
+                        onClick={() => {
+                          if (tgLinkCode) {
+                            navigator.clipboard.writeText(tgLinkCode).then(() => {
+                              setCodeCopied(true);
+                              setTimeout(() => setCodeCopied(false), 2000);
+                            }).catch(() => {});
+                          }
+                        }}
+                        style={{
+                          background: 'rgba(255, 215, 0, 0.1)',
+                          border: '1px solid rgba(255, 215, 0, 0.3)',
+                          borderRadius: '12px',
+                          padding: '14px 24px',
+                          fontSize: '28px',
+                          fontWeight: 800,
+                          color: 'var(--gold)',
+                          letterSpacing: '10px',
+                          fontFamily: 'monospace',
+                          cursor: 'pointer',
+                          userSelect: 'all',
+                          transition: 'all 0.2s ease',
+                        }}
+                        title="Click to copy code"
+                      >
+                        {tgLinkCode || '------'}
+                      </div>
+                      <span style={{ fontSize: '11px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: codeCopied ? 700 : 400 }}>
+                        {codeCopied ? '✓ Code copied! Now send it in the Telegram chat' : 'Tap the code to copy, or use the button below'}
+                      </span>
+                      <a
+                        href={tgDeepLink || 'https://t.me/EthioSwap_Bot'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-gold w-full"
+                        style={{
+                          height: '52px',
+                          fontSize: '14px',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textDecoration: 'none',
+                          background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                          color: '#fff',
+                          boxShadow: '0 8px 24px rgba(42, 171, 238, 0.35)',
+                        }}
+                        onClick={() => setAutoOpenedBot(true)}
+                      >
+                        <i className="ti ti-brand-telegram" style={{ marginRight: '10px', fontSize: '20px' }}></i>
+                        Open @EthioSwap_Bot
+                      </a>
+                      <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                        The bot will open with the code pre-filled. Just hit <b>Send</b>.<br/>
+                        This page will activate automatically once we detect the link.
+                      </p>
+                      {tgSecondsLeft > 0 ? (
+                        <span style={{ fontSize: '10px', color: tgSecondsLeft < 60 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+                          ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleResendTelegramCode()}
+                          disabled={tgLinking}
+                          style={{
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px dashed var(--border)',
+                            borderRadius: '10px',
+                            color: 'var(--gold-light)',
+                            padding: '8px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: tgLinking ? 'wait' : 'pointer',
+                            opacity: tgLinking ? 0.6 : 1,
+                          }}
+                        >
+                          {tgLinking ? '⏳ Generating…' : '🔄 Code expired? Generate a new one'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {flow.stage === 'otp_required' && (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '4px' }}>🔐</div>
+                    <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '8px 0 6px' }}>
+                      Verify It's You
+                    </h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.5, margin: 0 }}>
+                      We sent a 6-digit code to your Telegram bot to confirm this login.
+                    </p>
+                  </div>
+
+                  <div
                     style={{
-                      height: '44px',
-                      fontSize: '13px',
-                      fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      textDecoration: 'none',
-                      background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
-                      color: '#fff',
-                      boxShadow: '0 8px 24px rgba(42, 171, 238, 0.35)',
-                    }}
-                    onClick={() => setAutoOpenedBot(true)}
-                  >
-                    <i className="ti ti-brand-telegram" style={{ marginRight: '8px', fontSize: '18px' }}></i>
-                    Open & Send Code in Telegram
-                  </a>
-                  <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
-                    {autoOpenedBot
-                      ? 'Waiting for you to send the code in Telegram...'
-                      : 'Waiting for you to send the code in Telegram...'}
-                  </p>
-                  {tgSecondsLeft > 0 ? (
-                    <span style={{ fontSize: '10px', color: tgSecondsLeft < 60 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-                      ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleConnectTelegram(false)}
-                      disabled={tgLinking}
-                      style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px dashed var(--border)',
-                        borderRadius: '10px',
-                        color: 'var(--gold-light)',
-                        padding: '8px 12px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: tgLinking ? 'wait' : 'pointer',
-                        opacity: tgLinking ? 0.6 : 1,
-                      }}
-                    >
-                      {tgLinking ? '⏳ Generating…' : '🔄 Code expired? Generate a new one'}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {otpData?.isSignup && tgLinked && (
-                <div style={{
-                  background: 'rgba(0, 212, 160, 0.08)',
-                  border: '1px solid rgba(0, 212, 160, 0.3)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: '28px' }}>✅</span>
-                  <p style={{ fontSize: '14px', color: 'var(--text-1)', textAlign: 'center', margin: 0, fontWeight: 700 }}>
-                    Telegram Connected!
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
-                    Your account is now active. Redirecting...
-                  </p>
-                </div>
-              )}
-
-              {otpData?.isSignup && !showTgFallback && (
-                <button
-                  type="button"
-                  disabled={tgLinking}
-                  onClick={() => handleConnectTelegram(true)}
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    color: 'var(--text-2)',
-                    padding: '12px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    cursor: tgLinking ? 'wait' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease',
-                    width: '100%',
-                    opacity: tgLinking ? 0.6 : 1,
-                  }}
-                  onMouseOver={(e) => { if (!tgLinking) e.currentTarget.style.borderColor = 'var(--gold)'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                >
-                  {tgLinking ? '⏳ Opening Telegram…' : '💬 Did not receive SMS? Connect via Telegram'}
-                </button>
-              )}
-
-              {/* Auto-routed delivery indicator (no manual choice) */}
-              {!otpData?.isSignup && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    padding: '12px 14px',
-                    background: otpData.telegramChatId
-                      ? 'rgba(42,171,238,0.08)'
-                      : 'rgba(255,255,255,0.02)',
-                    border: otpData.telegramChatId
-                      ? '1px solid rgba(42,171,238,0.25)'
-                      : '1px solid var(--border)',
-                    borderRadius: '12px',
-                  }}
-                >
-                  {otpData.telegramChatId ? (
-                    <>
-                      <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
-                          Code sent to your Telegram bot
-                        </span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                          Open @EthioSwap_Bot to read your 6-digit code
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <i className="ti ti-message" style={{ fontSize: '18px', color: 'var(--text-2)' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
-                          Code sent to your phone
-                        </span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                          {otpData.phone || 'Check your SMS messages'}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="Enter code"
-                    value={otpCode}
-                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                    style={{
-                      width: '100%',
-                      height: '52px',
-                      background: '#111318',
-                      border: '1px solid var(--border)',
-                      borderRadius: '14px',
-                      color: '#ffffff',
-                      fontSize: '22px',
-                      fontWeight: 700,
-                      textAlign: 'center',
-                      letterSpacing: '8px',
-                      outline: 'none',
-                      transition: 'all 0.2s ease',
-                    }}
-                    className="input"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Trust device checkbox */}
-                {!otpData?.isSignup && (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: '13px', color: 'var(--text-2)', padding: '4px 0' }}>
-                    <input
-                      type="checkbox"
-                      checked={trustDevice}
-                      onChange={e => setTrustDevice(e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        accentColor: 'var(--gold)',
-                        cursor: 'pointer',
-                      }}
-                    />
-                    <span>Trust this device for 30 days</span>
-                  </label>
-                )}
-
-                {displayError && (
-                  <div style={{ 
-                    fontSize: '13px', 
-                    color: 'var(--status-danger-text)', 
-                    fontWeight: 600, 
-                    padding: '12px 14px', 
-                    background: 'rgba(239, 68, 68, 0.08)', 
-                    border: '1px solid rgba(239, 68, 68, 0.2)', 
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    lineHeight: 1.4
-                  }}>
-                    <i className="ti ti-alert-triangle" style={{ fontSize: '15px', color: '#EF4444' }}></i>
-                    <span>{displayError}</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={otpLoading || sendingOtp}
-                  className="btn btn-gold btn-full"
-                  style={{
-                    height: '52px',
-                    fontSize: '15px',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
-                    color: '#0A0C12',
-                    border: 'none',
-                    borderRadius: '14px',
-                    boxShadow: '0 8px 30px rgba(255, 215, 0, 0.2)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {otpLoading ? (
-                    <>
-                      <Spinner />
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      Verify & Log In
-                      <i className="ti ti-shield-check" style={{ marginLeft: '8px', fontSize: '18px' }}></i>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Resend actions */}
-              <div style={{ textAlign: 'center', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {resendTimer > 0 ? (
-                  <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 500 }}>
-                    Resend code in {resendTimer}s
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={sendingOtp}
-                    onClick={() => otpData?.isSignup
-                      ? handleResendWithFallback()
-                      : triggerSendOtp(otpData.userId, otpData.telegramChatId ? 'telegram' : 'sms')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--gold-light)',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      fontFamily: 'var(--font)',
-                    }}
-                  >
-                    {sendingOtp ? 'Sending…' : 'Resend Verification Code'}
-                  </button>
-                )}
-                {otpData?.isSignup && !showTgFallback && (
-                  <button
-                    type="button"
-                    disabled={tgLinking}
-                    onClick={() => handleConnectTelegram(true)}
-                    style={{
+                      gap: '10px',
+                      padding: '12px 14px',
                       background: 'rgba(42,171,238,0.08)',
                       border: '1px solid rgba(42,171,238,0.25)',
-                      borderRadius: '8px',
-                      color: '#2AABEE',
-                      padding: '8px 12px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: tgLinking ? 'wait' : 'pointer',
-                      fontFamily: 'var(--font)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
+                      borderRadius: '12px',
                     }}
                   >
-                    <i className="ti ti-brand-telegram" style={{ fontSize: '14px' }}></i>
-                    {tgLinking ? 'Opening Telegram…' : "Didn't get SMS? Verify via Telegram"}
-                  </button>
-                )}
-              </div>
+                    <i className="ti ti-brand-telegram" style={{ fontSize: '20px', color: '#2AABEE' }}></i>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
+                        Code sent to @EthioSwap_Bot
+                      </span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                        Open the bot to read your 6-digit code
+                      </span>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      style={{
+                        width: '100%',
+                        height: '52px',
+                        background: '#111318',
+                        border: '1px solid var(--border)',
+                        borderRadius: '14px',
+                        color: '#ffffff',
+                        fontSize: '22px',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        letterSpacing: '8px',
+                        outline: 'none',
+                        transition: 'all 0.2s ease',
+                      }}
+                      className="input"
+                      autoFocus
+                    />
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: '13px', color: 'var(--text-2)', padding: '4px 0' }}>
+                      <input
+                        type="checkbox"
+                        checked={trustDevice}
+                        onChange={e => setTrustDevice(e.target.checked)}
+                        style={{ width: '18px', height: '18px', accentColor: 'var(--gold)', cursor: 'pointer' }}
+                      />
+                      <span>Trust this device for 30 days</span>
+                    </label>
+
+                    {displayError && (
+                      <div style={{
+                        fontSize: '13px',
+                        color: 'var(--status-danger-text)',
+                        fontWeight: 600,
+                        padding: '12px 14px',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        lineHeight: 1.4,
+                      }}>
+                        <i className="ti ti-alert-triangle" style={{ fontSize: '15px', color: '#EF4444' }}></i>
+                        <span>{displayError}</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={otpLoading || sendingOtp}
+                      className="btn btn-gold btn-full"
+                      style={{
+                        height: '52px',
+                        fontSize: '15px',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                        color: '#0A0C12',
+                        border: 'none',
+                        borderRadius: '14px',
+                        boxShadow: '0 8px 30px rgba(255, 215, 0, 0.2)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {otpLoading ? <><Spinner />Verifying...</> : <>Verify & Log In<i className="ti ti-shield-check" style={{ marginLeft: '8px', fontSize: '18px' }}></i></>}
+                    </button>
+                  </form>
+
+                  <div style={{ textAlign: 'center' }}>
+                    {resendTimer > 0 ? (
+                      <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 500 }}>
+                        Resend code in {resendTimer}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={sendingOtp}
+                        onClick={() => triggerSendOtp(flow.userId)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--gold-light)',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          fontFamily: 'var(--font)',
+                        }}
+                      >
+                        {sendingOtp ? 'Sending…' : 'Resend Verification Code'}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             // ── STANDARD LOGIN/REGISTER FORM ──
@@ -825,9 +770,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
               <h2 className="auth-title" style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', textAlign: 'center' }}>
                 {mode === 'login' ? 'Welcome Back' : 'Create Account'}
               </h2>
-              <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '32px', textAlign: 'center', fontWeight: 500 }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-3)', marginBottom: '16px', textAlign: 'center', fontWeight: 500 }}>
                 {mode === 'login' ? 'Sign in to your EthioSwap wallet' : 'Join the most trusted P2P exchange in Ethiopia'}
               </p>
+              {mode === 'register' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  background: 'rgba(42,171,238,0.06)',
+                  border: '1px solid rgba(42,171,238,0.20)',
+                  borderRadius: '10px',
+                  marginBottom: '24px',
+                  fontSize: '12px',
+                  color: 'var(--text-2)',
+                  lineHeight: 1.4,
+                }}>
+                  <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE', flexShrink: 0 }}></i>
+                  <span>You'll need our <b>@EthioSwap_Bot</b> on Telegram to activate your account — have it ready.</span>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {mode === 'login' ? (

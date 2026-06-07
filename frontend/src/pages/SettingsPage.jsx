@@ -7,17 +7,15 @@ import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
 const SettingsPage = ({ user, onLogout }) => {
   const { t, i18n } = useTranslation();
-  const { updateUser, sendOtp } = useAuth();
+  const { updateUser } = useAuth();
   const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
   const disconnectTelegramMutation = useMutation(api.users.disconnectTelegram);
 
-  const [showSettingsOtp, setShowSettingsOtp] = useState(false);
-  const [settingsOtpCode, setSettingsOtpCode] = useState('');
-  const [settingsOtpChannel, setSettingsOtpChannel] = useState(user?.preferredVerificationMethod || 'sms');
-  const [settingsSendingOtp, setSettingsSendingOtp] = useState(false);
-  const [settingsResendTimer, setSettingsResendTimer] = useState(0);
-  const [settingsOtpError, setSettingsOtpError] = useState('');
-  const [settingsOtpLoading, setSettingsOtpLoading] = useState(false);
+  const [showDisconnectPwd, setShowDisconnectPwd] = useState(false);
+  const [disconnectPassword, setDisconnectPassword] = useState('');
+  const [disconnectConfirm, setDisconnectConfirm] = useState(false);
+  const [disconnectLoading, setDisconnectLoading] = useState(false);
+  const [disconnectError, setDisconnectError] = useState('');
 
   const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
   const [deepLink, setDeepLink] = useState('');
@@ -85,52 +83,43 @@ const SettingsPage = ({ user, onLogout }) => {
     }
   };
 
-  useEffect(() => {
-    if (settingsResendTimer <= 0) return;
-    const interval = setInterval(() => {
-      setSettingsResendTimer(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [settingsResendTimer]);
-
-  const triggerSettingsOtp = async (channel) => {
-    setSettingsSendingOtp(true);
-    setSettingsOtpError('');
-    try {
-      await sendOtp(user._id, 'sensitive_change', channel || settingsOtpChannel);
-      setSettingsResendTimer(60);
-    } catch (err) {
-      setSettingsOtpError(err.message);
-    } finally {
-      setSettingsSendingOtp(false);
-    }
-  };
-
   const handleDisconnectTelegramClick = async () => {
-    if (window.confirm("Are you sure you want to disconnect Telegram? This will disable Telegram alerts and security notifications.")) {
-      setShowSettingsOtp(true);
-      setSettingsOtpCode('');
-      setSettingsOtpError('');
-      await triggerSettingsOtp(settingsOtpChannel);
-    }
+    const ok = window.confirm(
+      "⚠ Disconnect Telegram?\n\n" +
+      "You will NOT be able to log in again until you reconnect. " +
+      "This is a security measure to prevent unauthorized access.\n\n" +
+      "Are you sure?"
+    );
+    if (!ok) return;
+    setShowDisconnectPwd(true);
+    setDisconnectPassword('');
+    setDisconnectConfirm(false);
+    setDisconnectError('');
   };
 
-  const handleSettingsOtpSubmit = async (e) => {
+  const handleDisconnectConfirm = async (e) => {
     e.preventDefault();
-    setSettingsOtpError('');
-    if (settingsOtpCode.length !== 6) {
-      setSettingsOtpError('Please enter the 6-digit OTP code.');
+    setDisconnectError('');
+    if (!disconnectConfirm) {
+      setDisconnectError('Please confirm you understand the consequences.');
       return;
     }
-    setSettingsOtpLoading(true);
+    if (!disconnectPassword) {
+      setDisconnectError('Please enter your account password.');
+      return;
+    }
+    setDisconnectLoading(true);
     try {
-      await disconnectTelegramMutation({ userId: user._id || user.id, otpCode: settingsOtpCode });
-      setShowSettingsOtp(false);
-      alert('Telegram disconnected successfully.');
+      await disconnectTelegramMutation({
+        userId: user._id || user.id,
+        password: disconnectPassword,
+      });
+      setShowDisconnectPwd(false);
+      alert('Telegram disconnected. You can reconnect from this page at any time.');
     } catch (err) {
-      setSettingsOtpError(err.message);
+      setDisconnectError(err.message);
     } finally {
-      setSettingsOtpLoading(false);
+      setDisconnectLoading(false);
     }
   };
 
@@ -237,22 +226,6 @@ const SettingsPage = ({ user, onLogout }) => {
       <div className="card">
         <div className="section-title">{t('Notification Channels')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* SMS Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>SMS Alerts</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive trade alerts on {user.phone || 'your phone'}</div>
-            </div>
-            <div
-              onClick={async () => {
-                await updateUser({ smsEnabled: !user.smsEnabled });
-              }}
-              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.smsEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.smsEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
-            >
-              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.smsEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
-            </div>
-          </div>
-
           {/* Telegram Toggle & Connect */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -371,34 +344,6 @@ const SettingsPage = ({ user, onLogout }) => {
               <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.emailEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
             </div>
           </div>
-
-          {/* Preferred OTP Method */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>Preferred OTP Method</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Default channel for 2FA and sensitive updates</div>
-            </div>
-            <select
-              value={user.preferredVerificationMethod || 'sms'}
-              onChange={async (e) => {
-                await updateUser({ preferredVerificationMethod: e.target.value });
-              }}
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                color: '#fff',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontFamily: 'var(--font)',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="sms">💬 SMS OTP</option>
-              <option value="telegram" disabled={!user.telegramChatId}>✈️ Telegram Bot</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -465,89 +410,56 @@ const SettingsPage = ({ user, onLogout }) => {
         Sign Out
       </button>
 
-      {/* Settings OTP Modal */}
-      {showSettingsOtp && (
+      {/* Disconnect Telegram — password confirmation modal */}
+      {showDisconnectPwd && (
         <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Security Verification</h3>
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
-              Enter the 6-digit OTP code to verify disconnection request.
+          <div className="modal-box" style={{ width: '100%', maxWidth: '380px', padding: '24px 20px', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>⚠ Disconnect Telegram</h3>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.5' }}>
+              <b style={{ color: '#EF4444' }}>This will block you from logging in</b> until you reconnect Telegram. To confirm, enter your account password.
             </p>
 
-            {/* Delivery channel selector */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={async () => { setSettingsOtpChannel('sms'); await triggerSettingsOtp('sms'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: settingsOtpChannel === 'sms' ? 'var(--gold)' : 'transparent',
-                  color: settingsOtpChannel === 'sms' ? '#0A0C12' : '#9ca3af',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                💬 SMS OTP
-              </button>
-              <button
-                type="button"
-                disabled={!user.telegramChatId}
-                onClick={async () => { setSettingsOtpChannel('telegram'); await triggerSettingsOtp('telegram'); }}
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: user.telegramChatId ? 'pointer' : 'not-allowed',
-                  background: settingsOtpChannel === 'telegram' ? 'var(--gold)' : 'transparent',
-                  color: settingsOtpChannel === 'telegram' ? '#0A0C12' : '#9ca3af',
-                  opacity: user.telegramChatId ? 1 : 0.5,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                ✈️ Telegram
-              </button>
-            </div>
-
-            <form onSubmit={handleSettingsOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleDisconnectConfirm} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <input
-                type="text"
-                maxLength={6}
-                placeholder="000000"
-                value={settingsOtpCode}
-                onChange={e => setSettingsOtpCode(e.target.value.replace(/\D/g, ''))}
+                type="password"
+                placeholder="Your account password"
+                value={disconnectPassword}
+                onChange={e => setDisconnectPassword(e.target.value)}
                 style={{
                   width: '100%',
-                  height: '48px',
+                  height: '44px',
                   background: 'rgba(0,0,0,0.3)',
                   border: '1px solid var(--border)',
                   borderRadius: '10px',
                   color: '#ffffff',
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  letterSpacing: '6px',
+                  fontSize: '14px',
+                  padding: '0 12px',
                   outline: 'none',
                 }}
                 className="input"
                 autoFocus
               />
 
-              {settingsOtpError && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', userSelect: 'none', fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.4 }}>
+                <input
+                  type="checkbox"
+                  checked={disconnectConfirm}
+                  onChange={e => setDisconnectConfirm(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: '#EF4444', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
+                />
+                <span>I understand I will not be able to log in until I reconnect Telegram.</span>
+              </label>
+
+              {disconnectError && (
                 <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
-                  ⚠ {settingsOtpError}
+                  ⚠ {disconnectError}
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={settingsOtpLoading || settingsSendingOtp}
-                className="btn btn-gold btn-full"
+                disabled={disconnectLoading}
+                className="btn btn-full"
                 style={{
                   height: '44px',
                   fontSize: '14px',
@@ -555,48 +467,26 @@ const SettingsPage = ({ user, onLogout }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
-                  color: '#0A0C12',
+                  background: disconnectLoading ? '#1f2937' : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                  color: '#fff',
                   border: 'none',
                   borderRadius: '10px',
                   width: '100%',
-                  cursor: 'pointer',
+                  cursor: disconnectLoading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {settingsOtpLoading ? '⏳ Disconnecting...' : 'Verify & Disconnect'}
+                {disconnectLoading ? '⏳ Disconnecting...' : 'Disconnect Telegram'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDisconnectPwd(false)}
+                className="btn btn-ghost btn-sm btn-full"
+                style={{ width: '100%' }}
+              >
+                Cancel
               </button>
             </form>
-
-            <div style={{ marginTop: '14px' }}>
-              {settingsResendTimer > 0 ? (
-                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {settingsResendTimer}s</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => triggerSettingsOtp(settingsOtpChannel)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--gold-light)',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Resend Code
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowSettingsOtp(false)}
-              className="btn btn-ghost btn-sm btn-full"
-              style={{ marginTop: '12px', width: '100%' }}
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}

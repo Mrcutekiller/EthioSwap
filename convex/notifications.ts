@@ -203,29 +203,10 @@ export const dispatchNotification = mutation({
 
     // Fetch system settings to check global disable controls
     const settings = await ctx.db.query("systemSettings").first();
-    const isSmsChannelDisabled = settings?.isSmsChannelDisabled ?? false;
     const isTelegramChannelDisabled = settings?.isTelegramChannelDisabled ?? false;
 
-    // 1. Send SMS if enabled globally & user enabled & phone exists
-    if (user.smsEnabled && user.phone && !isSmsChannelDisabled) {
-      const logId = await ctx.db.insert("notificationLogs", {
-        userId: user._id,
-        type: args.type,
-        channel: "sms",
-        message: smsMsg,
-        status: "pending",
-        sentAt: new Date().toISOString(),
-      });
-      await ctx.scheduler.runAfter(0, internal.sms.sendSmsAction, {
-        userId: user._id,
-        phone: user.phone,
-        message: smsMsg,
-        type: args.type,
-        logId,
-      });
-    }
-
-    // 2. Send Telegram if linked globally & telegramChatId exists
+    // Telegram is the only notification channel. Send to bot if linked and
+    // the global Telegram channel is not muted by an admin.
     if (user.telegramChatId && !isTelegramChannelDisabled) {
       const logId = await ctx.db.insert("notificationLogs", {
         userId: user._id,

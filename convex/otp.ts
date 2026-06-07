@@ -9,8 +9,7 @@ import { sha256Sync } from "./utils";
 export const generateOtp = mutation({
   args: {
     userId: v.id("users"),
-    purpose: v.string(), // "login" | "withdrawal" | "sensitive_change"
-    channel: v.string(), // "sms" | "telegram"
+    purpose: v.string(), // "login" | "withdrawal" | "sensitive_change" | "deposit"
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -29,22 +28,16 @@ export const generateOtp = mutation({
       throw new Error(`Too many failed OTP attempts. Your account is locked. Please try again in ${minutesLeft} minutes.`);
     }
 
-    // Auto-route channel based on telegramLinked
-    let channel = args.channel;
-    if (args.purpose !== "signup") {
-      if (user.telegramLinked) {
-        channel = "telegram";
-      } else {
-        channel = "sms";
-      }
+    // Telegram is the only OTP channel. The user MUST have Telegram linked
+    // to receive login, withdrawal, deposit, or sensitive-change codes.
+    if (!user.telegramLinked || !user.telegramChatId) {
+      throw new Error("Telegram is not connected to your account. Please reconnect Telegram in Settings to receive OTP codes.");
     }
+    const channel = "telegram";
 
-    // Retrieve settings to check if channel is globally disabled
+    // Retrieve settings to check if Telegram channel is globally disabled
     const settings = await ctx.db.query("systemSettings").first();
-    if (channel === "sms" && settings?.isSmsChannelDisabled) {
-      throw new Error("SMS notifications are currently disabled by administration.");
-    }
-    if (channel === "telegram" && settings?.isTelegramChannelDisabled) {
+    if (settings?.isTelegramChannelDisabled) {
       throw new Error("Telegram notifications are currently disabled by administration.");
     }
 
@@ -58,11 +51,7 @@ export const generateOtp = mutation({
       .collect();
 
     if (recentOtps.length > 0) {
-      // If switching from sms to telegram during signup, bypass the 60-second rate limit
-      const isSwitchingToTelegram = args.purpose === "signup" && channel === "telegram" && recentOtps.some((o) => o.channel === "sms");
-      if (!isSwitchingToTelegram) {
-        throw new Error("Please wait 60 seconds before requesting another code.");
-      }
+      throw new Error("Please wait 60 seconds before requesting another code.");
     }
 
     // Check resend limits: max 3 resends per purpose session
@@ -111,7 +100,7 @@ export const generateOtp = mutation({
       });
     }
 
-    const otpId = await ctx.db.insert("otps", {
+    await ctx.db.insert("otps", {
       userId: args.userId,
       purpose: args.purpose,
       code,
@@ -125,18 +114,12 @@ export const generateOtp = mutation({
       createdAt: new Date().toISOString(),
     });
 
-    // Determine contact detail
-    const phone = user.phone || "";
-    const telegramChatId = user.telegramChatId || "";
-
-    // Trigger dispatch action to send SMS or Telegram
+    // Trigger dispatch action to send via Telegram
     await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
       userId: args.userId,
       purpose: args.purpose,
-      channel,
       code,
-      phone,
-      telegramChatId,
+      telegramChatId: user.telegramChatId,
       preferredLanguage: user.preferredLanguage || "en",
     });
 
@@ -145,140 +128,81 @@ export const generateOtp = mutation({
 });
 
 /**
- * Smart OTP resend with automatic Telegram fallback.
- * Tries SMS first, and if SMS delivery fails, immediately generates a
- * Telegram linking code so the user can still get verified.
+ * Regenerate a Telegram linking code for a user who hasn't connected yet.
+ * Used on the signup screen so the user can request a fresh code without
+ * having to re-enter their details.
  */
 export const resendSignupOtpWithFallback = action({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    // 1) Try SMS first (60-second rate limit applies)
-    let smsResult: { success: boolean; error?: string; normalizedPhone?: string } | null = null;
-    try {
-      smsResult = await ctx.runMutation(api.otp.generateOtp, {
-        userId: args.userId,
-        purpose: "signup",
-        channel: "sms",
-      });
-    } catch (e) {
-      smsResult = { success: false, error: (e as Error).message };
-    }
-
-    // If SMS still pending/failed, also generate a fresh Telegram linking code
-    let telegramCode: { code: string; deepLink: string; expiresAt: number } | null = null;
-    try {
-      const linkRes = await ctx.runMutation(api.users.generateTelegramLinkCode, {
-        userId: args.userId,
-      });
-      if (linkRes?.code) {
-        telegramCode = {
-          code: linkRes.code,
-          deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
-          expiresAt: linkRes.expiresAt || Date.now() + 10 * 60 * 1000,
-        };
-      }
-    } catch (e) {
-      console.error("Telegram fallback code gen failed:", e);
-    }
-
+    const linkRes = await ctx.runMutation(api.users.generateTelegramLinkCode, {
+      userId: args.userId,
+    });
     return {
-      smsRequested: !!smsResult,
-      smsSuccess: smsResult?.success ?? false,
-      smsError: smsResult?.error,
-      telegramCode,
+      telegramCode: linkRes?.code
+        ? {
+            code: linkRes.code,
+            deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
+            expiresAt: linkRes.expiresAt || Date.now() + 10 * 60 * 1000,
+          }
+        : null,
     };
   },
 });
 
-// Action to send OTP via Vonage or Telegram
+// Action to send OTP via Telegram (only channel)
 export const sendOtpAction = internalAction({
   args: {
     userId: v.id("users"),
     purpose: v.string(),
-    channel: v.string(),
     code: v.string(),
-    phone: v.string(),
     telegramChatId: v.string(),
     preferredLanguage: v.string(),
   },
   handler: async (ctx, args) => {
-    const isAm = args.preferredLanguage === "am" || args.preferredLanguage.startsWith("am");
-    const message = isAm
-      ? `EthioSwap: የእርስዎ የማረጋገጫ ኮድ ${args.code} ነው። ይህ ኮድ በ5 ደቂቃ ውስጥ ያልፋል።`
-      : `EthioSwap: Your OTP verification code is ${args.code}. It will expire in 5 minutes.`;
+    let tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
 
-    if (args.channel === "sms") {
-      const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
-        userId: args.userId,
-        type: `${args.purpose}_otp`,
-        channel: "sms",
-        message: `OTP Code sent to ${args.phone}`,
-      });
-
-      // Use the unified sender — normalizes phone + tries AT first, then Vonage
-      const result = await ctx.runAction(internal.smsUnified.sendSmsUnifiedAction, {
-        userId: args.userId,
-        phone: args.phone,
-        message,
-        type: `${args.purpose}_otp`,
-      });
-
-      await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, {
-        logId,
-        status: result.success ? "delivered" : "failed",
-      });
-
-      return {
-        success: result.success,
-        provider: result.provider,
-        normalizedPhone: result.normalizedPhone,
-        error: result.error,
-      };
-    } else if (args.channel === "telegram") {
-      let tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
-      
-      if (args.purpose === "login") {
-        tgMsg = `🔐 <b>EthioSwap Login Code</b>\n\nYour code: <code>${args.code}</code>\n\n⏰ Expires in 10 minutes\n❌ Never share this code\n\nNot you? Secure your account:\n<a href="https://ethioswap.com/profile">Security Settings</a>`;
-      }
-
-      const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
-        userId: args.userId,
-        type: `${args.purpose}_otp`,
-        channel: "telegram",
-        message: `OTP Code sent to Telegram chatId: ${args.telegramChatId}`,
-      });
-
-      const token = process.env.TELEGRAM_BOT_TOKEN || "mock_token";
-      if (token === "mock_token") {
-        console.warn("TELEGRAM_BOT_TOKEN not set. Mock Telegram delivery to", args.telegramChatId, ":", tgMsg);
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "delivered" });
-        return { success: true };
-      }
-
-      try {
-        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: args.telegramChatId,
-            text: tgMsg,
-            parse_mode: "HTML",
-          }),
-        });
-
-        const status = response.ok ? "delivered" : "failed";
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
-        return { success: response.ok, error: response.ok ? undefined : `Telegram API ${response.status}` };
-      } catch (err) {
-        console.error("Telegram OTP send failed:", err);
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
-        return { success: false, error: (err as Error).message };
-      }
+    if (args.purpose === "login") {
+      tgMsg = `🔐 <b>EthioSwap Login Code</b>\n\nYour code: <code>${args.code}</code>\n\n⏰ Expires in 10 minutes\n❌ Never share this code\n\nNot you? Secure your account:\n<a href="https://ethioswap.com/profile">Security Settings</a>`;
+    } else if (args.purpose === "withdrawal") {
+      tgMsg = `💸 <b>Withdrawal Verification</b>\n\nYour withdrawal code: <code>${args.code}</code>\n\n⏰ Expires in 5 minutes\n❌ Never share this code`;
+    } else if (args.purpose === "deposit") {
+      tgMsg = `⬇️ <b>Deposit Verification</b>\n\nYour deposit code: <code>${args.code}</code>\n\n⏰ Expires in 5 minutes\n❌ Never share this code`;
     }
-    return { success: false, error: "Unknown channel" };
+
+    const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
+      userId: args.userId,
+      type: `${args.purpose}_otp`,
+      channel: "telegram",
+      message: `OTP Code sent to Telegram chatId: ${args.telegramChatId}`,
+    });
+
+    const token = process.env.TELEGRAM_BOT_TOKEN || "mock_token";
+    if (token === "mock_token") {
+      console.warn("TELEGRAM_BOT_TOKEN not set. Mock Telegram delivery to", args.telegramChatId, ":", tgMsg);
+      await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "delivered" });
+      return { success: true };
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: args.telegramChatId,
+          text: tgMsg,
+          parse_mode: "HTML",
+        }),
+      });
+
+      const status = response.ok ? "delivered" : "failed";
+      await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
+      return { success: response.ok, error: response.ok ? undefined : `Telegram API ${response.status}` };
+    } catch (err) {
+      console.error("Telegram OTP send failed:", err);
+      await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
+      return { success: false, error: (err as Error).message };
+    }
   },
 });
 

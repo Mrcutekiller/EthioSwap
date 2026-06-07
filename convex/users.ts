@@ -84,14 +84,14 @@ export const create = mutation({
       paymentAccounts: [],
       isSuspended: false,
       status,
-      smsEnabled: true,
-      preferredVerificationMethod: "sms",
+      smsEnabled: false,
+      preferredVerificationMethod: "telegram",
     });
 
     const randomBytes = new Uint8Array(8);
     crypto.getRandomValues(randomBytes);
     const tokenHex = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-    const telegramLinkToken = args.role !== "admin" 
+    const telegramLinkToken = args.role !== "admin"
       ? "tg_" + tokenHex
       : undefined;
 
@@ -101,43 +101,46 @@ export const create = mutation({
     });
 
     if (args.role !== "admin") {
-      // Generate a 6-digit cryptographically secure random code for signup OTP
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const code = (100000 + (randomBuffer[0] % 900000)).toString();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+      // Telegram-only signup: generate a fresh 6-digit linking code right away
+      // so the web can show it immediately. Account becomes active when the
+      // user sends the code to the Telegram bot.
+      let linkCode: string = "";
+      let attempts = 0;
+      const MAX_ATTEMPTS = 10;
+      while (attempts < MAX_ATTEMPTS) {
+        const randomBuffer = new Uint32Array(1);
+        crypto.getRandomValues(randomBuffer);
+        const candidate = (100000 + (randomBuffer[0] % 900000)).toString();
+        const existing = await ctx.db
+          .query("users")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("telegramLinkCode"), candidate),
+              q.gt(q.field("telegramLinkExpires"), Date.now())
+            )
+          )
+          .first();
+        if (!existing) { linkCode = candidate; break; }
+        attempts++;
+      }
+      if (!linkCode) {
+        const randomBuffer = new Uint32Array(1);
+        crypto.getRandomValues(randomBuffer);
+        linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
+      }
+      const linkExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
+      const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
 
-      await ctx.db.insert("otps", {
-        userId,
-        purpose: "signup",
-        code,
-        expiresAt,
-        attempts: 0,
-        resends: 0,
-        channel: "sms",
-        status: "pending",
-        used: false,
-        createdAtEpoch: Date.now(),
-        createdAt: new Date().toISOString(),
+      await ctx.db.patch(userId, {
+        telegramLinkCode: linkCode,
+        telegramLinkExpires: linkExpires,
       });
 
-      // Send OTP via SMS (normalized phone) and Telegram in parallel.
-      // Telegram will only deliver if the user has linked their account,
-      // which they may have done via the deep link during signup.
-      if (normalizedPhone) {
-        await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
-          userId,
-          purpose: "signup",
-          channel: "sms",
-          code,
-          phone: normalizedPhone,
-          telegramChatId: "",
-          preferredLanguage: "en",
-        });
-      }
+      return { userId, linkCode, linkExpires, deepLink };
     }
 
-    return userId;
+    return { userId };
   },
 });
 
@@ -187,14 +190,24 @@ export const authenticate = query({
     }
 
     if (user.status === "pending_verification") {
+      // Account is not yet active — user must connect Telegram to finish signup.
+      // The web will show a "Connect Telegram" screen with a fresh code.
       return {
-        status: "otp_required",
+        status: "telegram_required",
         userId: user._id,
-        preferredMethod: "sms",
-        phone: user.phone || "",
+        reason: "signup_incomplete",
+        telegramChatId: user.telegramChatId || "",
+      };
+    }
+
+    // Telegram is required for all logins. If the user disconnected it,
+    // they must reconnect before they can sign in again.
+    if (!user.telegramLinked) {
+      return {
+        status: "telegram_required",
+        userId: user._id,
+        reason: "telegram_disconnected",
         telegramChatId: "",
-        telegramLinkToken: user.telegramLinkToken || "",
-        isSignup: true,
       };
     }
 
@@ -214,12 +227,10 @@ export const authenticate = query({
       return { status: "success", user: safeUser };
     }
 
-    const preferredMethod = user.telegramLinked ? "telegram" : "sms";
-
     return {
       status: "otp_required",
       userId: user._id,
-      preferredMethod,
+      preferredMethod: "telegram",
       phone: user.phone || "",
       telegramChatId: user.telegramChatId || "",
     };
@@ -505,26 +516,32 @@ export const generateTelegramLinkCode = mutation({
 export const disconnectTelegram = mutation({
   args: {
     userId: v.id("users"),
-    otpCode: v.string(),
+    password: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Verify OTP for purpose "sensitive_change"
-    await verifyAndInvalidateOtp(ctx.db, user._id, "sensitive_change", args.otpCode);
+    // Verify the account password — Telegram is the primary auth channel so
+    // OTP can't be used to confirm its own disconnection.
+    const inputHash = sha256Sync(args.password);
+    if (user.passwordHash !== inputHash && user.passwordHash !== args.password) {
+      throw new Error("Incorrect password.");
+    }
 
     await ctx.db.patch(user._id, {
       telegramChatId: undefined,
+      telegram_chat_id: undefined,
       telegramLinkCode: undefined,
       telegramLinkExpires: undefined,
       telegramEnabled: false,
+      telegramLinked: false,
     });
 
     await ctx.scheduler.runAfter(0, api.notifications.dispatchNotification, {
       userId: user._id,
       type: "security_alert",
-      extraText: "Telegram account disconnected from Settings.",
+      extraText: "Telegram account disconnected from Settings. You will not be able to log in until you reconnect Telegram.",
     });
 
     return { success: true };
@@ -725,17 +742,10 @@ export const verifySignupOtp = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // 2. Mark as active and link Telegram if it was verified via Telegram
-    const updates: any = {
-      status: "active",
-    };
-    if (verifiedOtp && verifiedOtp.channel === "telegram") {
-      updates.telegramLinked = true;
-      updates.telegramEnabled = true;
-    } else {
-      updates.smsEnabled = true;
-    }
-    await ctx.db.patch(args.userId, updates);
+    // 2. Mark as active. Signup activation now happens via the Telegram bot
+    // linking flow (see activateUserAfterTelegramLink), so this mutation is
+    // kept only for legacy/backwards-compat reasons.
+    await ctx.db.patch(args.userId, { status: "active" });
 
 
 
