@@ -55,7 +55,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   // OTP State
   const [otpData, setOtpData] = useState(null); // { status, userId, preferredMethod, phone, telegramChatId, telegramLinkToken }
   const [otpCode, setOtpCode] = useState('');
-  const [chosenChannel, setChosenChannel] = useState('sms');
   const [trustDevice, setTrustDevice] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -269,15 +268,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     }
   };
 
-  const handleChannelChange = async (channel) => {
-    if (channel === 'telegram' && !otpData.telegramChatId) {
-      setLocalError('Telegram is not linked to this account. Connect via settings first.');
-      return;
-    }
-    setChosenChannel(channel);
-    await triggerSendOtp(otpData.userId, channel);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
@@ -290,7 +280,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       const res = await login(username, password);
       if (res && res.status === 'otp_required') {
         setOtpData(res);
-        setChosenChannel(res.preferredMethod || 'sms');
         if (res.isSignup) {
           setResendTimer(60);
         } else {
@@ -318,7 +307,6 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result) {
         if (result.status === 'otp_required') {
           setOtpData(result);
-          setChosenChannel('sms');
           setResendTimer(60);
         } else if (result.status === 'success_admin') {
           onToggle();
@@ -599,55 +587,50 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 </button>
               )}
 
-              {/* Delivery channel selector */}
+              {/* Auto-routed delivery indicator (no manual choice) */}
               {!otpData?.isSignup && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleChannelChange('sms')}
-                      style={{
-                        padding: '8px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        background: chosenChannel === 'sms' ? 'var(--gold)' : 'transparent',
-                        color: chosenChannel === 'sms' ? '#0A0C12' : 'var(--text-2)',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      💬 SMS OTP
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!otpData.telegramChatId}
-                      onClick={() => handleChannelChange('telegram')}
-                      style={{
-                        padding: '8px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: otpData.telegramChatId ? 'pointer' : 'not-allowed',
-                        background: chosenChannel === 'telegram' ? 'var(--gold)' : 'transparent',
-                        color: chosenChannel === 'telegram' ? '#0A0C12' : 'var(--text-2)',
-                        opacity: otpData.telegramChatId ? 1 : 0.5,
-                        transition: 'all 0.2s ease',
-                      }}
-                      title={!otpData.telegramChatId ? 'Telegram account not linked' : ''}
-                    >
-                      ✈️ Telegram Bot
-                    </button>
-                  </div>
-
-                  {!otpData.telegramChatId && chosenChannel === 'sms' && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center' }}>
-                      Telegram OTP unavailable (not connected in Settings)
-                    </span>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    background: otpData.telegramChatId
+                      ? 'rgba(42,171,238,0.08)'
+                      : 'rgba(255,255,255,0.02)',
+                    border: otpData.telegramChatId
+                      ? '1px solid rgba(42,171,238,0.25)'
+                      : '1px solid var(--border)',
+                    borderRadius: '12px',
+                  }}
+                >
+                  {otpData.telegramChatId ? (
+                    <>
+                      <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE' }}></i>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
+                          Code sent to your Telegram bot
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                          Open @EthioSwap_Bot to read your 6-digit code
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <i className="ti ti-message" style={{ fontSize: '18px', color: 'var(--text-2)' }}></i>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
+                          Code sent to your phone
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                          {otpData.phone || 'Check your SMS messages'}
+                        </span>
+                      </div>
+                    </>
                   )}
-                </>
+                </div>
               )}
 
               <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -758,7 +741,9 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   <button
                     type="button"
                     disabled={sendingOtp}
-                    onClick={() => otpData?.isSignup ? handleResendWithFallback() : triggerSendOtp(otpData.userId, chosenChannel)}
+                    onClick={() => otpData?.isSignup
+                      ? handleResendWithFallback()
+                      : triggerSendOtp(otpData.userId, otpData.telegramChatId ? 'telegram' : 'sms')}
                     style={{
                       background: 'none',
                       border: 'none',

@@ -332,6 +332,21 @@ export const handleTelegramWebhook = internalAction({
 
     if (/^\d{6}$/.test(text.trim())) {
       const trimmedCode = text.trim();
+
+      // First check if this chat is already linked to a user.
+      // If so, the user is almost certainly trying to paste a login/signup OTP
+      // into the bot by mistake — guide them back to the web.
+      const existingLinked = await ctx.runQuery(api.telegram.getUserByTelegramId, { chatId });
+      if (existingLinked && existingLinked.telegramLinked) {
+        await sendReply(
+          `🔐 <b>That looks like a verification code</b>\n\n` +
+          `Your Telegram is already connected to <b>@${existingLinked.username}</b>.\n\n` +
+          `If you just received a login or signup code, please enter it on the <b>EthioSwap website</b> to continue — not here in the bot.\n\n` +
+          `Type /help to see what this bot can do.`
+        );
+        return { ok: true };
+      }
+
       await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
 
       const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
@@ -344,10 +359,21 @@ export const handleTelegramWebhook = internalAction({
           await ctx.runMutation(api.telegram.activateUserAfterTelegramLink, {
             userId: linkResult.userId,
           });
+          // Also push the activation/OTP code to Telegram so the user can
+          // paste it on the web if they want, and to confirm ownership.
+          try {
+            await ctx.runMutation(api.otp.generateOtp, {
+              userId: linkResult.userId,
+              purpose: "signup",
+              channel: "telegram",
+            });
+          } catch (e) {
+            console.error("Failed to send signup OTP to Telegram after linking:", e);
+          }
           await sendReply(
             `🎉 <b>Account Activated!</b>\n\n` +
             `Your EthioSwap account <b>@${linkResult.username}</b> has been created and linked to Telegram successfully!\n\n` +
-            `You can now log in on the website using your username and password.\n\n` +
+            `We've also sent a 6-digit confirmation code here. You can use it on the EthioSwap website if you ever need to re-verify, or simply <b>log in with your username and password</b>.\n\n` +
             `Type /help for available commands.`
           );
         } else {
