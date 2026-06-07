@@ -150,9 +150,17 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     if (!tgLinked || !flow?.userId) return;
     const timer = setTimeout(() => {
       window.location.reload();
-    }, 2000);
+    }, 800);
     return () => clearTimeout(timer);
   }, [tgLinked, flow]);
+
+  // Safety net: if the user lands on the connect-Telegram screen without
+  // a code in hand (e.g. resume signup that was started before this code
+  // path existed), fetch one immediately.
+  useEffect(() => {
+    if (flow?.stage !== 'telegram_required' || !flow?.userId || tgLinkCode || tgLinking) return;
+    handleConnectTelegram(false);
+  }, [flow, tgLinkCode, tgLinking]);
 
   // Inline validation state
   const [usernameError, setUsernameError] = useState('');

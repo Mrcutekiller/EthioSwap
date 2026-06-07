@@ -246,30 +246,22 @@ export const AuthProvider = ({ children }) => {
         return { status: 'success_admin', userId: result.userId };
       }
 
-      // Resuming an in-progress signup: re-generate a fresh linking code
-      // so the user can keep trying without re-entering their details.
-      if (result.pendingVerification) {
-        const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
-        return {
-          status: 'telegram_required',
-          userId: result.userId,
-          reason: 'signup_incomplete',
-          linkCode: linkRes?.code,
-          linkExpires: linkRes?.expiresAt,
-          deepLink: linkRes?.deepLink,
-          phone,
-        };
+      // Always request a fresh 6-digit linking code from the backend so the
+      // UI never shows a blank/placeholder. This covers new signups AND
+      // signups that are resuming a previous pending-verification attempt.
+      const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+      if (!linkRes?.code) {
+        throw new Error("Could not generate Telegram linking code. Please try again.");
       }
 
-      // Normal user — backend created a fresh link code
-      setSuccess('Account created! Connect Telegram to activate.');
+      setSuccess('Account created! Open the Telegram bot and send the code to activate.');
       return {
         status: 'telegram_required',
         userId: result.userId,
         reason: 'signup_incomplete',
-        linkCode: result.linkCode,
-        linkExpires: result.linkExpires,
-        deepLink: result.deepLink,
+        linkCode: linkRes.code,
+        linkExpires: linkRes.expiresAt,
+        deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
         phone,
       };
     } catch (err) {
