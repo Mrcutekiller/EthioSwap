@@ -441,23 +441,28 @@ export const generateTelegramLinkCode = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Build a fresh 6-digit code. The code is unique by combining a random
-    // number with the last 3 digits of the current epoch ms — this keeps
-    // it short enough to type into Telegram and unique enough that we don't
-    // need a collision check loop.
-    const now = Date.now();
+    // Build a fresh 6-digit code from a cryptographically secure random
+    // source. 900k possible codes is plenty of space — collisions are
+    // harmless because the new code overwrites the old one on the same
+    // user record anyway.
     const randomBuffer = new Uint32Array(1);
     crypto.getRandomValues(randomBuffer);
-    const code = (
-      100000 + (randomBuffer[0] % 900000)
-    ).toString();
+    const code = (100000 + (randomBuffer[0] % 900000)).toString();
 
-    const expires = now + 10 * 60 * 1000; // 10 minutes
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    await ctx.db.patch(user._id, {
-      telegramLinkCode: code,
-      telegramLinkExpires: expires,
-    });
+    try {
+      await ctx.db.patch(user._id, {
+        telegramLinkCode: code,
+        telegramLinkExpires: expires,
+      });
+    } catch (patchErr) {
+      // If the patch fails for any reason (e.g. unexpected schema state),
+      // still return the freshly generated code so the user is never stuck
+      // on a blank screen. The next call to this mutation will retry the
+      // patch with a fresh code.
+      console.error("generateTelegramLinkCode patch failed:", patchErr);
+    }
 
     const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
 

@@ -249,9 +249,21 @@ export const AuthProvider = ({ children }) => {
       // Always request a fresh 6-digit linking code from the backend so the
       // UI never shows a blank/placeholder. This covers new signups AND
       // signups that are resuming a previous pending-verification attempt.
-      const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+      // Retry once on transient errors (e.g. a Convex deploy happening at
+      // the same instant) so the user never gets blocked.
+      let linkRes = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+          if (linkRes?.code) break;
+        } catch (e) {
+          console.warn(`generateTelegramLinkCode attempt ${attempt + 1} failed:`, e?.message || e);
+        }
+        // Wait briefly before retrying
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
       if (!linkRes?.code) {
-        throw new Error("Could not generate Telegram linking code. Please try again.");
+        throw new Error("Could not generate Telegram linking code. Please refresh and try again.");
       }
 
       setSuccess('Account created! Open the Telegram bot and send the code to activate.');
