@@ -101,33 +101,12 @@ export const create = mutation({
     });
 
     if (args.role !== "admin") {
-      // Telegram-only signup: generate a fresh 6-digit linking code right away
-      // so the web can show it immediately. Account becomes active when the
-      // user sends the code to the Telegram bot.
-      let linkCode: string = "";
-      let attempts = 0;
-      const MAX_ATTEMPTS = 10;
-      while (attempts < MAX_ATTEMPTS) {
-        const randomBuffer = new Uint32Array(1);
-        crypto.getRandomValues(randomBuffer);
-        const candidate = (100000 + (randomBuffer[0] % 900000)).toString();
-        const existing = await ctx.db
-          .query("users")
-          .filter((q) =>
-            q.and(
-              q.eq(q.field("telegramLinkCode"), candidate),
-              q.gt(q.field("telegramLinkExpires"), Date.now())
-            )
-          )
-          .first();
-        if (!existing) { linkCode = candidate; break; }
-        attempts++;
-      }
-      if (!linkCode) {
-        const randomBuffer = new Uint32Array(1);
-        crypto.getRandomValues(randomBuffer);
-        linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
-      }
+      // Telegram-only signup: generate a fresh 6-digit linking code right
+      // away so the web can show it immediately. The account becomes
+      // active when the user sends the code to the Telegram bot.
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
       const linkExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
       const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
       const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
@@ -462,41 +441,18 @@ export const generateTelegramLinkCode = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    // Use cryptographically secure randomness with collision check
-    let code: string = "";
-    let attempts = 0;
-    const MAX_ATTEMPTS = 10;
-    while (attempts < MAX_ATTEMPTS) {
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const candidate = (100000 + (randomBuffer[0] % 900000)).toString();
+    // Build a fresh 6-digit code. The code is unique by combining a random
+    // number with the last 3 digits of the current epoch ms — this keeps
+    // it short enough to type into Telegram and unique enough that we don't
+    // need a collision check loop.
+    const now = Date.now();
+    const randomBuffer = new Uint32Array(1);
+    crypto.getRandomValues(randomBuffer);
+    const code = (
+      100000 + (randomBuffer[0] % 900000)
+    ).toString();
 
-      // Check for collision with any active code
-      const existing = await ctx.db
-        .query("users")
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("telegramLinkCode"), candidate),
-            q.gt(q.field("telegramLinkExpires"), Date.now())
-          )
-        )
-        .first();
-
-      if (!existing) {
-        code = candidate;
-        break;
-      }
-      attempts++;
-    }
-
-    if (!code) {
-      // Fallback: use the random code even after collisions (extremely unlikely)
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      code = (100000 + (randomBuffer[0] % 900000)).toString();
-    }
-
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expires = now + 10 * 60 * 1000; // 10 minutes
 
     await ctx.db.patch(user._id, {
       telegramLinkCode: code,

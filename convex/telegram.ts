@@ -97,15 +97,16 @@ export const verifyAndLinkCode = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const user = await ctx.db
+    // Look up by the 6-digit linking code. The expiry check is done in JS
+    // because Convex's q.gt filter on optional number fields can be flaky.
+    const candidates = await ctx.db
       .query("users")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("telegramLinkCode"), args.code),
-          q.gt(q.field("telegramLinkExpires"), now)
-        )
-      )
-      .first();
+      .filter((q) => q.eq(q.field("telegramLinkCode"), args.code))
+      .collect();
+
+    const user = candidates.find(
+      (u) => (u.telegramLinkExpires ?? 0) > now
+    );
 
     if (!user) {
       return { success: false };
