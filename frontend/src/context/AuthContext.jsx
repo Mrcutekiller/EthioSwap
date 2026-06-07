@@ -434,6 +434,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const resendSignupOtpWithFallback = async (userId) => {
+    try {
+      const res = await convex.action(api.otp.resendSignupOtpWithFallback, { userId });
+      return res;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const getTelegramLinkStatus = async (userId) => {
     try {
       const res = await convex.query(api.telegram.getTelegramLinkStatus, { userId });
@@ -712,7 +722,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode, getTelegramLinkStatus,
+      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode, getTelegramLinkStatus, resendSignupOtpWithFallback,
       setError, setSuccess, setIsLocked
     }}>
       {children}

@@ -40,7 +40,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, generateTelegramLinkCode, loading, error } = useAuth();
+  const { login, register, verifyLoginOtp, verifySignupOtp, sendOtp, generateTelegramLinkCode, resendSignupOtpWithFallback, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -69,6 +69,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [tgLinked, setTgLinked] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [autoOpenedBot, setAutoOpenedBot] = useState(false);
+  const [resendWithFallback, setResendWithFallback] = useState(false);
+  const [smsDeliveryFailed, setSmsDeliveryFailed] = useState(false);
 
   const signupUser = useQuery(api.users.get, otpData?.userId && otpData?.isSignup ? { id: otpData.userId } : "skip");
 
@@ -225,8 +227,41 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     setLocalError('');
     try {
       const purpose = otpData?.isSignup ? 'signup' : 'login';
-      await sendOtp(userId, purpose, channel);
+      const res = await sendOtp(userId, purpose, channel);
       setResendTimer(60);
+      // For signup: if SMS could not be delivered, pre-stage the Telegram fallback
+      if (purpose === 'signup' && channel === 'sms' && res && res.success === false) {
+        setSmsDeliveryFailed(true);
+        if (!showTgFallback) {
+          await handleConnectTelegram(false);
+        }
+      } else if (res?.success !== false) {
+        setSmsDeliveryFailed(false);
+      }
+    } catch (err) {
+      setLocalError(cleanConvexError(err.message));
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleResendWithFallback = async () => {
+    if (!otpData?.userId) return;
+    setSendingOtp(true);
+    setLocalError('');
+    try {
+      const result = await resendSignupOtpWithFallback(otpData.userId);
+      setResendTimer(60);
+      if (result?.telegramCode) {
+        setTgLinkCode(result.telegramCode.code);
+        setTgDeepLink(result.telegramCode.deepLink);
+        setTgCodeExpiresAt(result.telegramCode.expiresAt);
+        setShowTgFallback(true);
+        setSmsDeliveryFailed(true);
+      } else if (result?.smsSuccess === false) {
+        setSmsDeliveryFailed(true);
+        setLocalError("SMS could not be delivered. Please use Telegram below to continue.");
+      }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
     } finally {
@@ -714,7 +749,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
               </form>
 
               {/* Resend actions */}
-              <div style={{ textAlign: 'center', marginTop: '10px' }}>
+              <div style={{ textAlign: 'center', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {resendTimer > 0 ? (
                   <span style={{ fontSize: '13px', color: 'var(--text-3)', fontWeight: 500 }}>
                     Resend code in {resendTimer}s
@@ -723,7 +758,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   <button
                     type="button"
                     disabled={sendingOtp}
-                    onClick={() => triggerSendOtp(otpData.userId, chosenChannel)}
+                    onClick={() => otpData?.isSignup ? handleResendWithFallback() : triggerSendOtp(otpData.userId, chosenChannel)}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -735,7 +770,32 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       fontFamily: 'var(--font)',
                     }}
                   >
-                    {sendingOtp ? 'Sending...' : 'Resend Verification Code'}
+                    {sendingOtp ? 'Sending…' : 'Resend Verification Code'}
+                  </button>
+                )}
+                {otpData?.isSignup && !showTgFallback && (
+                  <button
+                    type="button"
+                    disabled={tgLinking}
+                    onClick={() => handleConnectTelegram(true)}
+                    style={{
+                      background: 'rgba(42,171,238,0.08)',
+                      border: '1px solid rgba(42,171,238,0.25)',
+                      borderRadius: '8px',
+                      color: '#2AABEE',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: tgLinking ? 'wait' : 'pointer',
+                      fontFamily: 'var(--font)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <i className="ti ti-brand-telegram" style={{ fontSize: '14px' }}></i>
+                    {tgLinking ? 'Opening Telegram…' : "Didn't get SMS? Verify via Telegram"}
                   </button>
                 )}
               </div>
@@ -917,27 +977,31 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
                       <div className="auth-input-group">
-                        <input 
-                          className="auth-input" 
-                          type="tel" 
-                          placeholder="Phone (+251...)" 
-                          value={phone} 
-                          onChange={e => setPhone(e.target.value)} 
+                        <input
+                          className="auth-input"
+                          type="tel"
+                          placeholder="0912 345 678 or +251…"
+                          value={phone}
+                          onChange={e => setPhone(e.target.value)}
                         />
                         <i className="auth-input-icon ti ti-phone"></i>
                       </div>
                       <div className="auth-input-group">
-                        <input 
-                          className="auth-input" 
-                          type="number" 
-                          min="18" 
-                          placeholder="Age" 
-                          value={age} 
-                          onChange={e => setAge(e.target.value)} 
+                        <input
+                          className="auth-input"
+                          type="number"
+                          min="18"
+                          placeholder="Age"
+                          value={age}
+                          onChange={e => setAge(e.target.value)}
                         />
                         <i className="auth-input-icon ti ti-calendar-event"></i>
                       </div>
                     </div>
+                    <p style={{ fontSize: '10.5px', color: 'var(--text-3)', marginTop: '-8px', marginBottom: '0', paddingLeft: '4px' }}>
+                      <i className="ti ti-info-circle" style={{ fontSize: '11px', marginRight: '4px' }}></i>
+                      Ethiopian mobile only. We'll convert 09XXXXXXXX → +2519XXXXXXXX automatically.
+                    </p>
 
                   </>
                 )}

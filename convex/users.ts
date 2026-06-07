@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
 import { verifyAndInvalidateOtp } from "./otp";
+import { normalizeEthiopianPhone } from "./phone";
 
 export const get = query({
   args: { id: v.optional(v.id("users")) },
@@ -59,13 +60,19 @@ export const create = mutation({
       throw new Error("Username already taken");
     }
 
-    const { password, ...userData } = args;
+    // Normalize the phone to E.164 so SMS always works
+    const normalizedPhone = args.phone
+      ? normalizeEthiopianPhone(args.phone).e164 || args.phone
+      : args.phone;
+
+    const { password, phone: _ignored, ...userData } = args;
 
     const status = args.role === "admin" ? "active" : "pending_verification";
     const kycStatus = args.role === "admin" ? "approved" : "none";
 
     const userId = await ctx.db.insert("users", {
       ...userData,
+      phone: normalizedPhone,
       passwordHash: sha256Sync(password),
       etbBalance: 0,
       ethBalance: 0,
@@ -114,14 +121,16 @@ export const create = mutation({
         createdAt: new Date().toISOString(),
       });
 
-      // Send OTP via Vonage SMS
-      if (args.phone) {
+      // Send OTP via SMS (normalized phone) and Telegram in parallel.
+      // Telegram will only deliver if the user has linked their account,
+      // which they may have done via the deep link during signup.
+      if (normalizedPhone) {
         await ctx.scheduler.runAfter(0, internal.otp.sendOtpAction, {
           userId,
           purpose: "signup",
           channel: "sms",
           code,
-          phone: args.phone,
+          phone: normalizedPhone,
           telegramChatId: "",
           preferredLanguage: "en",
         });

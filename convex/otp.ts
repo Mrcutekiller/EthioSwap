@@ -140,7 +140,56 @@ export const generateOtp = mutation({
       preferredLanguage: user.preferredLanguage || "en",
     });
 
-    return { success: true, expiresAt };
+    return { success: true, expiresAt, channel };
+  },
+});
+
+/**
+ * Smart OTP resend with automatic Telegram fallback.
+ * Tries SMS first, and if SMS delivery fails, immediately generates a
+ * Telegram linking code so the user can still get verified.
+ */
+export const resendSignupOtpWithFallback = action({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // 1) Try SMS first (60-second rate limit applies)
+    let smsResult: { success: boolean; error?: string; normalizedPhone?: string } | null = null;
+    try {
+      smsResult = await ctx.runMutation(api.otp.generateOtp, {
+        userId: args.userId,
+        purpose: "signup",
+        channel: "sms",
+      });
+    } catch (e) {
+      smsResult = { success: false, error: (e as Error).message };
+    }
+
+    // If SMS still pending/failed, also generate a fresh Telegram linking code
+    let telegramCode: { code: string; deepLink: string; expiresAt: number } | null = null;
+    try {
+      const linkRes = await ctx.runMutation(api.users.generateTelegramLinkCode, {
+        userId: args.userId,
+      });
+      if (linkRes?.code) {
+        telegramCode = {
+          code: linkRes.code,
+          deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
+          expiresAt: linkRes.expiresAt || Date.now() + 10 * 60 * 1000,
+        };
+      }
+    } catch (e) {
+      console.error("Telegram fallback code gen failed:", e);
+    }
+
+    return {
+      smsRequested: !!smsResult,
+      smsSuccess: smsResult?.success ?? false,
+      smsError: smsResult?.error,
+      telegramCode,
+    };
   },
 });
 
@@ -162,10 +211,6 @@ export const sendOtpAction = internalAction({
       : `EthioSwap: Your OTP verification code is ${args.code}. It will expire in 5 minutes.`;
 
     if (args.channel === "sms") {
-      const apiKey = process.env.VONAGE_API_KEY || "mock_key";
-      const apiSecret = process.env.VONAGE_API_SECRET || "mock_secret";
-      const from = process.env.VONAGE_FROM_NUMBER || "EthioSwap";
-
       const logId = await ctx.runMutation(internal.otp.createOtpNotificationLog, {
         userId: args.userId,
         type: `${args.purpose}_otp`,
@@ -173,33 +218,25 @@ export const sendOtpAction = internalAction({
         message: `OTP Code sent to ${args.phone}`,
       });
 
-      if (apiKey === "mock_key" || apiSecret === "mock_secret") {
-        console.warn("VONAGE_API_KEY not set. Mock SMS delivery to", args.phone, ":", message);
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "delivered" });
-        return { success: true };
-      }
+      // Use the unified sender — normalizes phone + tries AT first, then Vonage
+      const result = await ctx.runAction(internal.smsUnified.sendSmsUnifiedAction, {
+        userId: args.userId,
+        phone: args.phone,
+        message,
+        type: `${args.purpose}_otp`,
+      });
 
-      try {
-        const response = await fetch("https://rest.nexmo.com/sms/json", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            api_key: apiKey,
-            api_secret: apiSecret,
-            to: args.phone,
-            from,
-            text: message,
-          }),
-        });
+      await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, {
+        logId,
+        status: result.success ? "delivered" : "failed",
+      });
 
-        if (!response.ok) throw new Error(`Vonage returned status ${response.status}`);
-        const result = await response.json();
-        const status = result.messages?.[0]?.status === "0" ? "delivered" : "failed";
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
-      } catch (err) {
-        console.error("Vonage OTP send failed:", err);
-        await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
-      }
+      return {
+        success: result.success,
+        provider: result.provider,
+        normalizedPhone: result.normalizedPhone,
+        error: result.error,
+      };
     } else if (args.channel === "telegram") {
       let tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
       
@@ -234,11 +271,14 @@ export const sendOtpAction = internalAction({
 
         const status = response.ok ? "delivered" : "failed";
         await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status });
+        return { success: response.ok, error: response.ok ? undefined : `Telegram API ${response.status}` };
       } catch (err) {
         console.error("Telegram OTP send failed:", err);
         await ctx.runMutation(internal.otp.updateOtpNotificationLogStatus, { logId, status: "failed" });
+        return { success: false, error: (err as Error).message };
       }
     }
+    return { success: false, error: "Unknown channel" };
   },
 });
 
