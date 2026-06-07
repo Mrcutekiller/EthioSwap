@@ -62,8 +62,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [otpLoading, setOtpLoading] = useState(false);
   const [showTgFallback, setShowTgFallback] = useState(false);
   const [tgLinkCode, setTgLinkCode] = useState('');
+  const [tgDeepLink, setTgDeepLink] = useState('');
+  const [tgCodeExpiresAt, setTgCodeExpiresAt] = useState(0);
+  const [tgSecondsLeft, setTgSecondsLeft] = useState(0);
   const [tgLinking, setTgLinking] = useState(false);
   const [tgLinked, setTgLinked] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [autoOpenedBot, setAutoOpenedBot] = useState(false);
 
   const signupUser = useQuery(api.users.get, otpData?.userId && otpData?.isSignup ? { id: otpData.userId } : "skip");
 
@@ -87,7 +92,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const handleConnectTelegram = async () => {
+  useEffect(() => {
+    if (tgCodeExpiresAt <= 0) {
+      setTgSecondsLeft(0);
+      return;
+    }
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((tgCodeExpiresAt - Date.now()) / 1000));
+      setTgSecondsLeft(remaining);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [tgCodeExpiresAt]);
+
+  const formatCountdown = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const handleConnectTelegram = async (autoOpen = false) => {
     if (!otpData?.userId) return;
     setTgLinking(true);
     setLocalError('');
@@ -95,7 +120,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       const res = await generateTelegramLinkCode(otpData.userId);
       if (res?.code) {
         setTgLinkCode(res.code);
+        setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
+        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 10 * 60 * 1000));
         setShowTgFallback(true);
+        if (autoOpen && res.deepLink) {
+          setAutoOpenedBot(true);
+          window.open(res.deepLink, '_blank', 'noopener,noreferrer');
+        }
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
@@ -397,41 +428,89 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     Connect via Telegram
                   </p>
                   <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-                    Copy the code below, open the Telegram Bot, click <b>Start</b>, and send the code.
+                    Tap the button below to open Telegram with the code pre-filled. Just hit <b>Send</b> and your account is verified instantly.
                   </p>
-                  <div style={{
-                    background: 'rgba(255, 215, 0, 0.1)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)',
-                    borderRadius: '12px',
-                    padding: '12px 20px',
-                    fontSize: '24px',
-                    fontWeight: 800,
-                    color: 'var(--gold)',
-                    letterSpacing: '8px',
-                    fontFamily: 'monospace',
-                  }}>
+                  <div
+                    onClick={() => {
+                      if (tgLinkCode) {
+                        navigator.clipboard.writeText(tgLinkCode).then(() => {
+                          setCodeCopied(true);
+                          setTimeout(() => setCodeCopied(false), 2000);
+                        }).catch(() => {});
+                      }
+                    }}
+                    style={{
+                      background: 'rgba(255, 215, 0, 0.1)',
+                      border: '1px solid rgba(255, 215, 0, 0.3)',
+                      borderRadius: '12px',
+                      padding: '12px 20px',
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color: 'var(--gold)',
+                      letterSpacing: '8px',
+                      fontFamily: 'monospace',
+                      cursor: 'pointer',
+                      userSelect: 'all',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Click to copy code"
+                  >
                     {tgLinkCode}
                   </div>
+                  <span style={{ fontSize: '11px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: codeCopied ? 700 : 400 }}>
+                    {codeCopied ? '✓ Code copied! Paste it in the Telegram chat' : 'Tap code to copy manually'}
+                  </span>
                   <a
-                    href="https://t.me/EthioSwap_Bot"
+                    href={tgDeepLink || 'https://t.me/EthioSwap_Bot'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-gold w-full"
                     style={{
-                      height: '42px',
+                      height: '44px',
                       fontSize: '13px',
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       textDecoration: 'none',
+                      background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                      color: '#fff',
+                      boxShadow: '0 8px 24px rgba(42, 171, 238, 0.35)',
                     }}
+                    onClick={() => setAutoOpenedBot(true)}
                   >
-                    Open Telegram Bot <i className="ti ti-brand-telegram" style={{ marginLeft: '6px', fontSize: '16px' }}></i>
+                    <i className="ti ti-brand-telegram" style={{ marginRight: '8px', fontSize: '18px' }}></i>
+                    Open & Send Code in Telegram
                   </a>
                   <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
-                    Waiting for you to send the code in Telegram...
+                    {autoOpenedBot
+                      ? 'Waiting for you to send the code in Telegram...'
+                      : 'Waiting for you to send the code in Telegram...'}
                   </p>
+                  {tgSecondsLeft > 0 ? (
+                    <span style={{ fontSize: '10px', color: tgSecondsLeft < 60 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+                      ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleConnectTelegram(false)}
+                      disabled={tgLinking}
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px dashed var(--border)',
+                        borderRadius: '10px',
+                        color: 'var(--gold-light)',
+                        padding: '8px 12px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: tgLinking ? 'wait' : 'pointer',
+                        opacity: tgLinking ? 0.6 : 1,
+                      }}
+                    >
+                      {tgLinking ? '⏳ Generating…' : '🔄 Code expired? Generate a new one'}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -460,7 +539,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 <button
                   type="button"
                   disabled={tgLinking}
-                  onClick={handleConnectTelegram}
+                  onClick={() => handleConnectTelegram(true)}
                   style={{
                     background: 'rgba(255,255,255,0.02)',
                     border: '1px solid var(--border)',
@@ -481,7 +560,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   onMouseOver={(e) => { if (!tgLinking) e.currentTarget.style.borderColor = 'var(--gold)'; }}
                   onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
-                  {tgLinking ? '⏳ Generating code...' : '💬 Did not receive SMS? Connect via Telegram'}
+                  {tgLinking ? '⏳ Opening Telegram…' : '💬 Did not receive SMS? Connect via Telegram'}
                 </button>
               )}
 

@@ -434,6 +434,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const getTelegramLinkStatus = async (userId) => {
+    try {
+      const res = await convex.query(api.telegram.getTelegramLinkStatus, { userId });
+      return res;
+    } catch (err) {
+      console.error("getTelegramLinkStatus failed:", err);
+      return null;
+    }
+  };
+
   const updateSensitiveDetails = async (otpCode, updates) => {
     if (!user) return;
     setLoading(true);
@@ -702,7 +712,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode,
+      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode, getTelegramLinkStatus,
       setError, setSuccess, setIsLocked
     }}>
       {children}

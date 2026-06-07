@@ -20,7 +20,10 @@ const SettingsPage = ({ user, onLogout }) => {
   const [settingsOtpLoading, setSettingsOtpLoading] = useState(false);
 
   const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
+  const [deepLink, setDeepLink] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [tgGenerating, setTgGenerating] = useState(false);
 
   useEffect(() => {
     if (user?.telegramLinkCode && user?.telegramLinkExpires) {
@@ -28,6 +31,7 @@ const SettingsPage = ({ user, onLogout }) => {
       if (remaining > 0) {
         setLinkCode(user.telegramLinkCode);
         setTimeRemaining(remaining);
+        setDeepLink(`https://t.me/EthioSwap_Bot?start=${user.telegramLinkCode}`);
       }
     }
   }, [user]);
@@ -49,6 +53,37 @@ const SettingsPage = ({ user, onLogout }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeRemaining]);
+
+  const formatCountdown = (ms) => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const handleGenerateTelegramCode = async (autoOpen = true) => {
+    try {
+      setTgGenerating(true);
+      const targetId = user._id || user.id;
+      if (!targetId) {
+        alert("User ID not found. Please log in again.");
+        return;
+      }
+      const res = await generateTelegramCodeMutation({ userId: targetId });
+      if (res && res.code) {
+        setLinkCode(res.code);
+        setTimeRemaining(10 * 60 * 1000);
+        setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
+        if (autoOpen && res.deepLink) {
+          window.open(res.deepLink, '_blank', 'noopener,noreferrer');
+        }
+      }
+    } catch (err) {
+      alert("Error generating Telegram link code: " + err.message);
+    } finally {
+      setTgGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (settingsResendTimer <= 0) return;
@@ -262,48 +297,58 @@ const SettingsPage = ({ user, onLogout }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,197,24,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                         <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
-                        <strong style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace' }}>
+                        <strong
+                          onClick={() => {
+                            navigator.clipboard.writeText(linkCode).then(() => {
+                              setCodeCopied(true);
+                              setTimeout(() => setCodeCopied(false), 2000);
+                            });
+                          }}
+                          style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace', cursor: 'pointer', padding: '4px 12px', borderRadius: '8px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.15)', userSelect: 'all', transition: 'all 0.2s ease' }}
+                          title="Click to copy code"
+                        >
                           {linkCode}
                         </strong>
-                        <span style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '4px' }}>
-                          Expires in {Math.max(0, Math.ceil(timeRemaining / 1000))}s
+                        <span style={{ fontSize: '10px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', marginTop: '4px', fontWeight: codeCopied ? 700 : 400 }}>
+                          {codeCopied
+                            ? '✓ Copied to clipboard!'
+                            : timeRemaining > 0
+                              ? `Expires in ${formatCountdown(timeRemaining)} — Tap code to copy`
+                              : '⏱ Code expired'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-2)', lineHeight: 1.4 }}>
-                          1. Click <b>Open Bot</b> below to open Telegram.
-                          <br />
-                          2. Send the 6-digit code <b>{linkCode}</b> to start receiving alerts.
+                        <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.4 }}>
+                          Tap the button below to open Telegram with the code pre-filled. Just hit <b>Send</b>.
                         </div>
-                        <a 
-                          href="https://t.me/EthioSwap_Bot" 
-                          target="_blank" 
+                        <a
+                          href={deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode}`}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn-gold btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 600 }}
+                          className="btn btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)', color: '#fff', border: 'none' }}
                         >
-                          ✈️ Open Bot (@EthioSwap_Bot)
+                          ✈️ Open & Send Code in Telegram
                         </a>
+                        {timeRemaining <= 0 && (
+                          <button
+                            onClick={() => handleGenerateTelegramCode(true)}
+                            disabled={tgGenerating}
+                            style={{ background: 'transparent', border: '1px dashed var(--border)', borderRadius: '6px', color: 'var(--gold-light)', padding: '6px', fontSize: '11px', fontWeight: 700, cursor: tgGenerating ? 'wait' : 'pointer' }}
+                          >
+                            {tgGenerating ? '⏳ Generating…' : '🔄 Generate a new code'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ) : (
-                    <button onClick={async () => {
-                      try {
-                        const targetId = user._id || user.id;
-                        if (!targetId) {
-                          alert("User ID not found. Please log in again.");
-                          return;
-                        }
-                        const res = await generateTelegramCodeMutation({ userId: targetId });
-                        if (res && res.code) {
-                          setLinkCode(res.code);
-                          setTimeRemaining(10 * 60 * 1000); // 10 mins
-                        }
-                      } catch (err) {
-                        alert("Error generating Telegram link code: " + err.message);
-                      }
-                    }} className="btn btn-gold btn-full btn-sm" style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}>
-                      🔌 Connect Telegram Bot
+                    <button
+                      onClick={() => handleGenerateTelegramCode(true)}
+                      disabled={tgGenerating}
+                      className="btn btn-gold btn-full btn-sm"
+                      style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}
+                    >
+                      {tgGenerating ? '⏳ Opening Telegram…' : '🔌 Connect Telegram Bot'}
                     </button>
                   )}
                 </div>

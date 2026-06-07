@@ -247,8 +247,47 @@ export const handleTelegramWebhook = internalAction({
     };
 
     if (text.startsWith("/start ")) {
-      const linkToken = text.substring(7).trim();
-      const user = await ctx.runQuery(api.telegram.getPendingUserByToken, { token: linkToken });
+      const param = text.substring(7).trim();
+
+      // Case 1: 6-digit linking code (deep link from signup/profile/settings)
+      if (/^\d{6}$/.test(param)) {
+        const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
+          code: param,
+          chatId,
+        });
+
+        if (linkResult.success) {
+          if (linkResult.isSignup) {
+            await ctx.runMutation(api.telegram.activateUserAfterTelegramLink, {
+              userId: linkResult.userId,
+            });
+            await sendReply(
+              `🎉 <b>Account Activated!</b>\n\n` +
+              `Your EthioSwap account <b>@${linkResult.username}</b> has been created and linked to Telegram successfully!\n\n` +
+              `You can now log in on the website using your username and password.\n\n` +
+              `Type /help for available commands.`
+            );
+          } else {
+            await sendReply(
+              `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
+              `You will receive:\n` +
+              `🔐 Login OTP codes\n` +
+              `💰 Deposit confirmations\n` +
+              `📤 Withdrawal alerts\n` +
+              `🔔 Trade notifications\n\n` +
+              `Type /help for commands.`
+            );
+          }
+        } else {
+          await sendReply(
+            `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website and try again.`
+          );
+        }
+        return { ok: true };
+      }
+
+      // Case 2: Long-form token (legacy flow from signup link)
+      const user = await ctx.runQuery(api.telegram.getPendingUserByToken, { token: param });
 
       if (user) {
         await ctx.runMutation(api.telegram.updateUserTelegramChatId, {
@@ -291,11 +330,12 @@ export const handleTelegramWebhook = internalAction({
       return { ok: true };
     }
 
-    if (/^\d{6}$/.test(text)) {
+    if (/^\d{6}$/.test(text.trim())) {
+      const trimmedCode = text.trim();
       await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
 
       const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
-        code: text,
+        code: trimmedCode,
         chatId,
       });
 
@@ -306,9 +346,9 @@ export const handleTelegramWebhook = internalAction({
           });
           await sendReply(
             `🎉 <b>Account Activated!</b>\n\n` +
-            `Your EthioSwap account has been created and linked to Telegram successfully!\n\n` +
+            `Your EthioSwap account <b>@${linkResult.username}</b> has been created and linked to Telegram successfully!\n\n` +
             `You can now log in on the website using your username and password.\n\n` +
-            `Type /help for commands`
+            `Type /help for available commands.`
           );
         } else {
           await sendReply(
@@ -318,12 +358,12 @@ export const handleTelegramWebhook = internalAction({
             `💰 Deposit confirmations\n` +
             `📤 Withdrawal alerts\n` +
             `🔔 Trade notifications\n\n` +
-            `Type /help for commands`
+            `Type /help for commands.`
           );
         }
       } else {
         await sendReply(
-          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website.`
+          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website and try again.`
         );
       }
       return { ok: true };
@@ -440,7 +480,8 @@ export const handleTelegramWebhook = internalAction({
       `To link this Telegram account to your EthioSwap account:\n` +
       `1. Open the EthioSwap website/app and go to <b>Profile Settings</b>.\n` +
       `2. Click <b>🔌 Connect Telegram Bot</b> to get your 6-digit verification code.\n` +
-      `3. Send that 6-digit code here to connect your account and start receiving alerts!`
+      `3. Tap the link we send you — Telegram will pre-fill the code. You just hit <b>Send</b>.\n\n` +
+      `Or simply paste the 6-digit code here in this chat.`
     );
 
     return { ok: true };
@@ -513,6 +554,43 @@ export const disconnectTelegramInternal = mutation({
         text: `Hi ${user.username},\n\nYour Telegram bot connection has been disconnected.\n\nPlease log in with your password to reconnect your Telegram account.\n\nBest regards,\nThe EthioSwap Team`,
       });
     }
+  },
+});
+
+export const getTelegramLinkStatus = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+
+    const now = Date.now();
+    const linkCode = user.telegramLinkCode;
+    const linkExpires = user.telegramLinkExpires;
+    const isCodeValid = !!(linkCode && linkExpires && linkExpires > now);
+
+    return {
+      isLinked: !!user.telegramChatId,
+      telegramChatId: user.telegramChatId || null,
+      telegramLinked: !!user.telegramLinked,
+      status: user.status,
+      hasActiveCode: isCodeValid,
+      linkCode: isCodeValid ? linkCode : null,
+      linkExpires: isCodeValid ? linkExpires : null,
+      secondsRemaining: isCodeValid && linkExpires ? Math.max(0, Math.ceil((linkExpires - now) / 1000)) : 0,
+    };
+  },
+});
+
+export const getTelegramWebhookInfo = action({
+  args: {},
+  handler: async () => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" };
+    }
+    const response = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+    const data = await response.json();
+    return data;
   },
 });
 

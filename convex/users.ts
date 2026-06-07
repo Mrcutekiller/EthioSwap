@@ -442,15 +442,54 @@ export const generateTelegramLinkCode = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 10 * 60 * 1000;
+    // Use cryptographically secure randomness with collision check
+    let code: string = "";
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+    while (attempts < MAX_ATTEMPTS) {
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const candidate = (100000 + (randomBuffer[0] % 900000)).toString();
+
+      // Check for collision with any active code
+      const existing = await ctx.db
+        .query("users")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("telegramLinkCode"), candidate),
+            q.gt(q.field("telegramLinkExpires"), Date.now())
+          )
+        )
+        .first();
+
+      if (!existing) {
+        code = candidate;
+        break;
+      }
+      attempts++;
+    }
+
+    if (!code) {
+      // Fallback: use the random code even after collisions (extremely unlikely)
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      code = (100000 + (randomBuffer[0] % 900000)).toString();
+    }
+
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     await ctx.db.patch(user._id, {
       telegramLinkCode: code,
       telegramLinkExpires: expires,
     });
 
-    return { code };
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
+
+    return {
+      code,
+      expiresAt: expires,
+      deepLink: `https://t.me/${botUsername}?start=${code}`,
+    };
   },
 });
 
