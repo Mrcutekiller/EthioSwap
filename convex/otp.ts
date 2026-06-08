@@ -143,7 +143,7 @@ export const resendSignupOtpWithFallback = action({
         ? {
             code: linkRes.code,
             deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
-            expiresAt: linkRes.expiresAt || Date.now() + 10 * 60 * 1000,
+            expiresAt: linkRes.expiresAt || Date.now() + 30 * 60 * 1000,
           }
         : null,
     };

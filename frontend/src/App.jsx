@@ -132,7 +132,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (res?.code) {
         setTgLinkCode(res.code);
         setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
-        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 10 * 60 * 1000));
+        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 30 * 60 * 1000));
         if (autoOpen && res.deepLink) {
           setAutoOpenedBot(true);
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
@@ -261,7 +261,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result?.telegramCode) {
         setTgLinkCode(result.telegramCode.code);
         setTgDeepLink(result.telegramCode.deepLink);
-        setTgCodeExpiresAt(result.telegramCode.expiresAt);
+        setTgCodeExpiresAt(result.telegramCode.expiresAt || (Date.now() + 30 * 60 * 1000));
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
@@ -287,24 +287,32 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       }
 
       if (res.status === 'telegram_required') {
-        // User needs to (re)connect Telegram before they can log in
+        // User needs to (re)connect Telegram before they can log in.
+        // Generate the link code FIRST, then set the flow — this prevents
+        // the safety-net useEffect from firing with an empty code and
+        // generating a competing code.
+        let linkCode = '';
+        let deepLink = '';
+        let expiresAt = Date.now() + 30 * 60 * 1000;
+        try {
+          const link = await generateTelegramLinkCode(res.userId);
+          if (link?.code) {
+            linkCode = link.code;
+            deepLink = link.deepLink || `https://t.me/EthioSwap_Bot?start=${link.code}`;
+            expiresAt = link.expiresAt || expiresAt;
+          }
+        } catch (e) {
+          // non-fatal — UI will offer a "generate new code" button
+        }
+        setTgLinkCode(linkCode);
+        setTgDeepLink(deepLink);
+        setTgCodeExpiresAt(expiresAt);
         setFlow({
           stage: 'telegram_required',
           userId: res.userId,
           reason: res.reason,
           phone: '',
         });
-        // Pre-generate a link code so the user can act immediately
-        try {
-          const link = await generateTelegramLinkCode(res.userId);
-          if (link?.code) {
-            setTgLinkCode(link.code);
-            setTgDeepLink(link.deepLink || `https://t.me/EthioSwap_Bot?start=${link.code}`);
-            setTgCodeExpiresAt(link.expiresAt || (Date.now() + 10 * 60 * 1000));
-          }
-        } catch (e) {
-          // non-fatal — UI will offer a "generate new code" button
-        }
         return;
       }
 
@@ -342,17 +350,19 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         return;
       }
       if (result.status === 'telegram_required') {
+        // Set code state BEFORE flow to prevent the safety-net useEffect
+        // from firing with an empty code and generating a competing code.
+        if (result.linkCode) {
+          setTgLinkCode(result.linkCode);
+          setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${result.linkCode}`);
+          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 30 * 60 * 1000));
+        }
         setFlow({
           stage: 'telegram_required',
           userId: result.userId,
           reason: result.reason,
           phone: result.phone,
         });
-        if (result.linkCode) {
-          setTgLinkCode(result.linkCode);
-          setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${result.linkCode}`);
-          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 10 * 60 * 1000));
-        }
       }
     }
   };
@@ -476,7 +486,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     <p style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.5, margin: 0 }}>
                       {flow.reason === 'telegram_disconnected'
                         ? 'For your security, all logins go through the @EthioSwap_Bot. Re-link your Telegram to continue.'
-                        : 'All accounts must be linked to our Telegram bot. Open the bot, send the code below, and your account is activated instantly.'}
+                        : 'Link your Telegram to activate your account. You\'ll receive login codes and trade notifications through our bot.'}
                     </p>
                   </div>
 
@@ -512,6 +522,71 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       gap: '14px',
                       alignItems: 'center',
                     }}>
+                      {/* Step-by-step instructions */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        width: '100%',
+                        marginBottom: '4px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            flexShrink: 0,
+                          }}>1</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '2px' }}>
+                            Open <b>@EthioSwap_Bot</b> on Telegram using the button below
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            flexShrink: 0,
+                          }}>2</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '2px' }}>
+                            <b>Send</b> the 6-digit code below to the bot (paste it in the chat)
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            flexShrink: 0,
+                          }}>3</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.5, paddingTop: '2px' }}>
+                            This page will <b>auto-detect</b> when you're connected
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Code display */}
                       <div
                         onClick={() => {
                           if (tgLinkCode) {
@@ -526,22 +601,37 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                           border: '1px solid rgba(255, 215, 0, 0.3)',
                           borderRadius: '12px',
                           padding: '14px 24px',
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '12px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                        title="Click to copy code"
+                      >
+                        <span style={{
                           fontSize: '28px',
                           fontWeight: 800,
                           color: 'var(--gold)',
                           letterSpacing: '10px',
                           fontFamily: 'monospace',
-                          cursor: 'pointer',
                           userSelect: 'all',
-                          transition: 'all 0.2s ease',
-                        }}
-                        title="Click to copy code"
-                      >
-                        {tgLinkCode || '------'}
+                        }}>
+                          {tgLinkCode || '------'}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          color: codeCopied ? '#00d4a0' : 'var(--text-3)',
+                          fontWeight: codeCopied ? 700 : 400,
+                          flexShrink: 0,
+                        }}>
+                          {codeCopied ? '✓ Copied!' : '📋 Copy'}
+                        </span>
                       </div>
-                      <span style={{ fontSize: '11px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: codeCopied ? 700 : 400 }}>
-                        {codeCopied ? '✓ Code copied! Now send it in the Telegram chat' : 'Tap the code to copy, or use the button below'}
-                      </span>
+
+                      {/* Telegram button */}
                       <a
                         href={tgDeepLink || 'https://t.me/EthioSwap_Bot'}
                         target="_blank"
@@ -558,18 +648,23 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                           background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
                           color: '#fff',
                           boxShadow: '0 8px 24px rgba(42, 171, 238, 0.35)',
+                          width: '100%',
                         }}
                         onClick={() => setAutoOpenedBot(true)}
                       >
                         <i className="ti ti-brand-telegram" style={{ marginRight: '10px', fontSize: '20px' }}></i>
                         Open @EthioSwap_Bot
                       </a>
+
+                      {/* Auto-detect notice */}
                       <p style={{ fontSize: '11px', color: 'var(--text-3)', textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-                        The bot will open with the code pre-filled. Just hit <b>Send</b>.<br/>
-                        This page will activate automatically once we detect the link.
+                        The bot will open with the code pre-filled. Just tap <b>Send</b>.<br/>
+                        Keep this page open — we'll detect the connection automatically.
                       </p>
+
+                      {/* Countdown / expiry */}
                       {tgSecondsLeft > 0 ? (
-                        <span style={{ fontSize: '10px', color: tgSecondsLeft < 60 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+                        <span style={{ fontSize: '10px', color: tgSecondsLeft < 120 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
                           ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
                         </span>
                       ) : (
@@ -796,7 +891,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   lineHeight: 1.4,
                 }}>
                   <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE', flexShrink: 0 }}></i>
-                  <span>You'll need our <b>@EthioSwap_Bot</b> on Telegram to activate your account — have it ready.</span>
+                  <span>Your account will be activated via <b>@EthioSwap_Bot</b> on Telegram. After signing up, you'll get a code to send to the bot.</span>
                 </div>
               )}
 

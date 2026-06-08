@@ -109,6 +109,14 @@ export const verifyAndLinkCode = mutation({
     );
 
     if (!user) {
+      // Log for debugging — helps identify whether the code wasn't found
+      // or was found but expired.
+      const expiredMatch = candidates.find((u) => (u.telegramLinkExpires ?? 0) <= now);
+      if (expiredMatch) {
+        console.warn(`[Telegram] verifyAndLinkCode: code ${args.code} found but expired for user ${expiredMatch._id}. Expired at ${expiredMatch.telegramLinkExpires}, now ${now}`);
+      } else {
+        console.warn(`[Telegram] verifyAndLinkCode: no user found with code ${args.code}. Candidates searched: ${candidates.length}`);
+      }
       return { success: false };
     }
 
@@ -279,8 +287,16 @@ export const handleTelegramWebhook = internalAction({
             );
           }
         } else {
+          console.warn(`[Telegram] /start code verification failed for chatId=${chatId}, code=${param}`);
           await sendReply(
-            `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website and try again.`
+            `❌ <b>Connection Failed!</b>\n\n` +
+            `The code <code>${param}</code> is invalid or has expired.\n\n` +
+            `<b>What to do:</b>\n` +
+            `1. Go back to the EthioSwap website\n` +
+            `2. Click "Generate a new code"\n` +
+            `3. Open this bot again with the new code\n` +
+            `4. Send the new code here\n\n` +
+            `<i>Codes expire after 30 minutes.</i>`
           );
         }
         return { ok: true };
@@ -388,8 +404,16 @@ export const handleTelegramWebhook = internalAction({
           );
         }
       } else {
+        console.warn(`[Telegram] Bare code verification failed for chatId=${chatId}, code=${trimmedCode}`);
         await sendReply(
-          `❌ <b>Connection Failed!</b> The code is invalid or has expired. Please request a new 6-digit code from the EthioSwap website and try again.`
+          `❌ <b>Connection Failed!</b>\n\n` +
+          `The code <code>${trimmedCode}</code> is invalid or has expired.\n\n` +
+          `<b>What to do:</b>\n` +
+          `1. Go back to the EthioSwap website\n` +
+          `2. Click "Generate a new code"\n` +
+          `3. Open this bot again with the new code\n` +
+          `4. Send the new code here\n\n` +
+          `<i>Codes expire after 30 minutes.</i>`
         );
       }
       return { ok: true };

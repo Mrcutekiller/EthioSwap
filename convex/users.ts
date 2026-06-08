@@ -100,24 +100,9 @@ export const create = mutation({
       telegramLinked: false,
     });
 
-    if (args.role !== "admin") {
-      // Telegram-only signup: generate a fresh 6-digit linking code right
-      // away so the web can show it immediately. The account becomes
-      // active when the user sends the code to the Telegram bot.
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
-      const linkExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
-      const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
-
-      await ctx.db.patch(userId, {
-        telegramLinkCode: linkCode,
-        telegramLinkExpires: linkExpires,
-      });
-
-      return { userId, linkCode, linkExpires, deepLink };
-    }
+    // The 6-digit linking code is generated separately via
+    // generateTelegramLinkCode after the user record is created. This
+    // avoids generating a code here that would immediately be overwritten.
 
     return { userId };
   },
@@ -449,20 +434,15 @@ export const generateTelegramLinkCode = mutation({
     crypto.getRandomValues(randomBuffer);
     const code = (100000 + (randomBuffer[0] % 900000)).toString();
 
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expires = Date.now() + 30 * 60 * 1000; // 30 minutes
 
-    try {
-      await ctx.db.patch(user._id, {
-        telegramLinkCode: code,
-        telegramLinkExpires: expires,
-      });
-    } catch (patchErr) {
-      // If the patch fails for any reason (e.g. unexpected schema state),
-      // still return the freshly generated code so the user is never stuck
-      // on a blank screen. The next call to this mutation will retry the
-      // patch with a fresh code.
-      console.error("generateTelegramLinkCode patch failed:", patchErr);
-    }
+    // Must throw on failure so the frontend never shows a code that
+    // isn't stored in the DB — that would cause "Connection Failed"
+    // when the user sends the code to the bot.
+    await ctx.db.patch(user._id, {
+      telegramLinkCode: code,
+      telegramLinkExpires: expires,
+    });
 
     const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
 
