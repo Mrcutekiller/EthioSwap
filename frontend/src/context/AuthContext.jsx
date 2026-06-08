@@ -246,23 +246,31 @@ export const AuthProvider = ({ children }) => {
         return { status: 'success_admin', userId: result.userId };
       }
 
-      // Always request a fresh 6-digit linking code from the backend so the
-      // UI never shows a blank/placeholder. This covers new signups AND
-      // signups that are resuming a previous pending-verification attempt.
-      // Retry once on transient errors (e.g. a Convex deploy happening at
-      // the same instant) so the user never gets blocked.
-      let linkRes = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
-          if (linkRes?.code) break;
-        } catch (e) {
-          console.warn(`generateTelegramLinkCode attempt ${attempt + 1} failed:`, e?.message || e);
+      // The create mutation returns a linkCode atomically for new signups.
+      // For resuming pending-verifications, fall back to generateTelegramLinkCode.
+      let linkCode = result.linkCode || null;
+      let linkExpires = result.linkExpires || null;
+      let deepLink = result.deepLink || null;
+
+      if (!linkCode) {
+        // Resuming a pending verification — generate a fresh code
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+            if (linkRes?.code) {
+              linkCode = linkRes.code;
+              linkExpires = linkRes.expiresAt;
+              deepLink = linkRes.deepLink;
+              break;
+            }
+          } catch (e) {
+            console.warn(`generateTelegramLinkCode attempt ${attempt + 1} failed:`, e?.message || e);
+          }
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         }
-        // Wait briefly before retrying
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
-      if (!linkRes?.code) {
+
+      if (!linkCode) {
         throw new Error("Could not generate Telegram linking code. Please refresh and try again.");
       }
 
@@ -271,9 +279,9 @@ export const AuthProvider = ({ children }) => {
         status: 'telegram_required',
         userId: result.userId,
         reason: 'signup_incomplete',
-        linkCode: linkRes.code,
-        linkExpires: linkRes.expiresAt,
-        deepLink: linkRes.deepLink || `https://t.me/EthioSwap_Bot?start=${linkRes.code}`,
+        linkCode: linkCode,
+        linkExpires: linkExpires,
+        deepLink: deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode}`,
         phone,
       };
     } catch (err) {

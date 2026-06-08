@@ -100,9 +100,23 @@ export const create = mutation({
       telegramLinked: false,
     });
 
-    // The 6-digit linking code is generated separately via
-    // generateTelegramLinkCode after the user record is created. This
-    // avoids generating a code here that would immediately be overwritten.
+    if (args.role !== "admin") {
+      // Generate the 6-digit linking code atomically with the user record
+      // so the frontend always gets a valid code without a separate call.
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
+      const linkExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
+      const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
+
+      await ctx.db.patch(userId, {
+        telegramLinkCode: linkCode,
+        telegramLinkExpires: linkExpires,
+      });
+
+      return { userId, linkCode, linkExpires, deepLink };
+    }
 
     return { userId };
   },
