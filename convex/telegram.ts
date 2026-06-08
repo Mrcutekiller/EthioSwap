@@ -289,14 +289,14 @@ export const handleTelegramWebhook = internalAction({
         } else {
           console.warn(`[Telegram] /start code verification failed for chatId=${chatId}, code=${param}`);
           await sendReply(
-            `❌ <b>Connection Failed!</b>\n\n` +
-            `The code <code>${param}</code> is invalid or has expired.\n\n` +
+            `⚠️ <b>Code Not Recognized</b>\n\n` +
+            `The code <code>${param}</code> doesn't match or may have expired.\n\n` +
             `<b>What to do:</b>\n` +
-            `1. Go back to the EthioSwap website\n` +
+            `1. Go back to the EthioSwap website (<b>ethioswap.qzz.io</b>)\n` +
             `2. Click "Generate a new code"\n` +
-            `3. Open this bot again with the new code\n` +
-            `4. Send the new code here\n\n` +
-            `<i>Codes expire after 30 minutes.</i>`
+            `3. Open this bot with the new code by clicking the Telegram link\n` +
+            `4. Or just paste the new 6-digit code here\n\n` +
+            `<i>Tip: Codes are valid for 30 minutes. Make sure you copy the exact 6 digits.</i>`
           );
         }
         return { ok: true };
@@ -340,7 +340,7 @@ export const handleTelegramWebhook = internalAction({
         await sendReply(
           `👋 <b>Welcome to EthioSwap Bot!</b>\n\n` +
           `I'm your EthioSwap trading assistant. To connect your account, please send me the <b>6-digit linking code</b> from the EthioSwap website.\n\n` +
-          `If you haven't signed up yet, visit <b>ethioswap.com</b> to create an account.`
+          `If you haven't signed up yet, visit <b>ethioswap.qzz.io</b> to create an account.`
         );
       }
       return { ok: true };
@@ -406,14 +406,14 @@ export const handleTelegramWebhook = internalAction({
       } else {
         console.warn(`[Telegram] Bare code verification failed for chatId=${chatId}, code=${trimmedCode}`);
         await sendReply(
-          `❌ <b>Connection Failed!</b>\n\n` +
-          `The code <code>${trimmedCode}</code> is invalid or has expired.\n\n` +
+          `⚠️ <b>Code Not Recognized</b>\n\n` +
+          `The code <code>${trimmedCode}</code> doesn't match or may have expired.\n\n` +
           `<b>What to do:</b>\n` +
-          `1. Go back to the EthioSwap website\n` +
+          `1. Go back to the EthioSwap website (<b>ethioswap.qzz.io</b>)\n` +
           `2. Click "Generate a new code"\n` +
-          `3. Open this bot again with the new code\n` +
-          `4. Send the new code here\n\n` +
-          `<i>Codes expire after 30 minutes.</i>`
+          `3. Open this bot with the new code by clicking the Telegram link\n` +
+          `4. Or just paste the new 6-digit code here\n\n` +
+          `<i>Tip: Codes are valid for 30 minutes. Make sure you copy the exact 6 digits.</i>`
         );
       }
       return { ok: true };

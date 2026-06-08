@@ -127,14 +127,11 @@ export const create = mutation({
     });
 
     if (args.role !== "admin") {
-      let link = null;
       try {
-        link = await generateLinkCode(userId);
-      } catch (e) {
-        console.warn("generateLinkCode failed for new user:", e);
-      }
-      if (link) {
+        const link = await generateLinkCode(userId);
         return { userId, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+      } catch (e) {
+        console.error("generateLinkCode failed for new user:", e);
       }
     }
 

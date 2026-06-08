@@ -163,7 +163,7 @@ export const sendOtpAction = internalAction({
     let tgMsg = `🛡️ <b>EthioSwap Secure OTP</b>\n\nYour OTP verification code is: <code>${args.code}</code>\n\nThis code expires in 5 minutes.`;
 
     if (args.purpose === "login") {
-      tgMsg = `🔐 <b>EthioSwap Login Code</b>\n\nYour code: <code>${args.code}</code>\n\n⏰ Expires in 10 minutes\n❌ Never share this code\n\nNot you? Secure your account:\n<a href="https://ethioswap.com/profile">Security Settings</a>`;
+      tgMsg = `🔐 <b>EthioSwap Login Code</b>\n\nYour code: <code>${args.code}</code>\n\n⏰ Expires in 10 minutes\n❌ Never share this code\n\nNot you? Secure your account:\n<a href="https://ethioswap.qzz.io/profile">Security Settings</a>`;
     } else if (args.purpose === "withdrawal") {
       tgMsg = `💸 <b>Withdrawal Verification</b>\n\nYour withdrawal code: <code>${args.code}</code>\n\n⏰ Expires in 5 minutes\n❌ Never share this code`;
     } else if (args.purpose === "deposit") {

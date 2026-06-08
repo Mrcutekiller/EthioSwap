@@ -590,49 +590,78 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       </div>
 
                       {/* Code display */}
-                      <div
-                        onClick={() => {
-                          if (tgLinkCode) {
+                      {tgLinkCode ? (
+                        <div
+                          onClick={() => {
                             navigator.clipboard.writeText(tgLinkCode).then(() => {
                               setCodeCopied(true);
                               setTimeout(() => setCodeCopied(false), 2000);
                             }).catch(() => {});
-                          }
-                        }}
-                        style={{
-                          background: 'rgba(255, 215, 0, 0.1)',
-                          border: '1px solid rgba(255, 215, 0, 0.3)',
-                          borderRadius: '12px',
-                          padding: '14px 24px',
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '12px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                        }}
-                        title="Click to copy code"
-                      >
-                        <span style={{
-                          fontSize: '28px',
-                          fontWeight: 800,
-                          color: 'var(--gold)',
-                          letterSpacing: '10px',
-                          fontFamily: 'monospace',
-                          userSelect: 'all',
-                        }}>
-                          {tgLinkCode || '------'}
-                        </span>
-                        <span style={{
-                          fontSize: '11px',
-                          color: codeCopied ? '#00d4a0' : 'var(--text-3)',
-                          fontWeight: codeCopied ? 700 : 400,
-                          flexShrink: 0,
-                        }}>
-                          {codeCopied ? '✓ Copied!' : '📋 Copy'}
-                        </span>
-                      </div>
+                          }}
+                          style={{
+                            background: 'rgba(255, 215, 0, 0.1)',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            borderRadius: '12px',
+                            padding: '14px 24px',
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                          title="Click to copy code"
+                        >
+                          <span style={{
+                            fontSize: '28px',
+                            fontWeight: 800,
+                            color: 'var(--gold)',
+                            letterSpacing: '10px',
+                            fontFamily: 'monospace',
+                            userSelect: 'all',
+                          }}>
+                            {tgLinkCode}
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            color: codeCopied ? '#00d4a0' : 'var(--text-3)',
+                            fontWeight: codeCopied ? 700 : 400,
+                            flexShrink: 0,
+                          }}>
+                            {codeCopied ? '✓ Copied!' : '📋 Copy'}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleConnectTelegram(false)}
+                          disabled={tgLinking}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%)',
+                            border: '2px dashed var(--gold)',
+                            borderRadius: '12px',
+                            padding: '18px 24px',
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            cursor: tgLinking ? 'wait' : 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <span style={{ fontSize: '22px' }}>{tgLinking ? '⏳' : '🔑'}</span>
+                          <span style={{
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            color: 'var(--gold)',
+                            fontFamily: 'var(--font)',
+                          }}>
+                            {tgLinking ? 'Generating your code...' : 'Generate Linking Code'}
+                          </span>
+                        </button>
+                      )}
 
                       {/* Telegram button */}
                       <a
