@@ -246,42 +246,43 @@ export const AuthProvider = ({ children }) => {
         return { status: 'success_admin', userId: result.userId };
       }
 
-      // The create mutation returns a linkCode atomically for new signups.
-      // For resuming pending-verifications, fall back to generateTelegramLinkCode.
-      let linkCode = result.linkCode || null;
-      let linkExpires = result.linkExpires || null;
-      let deepLink = result.deepLink || null;
+      // Telegram linking — NON-FATAL. If it fails, the connect screen
+      // has a "Generate code" button that retries on demand. Account
+      // creation is NEVER blocked by a Telegram failure.
+      let linkCode = null;
+      let linkExpires = null;
+      let deepLink = null;
 
+      // Try the atomically-generated code from create() first
+      if (result.linkCode) {
+        linkCode = result.linkCode;
+        linkExpires = result.linkExpires;
+        deepLink = result.deepLink;
+      }
+
+      // Fall back to generateTelegramLinkCode if we still have no code
       if (!linkCode) {
-        // Resuming a pending verification — generate a fresh code
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
-            if (linkRes?.code) {
-              linkCode = linkRes.code;
-              linkExpires = linkRes.expiresAt;
-              deepLink = linkRes.deepLink;
-              break;
-            }
-          } catch (e) {
-            console.warn(`generateTelegramLinkCode attempt ${attempt + 1} failed:`, e?.message || e);
+        try {
+          const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
+          if (linkRes?.code) {
+            linkCode = linkRes.code;
+            linkExpires = linkRes.expiresAt;
+            deepLink = linkRes.deepLink;
           }
-          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        } catch (e) {
+          console.warn('Telegram linking skipped — will retry on connect screen:', e?.message || e);
+          // Non-fatal — the UI shows a "Generate code" button
         }
       }
 
-      if (!linkCode) {
-        throw new Error("Could not generate Telegram linking code. Please refresh and try again.");
-      }
-
-      setSuccess('Account created! Open the Telegram bot and send the code to activate.');
+      setSuccess('Account created! Connect Telegram to activate.');
       return {
         status: 'telegram_required',
         userId: result.userId,
         reason: 'signup_incomplete',
-        linkCode: linkCode,
-        linkExpires: linkExpires,
-        deepLink: deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode}`,
+        linkCode,
+        linkExpires,
+        deepLink: deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode || ''}`,
         phone,
       };
     } catch (err) {

@@ -69,6 +69,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [tgLinked, setTgLinked] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [autoOpenedBot, setAutoOpenedBot] = useState(false);
+  const tgFetchAttempted = React.useRef(false);
 
   const pendingUser = useQuery(
     api.users.get,
@@ -156,9 +157,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
   // Safety net: if the user lands on the connect-Telegram screen without
   // a code in hand (e.g. resume signup that was started before this code
-  // path existed), fetch one immediately.
+  // path existed), fetch one immediately. Only fires once to avoid loops.
   useEffect(() => {
-    if (flow?.stage !== 'telegram_required' || !flow?.userId || tgLinkCode || tgLinking) return;
+    if (flow?.stage !== 'telegram_required' || !flow?.userId || tgLinkCode || tgLinking || tgFetchAttempted.current) return;
+    tgFetchAttempted.current = true;
     handleConnectTelegram(false);
   }, [flow, tgLinkCode, tgLinking]);
 
@@ -254,6 +256,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
   const handleResendTelegramCode = async () => {
     if (!flow?.userId) return;
+    tgFetchAttempted.current = false;
     setTgLinking(true);
     setLocalError('');
     try {
