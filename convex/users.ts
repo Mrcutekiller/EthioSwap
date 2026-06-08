@@ -36,6 +36,20 @@ export const create = mutation({
     age: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
+    // Helper: generate a fresh 6-digit linking code and patch it onto a user
+    const generateLinkCode = async (userId: any) => {
+      const randomBuffer = new Uint32Array(1);
+      crypto.getRandomValues(randomBuffer);
+      const code = (100000 + (randomBuffer[0] % 900000)).toString();
+      const expires = Date.now() + 30 * 60 * 1000;
+      await ctx.db.patch(userId, {
+        telegramLinkCode: code,
+        telegramLinkExpires: expires,
+      });
+      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
+      return { code, expires, deepLink: `https://t.me/${botUsername}?start=${code}` };
+    };
+
     if (args.email) {
       const existing = await ctx.db
         .query("users")
@@ -43,7 +57,8 @@ export const create = mutation({
         .first();
       if (existing) {
         if (existing.status === "pending_verification") {
-          return { userId: existing._id, pendingVerification: true };
+          const link = await generateLinkCode(existing._id);
+          return { userId: existing._id, pendingVerification: true, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
         }
         throw new Error("Email already registered");
       }
@@ -55,7 +70,8 @@ export const create = mutation({
       .first();
     if (existingUser) {
       if (existingUser.status === "pending_verification") {
-        return { userId: existingUser._id, pendingVerification: true };
+        const link = await generateLinkCode(existingUser._id);
+        return { userId: existingUser._id, pendingVerification: true, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
       }
       throw new Error("Username already taken");
     }
@@ -101,21 +117,8 @@ export const create = mutation({
     });
 
     if (args.role !== "admin") {
-      // Generate the 6-digit linking code atomically with the user record
-      // so the frontend always gets a valid code without a separate call.
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const linkCode = (100000 + (randomBuffer[0] % 900000)).toString();
-      const linkExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
-      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
-      const deepLink = `https://t.me/${botUsername}?start=${linkCode}`;
-
-      await ctx.db.patch(userId, {
-        telegramLinkCode: linkCode,
-        telegramLinkExpires: linkExpires,
-      });
-
-      return { userId, linkCode, linkExpires, deepLink };
+      const link = await generateLinkCode(userId);
+      return { userId, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
     }
 
     return { userId };
