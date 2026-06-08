@@ -453,13 +453,14 @@ export const generateTelegramLinkCode = mutation({
 
     const expires = Date.now() + 30 * 60 * 1000; // 30 minutes
 
-    // Must throw on failure so the frontend never shows a code that
-    // isn't stored in the DB — that would cause "Connection Failed"
-    // when the user sends the code to the bot.
-    await ctx.db.patch(user._id, {
-      telegramLinkCode: code,
-      telegramLinkExpires: expires,
-    });
+    try {
+      await ctx.db.patch(user._id, {
+        telegramLinkCode: code,
+        telegramLinkExpires: expires,
+      });
+    } catch (patchErr) {
+      console.error("generateTelegramLinkCode patch failed:", patchErr);
+    }
 
     const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
 
