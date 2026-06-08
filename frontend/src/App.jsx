@@ -635,10 +635,15 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => handleConnectTelegram(false)}
+                          onClick={async () => {
+                            setLocalError('');
+                            await handleConnectTelegram(false);
+                          }}
                           disabled={tgLinking}
                           style={{
-                            background: 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%)',
+                            background: tgLinking
+                              ? 'rgba(255,215,0,0.05)'
+                              : 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%)',
                             border: '2px dashed var(--gold)',
                             borderRadius: '12px',
                             padding: '18px 24px',
@@ -649,6 +654,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                             gap: '10px',
                             cursor: tgLinking ? 'wait' : 'pointer',
                             transition: 'all 0.2s ease',
+                            opacity: tgLinking ? 0.7 : 1,
                           }}
                         >
                           <span style={{ fontSize: '22px' }}>{tgLinking ? '⏳' : '🔑'}</span>
@@ -661,6 +667,26 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                             {tgLinking ? 'Generating your code...' : 'Generate Linking Code'}
                           </span>
                         </button>
+                      )}
+
+                      {localError && (
+                        <div style={{
+                          fontSize: '13px',
+                          color: 'var(--status-danger-text)',
+                          fontWeight: 600,
+                          padding: '12px 14px',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          lineHeight: 1.4,
+                          width: '100%',
+                        }}>
+                          <i className="ti ti-alert-triangle" style={{ fontSize: '15px', color: '#EF4444' }}></i>
+                          <span>{localError}</span>
+                        </div>
                       )}
 
                       {/* Telegram button */}
