@@ -57,8 +57,13 @@ export const create = mutation({
         .first();
       if (existing) {
         if (existing.status === "pending_verification") {
-          const link = await generateLinkCode(existing._id);
-          return { userId: existing._id, pendingVerification: true, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+          let link = null;
+          try {
+            link = await generateLinkCode(existing._id);
+          } catch (e) {
+            console.warn("generateLinkCode failed for existing pending user (email):", e);
+          }
+          return { userId: existing._id, pendingVerification: true, ...(link ? { linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
         }
         throw new Error("Email already registered");
       }
@@ -70,8 +75,13 @@ export const create = mutation({
       .first();
     if (existingUser) {
       if (existingUser.status === "pending_verification") {
-        const link = await generateLinkCode(existingUser._id);
-        return { userId: existingUser._id, pendingVerification: true, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+        let link = null;
+        try {
+          link = await generateLinkCode(existingUser._id);
+        } catch (e) {
+          console.warn("generateLinkCode failed for existing pending user (username):", e);
+        }
+        return { userId: existingUser._id, pendingVerification: true, ...(link ? { linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
       }
       throw new Error("Username already taken");
     }
@@ -117,8 +127,15 @@ export const create = mutation({
     });
 
     if (args.role !== "admin") {
-      const link = await generateLinkCode(userId);
-      return { userId, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+      let link = null;
+      try {
+        link = await generateLinkCode(userId);
+      } catch (e) {
+        console.warn("generateLinkCode failed for new user:", e);
+      }
+      if (link) {
+        return { userId, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+      }
     }
 
     return { userId };

@@ -644,3 +644,46 @@ export const getTelegramWebhookInfo = action({
   },
 });
 
+export const storeTelegramToken = internalMutation({
+  args: {
+    userId: v.id("users"),
+    token: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, { userId, token, expiresAt }) => {
+    const existing = await ctx.db
+      .query("telegramLinkTokens")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existing) await ctx.db.delete(existing._id);
+
+    await ctx.db.insert("telegramLinkTokens", {
+      userId,
+      token,
+      expiresAt,
+      used: false,
+    });
+  },
+});
+
+export const generateTelegramLinkToken = action({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const token = crypto.randomUUID();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    await ctx.runMutation(internal.telegram.storeTelegramToken, {
+      userId,
+      token,
+      expiresAt,
+    });
+
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME;
+    if (!botUsername) throw new Error("TELEGRAM_BOT_USERNAME not set");
+
+    const deepLink = `https://t.me/${botUsername}?start=${token}`;
+    return { token, deepLink };
+  },
+});
+

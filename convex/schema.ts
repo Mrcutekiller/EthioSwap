@@ -360,4 +360,13 @@ export default defineSchema({
     createdAt: v.string(),
   })
   .index("by_user_fingerprint", ["userId", "deviceFingerprint"]),
+
+  telegramLinkTokens: defineTable({
+    userId: v.id("users"),
+    token: v.string(),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_token", ["token"]),
 });
