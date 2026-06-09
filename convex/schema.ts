@@ -87,7 +87,8 @@ export default defineSchema({
     flaggedReason: v.optional(v.string()),
   })
   .index("by_username", ["username"])
-  .index("by_email", ["email"]),
+  .index("by_email", ["email"])
+  .index("by_link_code", ["telegramLinkCode"]),
 
   trades: defineTable({
     buyerId: v.optional(v.id("users")),

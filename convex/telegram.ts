@@ -101,7 +101,7 @@ export const verifyAndLinkCode = mutation({
     // because Convex's q.gt filter on optional number fields can be flaky.
     const candidates = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("telegramLinkCode"), args.code))
+      .withIndex("by_link_code", (q) => q.eq("telegramLinkCode", args.code))
       .collect();
 
     const user = candidates.find(
@@ -289,14 +289,9 @@ export const handleTelegramWebhook = internalAction({
         } else {
           console.warn(`[Telegram] /start code verification failed for chatId=${chatId}, code=${param}`);
           await sendReply(
-            `⚠️ <b>Code Not Recognized</b>\n\n` +
-            `The code <code>${param}</code> doesn't match or may have expired.\n\n` +
-            `<b>What to do:</b>\n` +
-            `1. Go back to the EthioSwap website (<b>ethioswap.qzz.io</b>)\n` +
-            `2. Click "Generate a new code"\n` +
-            `3. Open this bot with the new code by clicking the Telegram link\n` +
-            `4. Or just paste the new 6-digit code here\n\n` +
-            `<i>Tip: Codes are valid for 30 minutes. Make sure you copy the exact 6 digits.</i>`
+            `❌ <b>Connection Failed!</b>\n\n` +
+            `The code <code>${param}</code> is invalid or has expired.\n\n` +
+            `Please request a new 6-digit code from the EthioSwap website and try again.`
           );
         }
         return { ok: true };
@@ -406,14 +401,9 @@ export const handleTelegramWebhook = internalAction({
       } else {
         console.warn(`[Telegram] Bare code verification failed for chatId=${chatId}, code=${trimmedCode}`);
         await sendReply(
-          `⚠️ <b>Code Not Recognized</b>\n\n` +
-          `The code <code>${trimmedCode}</code> doesn't match or may have expired.\n\n` +
-          `<b>What to do:</b>\n` +
-          `1. Go back to the EthioSwap website (<b>ethioswap.qzz.io</b>)\n` +
-          `2. Click "Generate a new code"\n` +
-          `3. Open this bot with the new code by clicking the Telegram link\n` +
-          `4. Or just paste the new 6-digit code here\n\n` +
-          `<i>Tip: Codes are valid for 30 minutes. Make sure you copy the exact 6 digits.</i>`
+          `❌ <b>Connection Failed!</b>\n\n` +
+          `The code <code>${trimmedCode}</code> is invalid or has expired.\n\n` +
+          `Please request a new 6-digit code from the EthioSwap website and try again.`
         );
       }
       return { ok: true };
