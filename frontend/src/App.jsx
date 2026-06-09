@@ -58,20 +58,23 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       const saved = localStorage.getItem('ethioswap_auth_flow');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Only resume if it's less than 30 mins old
-        if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+        // Only resume if it's less than 30 mins old AND has a userId
+        if (parsed.userId && parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+          console.log("[Auth] Recovered auth flow from storage:", parsed.stage, parsed.userId);
           return parsed;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("[Auth] Failed to recover flow from storage:", e);
+    }
     return null;
   });
 
   // Sync flow to localStorage
   useEffect(() => {
-    if (flow) {
+    if (flow && flow.userId) {
       localStorage.setItem('ethioswap_auth_flow', JSON.stringify({ ...flow, timestamp: Date.now() }));
-    } else {
+    } else if (!flow) {
       localStorage.removeItem('ethioswap_auth_flow');
     }
   }, [flow]);
@@ -146,18 +149,21 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
   const handleConnectTelegram = async (autoOpen = false) => {
     // Session validation: prioritize flow.userId, fall back to logged-in user
-    const targetUserId = flow?.userId || user?._id || user?.id;
+    // Ensure we are working with string IDs
+    const flowUserId = flow?.userId ? String(flow.userId) : null;
+    const authUserId = user?._id ? String(user._id) : (user?.id ? String(user.id) : null);
+    const targetUserId = flowUserId || authUserId;
 
     if (!targetUserId) {
-      console.warn("[Auth] handleConnectTelegram: No userId found in flow or session");
-      setLocalError('Your session could not be verified. Please log in again to continue.');
+      console.warn("[Auth] handleConnectTelegram failed: No userId found", { flow, user });
+      setLocalError('Your session could not be verified. Please try logging in again to link your account.');
       return;
     }
 
     setTgLinking(true);
     setLocalError('');
     try {
-      console.log(`[Auth] Generating linking code for user: ${targetUserId}`);
+      console.log(`[Auth] Generating linking code for target ID: ${targetUserId}`);
       const res = await generateTelegramLinkCode(targetUserId);
       
       if (res && res.token) {
@@ -170,12 +176,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
         }
       } else {
-        throw new Error('Server returned an empty code. Please try again.');
+        console.error("[Auth] generateTelegramLinkCode returned invalid result:", res);
+        throw new Error('The server failed to generate a valid code. Please try again.');
       }
     } catch (err) {
       console.error("[Auth] Telegram code generation failed:", err);
-      const cleanErr = err.message || 'Unknown error occurred';
-      setLocalError(`Failed to generate code: ${cleanConvexError(cleanErr)}. Please try again.`);
+      const cleanErr = err.message || 'Connection to server failed';
+      setLocalError(`Failed to generate code: ${cleanConvexError(cleanErr)}`);
     } finally {
       setTgLinking(false);
     }
@@ -290,7 +297,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   };
 
   const handleResendTelegramCode = async () => {
-    const targetUserId = flow?.userId || user?._id || user?.id;
+    const flowUserId = flow?.userId ? String(flow.userId) : null;
+    const authUserId = user?._id ? String(user._id) : (user?.id ? String(user.id) : null);
+    const targetUserId = flowUserId || authUserId;
+
     if (!targetUserId) {
       setLocalError('Your session could not be verified. Please log in again.');
       return;
@@ -299,7 +309,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     setTgLinking(true);
     setLocalError('');
     try {
-      console.log(`[Auth] Resending linking code for user: ${targetUserId}`);
+      console.log(`[Auth] Resending linking code for target ID: ${targetUserId}`);
       const result = await generateTelegramLinkCode(targetUserId);
       if (result?.token) {
         setTgLinkCode(result.token);
@@ -418,7 +428,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     e.preventDefault();
     setLocalError('');
     
-    const targetUserId = flow?.userId || user?._id || user?.id;
+    const flowUserId = flow?.userId ? String(flow.userId) : null;
+    const authUserId = user?._id ? String(user._id) : (user?.id ? String(user.id) : null);
+    const targetUserId = flowUserId || authUserId;
+
     if (!targetUserId) {
       setLocalError('Your session has expired. Please log in again.');
       return;
