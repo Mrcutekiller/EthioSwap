@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "convex-api";
 import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
@@ -155,13 +155,99 @@ const SettingsPage = ({ user, onLogout }) => {
     localStorage.setItem('ethioswap_notif_prefs', JSON.stringify(updated));
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
+  const isTelegramLinked = useQuery(api.telegram.isTelegramLinked, { userId: user?._id || user?.id });
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '4px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: 800 }}>{t('Settings')}</h2>
+  return (
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
+      <div className="page-header" style={{ marginBottom: '24px' }}>
+        <h1 className="page-title" style={{ fontSize: '24px', fontWeight: 800 }}>{t('Settings')}</h1>
+        <p className="page-subtitle" style={{ fontSize: '14px', color: 'var(--text-3)' }}>Manage your account and preferences</p>
       </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Telegram Linking Section - Now Optional and moved to settings */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '10px', 
+              background: 'rgba(42, 171, 238, 0.1)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              color: '#2AABEE'
+            }}>
+              <Globe size={24} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Telegram Connection</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Receive notifications and secure your account</p>
+            </div>
+          </div>
+
+          {isTelegramLinked ? (
+            <div style={{ 
+              background: 'rgba(0, 212, 160, 0.06)', 
+              border: '1px solid rgba(0, 212, 160, 0.2)', 
+              borderRadius: '12px', 
+              padding: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Shield size={20} style={{ color: '#00D4A0' }} />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-1)' }}>Telegram is successfully linked!</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>
+                Link your Telegram account to get real-time trade alerts and use Telegram for secure login codes.
+              </p>
+              
+              {linkCode ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ 
+                    background: 'rgba(255, 215, 0, 0.08)', 
+                    border: '1px solid rgba(255, 215, 0, 0.2)', 
+                    borderRadius: '12px', 
+                    padding: '16px',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-3)', display: 'block', marginBottom: '4px' }}>Your Linking Code</span>
+                    <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)', letterSpacing: '4px' }}>{linkCode}</span>
+                  </div>
+                  <a 
+                    href={deepLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn btn-gold"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    Open @EthioSwap_Bot
+                  </a>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => handleGenerateTelegramCode()} 
+                  disabled={tgGenerating}
+                  className="btn btn-gold"
+                  style={{ width: 'fit-content' }}
+                >
+                  {tgGenerating ? 'Generating...' : 'Link Telegram Account'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
       {/* Language Selector */}
       <div className="card">

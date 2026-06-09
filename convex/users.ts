@@ -185,25 +185,8 @@ export const authenticate = query({
     }
 
     if (user.status === "pending_verification") {
-      // Account is not yet active — user must connect Telegram to finish signup.
-      // The web will show a "Connect Telegram" screen with a fresh code.
-      return {
-        status: "telegram_required",
-        userId: user._id,
-        reason: "signup_incomplete",
-        telegramChatId: user.telegramChatId || "",
-      };
-    }
-
-    // Telegram is required for all logins. If the user disconnected it,
-    // they must reconnect before they can sign in again.
-    if (!user.telegramLinked) {
-      return {
-        status: "telegram_required",
-        userId: user._id,
-        reason: "telegram_disconnected",
-        telegramChatId: "",
-      };
+      // Telegram is no longer required. Automatically activate the user.
+      await ctx.db.patch(user._id, { status: "active" });
     }
 
     const { passwordHash, ...safeUser } = user;

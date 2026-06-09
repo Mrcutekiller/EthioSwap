@@ -197,8 +197,20 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid password.');
       }
 
-      if (res.status === 'otp_required' || res.status === 'telegram_required') {
+      if (res.status === 'otp_required') {
         return res;
+      }
+
+      // If telegram was required but we've removed it, it might return success directly now
+      if (res.status === 'telegram_required') {
+        // Fallback: treat as success if backend still returns it but we want to skip it
+        const userRes = await convex.query(api.users.get, { id: res.userId });
+        if (userRes) {
+          const safeUser = { ...userRes, id: userRes._id };
+          setUser(safeUser);
+          localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
+          return { status: 'success', user: safeUser };
+        }
       }
 
       // Add id alias for compatibility
@@ -275,16 +287,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      setSuccess('Account created! Connect Telegram to activate.');
-      return {
-        status: 'telegram_required',
-        userId: result.userId,
-        reason: 'signup_incomplete',
-        linkCode,
-        linkExpires,
-        deepLink: deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode || ''}`,
-        phone,
-      };
+      setSuccess('Account created! Logging you in...');
+      // Automatically log in after registration
+      return login(username, password);
     } catch (err) {
       setError(err.message);
       return null;
