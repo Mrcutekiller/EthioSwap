@@ -91,18 +91,18 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [autoOpenedBot, setAutoOpenedBot] = useState(false);
   const tgFetchAttempted = React.useRef(false);
 
-  const pendingUser = useQuery(
-    api.users.get,
-    flow?.stage === 'telegram_required' && flow?.userId ? { id: flow.userId } : "skip"
+  const isTelegramLinked = useQuery(
+    api.telegram.isTelegramLinked,
+    flow?.userId ? { userId: flow.userId } : "skip"
   );
 
-  // When the user links Telegram, the bot activates the user (status: 'active').
-  // Detect that and move them to the login OTP step.
+  // When the user links Telegram, the bot updates the user record.
+  // Detect that via polling/query and move them forward.
   useEffect(() => {
-    if (pendingUser && pendingUser.status === "active" && flow?.stage === 'telegram_required' && flow?.reason === 'signup_incomplete') {
+    if (isTelegramLinked && flow?.stage === 'telegram_required') {
       setTgLinked(true);
     }
-  }, [pendingUser, flow]);
+  }, [isTelegramLinked, flow]);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -160,10 +160,10 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       console.log(`[Auth] Generating linking code for user: ${targetUserId}`);
       const res = await generateTelegramLinkCode(targetUserId);
       
-      if (res && res.code) {
-        setTgLinkCode(res.code);
-        setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
-        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 15 * 60 * 1000));
+      if (res && res.token) {
+        setTgLinkCode(res.token);
+        setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.token}`);
+        setTgCodeExpiresAt(Date.now() + 10 * 60 * 1000); // 10 minutes per requirement
         
         if (autoOpen && res.deepLink) {
           setAutoOpenedBot(true);
@@ -300,11 +300,11 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     setLocalError('');
     try {
       console.log(`[Auth] Resending linking code for user: ${targetUserId}`);
-      const result = await resendSignupOtpWithFallback(targetUserId);
-      if (result?.telegramCode) {
-        setTgLinkCode(result.telegramCode.code);
-        setTgDeepLink(result.telegramCode.deepLink);
-        setTgCodeExpiresAt(result.telegramCode.expiresAt || (Date.now() + 15 * 60 * 1000));
+      const result = await generateTelegramLinkCode(targetUserId);
+      if (result?.token) {
+        setTgLinkCode(result.token);
+        setTgDeepLink(result.deepLink);
+        setTgCodeExpiresAt(Date.now() + 10 * 60 * 1000);
       } else {
         throw new Error('Failed to generate a new code.');
       }
@@ -339,13 +339,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         // generating a competing code.
         let linkCode = '';
         let deepLink = '';
-        let expiresAt = Date.now() + 15 * 60 * 1000;
+        let expiresAt = Date.now() + 10 * 60 * 1000;
         try {
           const link = await generateTelegramLinkCode(res.userId);
-          if (link?.code) {
-            linkCode = link.code;
-            deepLink = link.deepLink || `https://t.me/EthioSwap_Bot?start=${link.code}`;
-            expiresAt = link.expiresAt || expiresAt;
+          if (link?.token) {
+            linkCode = link.token;
+            deepLink = link.deepLink || `https://t.me/EthioSwap_Bot?start=${link.token}`;
+            expiresAt = Date.now() + 10 * 60 * 1000;
           }
         } catch (e) {
           // non-fatal — UI will offer a "generate new code" button
@@ -398,10 +398,11 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result.status === 'telegram_required') {
         // Set code state BEFORE flow to prevent the safety-net useEffect
         // from firing with an empty code and generating a competing code.
-        if (result.linkCode) {
-          setTgLinkCode(result.linkCode);
-          setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${result.linkCode}`);
-          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 15 * 60 * 1000));
+        if (result.linkCode || result.token) {
+          const codeToUse = result.linkCode || result.token;
+          setTgLinkCode(codeToUse);
+          setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${codeToUse}`);
+          setTgCodeExpiresAt(Date.now() + 10 * 60 * 1000);
         }
         setFlow({
           stage: 'telegram_required',
@@ -769,30 +770,56 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                       </p>
 
                       {/* Countdown / expiry */}
-                      {tgSecondsLeft > 0 ? (
-                        <span style={{ fontSize: '10px', color: tgSecondsLeft < 120 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-                          ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
-                        </span>
-                      ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '8px' }}>
+                        {tgSecondsLeft > 0 ? (
+                          <span style={{ fontSize: '10px', color: tgSecondsLeft < 120 ? '#EF4444' : 'var(--text-3)', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+                            ⏱ Code expires in {formatCountdown(tgSecondsLeft)}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleResendTelegramCode()}
+                            disabled={tgLinking}
+                            style={{
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px dashed var(--border)',
+                              borderRadius: '10px',
+                              color: 'var(--gold-light)',
+                              padding: '8px 12px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: tgLinking ? 'wait' : 'pointer',
+                              opacity: tgLinking ? 0.6 : 1,
+                            }}
+                          >
+                            {tgLinking ? '⏳ Generating…' : '🔄 Code expired? Generate a new one'}
+                          </button>
+                        )}
+
                         <button
                           type="button"
-                          onClick={() => handleResendTelegramCode()}
-                          disabled={tgLinking}
+                          onClick={() => {
+                            // Telegram linking is optional, proceed to dashboard/login
+                            if (flow?.reason === 'signup_incomplete') {
+                              window.location.reload(); // Reload will clear flow and show main app
+                            } else {
+                              setFlow(null); // Clear flow for other reasons
+                            }
+                          }}
                           style={{
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px dashed var(--border)',
-                            borderRadius: '10px',
-                            color: 'var(--gold-light)',
-                            padding: '8px 12px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-3)',
                             fontSize: '11px',
-                            fontWeight: 700,
-                            cursor: tgLinking ? 'wait' : 'pointer',
-                            opacity: tgLinking ? 0.6 : 1,
+                            fontWeight: 600,
+                            textDecoration: 'underline',
+                            cursor: 'pointer',
+                            marginTop: '4px',
                           }}
                         >
-                          {tgLinking ? '⏳ Generating…' : '🔄 Code expired? Generate a new one'}
+                          Skip for now
                         </button>
-                      )}
+                      </div>
                     </div>
                   )}
                 </>

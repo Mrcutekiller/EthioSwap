@@ -170,14 +170,16 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  const generateTelegramCodeAction = useAction(api.telegram.generateTelegramLinkToken);
+
   const handleGenerateTelegramCode = async (autoOpen = true) => {
     try {
       setTgGenerating(true);
-      const res = await generateTelegramCodeMutation({ userId: user.id || user._id });
-      if (res && res.code) {
-        setLinkCode(res.code);
-        setTimeRemaining(res.expiresAt ? Math.max(0, res.expiresAt - Date.now()) : 15 * 60 * 1000);
-        setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
+      const res = await generateTelegramCodeAction({ userId: user.id || user._id });
+      if (res && res.token) {
+        setLinkCode(res.token);
+        setTimeRemaining(10 * 60 * 1000);
+        setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.token}`);
         if (autoOpen && res.deepLink) {
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
         }

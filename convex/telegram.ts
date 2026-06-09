@@ -235,6 +235,7 @@ export const handleTelegramWebhook = internalAction({
     if (!update || !update.message) return { ok: true };
 
     const chatId = String(update.message.chat.id);
+    const telegramUsername = update.message.from?.username || "";
     const text = String(update.message.text || "").trim();
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -259,25 +260,17 @@ export const handleTelegramWebhook = internalAction({
 
       // Case 1: 6-digit linking code (deep link from signup/profile/settings)
       if (/^\d{6}$/.test(param)) {
-        const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
-          code: param,
-          chatId,
-        });
+        try {
+          const linkResult = await ctx.runMutation(api.telegram.confirmTelegramLink, {
+            token: param,
+            telegramId: chatId,
+            telegramUsername: telegramUsername,
+          });
 
-        if (linkResult.success) {
-          if (linkResult.isSignup) {
-            await ctx.runMutation(api.telegram.activateUserAfterTelegramLink, {
-              userId: linkResult.userId,
-            });
-            await sendReply(
-              `🎉 <b>Account Activated!</b>\n\n` +
-              `Your EthioSwap account <b>@${linkResult.username}</b> has been created and linked to Telegram successfully!\n\n` +
-              `You can now log in on the website using your username and password.\n\n` +
-              `Type /help for available commands.`
-            );
-          } else {
+          if (linkResult.success) {
             await sendReply(
               `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
+              `Your account has been linked successfully!\n\n` +
               `You will receive:\n` +
               `🔐 Login OTP codes\n` +
               `💰 Deposit confirmations\n` +
@@ -286,8 +279,8 @@ export const handleTelegramWebhook = internalAction({
               `Type /help for commands.`
             );
           }
-        } else {
-          console.warn(`[Telegram] /start code verification failed for chatId=${chatId}, code=${param}`);
+        } catch (err) {
+          console.warn(`[Telegram] /start code verification failed for chatId=${chatId}, code=${param}:`, err);
           await sendReply(
             `❌ <b>Connection Failed!</b>\n\n` +
             `The code <code>${param}</code> is invalid or has expired.\n\n` +
@@ -360,36 +353,17 @@ export const handleTelegramWebhook = internalAction({
 
       await sendReply(`🔄 <b>Connecting...</b> Please wait while we link your account.`);
 
-      const linkResult = await ctx.runMutation(api.telegram.verifyAndLinkCode, {
-        code: trimmedCode,
-        chatId,
-      });
+      try {
+        const linkResult = await ctx.runMutation(api.telegram.confirmTelegramLink, {
+          token: trimmedCode,
+          telegramId: chatId,
+          telegramUsername: telegramUsername,
+        });
 
-      if (linkResult.success) {
-        if (linkResult.isSignup) {
-          await ctx.runMutation(api.telegram.activateUserAfterTelegramLink, {
-            userId: linkResult.userId,
-          });
-          // Also push the activation/OTP code to Telegram so the user can
-          // paste it on the web if they want, and to confirm ownership.
-          try {
-            await ctx.runMutation(api.otp.generateOtp, {
-              userId: linkResult.userId,
-              purpose: "signup",
-              channel: "telegram",
-            });
-          } catch (e) {
-            console.error("Failed to send signup OTP to Telegram after linking:", e);
-          }
-          await sendReply(
-            `🎉 <b>Account Activated!</b>\n\n` +
-            `Your EthioSwap account <b>@${linkResult.username}</b> has been created and linked to Telegram successfully!\n\n` +
-            `We've also sent a 6-digit confirmation code here. You can use it on the EthioSwap website if you ever need to re-verify, or simply <b>log in with your username and password</b>.\n\n` +
-            `Type /help for available commands.`
-          );
-        } else {
+        if (linkResult.success) {
           await sendReply(
             `✅ <b>EthioSwap Telegram connected!</b>\n\n` +
+            `Your account has been linked successfully!\n\n` +
             `You will receive:\n` +
             `🔐 Login OTP codes\n` +
             `💰 Deposit confirmations\n` +
@@ -398,8 +372,8 @@ export const handleTelegramWebhook = internalAction({
             `Type /help for commands.`
           );
         }
-      } else {
-        console.warn(`[Telegram] Bare code verification failed for chatId=${chatId}, code=${trimmedCode}`);
+      } catch (err) {
+        console.warn(`[Telegram] Bare code verification failed for chatId=${chatId}, code=${trimmedCode}:`, err);
         await sendReply(
           `❌ <b>Connection Failed!</b>\n\n` +
           `The code <code>${trimmedCode}</code> is invalid or has expired.\n\n` +
@@ -634,13 +608,14 @@ export const getTelegramWebhookInfo = action({
   },
 });
 
-export const storeTelegramToken = internalMutation({
+export const storeTelegramToken = mutation({
   args: {
     userId: v.id("users"),
     token: v.string(),
     expiresAt: v.number(),
   },
   handler: async (ctx, { userId, token, expiresAt }) => {
+    // Delete existing token for this user
     const existing = await ctx.db
       .query("telegramLinkTokens")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -654,26 +629,82 @@ export const storeTelegramToken = internalMutation({
       expiresAt,
       used: false,
     });
+
+    return token;
   },
 });
 
 export const generateTelegramLinkToken = action({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const token = crypto.randomUUID();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
+    if (!userId) throw new Error("userId is required");
 
-    await ctx.runMutation(internal.telegram.storeTelegramToken, {
+    // Generate a random 6-digit code
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await ctx.runMutation(api.telegram.storeTelegramToken, {
       userId,
       token,
       expiresAt,
     });
 
-    const botUsername = process.env.TELEGRAM_BOT_USERNAME;
-    if (!botUsername) throw new Error("TELEGRAM_BOT_USERNAME not set");
-
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
     const deepLink = `https://t.me/${botUsername}?start=${token}`;
+
     return { token, deepLink };
+  },
+});
+
+export const isTelegramLinked = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    return user?.telegramLinked ?? false;
+  },
+});
+
+export const confirmTelegramLink = mutation({
+  args: {
+    token: v.string(),
+    telegramId: v.string(),
+    telegramUsername: v.optional(v.string()),
+  },
+  handler: async (ctx, { token, telegramId, telegramUsername }) => {
+    const record = await ctx.db
+      .query("telegramLinkTokens")
+      .withIndex("by_token", (q) => q.eq("token", token))
+      .first();
+
+    if (!record) throw new Error("Invalid code");
+    if (record.used) throw new Error("Code already used");
+    if (Date.now() > record.expiresAt) throw new Error("Code expired");
+
+    // Mark token as used
+    await ctx.db.patch(record._id, { used: true });
+
+    // Update user as Telegram-linked
+    await ctx.db.patch(record.userId, {
+      telegramLinked: true,
+      telegramChatId: telegramId,
+      telegram_chat_id: telegramId,
+      telegramUsername: telegramUsername ?? null,
+      telegram_connected: true,
+      telegram_connected_at: new Date().toISOString(),
+      status: "active", // Activate the user automatically
+    });
+
+    // Also send a welcome notification
+    await ctx.db.insert("notifications", {
+      userId: record.userId,
+      type: "welcome",
+      title: "Telegram Linked! 🎉",
+      message: "Your account is now linked to Telegram. You will receive notifications and OTP codes here.",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    return { success: true };
   },
 });
 

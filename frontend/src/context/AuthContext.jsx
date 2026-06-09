@@ -460,7 +460,7 @@ export const AuthProvider = ({ children }) => {
 
   const generateTelegramLinkCode = async (userId) => {
     try {
-      const res = await generateTelegramLinkCodeMutation({ userId });
+      const res = await convex.action(api.telegram.generateTelegramLinkToken, { userId });
       return res;
     } catch (err) {
       setError(err.message);
