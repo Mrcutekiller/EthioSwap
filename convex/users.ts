@@ -41,7 +41,7 @@ export const create = mutation({
       const randomBuffer = new Uint32Array(1);
       crypto.getRandomValues(randomBuffer);
       const code = (100000 + (randomBuffer[0] % 900000)).toString();
-      const expires = Date.now() + 30 * 60 * 1000;
+      const expires = Date.now() + 15 * 60 * 1000;
       await ctx.db.patch(userId, {
         telegramLinkCode: code,
         telegramLinkExpires: expires,
@@ -465,7 +465,7 @@ export const generateTelegramLinkCode = mutation({
     crypto.getRandomValues(randomBuffer);
     const code = (100000 + (randomBuffer[0] % 900000)).toString();
 
-    const expires = Date.now() + 30 * 60 * 1000; // 30 minutes
+    const expires = Date.now() + 15 * 60 * 1000; // 15 minutes
 
     try {
       await ctx.db.patch(user._id, {

@@ -197,7 +197,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid password.');
       }
 
-      if (res.status === 'otp_required') {
+      if (res.status === 'otp_required' || res.status === 'telegram_required') {
         return res;
       }
 

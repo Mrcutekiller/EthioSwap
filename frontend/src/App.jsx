@@ -125,19 +125,24 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   };
 
   const handleConnectTelegram = async (autoOpen = false) => {
-    if (!flow?.userId) return;
+    if (!flow?.userId) {
+      setLocalError('Session expired. Please log in again.');
+      return;
+    }
     setTgLinking(true);
     setLocalError('');
     try {
       const res = await generateTelegramLinkCode(flow.userId);
-      if (res?.code) {
+      if (res && res.code) {
         setTgLinkCode(res.code);
         setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
-        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 30 * 60 * 1000));
+        setTgCodeExpiresAt(res.expiresAt || (Date.now() + 15 * 60 * 1000));
         if (autoOpen && res.deepLink) {
           setAutoOpenedBot(true);
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
         }
+      } else {
+        setLocalError('Failed to generate code. Please click "Generate Linking Code" to retry.');
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
@@ -264,7 +269,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result?.telegramCode) {
         setTgLinkCode(result.telegramCode.code);
         setTgDeepLink(result.telegramCode.deepLink);
-        setTgCodeExpiresAt(result.telegramCode.expiresAt || (Date.now() + 30 * 60 * 1000));
+        setTgCodeExpiresAt(result.telegramCode.expiresAt || (Date.now() + 15 * 60 * 1000));
       }
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
@@ -296,7 +301,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         // generating a competing code.
         let linkCode = '';
         let deepLink = '';
-        let expiresAt = Date.now() + 30 * 60 * 1000;
+        let expiresAt = Date.now() + 15 * 60 * 1000;
         try {
           const link = await generateTelegramLinkCode(res.userId);
           if (link?.code) {
@@ -358,7 +363,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         if (result.linkCode) {
           setTgLinkCode(result.linkCode);
           setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${result.linkCode}`);
-          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 30 * 60 * 1000));
+          setTgCodeExpiresAt(result.linkExpires || (Date.now() + 15 * 60 * 1000));
         }
         setFlow({
           stage: 'telegram_required',

@@ -176,7 +176,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       const res = await generateTelegramCodeMutation({ userId: user.id || user._id });
       if (res && res.code) {
         setLinkCode(res.code);
-        setTimeRemaining(res.expiresAt ? Math.max(0, res.expiresAt - Date.now()) : 30 * 60 * 1000);
+        setTimeRemaining(res.expiresAt ? Math.max(0, res.expiresAt - Date.now()) : 15 * 60 * 1000);
         setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
         if (autoOpen && res.deepLink) {
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
