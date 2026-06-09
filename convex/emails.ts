@@ -21,7 +21,7 @@ export const sendNotification = action({
       const resend = new Resend(process.env.RESEND_API_KEY);
       const { data, error } = await resend.emails.send({
 
-        from: "EthioSwap <notifications@ethioswap.com>",
+        from: "EthioSwap <notifications@ethioswap.qzz.io>",
         to: [args.to],
         subject: args.subject,
         text: args.text,
