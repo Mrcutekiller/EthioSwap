@@ -40,7 +40,7 @@ const Icons = {
 
 // ── Auth Form ──────────────────────────────────────────────────
 const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
-  const { login, register, verifyLoginOtp, sendOtp, generateTelegramLinkCode, resendSignupOtpWithFallback, loading, error } = useAuth();
+  const { user, login, register, verifyLoginOtp, sendOtp, generateTelegramLinkCode, resendSignupOtpWithFallback, loading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,9 +53,29 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [width, setWidth] = useState(window.innerWidth);
 
   // Flow State
-  // For signup: { stage: 'telegram_required', userId, reason: 'signup_incomplete' | 'telegram_disconnected', linkCode, linkExpires, deepLink }
-  // For login OTP: { stage: 'otp_required', userId, telegramChatId, phone }
-  const [flow, setFlow] = useState(null);
+  const [flow, setFlow] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ethioswap_auth_flow');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only resume if it's less than 30 mins old
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  // Sync flow to localStorage
+  useEffect(() => {
+    if (flow) {
+      localStorage.setItem('ethioswap_auth_flow', JSON.stringify({ ...flow, timestamp: Date.now() }));
+    } else {
+      localStorage.removeItem('ethioswap_auth_flow');
+    }
+  }, [flow]);
+
   const [otpCode, setOtpCode] = useState('');
   const [trustDevice, setTrustDevice] = useState(true);
   const [resendTimer, setResendTimer] = useState(0);
@@ -125,27 +145,37 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   };
 
   const handleConnectTelegram = async (autoOpen = false) => {
-    if (!flow?.userId) {
-      setLocalError('Session expired. Please log in again.');
+    // Session validation: prioritize flow.userId, fall back to logged-in user
+    const targetUserId = flow?.userId || user?._id || user?.id;
+
+    if (!targetUserId) {
+      console.warn("[Auth] handleConnectTelegram: No userId found in flow or session");
+      setLocalError('Your session could not be verified. Please log in again to continue.');
       return;
     }
+
     setTgLinking(true);
     setLocalError('');
     try {
-      const res = await generateTelegramLinkCode(flow.userId);
+      console.log(`[Auth] Generating linking code for user: ${targetUserId}`);
+      const res = await generateTelegramLinkCode(targetUserId);
+      
       if (res && res.code) {
         setTgLinkCode(res.code);
         setTgDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.code}`);
         setTgCodeExpiresAt(res.expiresAt || (Date.now() + 15 * 60 * 1000));
+        
         if (autoOpen && res.deepLink) {
           setAutoOpenedBot(true);
           window.open(res.deepLink, '_blank', 'noopener,noreferrer');
         }
       } else {
-        setLocalError('Failed to generate code. Please click "Generate Linking Code" to retry.');
+        throw new Error('Server returned an empty code. Please try again.');
       }
     } catch (err) {
-      setLocalError(cleanConvexError(err.message));
+      console.error("[Auth] Telegram code generation failed:", err);
+      const cleanErr = err.message || 'Unknown error occurred';
+      setLocalError(`Failed to generate code: ${cleanConvexError(cleanErr)}. Please try again.`);
     } finally {
       setTgLinking(false);
     }
@@ -260,19 +290,27 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   };
 
   const handleResendTelegramCode = async () => {
-    if (!flow?.userId) return;
+    const targetUserId = flow?.userId || user?._id || user?.id;
+    if (!targetUserId) {
+      setLocalError('Your session could not be verified. Please log in again.');
+      return;
+    }
     tgFetchAttempted.current = false;
     setTgLinking(true);
     setLocalError('');
     try {
-      const result = await resendSignupOtpWithFallback(flow.userId);
+      console.log(`[Auth] Resending linking code for user: ${targetUserId}`);
+      const result = await resendSignupOtpWithFallback(targetUserId);
       if (result?.telegramCode) {
         setTgLinkCode(result.telegramCode.code);
         setTgDeepLink(result.telegramCode.deepLink);
         setTgCodeExpiresAt(result.telegramCode.expiresAt || (Date.now() + 15 * 60 * 1000));
+      } else {
+        throw new Error('Failed to generate a new code.');
       }
     } catch (err) {
-      setLocalError(cleanConvexError(err.message));
+      console.error("[Auth] Telegram code resend failed:", err);
+      setLocalError(`Failed to resend code: ${cleanConvexError(err.message)}`);
     } finally {
       setTgLinking(false);
     }
@@ -378,6 +416,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLocalError('');
+    
+    const targetUserId = flow?.userId || user?._id || user?.id;
+    if (!targetUserId) {
+      setLocalError('Your session has expired. Please log in again.');
+      return;
+    }
+
     if (otpCode.length !== 6) {
       setLocalError('Please enter the 6-digit OTP code.');
       return;
@@ -390,9 +435,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         ? `${navigator.userAgentData?.brands?.[0]?.brand || 'Browser'} on ${navigator.userAgentData?.platform || 'Windows/MacOS'}`
         : parsedDevice;
 
-      if (flow?.stage === 'otp_required') {
-        await verifyLoginOtp(flow.userId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
-      }
+      await verifyLoginOtp(targetUserId, otpCode, deviceName, "Addis Ababa, Ethiopia", trustDevice);
     } catch (err) {
       setLocalError(cleanConvexError(err.message));
     } finally {
