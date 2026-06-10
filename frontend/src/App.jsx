@@ -16,6 +16,7 @@ import { requestPermission, showBrowserNotification, isNotificationSupported } f
 import { convex } from './convexClient';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "convex-api";
+import TelegramConnectScreen from './components/TelegramConnectScreen.jsx';
 
 // ── Icons (inline SVG for zero deps) ──
 const Icon = ({ d, size = 22 }) => (
@@ -188,10 +189,23 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     }
   };
 
-  // After the bot activates the user, auto-redirect to the app
+  // After the bot activates the user, auto-login them (new signup) or reload page (login reconnect)
   useEffect(() => {
     if (!tgLinked || !flow?.userId) return;
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
+      // If we have credentials in state (new signup path), auto-login directly
+      if (username && password) {
+        try {
+          const res = await login(username, password);
+          if (res?.status === 'success' || res?.user) {
+            setFlow(null);
+            return;
+          }
+        } catch (e) {
+          console.warn('[Auth] Auto-login after Telegram link failed, reloading:', e);
+        }
+      }
+      // Fallback: reload (handles the login-reconnect flow case)
       window.location.reload();
     }, 800);
     return () => clearTimeout(timer);
@@ -408,17 +422,18 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       if (result.status === 'telegram_required') {
         // Set code state BEFORE flow to prevent the safety-net useEffect
         // from firing with an empty code and generating a competing code.
-        if (result.linkCode || result.token) {
-          const codeToUse = result.linkCode || result.token;
+        const codeToUse = result.token || result.linkCode;
+        if (codeToUse) {
           setTgLinkCode(codeToUse);
           setTgDeepLink(result.deepLink || `https://t.me/EthioSwap_Bot?start=${codeToUse}`);
           setTgCodeExpiresAt(Date.now() + 10 * 60 * 1000);
         }
+        tgFetchAttempted.current = !!codeToUse; // Prevent safety-net from firing if we already have a code
         setFlow({
           stage: 'telegram_required',
           userId: result.userId,
           reason: result.reason,
-          phone: result.phone,
+          phone: result.phone || '',
         });
       }
     }
@@ -513,7 +528,22 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         {/* Right/Bottom Column: Auth Form Card */}
         <div className="auth-card" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column' }}>
           
-          {flow && flow.stage !== 'telegram_required' ? (
+          {flow && flow.stage === 'telegram_required' ? (
+            // ── TELEGRAM CONNECT SCREEN ──
+            <TelegramConnectScreen
+              flow={flow}
+              tgLinkCode={tgLinkCode}
+              tgDeepLink={tgDeepLink}
+              tgSecondsLeft={tgSecondsLeft}
+              tgLinking={tgLinking}
+              tgLinked={tgLinked}
+              codeCopied={codeCopied}
+              setCodeCopied={setCodeCopied}
+              displayError={displayError}
+              handleResendTelegramCode={handleResendTelegramCode}
+              onBack={() => { setFlow(null); setTgLinkCode(''); setTgDeepLink(''); setTgCodeExpiresAt(0); setTgLinked(false); setLocalError(''); tgFetchAttempted.current = false; }}
+            />
+          ) : flow && flow.stage !== 'telegram_required' ? (
             // ── POST-SUBMIT FLOW: OTP code (login) ──
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <button

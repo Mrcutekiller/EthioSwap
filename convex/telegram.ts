@@ -671,20 +671,43 @@ export const confirmTelegramLink = mutation({
     telegramUsername: v.optional(v.string()),
   },
   handler: async (ctx, { token, telegramId, telegramUsername }) => {
+    let userId: any = null;
+
+    // 1. Try finding in telegramLinkTokens first
     const record = await ctx.db
       .query("telegramLinkTokens")
       .withIndex("by_token", (q) => q.eq("token", token))
       .first();
 
-    if (!record) throw new Error("Invalid code");
-    if (record.used) throw new Error("Code already used");
-    if (Date.now() > record.expiresAt) throw new Error("Code expired");
+    if (record) {
+      if (record.used) throw new Error("Code already used");
+      if (Date.now() > record.expiresAt) throw new Error("Code expired");
+      await ctx.db.patch(record._id, { used: true });
+      userId = record.userId;
+    } else {
+      // 2. Fall back to finding in users table
+      const candidates = await ctx.db
+        .query("users")
+        .withIndex("by_link_code", (q) => q.eq("telegramLinkCode", token))
+        .collect();
 
-    // Mark token as used
-    await ctx.db.patch(record._id, { used: true });
+      const user = candidates.find(
+        (u) => (u.telegramLinkExpires ?? 0) > Date.now()
+      );
+
+      if (!user) {
+        throw new Error("Invalid or expired code");
+      }
+      userId = user._id;
+      // Clean up link code on user record
+      await ctx.db.patch(user._id, {
+        telegramLinkCode: undefined,
+        telegramLinkExpires: undefined,
+      });
+    }
 
     // Update user as Telegram-linked
-    await ctx.db.patch(record.userId, {
+    await ctx.db.patch(userId, {
       telegramLinked: true,
       telegramChatId: telegramId,
       telegram_chat_id: telegramId,
@@ -696,7 +719,7 @@ export const confirmTelegramLink = mutation({
 
     // Also send a welcome notification
     await ctx.db.insert("notifications", {
-      userId: record.userId,
+      userId: userId,
       type: "welcome",
       title: "Telegram Linked! 🎉",
       message: "Your account is now linked to Telegram. You will receive notifications and OTP codes here.",

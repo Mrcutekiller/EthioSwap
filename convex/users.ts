@@ -41,10 +41,17 @@ export const create = mutation({
       const randomBuffer = new Uint32Array(1);
       crypto.getRandomValues(randomBuffer);
       const code = (100000 + (randomBuffer[0] % 900000)).toString();
-      const expires = Date.now() + 15 * 60 * 1000;
+      const expires = Date.now() + 10 * 60 * 1000; // 10 minutes per requirement
       await ctx.db.patch(userId, {
         telegramLinkCode: code,
         telegramLinkExpires: expires,
+      });
+      // Insert into telegramLinkTokens table so it is compatible with bot confirmTelegramLink mutation
+      await ctx.db.insert("telegramLinkTokens", {
+        userId,
+        token: code,
+        expiresAt: expires,
+        used: false,
       });
       const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
       return { code, expires, deepLink: `https://t.me/${botUsername}?start=${code}` };
@@ -185,8 +192,14 @@ export const authenticate = query({
     }
 
     if (user.status === "pending_verification") {
-      // Telegram is no longer required. Automatically activate the user.
-      await ctx.db.patch(user._id, { status: "active" });
+      // User hasn't connected Telegram yet. Return telegram_required so the
+      // front-end shows the Connect Telegram screen.
+      return {
+        status: "telegram_required",
+        userId: user._id,
+        reason: "pending_verification",
+        phone: user.phone || "",
+      };
     }
 
     const { passwordHash, ...safeUser } = user;
@@ -448,12 +461,28 @@ export const generateTelegramLinkCode = mutation({
     crypto.getRandomValues(randomBuffer);
     const code = (100000 + (randomBuffer[0] % 900000)).toString();
 
-    const expires = Date.now() + 15 * 60 * 1000; // 15 minutes
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes per requirement
 
     try {
       await ctx.db.patch(user._id, {
         telegramLinkCode: code,
         telegramLinkExpires: expires,
+      });
+
+      // Clear any existing tokens in the telegramLinkTokens table for this user
+      const existing = await ctx.db
+        .query("telegramLinkTokens")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first();
+      if (existing) {
+        await ctx.db.delete(existing._id);
+      }
+
+      await ctx.db.insert("telegramLinkTokens", {
+        userId: user._id,
+        token: code,
+        expiresAt: expires,
+        used: false,
       });
     } catch (patchErr) {
       console.error("generateTelegramLinkCode patch failed:", patchErr);

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "convex-api";
 import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
 const SettingsPage = ({ user, onLogout }) => {
   const { t, i18n } = useTranslation();
   const { updateUser } = useAuth();
-  const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
   const disconnectTelegramMutation = useMutation(api.users.disconnectTelegram);
 
   const [showDisconnectPwd, setShowDisconnectPwd] = useState(false);
@@ -165,148 +164,65 @@ const SettingsPage = ({ user, onLogout }) => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Telegram Linking Section - Now Optional and moved to settings */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '10px', 
-              background: 'rgba(42, 171, 238, 0.1)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              color: '#2AABEE'
-            }}>
-              <Globe size={24} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Telegram Connection</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Receive notifications and secure your account</p>
-            </div>
+        {/* Language Selector */}
+        <div className="card">
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Globe size={16} /> {t('Language')} / ቋንቋ
           </div>
-
-          {isTelegramLinked ? (
-            <div style={{ 
-              background: 'rgba(0, 212, 160, 0.06)', 
-              border: '1px solid rgba(0, 212, 160, 0.2)', 
-              borderRadius: '12px', 
-              padding: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <Shield size={20} style={{ color: '#00D4A0' }} />
-              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-1)' }}>Telegram is successfully linked!</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>
-                Link your Telegram account to get real-time trade alerts and use Telegram for secure login codes.
-              </p>
-              
-              {linkCode ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ 
-                    background: 'rgba(255, 215, 0, 0.08)', 
-                    border: '1px solid rgba(255, 215, 0, 0.2)', 
-                    borderRadius: '12px', 
-                    padding: '16px',
-                    textAlign: 'center'
-                  }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-3)', display: 'block', marginBottom: '4px' }}>Your Linking Code</span>
-                    <span style={{ fontSize: '24px', fontWeight: 800, color: 'var(--gold)', letterSpacing: '4px' }}>{linkCode}</span>
-                  </div>
-                  <a 
-                    href={deepLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="btn btn-gold"
-                    style={{ 
-                      background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    Open @EthioSwap_Bot
-                  </a>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => handleGenerateTelegramCode()} 
-                  disabled={tgGenerating}
-                  className="btn btn-gold"
-                  style={{ width: 'fit-content' }}
-                >
-                  {tgGenerating ? 'Generating...' : 'Link Telegram Account'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-      {/* Language Selector */}
-      <div className="card">
-        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Globe size={16} /> {t('Language')} / ቋንቋ
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={() => changeLanguage('en')}
-            className={`btn ${lang === 'en' ? 'btn-gold' : 'btn-ghost'}`}
-            style={{ flex: 1 }}
-          >
-            English
-          </button>
-          <button 
-            onClick={() => changeLanguage('am')}
-            className={`btn ${lang === 'am' ? 'btn-gold' : 'btn-ghost'}`}
-            style={{ flex: 1 }}
-          >
-            አማርኛ
-          </button>
-        </div>
-      </div>
-
-      {/* 2FA Settings */}
-      <div className="card">
-        <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={16} /> Two-Factor Authentication
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>Enable 2FA</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Extra security for withdrawals and login</div>
-            </div>
-            <div
-              onClick={async () => {
-                const newState = !user.twoFaEnabled;
-                await updateUser({ twoFaEnabled: newState });
-              }}
-              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.twoFaEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.twoFaEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              onClick={() => changeLanguage('en')}
+              className={`btn ${lang === 'en' ? 'btn-gold' : 'btn-ghost'}`}
+              style={{ flex: 1 }}
             >
-              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
-            </div>
+              English
+            </button>
+            <button 
+              onClick={() => changeLanguage('am')}
+              className={`btn ${lang === 'am' ? 'btn-gold' : 'btn-ghost'}`}
+              style={{ flex: 1 }}
+            >
+              አማርኛ
+            </button>
           </div>
-          
-          {user.twoFaEnabled && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-3)' }}>Verification Method</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <button className={`btn btn-sm ${user.twoFaMethod === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'email' })}>
-                  <Mail size={14} /> Email
-                </button>
-                <button className={`btn btn-sm ${user.twoFaMethod === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'sms' })}>
-                  <Smartphone size={14} /> SMS
-                </button>
+        </div>
+
+        {/* 2FA Settings */}
+        <div className="card">
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Shield size={16} /> Two-Factor Authentication
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>Enable 2FA</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Extra security for withdrawals and login</div>
+              </div>
+              <div
+                onClick={async () => {
+                  const newState = !user.twoFaEnabled;
+                  await updateUser({ twoFaEnabled: newState });
+                }}
+                style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.twoFaEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.twoFaEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+              >
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
               </div>
             </div>
-          )}
+            
+            {user.twoFaEnabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-3)' }}>Verification Method</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button className={`btn btn-sm ${user.twoFaMethod === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'email' })}>
+                    <Mail size={14} /> Email
+                  </button>
+                  <button className={`btn btn-sm ${user.twoFaMethod === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'sms' })}>
+                    <Smartphone size={14} /> SMS
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -314,109 +230,8 @@ const SettingsPage = ({ user, onLogout }) => {
       <div className="card">
         <div className="section-title">{t('Notification Channels')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Telegram Toggle & Connect */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 600 }}>Telegram Alerts</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive rich trade alerts on Telegram</div>
-              </div>
-              <div
-                onClick={async () => {
-                  if (!user.telegramChatId) {
-                    alert('Please connect your Telegram account first.');
-                    return;
-                  }
-                  await updateUser({ telegramEnabled: !user.telegramEnabled });
-                }}
-                style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.telegramEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.telegramEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: user.telegramChatId ? 'pointer' : 'not-allowed', position: 'relative', transition: 'all 0.2s ease', opacity: user.telegramChatId ? 1 : 0.5 }}
-              >
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.telegramEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
-              </div>
-            </div>
-
-            {/* Telegram Link/Disconnect Widget */}
-            <div style={{ marginTop: '6px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-              {user.telegramChatId ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      🟢 Connected
-                    </span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>ID: {user.telegramChatId}</span>
-                  </div>
-                  <button onClick={handleDisconnectTelegramClick} className="btn btn-sm btn-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
-                    Disconnect
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <p style={{ fontSize: '11px', color: 'var(--text-2)', margin: 0, lineHeight: 1.4 }}>
-                    Link your account to our Telegram bot <b>@EthioSwap_Bot</b> to get rich alerts and check trade statuses.
-                  </p>
-                  {linkCode ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,197,24,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
-                        <strong
-                          onClick={() => {
-                            navigator.clipboard.writeText(linkCode).then(() => {
-                              setCodeCopied(true);
-                              setTimeout(() => setCodeCopied(false), 2000);
-                            });
-                          }}
-                          style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace', cursor: 'pointer', padding: '4px 12px', borderRadius: '8px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.15)', userSelect: 'all', transition: 'all 0.2s ease' }}
-                          title="Click to copy code"
-                        >
-                          {linkCode}
-                        </strong>
-                        <span style={{ fontSize: '10px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', marginTop: '4px', fontWeight: codeCopied ? 700 : 400 }}>
-                          {codeCopied
-                            ? '✓ Copied to clipboard!'
-                            : timeRemaining > 0
-                              ? `Expires in ${formatCountdown(timeRemaining)} — Tap code to copy`
-                              : '⏱ Code expired'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.4 }}>
-                          Tap the button below to open Telegram with the code pre-filled. Just hit <b>Send</b>.
-                        </div>
-                        <a
-                          href={deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)', color: '#fff', border: 'none' }}
-                        >
-                          ✈️ Open & Send Code in Telegram
-                        </a>
-                        {timeRemaining <= 0 && (
-                          <button
-                            onClick={() => handleGenerateTelegramCode(true)}
-                            disabled={tgGenerating}
-                            style={{ background: 'transparent', border: '1px dashed var(--border)', borderRadius: '6px', color: 'var(--gold-light)', padding: '6px', fontSize: '11px', fontWeight: 700, cursor: tgGenerating ? 'wait' : 'pointer' }}
-                          >
-                            {tgGenerating ? '⏳ Generating…' : '🔄 Generate a new code'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleGenerateTelegramCode(true)}
-                      disabled={tgGenerating}
-                      className="btn btn-gold btn-full btn-sm"
-                      style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}
-                    >
-                      {tgGenerating ? '⏳ Opening Telegram…' : '🔌 Connect Telegram Bot'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
+          {/* Telegram Toggle & Connect - REMOVED */}
+          
           {/* Email Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
             <div>

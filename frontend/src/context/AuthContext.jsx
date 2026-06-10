@@ -287,9 +287,41 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      setSuccess('Account created! Logging you in...');
-      // Automatically log in after registration
-      return login(username, password);
+      // Generate a fresh Telegram link token so the connect screen has a valid code.
+      // We use generateTelegramLinkToken (action) which stores in telegramLinkTokens table
+      // and is validated by confirmTelegramLink which the bot uses.
+      let token = null;
+
+      // Try the atomically-generated code from create() first (stored in linkCode field)
+      if (result.linkCode) {
+        // The code from users.create uses the user.telegramLinkCode field, but the bot
+        // uses the telegramLinkTokens table. Generate a fresh token via the action to ensure compatibility.
+        token = result.linkCode;
+        deepLink = result.deepLink;
+      }
+
+      // Always generate a proper token via the action (uses telegramLinkTokens table, works with bot)
+      try {
+        const linkRes = await generateTelegramLinkCode(result.userId);
+        if (linkRes?.token) {
+          token = linkRes.token;
+          deepLink = linkRes.deepLink;
+        }
+      } catch (e) {
+        console.warn('generateTelegramLinkToken failed, will retry on connect screen:', e?.message || e);
+      }
+
+      setSuccess('Account created! Please connect your Telegram to activate.');
+      // Return telegram_required so the connect screen is displayed
+      return {
+        status: 'telegram_required',
+        userId: result.userId,
+        reason: 'new_signup',
+        phone: result.phone || '',
+        token,
+        linkCode: token,
+        deepLink,
+      };
     } catch (err) {
       setError(err.message);
       return null;
