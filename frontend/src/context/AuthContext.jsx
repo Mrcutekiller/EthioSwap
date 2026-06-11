@@ -77,33 +77,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user?._id, dbUser]);
 
-  // Centralized fetching with error handling to prevent app crashes
+  // Use Convex's reactive useQuery hooks for efficient live updates
+  const systemSettingsQuery = useQuery(api.systemSettings.get);
+  const listingsQuery = useQuery(api.listings.listActive);
+  const tradesQuery = useQuery(api.trades.listForUser, user?._id ? { userId: user._id } : "skip");
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch System Settings
-        const settings = await convex.query(api.systemSettings.get).catch(() => null);
-        if (settings) setSystemSettings(settings);
+    if (systemSettingsQuery) {
+      setSystemSettings(systemSettingsQuery);
+    }
+  }, [systemSettingsQuery]);
 
-        // Fetch Listings
-        const activeListings = await convex.query(api.listings.listActive).catch(() => []);
-        setListings(activeListings.map(l => ({ ...l, id: l._id })));
+  useEffect(() => {
+    if (listingsQuery) {
+      setListings(listingsQuery.map(l => ({ ...l, id: l._id })));
+    }
+  }, [listingsQuery]);
 
-        // Fetch User Trades if logged in
-        if (user?._id) {
-          const userTrades = await convex.query(api.trades.listForUser, { userId: user._id }).catch(() => []);
-          setTrades(userTrades.map(t => ({ ...t, id: t._id })));
-        }
-      } catch (err) {
-        console.warn("AuthContext: Convex data synchronization failed. Using local state.", err);
-      }
-    };
-    
-    fetchData();
-    // Re-fetch every 30 seconds for live updates without useQuery hooks
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [user?._id]);
+  useEffect(() => {
+    if (tradesQuery) {
+      setTrades(tradesQuery.map(t => ({ ...t, id: t._id })));
+    }
+  }, [tradesQuery]);
 
   // Derived queries (using skip pattern to be safe)
   const isAdmin = user?.role === 'admin';

@@ -547,7 +547,8 @@ const AdminPanel = ({ user }) => {
           minP2pListingUSD: parseFloat(minP2pListing) || 1.0,
           maxDailyWithdrawalUSD: parseFloat(maxDailyWithdraw) || 1000,
           isP2pFreePeriod: isP2pFreePeriod,
-        }
+        },
+        adminId: user._id,
       });
       showAlert('✓ Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }

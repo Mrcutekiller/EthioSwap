@@ -70,7 +70,7 @@ export const create = mutation({
           } catch (e) {
             console.warn("generateLinkCode failed for existing pending user (email):", e);
           }
-          return { userId: existing._id, pendingVerification: true, ...(link ? { linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
+          return { userId: existing._id, pendingVerification: true, ...(link ? { linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
         }
         throw new Error("Email already registered");
       }
@@ -88,7 +88,7 @@ export const create = mutation({
         } catch (e) {
           console.warn("generateLinkCode failed for existing pending user (username):", e);
         }
-        return { userId: existingUser._id, pendingVerification: true, ...(link ? { linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
+        return { userId: existingUser._id, pendingVerification: true, ...(link ? { linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
       }
       throw new Error("Username already taken");
     }
@@ -136,7 +136,7 @@ export const create = mutation({
     if (args.role !== "admin") {
       try {
         const link = await generateLinkCode(userId);
-        return { userId, linkCode: link.code, linkExpires: link.expires, deepLink: link.deepLink };
+        return { userId, linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink };
       } catch (e) {
         console.error("generateLinkCode failed for new user:", e);
       }
@@ -492,6 +492,7 @@ export const generateTelegramLinkCode = mutation({
 
     return {
       code,
+      token: code,
       expiresAt: expires,
       deepLink: `https://t.me/${botUsername}?start=${code}`,
     };

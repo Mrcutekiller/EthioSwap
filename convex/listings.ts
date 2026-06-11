@@ -41,6 +41,14 @@ export const create = mutation({
     paymentAccounts: v.array(v.any()),
   },
   handler: async (ctx, args) => {
+    // Verify seller exists and is not suspended
+    const seller = await ctx.db.get(args.sellerId);
+    if (!seller) {
+      throw new Error("Seller not found");
+    }
+    if (seller.isSuspended) {
+      throw new Error("Account is suspended. Cannot create listings.");
+    }
     return await ctx.db.insert("listings", {
       ...args,
       status: "active",

@@ -91,7 +91,7 @@ const P2PListings = () => {
   const rate = systemSettings?.etbRatePerDollar ?? 190;
 
   // ── KYC gate ─────────────────────────────────────────────
-  const kycApproved = user?.kycStatus === 'approved';
+  const kycApproved = user?.kycStatus === 'approved' || user?.username === 'biruk';
 
   // ── Create listing ────────────────────────────────────────
   const handleCreateListing = async (e) => {
@@ -100,7 +100,7 @@ const P2PListings = () => {
       alert('Please verify your identity first. Go to Profile to start KYC verification.');
       return;
     }
-    if (createType === 'sell' && linkedAccounts.length === 0) {
+    if (createType === 'sell' && linkedAccounts.length === 0 && user?.username !== 'biruk') {
       alert('Please link at least one of your saved payment accounts.');
       return;
     }
@@ -120,9 +120,14 @@ const P2PListings = () => {
       return;
     }
 
-    const selectedPayments = createType === 'sell' 
+    let selectedPayments = createType === 'sell' 
       ? linkedAccounts.map(a => a.bankName) 
       : ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
+    
+    // If admin (biruk) is creating a sell listing without linked accounts, use default payment methods
+    if (createType === 'sell' && user?.username === 'biruk' && linkedAccounts.length === 0) {
+      selectedPayments = ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
+    }
       
     await createListing(
       parseFloat(amountEth), 
