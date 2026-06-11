@@ -175,21 +175,15 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       console.log('login called with:', { identifier, password });
-      // First check if the account exists
-      const check = await convex.query(api.users.getByIdentifier, { identifier });
-      console.log('getByIdentifier result:', check);
-      if (!check || !check.exists) {
-        throw new Error('Account does not exist.');
-      }
 
       const deviceFingerprint = getDeviceFingerprint();
 
-      // Use the authenticate query
+      // Use the authenticate query directly
       const res = await convex.query(api.users.authenticate, { identifier, password, deviceFingerprint });
       console.log('authenticate result:', res);
       
       if (!res) {
-        throw new Error('Invalid password.');
+        throw new Error('Invalid email/username or password.');
       }
 
       // Check if res.user exists!
@@ -240,13 +234,21 @@ export const AuthProvider = ({ children }) => {
       }
 
       // After successful registration, log the user in automatically!
-      const loginResult = await login(username, password);
-      console.log('loginResult after register:', loginResult);
+      let loginResult = null;
+      try {
+        loginResult = await login(username, password);
+        console.log('loginResult after register:', loginResult);
+      } catch (loginErr) {
+        console.warn('Auto-login failed after register:', loginErr);
+        // Ignore login error, just show success message for account creation
+      }
+      
       if (loginResult && loginResult.status === 'success') {
         return { status: 'success', userId: result.userId };
       }
 
-      setSuccess('Account created! Please log in.');
+      // If login fails but account is created:
+      setSuccess('Account created successfully! Please log in.');
       return { status: 'success', userId: result.userId };
     } catch (err) {
       console.error('Register error:', err);
