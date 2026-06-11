@@ -518,6 +518,17 @@ const AppContent = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Session check: if user is set but no session token, force logout
+  useEffect(() => {
+    if (user) {
+      const session = localStorage.getItem('ethioswap_session');
+      if (!session) {
+        console.warn('No session token found — logging out.');
+        logout();
+      }
+    }
+  }, [user]);
+
   // If locked, show lock screen first
   if (isLocked) {
     return <AppLockScreen onUnlock={() => setIsLocked(false)} />;

@@ -9,6 +9,7 @@
  */
 
 import type * as adminAuditLogs from "../adminAuditLogs.js";
+import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as depositRequests from "../depositRequests.js";
 import type * as emails from "../emails.js";
@@ -20,6 +21,7 @@ import type * as otp from "../otp.js";
 import type * as phone from "../phone.js";
 import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
+import type * as sessions from "../sessions.js";
 import type * as sms from "../sms.js";
 import type * as smsUnified from "../smsUnified.js";
 import type * as stats from "../stats.js";
@@ -40,6 +42,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   adminAuditLogs: typeof adminAuditLogs;
+  auth: typeof auth;
   crons: typeof crons;
   depositRequests: typeof depositRequests;
   emails: typeof emails;
@@ -51,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   phone: typeof phone;
   reviews: typeof reviews;
   seed: typeof seed;
+  sessions: typeof sessions;
   sms: typeof sms;
   smsUnified: typeof smsUnified;
   stats: typeof stats;

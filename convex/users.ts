@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation, action } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
@@ -23,6 +23,36 @@ export const getByEmail = query({
   },
 });
 
+export const getUserByEmail = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+  },
+});
+
+export const getUserByUsername = internalQuery({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+  },
+});
+
+export const updatePasswordHash = internalMutation({
+  args: {
+    userId: v.id("users"),
+    passwordHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { passwordHash: args.passwordHash });
+  },
+});
+
 export const create = mutation({
   args: {
     username: v.string(),
@@ -39,6 +69,10 @@ export const create = mutation({
     const normalizedUsername = args.username.trim().toLowerCase();
     const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
     
+    console.log('=== CREATE USER ===');
+    console.log('Normalized username:', normalizedUsername);
+    console.log('Normalized email:', normalizedEmail);
+
     if (normalizedEmail) {
       const existing = await ctx.db
         .query("users")
@@ -67,12 +101,15 @@ export const create = mutation({
     const status = "active";
     const kycStatus = args.role === "admin" ? "approved" : "none";
 
+    const passwordHash = sha256Sync(password);
+    console.log('Password hash generated, length:', passwordHash.length);
+
     const userId = await ctx.db.insert("users", {
       ...userData,
       username: normalizedUsername,
       email: normalizedEmail,
       phone: normalizedPhone,
-      passwordHash: sha256Sync(password),
+      passwordHash,
       etbBalance: 0,
       ethBalance: 0,
       ethLocked: 0,
@@ -86,6 +123,7 @@ export const create = mutation({
       smsEnabled: false,
     });
 
+    console.log('User created with ID:', userId);
     return { userId };
   },
 });
@@ -109,49 +147,60 @@ export const authenticate = query({
   },
   handler: async (ctx, args) => {
     const normalizedIdentifier = args.identifier.trim().toLowerCase();
-    console.log('authenticate called with args:', { ...args, normalizedIdentifier });
+    console.log('=== AUTHENTICATE QUERY ===');
+    console.log('Raw identifier:', args.identifier);
+    console.log('Normalized identifier:', normalizedIdentifier);
+    console.log('Password length:', args.password.length);
+
     // Try by email index first
     let user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", normalizedIdentifier))
       .first();
 
-    console.log('user found by email:', user);
+    console.log('Found by email:', user ? `${user.username} (${user._id})` : 'null');
+
     // Fall back to username index
     if (!user) {
       user = await ctx.db
         .query("users")
         .withIndex("by_username", (q) => q.eq("username", normalizedIdentifier))
         .first();
-      console.log('user found by username:', user);
+      console.log('Found by username:', user ? `${user.username} (${user._id})` : 'null');
     }
 
-    if (!user) return null;
+    if (!user) {
+      console.error('No user found for identifier:', normalizedIdentifier);
+      return null;
+    }
+
     const inputHash = sha256Sync(args.password);
-    console.log('inputHash:', inputHash);
-    console.log('user.passwordHash:', user.passwordHash);
+    console.log('Input hash:', inputHash);
+    console.log('Stored hash:', user.passwordHash);
+    console.log('Hashes match:', user.passwordHash === inputHash);
     
     // Compare both the hash and plaintext (for backward compatibility)
     let passwordMatches = false;
     if (user.passwordHash && user.passwordHash === inputHash) {
       passwordMatches = true;
-      console.log('Password matches hash');
+      console.log('Password matches via hash comparison');
     }
     if (!passwordMatches && user.passwordHash && user.passwordHash === args.password) {
       passwordMatches = true;
-      console.log('Password matches plaintext');
+      console.log('Password matches via plaintext (legacy)');
     }
     if (!passwordMatches) {
-      console.log('Password does not match');
+      console.error('Password does NOT match for user:', user.username);
       return null;
     }
 
     if (user.isSuspended) {
+      console.error('User is suspended:', user.username);
       throw new Error("This account is suspended. Please contact support.");
     }
 
     const { passwordHash, ...safeUser } = user;
-    console.log('returning safeUser:', safeUser);
+    console.log('Authentication successful for:', safeUser.username);
     return { status: "success", user: safeUser };
   },
 });
@@ -639,9 +688,18 @@ export const verifyLoginOtp = mutation({
       extraText: alertMsg,
     });
 
+    // 4. Create session token
+    const sessionToken = crypto.randomUUID();
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+    await ctx.db.insert("sessions", {
+      userId,
+      sessionToken,
+      expiresAt,
+    });
+
     // Don't return password hash
     const { passwordHash, ...safeUser } = user;
-    return safeUser;
+    return { ...safeUser, sessionToken };
   },
 });
 

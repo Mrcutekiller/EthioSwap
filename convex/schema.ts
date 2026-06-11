@@ -370,4 +370,12 @@ export default defineSchema({
   })
   .index("by_user", ["userId"])
   .index("by_token", ["token"]),
+
+  sessions: defineTable({
+    userId: v.id("users"),
+    sessionToken: v.string(),
+    expiresAt: v.number(),
+  })
+  .index("by_token", ["sessionToken"])
+  .index("by_user", ["userId"]),
 });

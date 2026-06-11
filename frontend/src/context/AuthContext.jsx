@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useQuery, useMutation } from "convex/react";
-import { api } from "convex-api";
+import { api, internal } from "convex-api";
 import { convex } from "../convexClient";
 import { ethers } from "ethers";
 
@@ -142,6 +142,11 @@ export const AuthProvider = ({ children }) => {
   const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
   const logoutUserMutation = useMutation(api.users.logoutUser);
 
+  const verifyLoginOtpMutation = useMutation(api.users.verifyLoginOtp);
+  const verifySignupOtpMutation = useMutation(api.users.verifySignupOtp);
+  const generateOtpMutation = useMutation(api.otp.generateOtp);
+  const generateTelegramLinkCodeMutation = useMutation(api.users.generateTelegramLinkCode);
+
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
@@ -174,22 +179,28 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('login called with:', { identifier, password });
+      console.log('=== LOGIN DEBUG ===');
+      console.log('Identifier:', identifier);
+      console.log('Password length:', password?.length);
 
-      const deviceFingerprint = getDeviceFingerprint();
+      // Use the new signInUser action (bcrypt + session)
+      const res = await convex.action(api.auth.signInUser, { identifier, password });
+      console.log('=== SIGN IN RESULT ===');
+      console.log('Result:', JSON.stringify(res, null, 2));
 
-      // Use the authenticate query directly
-      const res = await convex.query(api.users.authenticate, { identifier, password, deviceFingerprint });
-      console.log('authenticate result:', res);
-      
-      if (!res) {
+      if (!res || !res.success) {
         throw new Error('Invalid email/username or password.');
       }
 
-      // Check if res.user exists!
       if (!res.user) {
-        throw new Error('Login failed. Please try again.');
+        throw new Error('Login failed — server returned no user data.');
       }
+
+      console.log('Login successful! User:', res.user.username, 'ID:', res.user._id);
+
+      // Store session token
+      localStorage.setItem('ethioswap_session', res.sessionToken);
+      localStorage.setItem('ethioswap_user_id', res.userId);
 
       // Add id alias for compatibility
       const safeUser = { ...res.user, id: res.user._id };
@@ -198,7 +209,10 @@ export const AuthProvider = ({ children }) => {
       setSuccess(`Welcome back, ${safeUser.username}!`);
       return { status: 'success', user: safeUser };
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('=== LOGIN ERROR ===');
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Full error:', err);
       setError(err.message);
       return null;
     } finally {
@@ -210,7 +224,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('register called with:', { username, password, phone, email, fullName, age });
+      console.log('=== REGISTER DEBUG ===');
+      console.log('Register called with:', { username, email, phone, age });
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
 
@@ -234,24 +249,31 @@ export const AuthProvider = ({ children }) => {
       }
 
       // After successful registration, log the user in automatically!
+      console.log('=== AUTO-LOGIN ATTEMPT ===');
+      console.log('Logging in with username:', username);
       let loginResult = null;
       try {
         loginResult = await login(username, password);
-        console.log('loginResult after register:', loginResult);
+        console.log('Auto-login result:', loginResult);
       } catch (loginErr) {
-        console.warn('Auto-login failed after register:', loginErr);
+        console.error('Auto-login failed after register:', loginErr);
         // Ignore login error, just show success message for account creation
       }
       
       if (loginResult && loginResult.status === 'success') {
+        console.log('Auto-login succeeded!');
         return { status: 'success', userId: result.userId };
       }
 
       // If login fails but account is created:
+      console.warn('Auto-login did not succeed. Account was created but user needs to log in manually.');
       setSuccess('Account created successfully! Please log in.');
       return { status: 'success', userId: result.userId };
     } catch (err) {
-      console.error('Register error:', err);
+      console.error('=== REGISTER ERROR ===');
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Full error:', err);
       setError(err.message);
       return null;
     } finally {
@@ -266,8 +288,17 @@ export const AuthProvider = ({ children }) => {
         console.error("Failed to revoke trusted device on logout:", err);
       });
     }
+    // Delete server-side session
+    const sessionToken = localStorage.getItem('ethioswap_session');
+    if (sessionToken) {
+      convex.mutation(api.sessions.deleteSession, { sessionToken }).catch((err) => {
+        console.error("Failed to delete session on logout:", err);
+      });
+    }
     setUser(null);
     localStorage.removeItem('ethioswap_user');
+    localStorage.removeItem('ethioswap_session');
+    localStorage.removeItem('ethioswap_user_id');
     setSuccess('Signed out successfully.');
   };
 
@@ -367,7 +398,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const fingerprint = getDeviceFingerprint();
-      const userObj = await verifyLoginOtpMutation({
+      const result = await verifyLoginOtpMutation({
         userId,
         code,
         deviceFingerprint: fingerprint,
@@ -376,7 +407,14 @@ export const AuthProvider = ({ children }) => {
         trustDevice,
       });
 
-      const safeUser = { ...userObj, id: userObj._id };
+      // Store session token (returned from mutation)
+      if (result.sessionToken) {
+        localStorage.setItem('ethioswap_session', result.sessionToken);
+        localStorage.setItem('ethioswap_user_id', userId);
+      }
+
+      const safeUser = { ...result, id: result._id };
+      delete safeUser.sessionToken;
       setUser(safeUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
       setSuccess(`Welcome back, ${safeUser.username}!`);
