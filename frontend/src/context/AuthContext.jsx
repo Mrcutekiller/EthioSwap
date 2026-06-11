@@ -139,12 +139,9 @@ export const AuthProvider = ({ children }) => {
   const updateReviewMutation = useMutation(api.reviews.update);
   const deleteReviewMutation = useMutation(api.reviews.remove);
 
-  const generateOtpMutation = useMutation(api.otp.generateOtp);
-  const verifyLoginOtpMutation = useMutation(api.users.verifyLoginOtp);
-  const verifySignupOtpMutation = useMutation(api.users.verifySignupOtp);
   const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
   const logoutUserMutation = useMutation(api.users.logoutUser);
-  const generateTelegramLinkCodeMutation = useMutation(api.users.generateTelegramLinkCode);
+
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
@@ -185,27 +182,11 @@ export const AuthProvider = ({ children }) => {
 
       const deviceFingerprint = getDeviceFingerprint();
 
-      // Use the new authenticate query
+      // Use the authenticate query
       const res = await convex.query(api.users.authenticate, { identifier, password, deviceFingerprint });
       
       if (!res) {
         throw new Error('Invalid password.');
-      }
-
-      if (res.status === 'otp_required') {
-        return res;
-      }
-
-      // If telegram was required but we've removed it, it might return success directly now
-      if (res.status === 'telegram_required') {
-        // Fallback: treat as success if backend still returns it but we want to skip it
-        const userRes = await convex.query(api.users.get, { id: res.userId });
-        if (userRes) {
-          const safeUser = { ...userRes, id: userRes._id };
-          setUser(safeUser);
-          localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-          return { status: 'success', user: safeUser };
-        }
       }
 
       // Add id alias for compatibility
@@ -247,76 +228,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Account creation failed.");
       }
 
-      // Admin accounts skip OTP entirely
-      if (isAdminRole) {
-        setSuccess('Admin account created successfully! Please sign in.');
-        return { status: 'success_admin', userId: result.userId };
-      }
-
-      // Telegram linking — NON-FATAL. If it fails, the connect screen
-      // has a "Generate code" button that retries on demand. Account
-      // creation is NEVER blocked by a Telegram failure.
-      let linkCode = null;
-      let linkExpires = null;
-      let deepLink = null;
-
-      // Try the atomically-generated code from create() first
-      if (result.linkCode) {
-        linkCode = result.linkCode;
-        linkExpires = result.linkExpires;
-        deepLink = result.deepLink;
-      }
-
-      // Fall back to generateTelegramLinkCode if we still have no code
-      if (!linkCode) {
-        try {
-          const linkRes = await generateTelegramLinkCodeMutation({ userId: result.userId });
-          if (linkRes?.code) {
-            linkCode = linkRes.code;
-            linkExpires = linkRes.expiresAt;
-            deepLink = linkRes.deepLink;
-          }
-        } catch (e) {
-          console.warn('Telegram linking skipped — will retry on connect screen:', e?.message || e);
-          // Non-fatal — the UI shows a "Generate code" button
-        }
-      }
-
-      // Generate a fresh Telegram link token so the connect screen has a valid code.
-      // We use generateTelegramLinkToken (action) which stores in telegramLinkTokens table
-      // and is validated by confirmTelegramLink which the bot uses.
-      let token = null;
-
-      // Try the atomically-generated code from create() first (stored in linkCode field)
-      if (result.linkCode) {
-        // The code from users.create uses the user.telegramLinkCode field, but the bot
-        // uses the telegramLinkTokens table. Generate a fresh token via the action to ensure compatibility.
-        token = result.linkCode;
-        deepLink = result.deepLink;
-      }
-
-      // Always generate a proper token via the action (uses telegramLinkTokens table, works with bot)
-      try {
-        const linkRes = await generateTelegramLinkCode(result.userId);
-        if (linkRes?.token) {
-          token = linkRes.token;
-          deepLink = linkRes.deepLink;
-        }
-      } catch (e) {
-        console.warn('generateTelegramLinkToken failed, will retry on connect screen:', e?.message || e);
-      }
-
-      setSuccess('Account created! Please connect your Telegram to activate.');
-      // Return telegram_required so the connect screen is displayed
-      return {
-        status: 'telegram_required',
-        userId: result.userId,
-        reason: 'new_signup',
-        phone: result.phone || '',
-        token,
-        linkCode: token,
-        deepLink,
-      };
+      setSuccess('Account created successfully! Please sign in.');
+      return { status: 'success', userId: result.userId };
     } catch (err) {
       setError(err.message);
       return null;
@@ -789,7 +702,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      verifyLoginOtp, verifySignupOtp, sendOtp, updateSensitiveDetails, generateTelegramLinkCode, getTelegramLinkStatus, resendSignupOtpWithFallback,
+      updateSensitiveDetails,
       setError, setSuccess, setIsLocked
     }}>
       {children}

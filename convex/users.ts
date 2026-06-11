@@ -36,42 +36,12 @@ export const create = mutation({
     age: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    // Helper: generate a fresh 6-digit linking code and patch it onto a user
-    const generateLinkCode = async (userId: any) => {
-      const randomBuffer = new Uint32Array(1);
-      crypto.getRandomValues(randomBuffer);
-      const code = (100000 + (randomBuffer[0] % 900000)).toString();
-      const expires = Date.now() + 10 * 60 * 1000; // 10 minutes per requirement
-      await ctx.db.patch(userId, {
-        telegramLinkCode: code,
-        telegramLinkExpires: expires,
-      });
-      // Insert into telegramLinkTokens table so it is compatible with bot confirmTelegramLink mutation
-      await ctx.db.insert("telegramLinkTokens", {
-        userId,
-        token: code,
-        expiresAt: expires,
-        used: false,
-      });
-      const botUsername = process.env.TELEGRAM_BOT_USERNAME || "EthioSwap_Bot";
-      return { code, expires, deepLink: `https://t.me/${botUsername}?start=${code}` };
-    };
-
     if (args.email) {
       const existing = await ctx.db
         .query("users")
         .withIndex("by_email", (q) => q.eq("email", args.email))
         .first();
       if (existing) {
-        if (existing.status === "pending_verification") {
-          let link = null;
-          try {
-            link = await generateLinkCode(existing._id);
-          } catch (e) {
-            console.warn("generateLinkCode failed for existing pending user (email):", e);
-          }
-          return { userId: existing._id, pendingVerification: true, ...(link ? { linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
-        }
         throw new Error("Email already registered");
       }
     }
@@ -81,15 +51,6 @@ export const create = mutation({
       .withIndex("by_username", (q) => q.eq("username", args.username))
       .first();
     if (existingUser) {
-      if (existingUser.status === "pending_verification") {
-        let link = null;
-        try {
-          link = await generateLinkCode(existingUser._id);
-        } catch (e) {
-          console.warn("generateLinkCode failed for existing pending user (username):", e);
-        }
-        return { userId: existingUser._id, pendingVerification: true, ...(link ? { linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink } : {}) };
-      }
       throw new Error("Username already taken");
     }
 
@@ -100,7 +61,7 @@ export const create = mutation({
 
     const { password, phone: _ignored, ...userData } = args;
 
-    const status = args.role === "admin" ? "active" : "pending_verification";
+    const status = "active";
     const kycStatus = args.role === "admin" ? "approved" : "none";
 
     const userId = await ctx.db.insert("users", {
@@ -118,29 +79,7 @@ export const create = mutation({
       isSuspended: false,
       status,
       smsEnabled: false,
-      preferredVerificationMethod: "telegram",
     });
-
-    const randomBytes = new Uint8Array(8);
-    crypto.getRandomValues(randomBytes);
-    const tokenHex = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-    const telegramLinkToken = args.role !== "admin"
-      ? "tg_" + tokenHex
-      : undefined;
-
-    await ctx.db.patch(userId, {
-      telegramLinkToken,
-      telegramLinked: false,
-    });
-
-    if (args.role !== "admin") {
-      try {
-        const link = await generateLinkCode(userId);
-        return { userId, linkCode: link.code, token: link.code, linkExpires: link.expires, deepLink: link.deepLink };
-      } catch (e) {
-        console.error("generateLinkCode failed for new user:", e);
-      }
-    }
 
     return { userId };
   },
@@ -186,45 +125,8 @@ export const authenticate = query({
       throw new Error("This account is suspended. Please contact support.");
     }
 
-    if (user.role === "admin") {
-      const { passwordHash, ...safeUser } = user;
-      return { status: "success", user: safeUser };
-    }
-
-    if (user.status === "pending_verification") {
-      // User hasn't connected Telegram yet. Return telegram_required so the
-      // front-end shows the Connect Telegram screen.
-      return {
-        status: "telegram_required",
-        userId: user._id,
-        reason: "pending_verification",
-        phone: user.phone || "",
-      };
-    }
-
     const { passwordHash, ...safeUser } = user;
-
-    // Check if device is trusted
-    const now = Date.now();
-    const trusted = await ctx.db
-      .query("trustedDevices")
-      .withIndex("by_user_fingerprint", (q) =>
-        q.eq("userId", user!._id).eq("deviceFingerprint", args.deviceFingerprint)
-      )
-      .filter((q) => q.gt(q.field("trustedUntil"), now))
-      .first();
-
-    if (trusted) {
-      return { status: "success", user: safeUser };
-    }
-
-    return {
-      status: "otp_required",
-      userId: user._id,
-      preferredMethod: "telegram",
-      phone: user.phone || "",
-      telegramChatId: user.telegramChatId || "",
-    };
+    return { status: "success", user: safeUser };
   },
 });
 
