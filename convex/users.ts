@@ -36,10 +36,13 @@ export const create = mutation({
     age: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    if (args.email) {
+    const normalizedUsername = args.username.trim().toLowerCase();
+    const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
+    
+    if (normalizedEmail) {
       const existing = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
         .first();
       if (existing) {
         throw new Error("Email already registered");
@@ -48,7 +51,7 @@ export const create = mutation({
 
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
       .first();
     if (existingUser) {
       throw new Error("Username already taken");
@@ -66,6 +69,8 @@ export const create = mutation({
 
     const userId = await ctx.db.insert("users", {
       ...userData,
+      username: normalizedUsername,
+      email: normalizedEmail,
       phone: normalizedPhone,
       passwordHash: sha256Sync(password),
       etbBalance: 0,
@@ -103,11 +108,12 @@ export const authenticate = query({
     deviceFingerprint: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log('authenticate called with args:', args);
+    const normalizedIdentifier = args.identifier.trim().toLowerCase();
+    console.log('authenticate called with args:', { ...args, normalizedIdentifier });
     // Try by email index first
     let user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.identifier))
+      .withIndex("by_email", (q) => q.eq("email", normalizedIdentifier))
       .first();
 
     console.log('user found by email:', user);
@@ -115,7 +121,7 @@ export const authenticate = query({
     if (!user) {
       user = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", args.identifier))
+        .withIndex("by_username", (q) => q.eq("username", normalizedIdentifier))
         .first();
       console.log('user found by username:', user);
     }
@@ -355,14 +361,15 @@ export const remove = mutation({
 export const getByIdentifier = query({
   args: { identifier: v.string() },
   handler: async (ctx, args) => {
+    const normalizedIdentifier = args.identifier.trim().toLowerCase();
     let user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.identifier))
+      .withIndex("by_email", (q) => q.eq("email", normalizedIdentifier))
       .first();
     if (!user) {
       user = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", args.identifier))
+        .withIndex("by_username", (q) => q.eq("username", normalizedIdentifier))
         .first();
     }
     return user ? { exists: true } : { exists: false };
