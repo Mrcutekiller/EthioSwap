@@ -43,6 +43,24 @@ export const getUserByUsername = internalQuery({
   },
 });
 
+export const findUserByIdentifier = internalQuery({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    const id = args.identifier.trim().toLowerCase();
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", id))
+      .first();
+    if (!user) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", id))
+        .first();
+    }
+    return user;
+  },
+});
+
 export const updatePasswordHash = internalMutation({
   args: {
     userId: v.id("users"),

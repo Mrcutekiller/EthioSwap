@@ -12,19 +12,12 @@ export const signInUser = action({
   handler: async (ctx, { identifier, password }) => {
     const normalizedIdentifier = identifier.trim().toLowerCase();
 
-    // Step 1: Find user by email, then by username
-    let user = await ctx.runQuery(internal.users.getUserByEmail, {
-      email: normalizedIdentifier,
+    // Single query: find by email OR username
+    const user = await ctx.runQuery(internal.users.findUserByIdentifier, {
+      identifier: normalizedIdentifier,
     });
 
     if (!user) {
-      user = await ctx.runQuery(internal.users.getUserByUsername, {
-        username: normalizedIdentifier,
-      });
-    }
-
-    if (!user) {
-      console.error("signInUser: No user found for identifier:", normalizedIdentifier);
       throw new Error("Invalid email/username or password.");
     }
 
@@ -32,53 +25,25 @@ export const signInUser = action({
       throw new Error("This account is suspended. Please contact support.");
     }
 
-    // Step 2: Compare password
+    // Compare password (no round-trips — pure computation)
     let passwordMatches = false;
 
-    // Try bcrypt first (new users)
     if (user.passwordHash && user.passwordHash.startsWith("$2")) {
+      // bcrypt hash
       passwordMatches = await bcrypt.compare(password, user.passwordHash);
-      if (passwordMatches) {
-        console.log("Password matches via bcrypt");
-      }
-    }
-
-    // Fall back to sha256 (legacy users)
-    if (!passwordMatches && user.passwordHash) {
+    } else if (user.passwordHash) {
+      // sha256 or plaintext legacy
       const inputHash = sha256Sync(password);
-      if (user.passwordHash === inputHash) {
-        passwordMatches = true;
-        console.log("Password matches via sha256 (legacy) — upgrading to bcrypt");
-
-        // Upgrade to bcrypt in the background
-        const newHash = await bcrypt.hash(password, 10);
-        await ctx.runMutation(internal.users.updatePasswordHash, {
-          userId: user._id,
-          passwordHash: newHash,
-        });
-      }
-    }
-
-    // Also check plaintext (very old legacy accounts)
-    if (!passwordMatches && user.passwordHash === password) {
-      passwordMatches = true;
-      console.log("Password matches via plaintext (legacy) — upgrading to bcrypt");
-
-      const newHash = await bcrypt.hash(password, 10);
-      await ctx.runMutation(internal.users.updatePasswordHash, {
-        userId: user._id,
-        passwordHash: newHash,
-      });
+      passwordMatches = user.passwordHash === inputHash || user.passwordHash === password;
     }
 
     if (!passwordMatches) {
-      console.error("signInUser: Password does NOT match for user:", user.username);
       throw new Error("Invalid email/username or password.");
     }
 
-    // Step 3: Create session token
+    // Create session (single mutation round-trip)
     const sessionToken = crypto.randomUUID();
-    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
 
     await ctx.runMutation(internal.sessions.createSession, {
       userId: user._id,
@@ -86,14 +51,7 @@ export const signInUser = action({
       expiresAt,
     });
 
-    // Step 4: Return safe user data + session
     const { passwordHash, ...safeUser } = user;
-
-    return {
-      success: true,
-      userId: user._id,
-      sessionToken,
-      user: safeUser,
-    };
+    return { success: true, userId: user._id, sessionToken, user: safeUser };
   },
 });
