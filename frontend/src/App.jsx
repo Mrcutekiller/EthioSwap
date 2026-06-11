@@ -147,7 +147,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
     if (mode === 'login') {
       if (!username || !password) {
-        setLocalError('Please enter both username/email and password.');
+        setLocalError('Please enter both email and password.');
         return;
       }
       const res = await login(username, password);
@@ -278,13 +278,13 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 <div className="auth-input-group">
                   <input 
                     className="auth-input" 
-                    type="text" 
-                    placeholder="Username or Email" 
+                    type="email" 
+                    placeholder="Email Address" 
                     value={username} 
                     onChange={e => setUsername(e.target.value)} 
-                    autoComplete="username" 
+                    autoComplete="email" 
                   />
-                  <i className="auth-input-icon ti ti-user"></i>
+                  <i className="auth-input-icon ti ti-mail"></i>
                 </div>
               </>
             ) : (

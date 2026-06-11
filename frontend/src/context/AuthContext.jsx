@@ -176,18 +176,18 @@ export const AuthProvider = ({ children }) => {
     if (message) setTimeout(() => setSuccessState(null), 5000);
   };
 
-  const login = async (identifier, password) => {
+  const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
       console.log('=== LOGIN DEBUG ===');
-      console.log('Identifier:', identifier);
+      console.log('Email:', email);
 
       const deviceFingerprint = getDeviceFingerprint();
 
       // Step 1: Verify password via query (fast, no action)
       const authResult = await convex.query(api.users.authenticate, {
-        identifier,
+        email,
         password,
         deviceFingerprint,
       });
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }) => {
       console.log('Result:', JSON.stringify(authResult, null, 2));
 
       if (!authResult || !authResult.user) {
-        throw new Error('Invalid email/username or password.');
+        throw new Error('Invalid email or password.');
       }
 
       // Step 2: Create session via mutation (fast, no action)
@@ -258,10 +258,10 @@ export const AuthProvider = ({ children }) => {
 
       // After successful registration, log the user in automatically!
       console.log('=== AUTO-LOGIN ATTEMPT ===');
-      console.log('Logging in with username:', username);
+      console.log('Logging in with email:', email);
       let loginResult = null;
       try {
-        loginResult = await login(username, password);
+        loginResult = await login(email, password);
         console.log('Auto-login result:', loginResult);
       } catch (loginErr) {
         console.error('Auto-login failed after register:', loginErr);

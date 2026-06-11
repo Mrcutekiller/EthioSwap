@@ -159,36 +159,24 @@ export const sendWelcomeEmailAction = action({
 
 export const authenticate = query({
   args: {
-    identifier: v.string(), // username or email
+    email: v.string(),
     password: v.string(),
     deviceFingerprint: v.string(),
   },
   handler: async (ctx, args) => {
-    const normalizedIdentifier = args.identifier.trim().toLowerCase();
+    const normalizedEmail = args.email.trim().toLowerCase();
     console.log('=== AUTHENTICATE QUERY ===');
-    console.log('Raw identifier:', args.identifier);
-    console.log('Normalized identifier:', normalizedIdentifier);
-    console.log('Password length:', args.password.length);
+    console.log('Email:', normalizedEmail);
 
-    // Try by email index first
-    let user = await ctx.db
+    const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedIdentifier))
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
       .first();
 
-    console.log('Found by email:', user ? `${user.username} (${user._id})` : 'null');
-
-    // Fall back to username index
-    if (!user) {
-      user = await ctx.db
-        .query("users")
-        .withIndex("by_username", (q) => q.eq("username", normalizedIdentifier))
-        .first();
-      console.log('Found by username:', user ? `${user.username} (${user._id})` : 'null');
-    }
+    console.log('Found user:', user ? `${user.username} (${user._id})` : 'null');
 
     if (!user) {
-      console.error('No user found for identifier:', normalizedIdentifier);
+      console.error('No user found for email:', normalizedEmail);
       return null;
     }
 
