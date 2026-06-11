@@ -1,6 +1,27 @@
 import { mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
+export const createSessionForUser = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const sessionToken = crypto.randomUUID();
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+    await ctx.db.insert("sessions", {
+      userId: args.userId,
+      sessionToken,
+      expiresAt,
+    });
+
+    return { sessionToken, expiresAt };
+  },
+});
+
 export const createSession = internalMutation({
   args: {
     userId: v.id("users"),
