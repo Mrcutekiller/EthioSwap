@@ -119,7 +119,18 @@ export const authenticate = query({
 
     if (!user) return null;
     const inputHash = sha256Sync(args.password);
-    if (user.passwordHash !== inputHash && user.passwordHash !== args.password) return null;
+    
+    // Compare both the hash and plaintext (for backward compatibility)
+    let passwordMatches = false;
+    if (user.passwordHash && user.passwordHash === inputHash) {
+      passwordMatches = true;
+    }
+    if (!passwordMatches && user.passwordHash && user.passwordHash === args.password) {
+      passwordMatches = true;
+    }
+    if (!passwordMatches) {
+      return null;
+    }
 
     if (user.isSuspended) {
       throw new Error("This account is suspended. Please contact support.");
