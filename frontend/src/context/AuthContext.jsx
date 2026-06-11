@@ -189,6 +189,11 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid password.');
       }
 
+      // Check if res.user exists!
+      if (!res.user) {
+        throw new Error('Login failed. Please try again.');
+      }
+
       // Add id alias for compatibility
       const safeUser = { ...res.user, id: res.user._id };
       setUser(safeUser);
@@ -228,7 +233,13 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Account creation failed.");
       }
 
-      setSuccess('Account created successfully! Please sign in.');
+      // After successful registration, log the user in automatically!
+      const loginResult = await login(username, password);
+      if (loginResult && loginResult.status === 'success') {
+        return { status: 'success', userId: result.userId };
+      }
+
+      setSuccess('Account created! Please log in.');
       return { status: 'success', userId: result.userId };
     } catch (err) {
       setError(err.message);

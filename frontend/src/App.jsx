@@ -52,6 +52,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
 
+  // If user is already logged in, don't show auth form
+  // (This is handled by AppContent, but just in case)
+  if (user) {
+    return null;
+  }
+
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
