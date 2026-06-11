@@ -103,32 +103,40 @@ export const authenticate = query({
     deviceFingerprint: v.string(),
   },
   handler: async (ctx, args) => {
+    console.log('authenticate called with args:', args);
     // Try by email index first
     let user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.identifier))
       .first();
 
+    console.log('user found by email:', user);
     // Fall back to username index
     if (!user) {
       user = await ctx.db
         .query("users")
         .withIndex("by_username", (q) => q.eq("username", args.identifier))
         .first();
+      console.log('user found by username:', user);
     }
 
     if (!user) return null;
     const inputHash = sha256Sync(args.password);
+    console.log('inputHash:', inputHash);
+    console.log('user.passwordHash:', user.passwordHash);
     
     // Compare both the hash and plaintext (for backward compatibility)
     let passwordMatches = false;
     if (user.passwordHash && user.passwordHash === inputHash) {
       passwordMatches = true;
+      console.log('Password matches hash');
     }
     if (!passwordMatches && user.passwordHash && user.passwordHash === args.password) {
       passwordMatches = true;
+      console.log('Password matches plaintext');
     }
     if (!passwordMatches) {
+      console.log('Password does not match');
       return null;
     }
 
@@ -137,6 +145,7 @@ export const authenticate = query({
     }
 
     const { passwordHash, ...safeUser } = user;
+    console.log('returning safeUser:', safeUser);
     return { status: "success", user: safeUser };
   },
 });

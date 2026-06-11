@@ -174,8 +174,10 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('login called with:', { identifier, password });
       // First check if the account exists
       const check = await convex.query(api.users.getByIdentifier, { identifier });
+      console.log('getByIdentifier result:', check);
       if (!check || !check.exists) {
         throw new Error('Account does not exist.');
       }
@@ -184,6 +186,7 @@ export const AuthProvider = ({ children }) => {
 
       // Use the authenticate query
       const res = await convex.query(api.users.authenticate, { identifier, password, deviceFingerprint });
+      console.log('authenticate result:', res);
       
       if (!res) {
         throw new Error('Invalid password.');
@@ -201,6 +204,7 @@ export const AuthProvider = ({ children }) => {
       setSuccess(`Welcome back, ${safeUser.username}!`);
       return { status: 'success', user: safeUser };
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message);
       return null;
     } finally {
@@ -212,6 +216,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('register called with:', { username, password, phone, email, fullName, age });
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
 
@@ -228,6 +233,7 @@ export const AuthProvider = ({ children }) => {
         ethAddress: address,
         ethPrivateKey: privateKey,
       });
+      console.log('createUser result:', result);
 
       if (!result) {
         throw new Error("Account creation failed.");
@@ -235,6 +241,7 @@ export const AuthProvider = ({ children }) => {
 
       // After successful registration, log the user in automatically!
       const loginResult = await login(username, password);
+      console.log('loginResult after register:', loginResult);
       if (loginResult && loginResult.status === 'success') {
         return { status: 'success', userId: result.userId };
       }
@@ -242,6 +249,7 @@ export const AuthProvider = ({ children }) => {
       setSuccess('Account created! Please log in.');
       return { status: 'success', userId: result.userId };
     } catch (err) {
+      console.error('Register error:', err);
       setError(err.message);
       return null;
     } finally {
