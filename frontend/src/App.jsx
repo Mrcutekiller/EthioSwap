@@ -171,7 +171,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
       }
       const result = await register(username, password, phone, email, fullName, age);
       if (!result) return;
-      onToggle(); // Switch to login mode after successful registration
+      // Don't toggle if register succeeded (user is already logged in)
     }
   };
 
