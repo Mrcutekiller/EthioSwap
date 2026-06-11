@@ -526,7 +526,11 @@ const AppContent = () => {
         onBackToHome={() => setShowAuth(false)} 
       />
     ) : (
-      <LandingPage onStart={() => setShowAuth(true)} />
+      <LandingPage 
+        onGetStarted={() => { setAuthMode('register'); setShowAuth(true); }} 
+        onSignIn={() => { setAuthMode('login'); setShowAuth(true); }} 
+        systemSettings={null} 
+      />
     );
   }
 

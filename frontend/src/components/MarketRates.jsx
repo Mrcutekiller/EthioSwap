@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from 'convex-api';
-import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 
 const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
-  const { t } = useTranslation();
   const data = useQuery(api.listings.getCalculatorData);
 
   const [mode, setMode] = useState('buy'); // 'buy' means visitor buys USDT, 'sell' means visitor sells USDT
@@ -13,8 +10,8 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
   const [etbAmount, setEtbAmount] = useState('');
   const [lastEdited, setLastEdited] = useState('usdt');
 
-  const bestBuyRate = data?.bestBuyRate || 110;
-  const bestSellRate = data?.bestSellRate || 108;
+  const bestBuyRate = data?.bestBuyRate || 190;
+  const bestSellRate = data?.bestSellRate || 186;
   const rateHistory = data?.rateHistory || [];
 
   const currentRate = mode === 'buy' ? bestBuyRate : bestSellRate;
@@ -67,56 +64,56 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
   if (!data) {
     return (
       <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-3)' }}>
-        {t('Loading market rates...')}
+        Loading market rates...
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Rate Display Card */}
-      <div className="premium-dashboard-card" style={{
-        padding: '24px',
-        borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(245,197,24,0.04) 0%, rgba(0,212,160,0.03) 100%)',
-        border: '1px solid var(--border)',
+      <div style={{
+        padding: '28px',
+        borderRadius: '20px',
+        background: 'linear-gradient(135deg, rgba(245,197,24,0.10) 0%, rgba(0,212,160,0.08) 100%)',
+        border: '1px solid rgba(245,197,24,0.3)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        textAlign: 'center'
+        textAlign: 'center',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.3)'
       }}>
-        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '8px' }}>
           USDT / ETB Live Market Average
         </div>
-        <div style={{ fontSize: '32px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace', margin: '8px 0' }}>
-          {((bestBuyRate + bestSellRate) / 2).toFixed(2)} <span style={{ fontSize: '18px', fontWeight: 500 }}>ETB</span>
+        <div style={{ fontSize: '48px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace', margin: '12px 0' }}>
+          {((bestBuyRate + bestSellRate) / 2).toFixed(2)} <span style={{ fontSize: '20px', fontWeight: 500 }}>ETB</span>
         </div>
-        <div style={{ fontSize: '12px', color: changePercent >= 0 ? '#00d4a0' : '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {changePercent >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          {changePercent >= 0 ? '▲ +' : '▼ '}{changePercent}% {t('last 24h')}
+        <div style={{ fontSize: '14px', color: changePercent >= 0 ? '#00d4a0' : '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {changePercent >= 0 ? '▲ +' : '▼ '}{changePercent}% last 24h
         </div>
       </div>
 
       {/* SVG Sparkline */}
-      <div className="premium-dashboard-card" style={{ padding: '16px', borderRadius: '16px', background: '#111318', border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>
+      <div style={{ padding: '20px', borderRadius: '20px', background: '#111318', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-3)', marginBottom: '12px', fontWeight: 600 }}>
           <span>24h Trend Chart</span>
           <span style={{ color: changePercent >= 0 ? '#00d4a0' : '#ef4444' }}>
             {changePercent >= 0 ? 'Trending Up' : 'Trending Down'}
           </span>
         </div>
-        <svg viewBox="0 0 400 80" style={{ width: '100%', height: '80px', display: 'block' }}>
+        <svg viewBox="0 0 400 100" style={{ width: '100%', height: '100px', display: 'block' }}>
           {rateHistory.length > 1 && (() => {
             const rates = rateHistory.map(r => r.averageRate);
             const min = Math.min(...rates);
             const max = Math.max(...rates);
             const range = (max - min) || 1;
             const step = 400 / (rates.length - 1);
-            const points = rates.map((r, i) => `${i * step},${70 - ((r - min) / range) * 60}`).join(' ');
+            const points = rates.map((r, i) => `${i * step},${85 - ((r - min) / range) * 70}`).join(' ');
             return (
               <>
-                <polyline fill="none" stroke={changePercent >= 0 ? '#00d4a0' : '#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
-                <polygon fill={changePercent >= 0 ? 'rgba(0,212,160,0.06)' : 'rgba(239,68,68,0.06)'} points={`0,80 ${points} 400,80`} />
+                <polyline fill="none" stroke={changePercent >= 0 ? '#00d4a0' : '#ef4444'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} />
+                <polygon fill={changePercent >= 0 ? 'rgba(0,212,160,0.12)' : 'rgba(239,68,68,0.12)'} points={`0,100 ${points} 400,100`} />
               </>
             );
           })()}
@@ -124,54 +121,58 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
       </div>
 
       {/* Calculator Inputs Card */}
-      <div className="premium-dashboard-card" style={{ padding: '24px', borderRadius: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '10px', padding: '3px', border: '1px solid var(--border)' }}>
-          <button onClick={() => setMode('buy')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: mode === 'buy' ? 'var(--gold)' : 'transparent', color: mode === 'buy' ? '#0a0a0a' : 'var(--text-secondary)', transition: 'all 0.2s' }}>
-            {t('Buy USDT')}
+      <div style={{ padding: '28px', borderRadius: '20px', background: '#111318', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '12px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <button onClick={() => setMode('buy')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', background: mode === 'buy' ? 'var(--gold)' : 'transparent', color: mode === 'buy' ? '#0a0a0a' : 'var(--text-3)', transition: 'all 0.2s' }}>
+            Buy USDT
           </button>
-          <button onClick={() => setMode('sell')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: mode === 'sell' ? 'var(--gold)' : 'transparent', color: mode === 'sell' ? '#0a0a0a' : 'var(--text-secondary)', transition: 'all 0.2s' }}>
-            {t('Sell USDT')}
+          <button onClick={() => setMode('sell')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', background: mode === 'sell' ? 'var(--gold)' : 'transparent', color: mode === 'sell' ? '#0a0a0a' : 'var(--text-3)', transition: 'all 0.2s' }}>
+            Sell USDT
           </button>
         </div>
 
         {/* USDT Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>USDT</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 700 }}>USDT</label>
           <div style={{ position: 'relative' }}>
-            <input type="number" placeholder="0.00" value={usdtAmount} onChange={handleUsdtChange} className="input" style={{ width: '100%', paddingRight: '64px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '16px' }} />
-            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: 'var(--gold)' }}>USDT</span>
+            <input type="number" placeholder="0.00" value={usdtAmount} onChange={handleUsdtChange} className="input" style={{ width: '100%', paddingRight: '70px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '18px', height: '56px', borderRadius: '12px' }} />
+            <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 800, color: 'var(--gold)' }}>USDT</span>
           </div>
         </div>
 
         {/* ETB Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>ETB</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 700 }}>ETB</label>
           <div style={{ position: 'relative' }}>
-            <input type="number" placeholder="0.00" value={etbAmount} onChange={handleEtbChange} className="input" style={{ width: '100%', paddingRight: '64px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '16px' }} />
-            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 800, color: 'var(--text-1)' }}>ETB</span>
+            <input type="number" placeholder="0.00" value={etbAmount} onChange={handleEtbChange} className="input" style={{ width: '100%', paddingRight: '70px', margin: 0, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '18px', height: '56px', borderRadius: '12px' }} />
+            <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 800, color: 'var(--text-1)' }}>ETB</span>
           </div>
         </div>
       </div>
 
       {/* Best Offers Section */}
-      <div className="premium-dashboard-card" style={{ padding: '20px', borderRadius: '16px', background: '#111318', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0' }}>Best Buy Offer (Taker buys)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{bestBuyRate.toFixed(2)} ETB</span>
-            <button onClick={() => onSelectOffer('buy', data.bestBuyOfferId)} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(0,212,160,0.15)', color: '#00d4a0', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
-              Go <ArrowRight size={10} />
-            </button>
+      <div style={{ padding: '24px', borderRadius: '20px', background: '#111318', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,212,160,0.08)', padding: '14px 16px', borderRadius: '12px', border: '1px solid rgba(0,212,160,0.2)' }}>
+          <div>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0' }}>Best Buy Offer (You buy)</span>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>{bestBuyRate.toFixed(2)} ETB</div>
           </div>
+          {onSelectOffer && (
+            <button onClick={() => onSelectOffer('buy', data.bestBuyOfferId)} style={{ padding: '10px 18px', borderRadius: '10px', border: 'none', background: '#00d4a0', color: '#0a0a0a', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Trade →
+            </button>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>Best Sell Offer (Taker sells)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{bestSellRate.toFixed(2)} ETB</span>
-            <button onClick={() => onSelectOffer('sell', data.bestSellOfferId)} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', background: 'rgba(245,197,24,0.15)', color: 'var(--gold)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
-              Go <ArrowRight size={10} />
-            </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(245,197,24,0.08)', padding: '14px 16px', borderRadius: '12px', border: '1px solid rgba(245,197,24,0.2)' }}>
+          <div>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>Best Sell Offer (You sell)</span>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>{bestSellRate.toFixed(2)} ETB</div>
           </div>
+          {onSelectOffer && (
+            <button onClick={() => onSelectOffer('sell', data.bestSellOfferId)} style={{ padding: '10px 18px', borderRadius: '10px', border: 'none', background: 'var(--gold)', color: '#0a0a0a', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Trade →
+            </button>
+          )}
         </div>
       </div>
     </div>

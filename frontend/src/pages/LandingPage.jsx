@@ -502,6 +502,34 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => observer.disconnect();
   }, []);
 
+  // Smooth scroll for anchor links
+  useEffect(() => {
+    const handleAnchorClick = (e) => {
+      const href = e.currentTarget.getAttribute('href');
+      if (href && href.startsWith('#')) {
+        e.preventDefault();
+        const targetId = href.slice(1);
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }
+    };
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', handleAnchorClick);
+    });
+
+    return () => {
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.removeEventListener('click', handleAnchorClick);
+      });
+    };
+  }, []);
+
   // Sync live rate with database configuration
   useEffect(() => {
     setLiveRate(buyRate);
@@ -1241,7 +1269,10 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <p style={{ fontSize: '18px', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '32px' }}>
                 We use multi-layer security protocols and automated escrow systems to ensure your assets are protected at all times. Every transaction is monitored by our security engine.
               </p>
-              <button onClick={onGetStarted} className="btn-saas-primary">Learn About Security</button>
+              <button onClick={() => {
+                const sec = document.getElementById('security');
+                if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }} className="btn-saas-primary">Learn About Security</button>
             </div>
           </div>
 
