@@ -439,15 +439,58 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
             {mode === 'register' && (
               <>
-                {/* Profile Picture Upload */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
-                  <div style={{ position: 'relative', width: '90px', height: '90px', borderRadius: '50%', border: '2.5px dashed var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} onClick={() => document.getElementById('pic-upload').click()}>
+                <div className="auth-input-group">
+                  <input
+                    className="auth-input"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Confirm Password"
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    style={{ paddingRight: '48px' }}
+                  />
+                  <i className="auth-input-icon ti ti-shield-lock"></i>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                  <div className="auth-input-group">
+                    <input className="auth-input" type="tel" placeholder="Phone: 0912..." value={phone} onChange={e => setPhone(e.target.value)} />
+                    <i className="auth-input-icon ti ti-phone"></i>
+                  </div>
+                  <div className="auth-input-group">
+                    <input className="auth-input" type="number" min="18" placeholder="Age" value={age} onChange={e => setAge(e.target.value)} />
+                    <i className="auth-input-icon ti ti-calendar-event"></i>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="auth-input-group">
+                    <input className="auth-input" type="text" placeholder="Country" value={country} onChange={e => setCountry(e.target.value)} />
+                    <i className="auth-input-icon ti ti-world"></i>
+                  </div>
+                  <div className="auth-input-group">
+                    <input className="auth-input" type="text" placeholder="City" value={city} onChange={e => setCity(e.target.value)} />
+                    <i className="auth-input-icon ti ti-map-pin"></i>
+                  </div>
+                </div>
+                <div className="auth-input-group">
+                  <input className="auth-input" type="text" placeholder="Work / Occupation" value={work} onChange={e => setWork(e.target.value)} />
+                  <i className="auth-input-icon ti ti-briefcase"></i>
+                </div>
+
+                {/* Profile Picture Upload - last */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', margin: '4px 0 0' }}>
+                  <div style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '50%', border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', transition: 'border-color 0.2s' }} onClick={() => document.getElementById('pic-upload').click()}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
                     {profilePicPreview ? (
                       <img src={profilePicPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'var(--text-3)' }}>
-                        <i className="ti ti-camera" style={{ fontSize: '28px' }}></i>
-                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Add Photo</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--muted)' }}>
+                        <i className="ti ti-camera" style={{ fontSize: '22px' }}></i>
+                        <span style={{ fontSize: '9px', fontWeight: 600 }}>Photo</span>
                       </div>
                     )}
                     {uploadingPic && (
@@ -459,83 +502,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                   </div>
                   <input id="pic-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
                   {profilePic && !uploadingPic && (
-                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>✓ Picture attached</span>
+                    <span style={{ fontSize: '11px', color: 'var(--teal)', fontWeight: 600 }}>✓ Photo attached</span>
                   )}
-                </div>
-
-                <div className="auth-input-group">
-                  <input 
-                    className="auth-input" 
-                    type={showPassword ? "text" : "password"} 
-                    placeholder="Confirm Password" 
-                    autoComplete="new-password" 
-                    autoCorrect="off" 
-                    autoCapitalize="off" 
-                    spellCheck="false" 
-                    value={confirmPassword} 
-                    onChange={e => setConfirmPassword(e.target.value)} 
-                    style={{ paddingRight: '48px' }}
-                  />
-                  <i className="auth-input-icon ti ti-shield-lock"></i>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
-                  <div className="auth-input-group">
-                    <input
-                      className="auth-input"
-                      type="tel"
-                      placeholder="Phone: 0912..."
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                    />
-                    <i className="auth-input-icon ti ti-phone"></i>
-                  </div>
-                  <div className="auth-input-group">
-                    <input
-                      className="auth-input"
-                      type="number"
-                      min="18"
-                      placeholder="Age"
-                      value={age}
-                      onChange={e => setAge(e.target.value)}
-                    />
-                    <i className="auth-input-icon ti ti-calendar-event"></i>
-                  </div>
-                </div>
-
-                {/* Country and City */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="auth-input-group">
-                    <input 
-                      className="auth-input" 
-                      type="text" 
-                      placeholder="Country" 
-                      value={country} 
-                      onChange={e => setCountry(e.target.value)} 
-                    />
-                    <i className="auth-input-icon ti ti-world"></i>
-                  </div>
-                  <div className="auth-input-group">
-                    <input 
-                      className="auth-input" 
-                      type="text" 
-                      placeholder="City" 
-                      value={city} 
-                      onChange={e => setCity(e.target.value)} 
-                    />
-                    <i className="auth-input-icon ti ti-map-pin"></i>
-                  </div>
-                </div>
-
-                {/* Work Field */}
-                <div className="auth-input-group">
-                  <input 
-                    className="auth-input" 
-                    type="text" 
-                    placeholder="Work / Occupation" 
-                    value={work} 
-                    onChange={e => setWork(e.target.value)} 
-                  />
-                  <i className="auth-input-icon ti ti-briefcase"></i>
                 </div>
               </>
             )}
