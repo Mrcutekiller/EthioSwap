@@ -173,7 +173,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
             </button>
           )}
           {tradeStatus !== 'completed' && tradeStatus !== 'cancelled' && (
-            <button onClick={handleOpenDispute} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <button onClick={handleOpenDispute} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,77,77,0.3)', background: 'rgba(255,77,77,0.08)', color: '#FF4D4D', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <AlertTriangle size={14} /> {t('Open Dispute')}
             </button>
           )}
@@ -184,7 +184,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {isFinished ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-3)', gap: '8px', padding: '20px', textAlign: 'center' }}>
-            <Shield size={32} style={{ color: '#ef4444', opacity: 0.8 }} />
+            <Shield size={32} style={{ color: '#FF4D4D', opacity: 0.8 }} />
             <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{t('Chat Locked for Privacy')}</div>
             <div style={{ fontSize: '12px', maxWidth: '300px' }}>{t('Conversations are permanently locked and hidden once a trade has been completed or cancelled.')}</div>
           </div>
@@ -241,7 +241,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
                     </span>
                     {isMe && (
                       msg.is_read
-                        ? <CheckCheck size={12} color="#00d4a0" />
+                        ? <CheckCheck size={12} color="#00C896" />
                         : <Check size={12} color="var(--text-3)" />
                     )}
                   </div>

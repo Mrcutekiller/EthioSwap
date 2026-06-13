@@ -76,14 +76,14 @@ function getRelativeTime(dateString) {
 // Gold SVG icons for features
 const FeatureIcons = {
   buy: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="5" width="20" height="14" rx="2" />
       <line x1="2" y1="10" x2="22" y2="10" />
       <path d="M12 14v2M12 11v1" />
     </svg>
   ),
   sell: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10" />
       <line x1="12" y1="20" x2="12" y2="4" />
       <line x1="6" y1="20" x2="6" y2="14" />
@@ -91,20 +91,20 @@ const FeatureIcons = {
     </svg>
   ),
   send: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   ),
   receive: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="8 17 12 21 16 17" />
       <line x1="12" y1="12" x2="12" y2="21" />
       <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29" />
     </svg>
   ),
   exchange: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="16 3 21 3 21 8" />
       <line x1="4" y1="20" x2="21" y2="3" />
       <polyline points="8 21 3 21 3 16" />
@@ -112,7 +112,7 @@ const FeatureIcons = {
     </svg>
   ),
   rates: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 3v18h18" />
       <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
     </svg>
@@ -147,7 +147,7 @@ export const PaperMoney3D = ({ size = 'lg', className = '' }) => {
         cursor: 'pointer',
         userSelect: 'none',
         filter: hovered
-          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.75)) drop-shadow(0 0 40px rgba(245,197,24,0.25))'
+          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.75)) drop-shadow(0 0 40px rgba(245,166,35,0.25))'
           : 'drop-shadow(0 20px 40px rgba(0,0,0,0.6))',
         transition: 'filter 0.4s ease',
       }}
@@ -220,13 +220,13 @@ export const PaperMoney3D = ({ size = 'lg', className = '' }) => {
       <div style={{
         position: 'absolute', bottom: '-28px', left: '50%',
         transform: 'translateX(-50%)',
-        fontSize: '11px', color: 'rgba(245,197,24,0.7)',
+        fontSize: '11px', color: 'rgba(245,166,35,0.7)',
         fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap',
         pointerEvents: 'none', fontFamily: 'sans-serif',
         background: 'rgba(0, 0, 0, 0.4)',
         padding: '4px 12px',
         borderRadius: '20px',
-        border: '1px solid rgba(245,197,24,0.15)',
+        border: '1px solid rgba(245,166,35,0.15)',
         backdropFilter: 'blur(5px)',
       }}>
         {flipped ? '← Click to see USD' : 'Click to see Birr →'}
@@ -575,7 +575,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     const rotateY = ((x - centerX) / centerX) * 6; // max 6deg
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
     card.style.borderColor = 'rgba(245, 197, 24, 0.3)';
-    card.style.boxShadow = '0 0 0 1px rgba(245,197,24,0.3)';
+    card.style.boxShadow = '0 0 0 1px rgba(245,166,35,0.3)';
   };
 
   const handleCardMouseLeave = (e) => {
@@ -695,7 +695,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
         :root {
-          --gold: #f5c518;
+          --gold: #F5A623;
           --gold-bright: #ffdf5e;
           --gold-muted: rgba(245, 197, 24, 0.1);
           --bg: #020203;
@@ -705,7 +705,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           --border-bright: rgba(255, 255, 255, 0.1);
           --text-main: #ffffff;
           --text-dim: #8b92a8;
-          --accent-green: #00d4a0;
+          --accent-green: #00C896;
           --glass-bg: rgba(10, 10, 12, 0.7);
         }
 
@@ -854,7 +854,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           content: '';
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(245,197,24,0.08) 0%, transparent 50%);
+          background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(245,166,35,0.08) 0%, transparent 50%);
           opacity: 0;
           transition: opacity 0.3s;
         }
@@ -871,7 +871,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           width: 600px;
           height: 600px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(245,197,24,0.05) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(245,166,35,0.05) 0%, transparent 70%);
           filter: blur(80px);
           pointer-events: none;
           z-index: 0;
@@ -957,7 +957,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
             <Logo size={36} showText={true} />
-            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#f5c518', fontSize: '28px', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#F5A623', fontSize: '28px', cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, justifyContent: 'center' }}>
             {[
@@ -970,7 +970,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <div key={link.label}>
                 <a href={link.target} onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'block', color: '#c8c8c8', textDecoration: 'none', fontSize: '20px', fontWeight: 600, padding: '20px 0', textAlign: 'center', transition: 'color 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.color = '#f5c518'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
+                  onMouseOver={e => e.currentTarget.style.color = '#F5A623'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
                   {link.label}
                 </a>
                 {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '100%' }} />}
@@ -1104,7 +1104,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               {/* Premium $ Secure Asset / USD Reserve Card */}
               <div className="premium-card" style={{
                 background: 'linear-gradient(145deg, rgba(20,20,24,0.9) 0%, rgba(10,10,14,0.95) 100%)',
-                border: '1px solid rgba(245,197,24,0.18)',
+                border: '1px solid rgba(245,166,35,0.18)',
                 borderRadius: '24px',
                 padding: '28px',
                 boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
@@ -1113,16 +1113,16 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 position: 'relative',
                 overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(0,212,160,0.15) 0%, transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(0,200,150,0.15) 0%, transparent 70%)', filter: 'blur(10px)', pointerEvents: 'none' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                   <div style={{
                     width: '64px', height: '64px',
                     borderRadius: '16px',
-                    background: 'rgba(245,197,24,0.08)',
+                    background: 'rgba(245,166,35,0.08)',
                     border: '1.5px solid var(--gold)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '32px', fontWeight: '900', color: 'var(--gold)',
-                    boxShadow: '0 0 20px rgba(245,197,24,0.2)',
+                    boxShadow: '0 0 20px rgba(245,166,35,0.2)',
                     flexShrink: 0
                   }}>
                     $
@@ -1288,7 +1288,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
               <span className="badge-live-pulse" />
-              <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE EXCHANGE RATE</span>
+              <span style={{ fontSize: '11px', color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE EXCHANGE RATE</span>
             </div>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>USDT ↔ ETB Calculator</h2>
             <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
@@ -1296,7 +1296,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </p>
           </div>
 
-          <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
+          <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
             <MarketRates isLoggedIn={false} onSelectOffer={() => onGetStarted()} />
           </div>
         </div>
@@ -1306,7 +1306,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       <section id="security" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TRUST & SECURITY</span>
+            <span style={{ fontSize: '11px', color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>TRUST & SECURITY</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Your Security is Our Priority</h2>
           </div>
           
@@ -1318,7 +1318,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               { t: 'Dispute Resolution', d: 'Dedicated support team reviews evidence and resolves disputes fairly. Your funds are safe throughout.', ic: '⚖️' },
               { t: '2FA & PIN Lock', d: 'Secure your account with two-factor authentication and a secure 6-digit PIN lock. Your keys stay on your device.', ic: '🔑' },
             ].map((ft, idx) => (
-              <div key={idx} className="trust-card" style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '28px', transition: 'transform 0.2s, border-color 0.2s' }}>
+              <div key={idx} className="trust-card" style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '28px', transition: 'transform 0.2s, border-color 0.2s' }}>
                 <div style={{ fontSize: '32px', marginBottom: '16px' }}>{ft.ic}</div>
                 <h3 style={{ fontSize: '16px', color: '#fff', fontWeight: 600, margin: '0 0 8px 0' }}>{ft.t}</h3>
                 <p style={{ fontSize: '13px', color: '#c8c8c8', lineHeight: 1.6, margin: 0 }}>{ft.d}</p>
@@ -1335,7 +1335,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span style={{ fontSize: '11px', color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REVIEWS</span>
+            <span style={{ fontSize: '11px', color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REVIEWS</span>
             <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>Trusted by Ethiopian Traders</h2>
             <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
               All reviews are posted by verified EthioSwap traders after completing real trades.
@@ -1345,7 +1345,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           {/* Leave a review button */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '48px' }}>
             {user ? (
-              <button onClick={() => setShowReviewModal(true)} className="cta-btn-outline" style={{ border: '2px solid #f5c518', color: '#f5c518', fontWeight: 700 }}>
+              <button onClick={() => setShowReviewModal(true)} className="cta-btn-outline" style={{ border: '2px solid #F5A623', color: '#F5A623', fontWeight: 700 }}>
                 Write a Review
               </button>
             ) : (
@@ -1365,23 +1365,23 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                       const rating = Math.max(0, Math.min(5, Math.round(Number(r.rating) || 5)));
                       return (
                         <>
-                          {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '15px' }}>★</span>)}
+                          {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#F5A623', fontSize: '15px' }}>★</span>)}
                           {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#2a2a2a', fontSize: '15px' }}>★</span>)}
                         </>
                       );
                     })()}
                   </div>
-                  <span style={{ fontSize: '40px', color: 'rgba(245,197,24,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, marginTop: '-8px' }}>"</span>
+                  <span style={{ fontSize: '40px', color: 'rgba(245,166,35,0.12)', fontFamily: 'Georgia, serif', lineHeight: 1, marginTop: '-8px' }}>"</span>
                 </div>
                 <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7, margin: '0 0 20px 0', fontStyle: 'italic' }}>"{r.content}"</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(245,197,24,0.2), rgba(245,197,24,0.05))', border: '1px solid rgba(245,197,24,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f5c518', fontWeight: 800, fontSize: '16px', flexShrink: 0 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(245,166,35,0.2), rgba(245,166,35,0.05))', border: '1px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F5A623', fontWeight: 800, fontSize: '16px', flexShrink: 0 }}>
                     {(r.username || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div style={{ fontSize: '14px', color: '#fff', fontWeight: 700 }}>@{r.username}</div>
                     <div style={{ fontSize: '11px', color: '#8b92a8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <span style={{ color: '#00d4a0', fontWeight: 700 }}>✓ Verified Trader</span>
+                      <span style={{ color: '#00C896', fontWeight: 700 }}>✓ Verified Trader</span>
                       <span>•</span>
                       <span>{getRelativeTime(r.createdAt || r.created_at || r._creationTime)}</span>
                     </div>
@@ -1538,7 +1538,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             {reviewSuccess ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <span style={{ fontSize: '48px' }}>🎉</span>
-                <p style={{ fontSize: '15px', color: '#00d4a0', fontWeight: 700, marginTop: '16px' }}>
+                <p style={{ fontSize: '15px', color: '#00C896', fontWeight: 700, marginTop: '16px' }}>
                   Your review has been posted successfully. Thank you!
                 </p>
                 <button onClick={() => { setShowReviewModal(false); setReviewSuccess(false); }} className="cta-btn-gold" style={{ marginTop: '24px', height: '40px', fontSize: '14px', borderRadius: '8px' }}>
@@ -1551,7 +1551,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '8px' }}>Rating</label>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     {[1, 2, 3, 4, 5].map(star => (
-                      <button key={star} type="button" onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '32px', padding: 0, color: star <= reviewRating ? '#f5c518' : '#3a3a3a' }}>★</button>
+                      <button key={star} type="button" onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '32px', padding: 0, color: star <= reviewRating ? '#F5A623' : '#3a3a3a' }}>★</button>
                     ))}
                   </div>
                 </div>
@@ -1565,14 +1565,14 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                     placeholder="Tell others about your trading experience on EthioSwap..."
                     style={{ width: '100%', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#fff', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8A9BB8', marginTop: '4px' }}>
                     <span>Must be 20-300 characters</span>
                     <span>{reviewContent.length} / 300</span>
                   </div>
                 </div>
 
                 {reviewError && (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '10px 12px', borderRadius: '8px', color: '#f87171', fontSize: '12px' }}>
+                  <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.2)', padding: '10px 12px', borderRadius: '8px', color: '#FF4D4D', fontSize: '12px' }}>
                     ⚠️ {reviewError}
                   </div>
                 )}

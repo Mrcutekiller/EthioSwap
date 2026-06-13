@@ -96,7 +96,7 @@ const SendReceive = ({ onClose }) => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '14px', fontWeight: 600 }}>@{selectedUser.username}</div>
-                  <div style={{ fontSize: '11px', color: '#00d4a0' }}>✅ Verified</div>
+                  <div style={{ fontSize: '11px', color: '#00C896' }}>✅ Verified</div>
                 </div>
                 <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
               </div>
@@ -115,11 +115,11 @@ const SendReceive = ({ onClose }) => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
                   <span style={{ color: 'var(--text-3)' }}>Platform Fee:</span>
-                  <span style={{ fontWeight: 600, color: '#00d4a0' }}>FREE 🎉</span>
+                  <span style={{ fontWeight: 600, color: '#00C896' }}>FREE 🎉</span>
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                   <span style={{ fontWeight: 700 }}>They Receive:</span>
-                  <span style={{ fontWeight: 800, color: '#00d4a0' }}>${amount || '0.00'}</span>
+                  <span style={{ fontWeight: 800, color: '#00C896' }}>${amount || '0.00'}</span>
                 </div>
               </div>
 

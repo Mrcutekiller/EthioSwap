@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component {
           textAlign: 'center'
         }}>
           <div style={{
-            background: '#111318',
+            background: '#141827',
             borderRadius: '24px',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             width: '100%',

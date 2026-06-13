@@ -14,7 +14,7 @@ const Onboarding = ({ onComplete }) => {
       icon: '🎉',
       title: t('Welcome to EthioSwap!'),
       subtitle: t('Buy & Sell USDT safely in Ethiopia'),
-      color: '#f5c518'
+      color: '#F5A623'
     },
     {
       icon: <Shield size={36} color="#4f46e5" />,
@@ -23,10 +23,10 @@ const Onboarding = ({ onComplete }) => {
       color: '#4f46e5'
     },
     {
-      icon: <TrendingUp size={36} color="#00d4a0" />,
+      icon: <TrendingUp size={36} color="#00C896" />,
       title: t('Best Rates in Ethiopia'),
       subtitle: t('Trade directly with other Ethiopians'),
-      color: '#00d4a0'
+      color: '#00C896'
     },
     {
       icon: <Star size={36} color="#f59e0b" />,
@@ -35,10 +35,10 @@ const Onboarding = ({ onComplete }) => {
       color: '#f59e0b'
     },
     {
-      icon: <Rocket size={36} color="#ef4444" />,
+      icon: <Rocket size={36} color="#FF4D4D" />,
       title: t('Ready to Start!'),
       subtitle: t('Complete your KYC to unlock all features'),
-      color: '#ef4444'
+      color: '#FF4D4D'
     }
   ];
 

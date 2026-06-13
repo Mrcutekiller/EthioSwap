@@ -258,7 +258,7 @@ const P2PListings = () => {
       case 'Dashen Bank':
         return { bg: 'rgba(255, 145, 0, 0.08)', border: 'rgba(255, 145, 0, 0.25)', text: '#ffb74d' }; // Dashen orange
       case 'Bank of Abyssinia':
-        return { bg: 'rgba(245, 197, 24, 0.08)', border: 'rgba(245, 197, 24, 0.25)', text: '#f5c518' }; // Abyssinia gold
+        return { bg: 'rgba(245, 197, 24, 0.08)', border: 'rgba(245, 197, 24, 0.25)', text: '#F5A623' }; // Abyssinia gold
       case 'Awash Bank':
         return { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.25)', text: '#ff7676' }; // Awash red
       case 'Wegagen Bank':
@@ -294,13 +294,13 @@ const P2PListings = () => {
         .gold-glow-btn {
           position: relative;
           overflow: hidden;
-          background: linear-gradient(135deg, #f5c518 0%, #e2b310 100%);
-          box-shadow: 0 4px 14px rgba(245, 197, 24, 0.15);
+          background: #F5A623;
+          box-shadow: 0 4px 14px rgba(245, 166, 35, 0.15);
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .gold-glow-btn:hover {
           transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(245, 197, 24, 0.3);
+          box-shadow: 0 6px 20px rgba(245, 166, 35, 0.3);
         }
         .gold-glow-btn::after {
           content: '';
@@ -313,13 +313,13 @@ const P2PListings = () => {
         .teal-glow-btn {
           position: relative;
           overflow: hidden;
-          background: linear-gradient(135deg, #00d4a0 0%, #00b88b 100%);
-          box-shadow: 0 4px 14px rgba(0, 212, 160, 0.15);
+          background: #00C896;
+          box-shadow: 0 4px 14px rgba(0, 200, 150, 0.15);
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .teal-glow-btn:hover {
           transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(0, 212, 160, 0.3);
+          box-shadow: 0 6px 20px rgba(0, 200, 150, 0.3);
         }
         .teal-glow-btn::after {
           content: '';
@@ -373,8 +373,8 @@ const P2PListings = () => {
       {/* ── Header ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>P2P Marketplace</h2>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
+          <h2 style={{ fontSize: '22px', fontWeight: 600, color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>P2P Marketplace</h2>
+          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -392,7 +392,7 @@ const P2PListings = () => {
             <button 
               onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }} 
               className="btn btn-gold" 
-              style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+              style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
             >
               <span>+ Post Ad</span>
             </button>
@@ -407,13 +407,13 @@ const P2PListings = () => {
               }}
               style={{
                 background: 'transparent',
-                border: '1.5px solid #f5c518',
+                border: '1.5px solid #F5A623',
                 borderRadius: '20px',
                 height: '38px',
                 padding: '0 16px',
                 fontSize: '12px',
-                fontWeight: 700,
-                color: '#f5c518',
+                fontWeight: 600,
+                color: '#F5A623',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -466,10 +466,10 @@ const P2PListings = () => {
             <h4 style={{ margin: 0, fontSize: '16px', color: '#fff', fontWeight: 800 }}>@{user?.username}</h4>
             {kycApproved && (
               <span style={{ 
-                background: 'rgba(0,212,160,0.15)', 
-                color: '#00d4a0', 
+                background: 'rgba(0,200,150,0.15)', 
+                color: '#00C896', 
                 fontSize: '9px', 
-                fontWeight: 700, 
+                fontWeight: 600, 
                 padding: '1px 5px', 
                 borderRadius: '99px',
                 display: 'inline-flex',
@@ -506,22 +506,22 @@ const P2PListings = () => {
 
       {/* ── Platform Analytics Row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-        <div className="premium-dashboard-card" style={{ background: '#111318', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Best Buy Rate</div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: '#00d4a0', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
+        <div className="premium-dashboard-card" style={{ background: '#141827', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>Best Buy Rate</div>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#00C896', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
             {rate} <span style={{ fontSize: '11px', fontWeight: 500 }}>ETB</span>
           </div>
         </div>
-        <div className="premium-dashboard-card" style={{ background: '#111318', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Best Sell Rate</div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--gold)', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
+        <div className="premium-dashboard-card" style={{ background: '#141827', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>Best Sell Rate</div>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--gold)', marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
             {systemSettings?.etbRatePerDollarSell ?? rate} <span style={{ fontSize: '11px', fontWeight: 500 }}>ETB</span>
           </div>
         </div>
-        <div className="premium-dashboard-card" style={{ background: '#111318', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Platform Fee</div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: '#00d4a0', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            0% <span className="notif-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00d4a0' }} />
+        <div className="premium-dashboard-card" style={{ background: '#141827', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>Platform Fee</div>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#00C896', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            0% <span className="notif-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896' }} />
           </div>
         </div>
       </div>
@@ -529,7 +529,7 @@ const P2PListings = () => {
       {/* ── Buy/Sell Segmented Toggle ── */}
       <div style={{ 
         display: 'flex', 
-        background: '#111318', 
+        background: '#141827', 
         border: '1px solid rgba(255,255,255,0.06)', 
         borderRadius: '12px', 
         padding: '4px', 
@@ -544,16 +544,16 @@ const P2PListings = () => {
             border: 'none', 
             cursor: 'pointer',
             fontFamily: 'var(--font)', 
-            fontWeight: 800, 
+            fontWeight: 600, 
             fontSize: '14px',
-            background: p2pTab === 'buy' ? 'linear-gradient(135deg, #00d4a0 0%, #00b88b 100%)' : 'transparent',
-            color: p2pTab === 'buy' ? '#0a0a0a' : '#6b7280',
+            background: p2pTab === 'buy' ? '#00C896' : 'transparent',
+            color: p2pTab === 'buy' ? '#04342C' : '#8A9BB8',
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '8px',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: p2pTab === 'buy' ? '0 4px 15px rgba(0,212,160,0.3)' : 'none'
+            boxShadow: p2pTab === 'buy' ? '0 4px 15px rgba(0,200,150,0.3)' : 'none'
           }}
         >
           Buy USD
@@ -566,16 +566,16 @@ const P2PListings = () => {
             border: 'none', 
             cursor: 'pointer',
             fontFamily: 'var(--font)', 
-            fontWeight: 800, 
+            fontWeight: 600, 
             fontSize: '14px',
-            background: p2pTab === 'sell' ? 'linear-gradient(135deg, #f5c518 0%, #e2b310 100%)' : 'transparent',
-            color: p2pTab === 'sell' ? '#0a0a0a' : '#6b7280',
+            background: p2pTab === 'sell' ? '#F5A623' : 'transparent',
+            color: p2pTab === 'sell' ? '#04342C' : '#8A9BB8',
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '8px',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: p2pTab === 'sell' ? '0 4px 15px rgba(245,197,24,0.3)' : 'none'
+            boxShadow: p2pTab === 'sell' ? '0 4px 15px rgba(245,166,35,0.3)' : 'none'
           }}
         >
           Sell USD
@@ -594,7 +594,7 @@ const P2PListings = () => {
             style={{
               width: '100%',
               padding: '11px 12px 11px 36px',
-              background: '#111318',
+              background: '#141827',
               border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: '10px',
               color: '#fff',
@@ -627,7 +627,7 @@ const P2PListings = () => {
           onChange={e => setSortBy(e.target.value)}
           style={{
             padding: '11px 28px 11px 12px',
-            background: '#111318',
+            background: '#141827',
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: '10px',
             color: '#fff',
@@ -666,12 +666,12 @@ const P2PListings = () => {
             padding: '6px 14px',
             borderRadius: '20px',
             fontSize: '11px',
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             border: '1px solid',
-            background: onlyVerified ? 'rgba(245, 197, 24, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-            borderColor: onlyVerified ? '#f5c518' : 'rgba(255, 255, 255, 0.08)',
-            color: onlyVerified ? '#f5c518' : '#8b92a8',
+            background: onlyVerified ? 'rgba(245, 166, 35, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+            borderColor: onlyVerified ? '#F5A623' : 'rgba(255, 255, 255, 0.08)',
+            color: onlyVerified ? '#F5A623' : '#8b92a8',
             transition: 'all 0.2s',
           }}
         >
@@ -683,12 +683,12 @@ const P2PListings = () => {
             padding: '6px 14px',
             borderRadius: '20px',
             fontSize: '11px',
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             border: '1px solid',
-            background: onlyKyc ? 'rgba(0, 212, 160, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-            borderColor: onlyKyc ? '#00d4a0' : 'rgba(255, 255, 255, 0.08)',
-            color: onlyKyc ? '#00d4a0' : '#8b92a8',
+            background: onlyKyc ? 'rgba(0, 200, 150, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+            borderColor: onlyKyc ? '#00C896' : 'rgba(255, 255, 255, 0.08)',
+            color: onlyKyc ? '#00C896' : '#8b92a8',
             transition: 'all 0.2s',
           }}
         >
@@ -714,12 +714,12 @@ const P2PListings = () => {
                   cursor: 'pointer',
                   fontFamily: 'var(--font)', 
                   fontSize: '11.5px', 
-                  fontWeight: 700, 
+                  fontWeight: 600, 
                   transition: 'all 0.2s ease',
-                  background: isSelected ? '#f5c518' : '#111318',
-                  color: isSelected ? '#0a0a0a' : '#c8c8c8',
-                  borderColor: isSelected ? '#f5c518' : 'rgba(255,255,255,0.07)',
-                  boxShadow: isSelected ? '0 4px 12px rgba(245,197,24,0.15)' : 'none',
+                  background: isSelected ? '#F5A623' : '#141827',
+                  color: isSelected ? '#04342C' : '#c8c8c8',
+                  borderColor: isSelected ? '#F5A623' : 'rgba(255,255,255,0.07)',
+                  boxShadow: isSelected ? '0 4px 12px rgba(245,166,35,0.15)' : 'none',
                 }}
               >
                 {p === 'All' ? '🌐 All Methods' : `${method?.icon} ${method?.label || p}`}
@@ -753,15 +753,15 @@ const P2PListings = () => {
                   flexShrink: 0, 
                   padding: '7px 14px', 
                   borderRadius: '99px', 
-                  border: isSelected ? '1.5px solid #00d4a0' : '1px solid rgba(255,255,255,0.07)', 
+                  border: isSelected ? '1.5px solid #00C896' : '1px solid rgba(255,255,255,0.07)', 
                   cursor: 'pointer',
                   fontFamily: 'var(--font)', 
                   fontSize: '11.5px', 
-                  fontWeight: 700, 
+                  fontWeight: 600, 
                   transition: 'all 0.2s ease',
-                  background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#111318',
-                  color: isSelected ? '#00d4a0' : '#c8c8c8',
-                  boxShadow: isSelected ? '0 0 10px rgba(0, 212, 160, 0.1)' : 'none',
+                  background: isSelected ? 'rgba(0, 200, 150, 0.08)' : '#141827',
+                  color: isSelected ? '#00C896' : '#c8c8c8',
+                  boxShadow: isSelected ? '0 0 10px rgba(0, 200, 150, 0.1)' : 'none',
                 }}
               >
                 {b.label}
@@ -779,8 +779,8 @@ const P2PListings = () => {
       {/* ── KYC WARNING BANNER ── */}
       {!kycApproved && !kycDismissed && (
         <div style={{
-          background: '#111318', 
-          borderLeft: '3px solid #f5c518',
+          background: '#141827', 
+          borderLeft: '3px solid #F5A623',
           borderTop: '1px solid rgba(255,255,255,0.07)',
           borderRight: '1px solid rgba(255,255,255,0.07)',
           borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -794,11 +794,11 @@ const P2PListings = () => {
         }}>
           <div style={{ fontSize: '20px', marginTop: '2px' }}>⚠️</div>
           <div style={{ flex: 1, paddingRight: '20px' }}>
-            <div style={{ fontWeight: 700, fontSize: '15px', color: '#f5c518' }}>
+            <div style={{ fontWeight: 600, fontSize: '15px', color: '#F5A623' }}>
               Identity Verification Required
             </div>
             <div style={{ fontSize: '13px', color: '#c8c8c8', marginTop: '4px', lineHeight: 1.4 }}>
-              Post listings and open escrow P2P trades securely. Go to <a href="#profile" style={{ color: '#f5c518', fontWeight: 700, textDecoration: 'underline' }}>Profile → Verify Identity</a> to upload documents and selfie.
+              Post listings and open escrow P2P trades securely. Go to <a href="#profile" style={{ color: '#F5A623', fontWeight: 600, textDecoration: 'underline' }}>Profile → Verify Identity</a> to upload documents and selfie.
             </div>
           </div>
           <button 
@@ -809,7 +809,7 @@ const P2PListings = () => {
               right: '12px',
               background: 'none',
               border: 'none',
-              color: '#6b7280',
+              color: '#8A9BB8',
               fontSize: '14px',
               cursor: 'pointer',
               fontWeight: 700
@@ -865,15 +865,15 @@ const P2PListings = () => {
                       width: '36px', 
                       height: '36px', 
                       borderRadius: '50%',
-                      background: isBuyType ? 'rgba(0, 212, 160, 0.1)' : 'rgba(245, 197, 24, 0.1)',
-                      border: `1.5px solid ${isBuyType ? '#00d4a0' : '#f5c518'}`,
+                      background: isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)',
+                      border: `1.5px solid ${isBuyType ? '#00C896' : '#F5A623'}`,
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      fontWeight: 800, 
+                      fontWeight: 600, 
                       fontSize: '13px', 
-                      color: isBuyType ? '#00d4a0' : '#f5c518',
-                      boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 212, 160, 0.1)' : 'rgba(245, 197, 24, 0.1)'}`,
+                      color: isBuyType ? '#00C896' : '#F5A623',
+                      boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)'}`,
                       flexShrink: 0
                     }}>
                       {(listing.sellerName || 'U').charAt(0).toUpperCase()}
@@ -883,52 +883,52 @@ const P2PListings = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span 
                           onClick={(e) => { e.stopPropagation(); setViewingTraderId(listing.sellerId); }}
-                          style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          style={{ fontWeight: 600, fontSize: '14px', color: '#F5A623', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                         >
                           @{listing.sellerName}
                         </span>
                         {(listing.sellerKycStatus === 'verified' || listing.sellerKycStatus === 'approved') && (
                           <span style={{ 
-                            background: 'rgba(0,212,160,0.12)', 
-                            color: '#00d4a0', 
+                            background: 'rgba(0,200,150,0.12)', 
+                            color: '#00C896', 
                             fontSize: '8.5px', 
-                            fontWeight: 700, 
+                            fontWeight: 600, 
                             padding: '2px 6px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             whiteSpace: 'nowrap',
-                            border: '1px solid rgba(0,212,160,0.2)'
+                            border: '1px solid rgba(0,200,150,0.2)'
                           }}>
                             ✅ Verified
                           </span>
                         )}
                         {listing.isSellerVerifiedTrader && (
                           <span style={{ 
-                            background: 'rgba(245,197,24,0.12)', 
-                            color: '#f5c518', 
+                            background: 'rgba(245,166,35,0.12)', 
+                            color: '#F5A623', 
                             fontSize: '8.5px', 
-                            fontWeight: 700, 
+                            fontWeight: 600, 
                             padding: '2px 6px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             whiteSpace: 'nowrap',
-                            border: '1px solid rgba(245,197,24,0.2)'
+                            border: '1px solid rgba(245,166,35,0.2)'
                           }}>
                             ★ Pro
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                        <span style={{ color: '#f5c518', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span style={{ color: '#F5A623', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
                           ⭐ {(listing.sellerAverageRating || 5.0).toFixed(1)}
                         </span>
-                        <span style={{ color: 'var(--text-3)' }}>
+                        <span style={{ color: 'var(--muted)' }}>
                           ({listing.sellerTotalTrades || 0} trades)
                         </span>
                         <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                        <span style={{ color: '#00d4a0', fontWeight: 600 }}>
+                        <span style={{ color: '#00C896', fontWeight: 600 }}>
                           👍 {listing.sellerPositivePercentage || 100}% positive
                         </span>
 
@@ -938,10 +938,10 @@ const P2PListings = () => {
 
                   <span style={{
                     fontSize: '9px',
-                    fontWeight: 800,
-                    color: isBuyType ? '#00d4a0' : '#f5c518',
-                    background: isBuyType ? 'rgba(0, 212, 160, 0.12)' : 'rgba(245, 197, 24, 0.12)',
-                    border: `1px solid ${isBuyType ? 'rgba(0, 212, 160, 0.2)' : 'rgba(245, 197, 24, 0.2)'}`,
+                    fontWeight: 600,
+                    color: isBuyType ? '#00C896' : '#F5A623',
+                    background: isBuyType ? 'rgba(0, 200, 150, 0.12)' : 'rgba(245, 166, 35, 0.12)',
+                    border: `1px solid ${isBuyType ? 'rgba(0, 200, 150, 0.2)' : 'rgba(245, 166, 35, 0.2)'}`,
                     padding: '4px 8px',
                     borderRadius: '6px',
                     textTransform: 'uppercase',
@@ -955,22 +955,22 @@ const P2PListings = () => {
                 {/* Middle Row: Big USD volume, rate, limits */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '14px 18px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
                   <div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AD VOLUME</div>
-                    <div style={{ fontSize: '24px', marginTop: '2px', color: '#f5c518', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-                      ${(listing.amountEth ?? 0).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>USD</span>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AD VOLUME</div>
+                    <div style={{ fontSize: '24px', marginTop: '2px', color: '#F5A623', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+                      ${(listing.amountEth ?? 0).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>USD</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RATE</div>
-                    <div style={{ fontSize: '18px', marginTop: '2px', color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-                      {effectiveRate} <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>ETB/$</span>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RATE</div>
+                    <div style={{ fontSize: '18px', marginTop: '2px', color: '#00C896', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+                      {effectiveRate} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>ETB/$</span>
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#e0e0e0', padding: '0 2px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Limits:</span>
-                  <strong style={{ color: '#00d4a0', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+                  <span style={{ color: 'var(--muted)' }}>Limits:</span>
+                  <strong style={{ color: '#00C896', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
                     {listing.minLimitEtb.toLocaleString()} – {listing.maxLimitEtb.toLocaleString()} ETB
                   </strong>
                 </div>
@@ -1005,10 +1005,10 @@ const P2PListings = () => {
                     textAlign: 'center', 
                     padding: '12px', 
                     fontSize: '13px', 
-                    fontWeight: 700,
-                    color: '#f5c518', 
-                    background: 'rgba(245,197,24,0.05)',
-                    border: '1px solid rgba(245,197,24,0.15)', 
+                    fontWeight: 600,
+                    color: '#F5A623', 
+                    background: 'rgba(245,166,35,0.05)',
+                    border: '1px solid rgba(245,166,35,0.15)', 
                     borderRadius: '12px',
                   }}>
                     ✓ Your active P2P listing
@@ -1030,9 +1030,9 @@ const P2PListings = () => {
                       border: 'none',
                       borderRadius: '12px',
                       fontSize: '14.5px', 
-                      fontWeight: 800,
+                      fontWeight: 600,
                       cursor: kycApproved ? 'pointer' : 'not-allowed',
-                      color: '#0a0a0a',
+                      color: '#04342C',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1297,7 +1297,7 @@ const P2PListings = () => {
                     @{selectedListing.sellerName}
                   </span>
                   {(selectedListing.sellerKycStatus === 'verified' || selectedListing.sellerKycStatus === 'approved') && (
-                    <span style={{ background: 'rgba(0,212,160,0.12)', color: '#00d4a0', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
+                    <span style={{ background: 'rgba(0,200,150,0.12)', color: '#00C896', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
                       ✅ Verified
                     </span>
                   )}
@@ -1306,7 +1306,7 @@ const P2PListings = () => {
                   <span>⭐ {(selectedListing.sellerAverageRating || 5.0).toFixed(1)}</span>
                   <span>({selectedListing.sellerTotalTrades || 0} trades)</span>
                   <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
-                  <span style={{ color: '#00d4a0' }}>👍 {selectedListing.sellerPositivePercentage || 100}% positive</span>
+                  <span style={{ color: '#00C896' }}>👍 {selectedListing.sellerPositivePercentage || 100}% positive</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -1369,7 +1369,7 @@ const P2PListings = () => {
                       {Math.round(parseFloat(tradeamountEth) * (selectedListing.customRateEtb || rate)).toLocaleString()} ETB
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00d4a0', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
                     <span>Platform Fee:</span>
                     <span>{systemSettings?.isP2pFreePeriod ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
                   </div>
@@ -1538,7 +1538,7 @@ const TraderProfileModal = ({ viewingTraderId, setViewingTraderId }) => {
             <div style={{ fontWeight: 700, fontSize: '16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
               @{traderStats.username}
               {traderStats.kycApproved && (
-                <span style={{ fontSize: '12px', color: '#00d4a0' }} title="KYC Verified">✅</span>
+                <span style={{ fontSize: '12px', color: '#00C896' }} title="KYC Verified">✅</span>
               )}
             </div>
 
@@ -1556,7 +1556,7 @@ const TraderProfileModal = ({ viewingTraderId, setViewingTraderId }) => {
           </div>
           <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.02)' }}>
             <div style={{ fontSize: '10px', color: 'var(--text-3)', textTransform: 'uppercase' }}>POSITIVE FEEDBACK</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: '#00d4a0', marginTop: '4px' }}>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#00C896', marginTop: '4px' }}>
               👍 {traderStats.positivePercentage}% <span style={{ fontSize: '11px', color: 'var(--text-3)', fontWeight: 500 }}>Positive</span>
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>{traderStats.totalCompletedTrades} completed trades</div>

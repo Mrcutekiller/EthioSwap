@@ -216,7 +216,7 @@ const TransactionHistory = () => {
       : '';
 
     return (
-      <div className="premium-dashboard-card" style={{ padding: '20px', borderRadius: '16px', background: '#111318', border: '1px solid var(--border)' }}>
+      <div className="premium-dashboard-card" style={{ padding: '20px', borderRadius: '16px', background: '#141827', border: '1px solid #1E2640' }}>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Monthly Trading Volume (USDT)
         </div>
@@ -399,13 +399,21 @@ const TransactionHistory = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
+      <style>{`
+        @keyframes hist-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hist-row { animation: hist-fade 0.3s ease both; }
+        .hist-row:hover { background: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.08) !important; }
+        .tx-tab-btn { transition: all 0.2s ease !important; }
+        .tx-tab-btn:hover { opacity: 0.85; }
+        .filter-select:focus { border-color: rgba(255,215,0,0.3) !important; outline: none; }
+      `}</style>
       
-      {/* ─── Tabs segment ─── */}
-      <div style={{ display: 'flex', background: '#111318', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '4px', gap: '4px' }}>
-        <button onClick={() => setActiveHistoryTab('p2p')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '13px', background: activeHistoryTab === 'p2p' ? 'var(--gold)' : 'transparent', color: activeHistoryTab === 'p2p' ? '#000' : 'var(--text-secondary)' }}>
-          🤝 P2P Trades History
+      {/* ─── Premium Tab Header ─── */}
+      <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '20px', padding: '6px', display: 'flex', gap: '6px' }}>
+        <button onClick={() => setActiveHistoryTab('p2p')} className="tx-tab-btn" style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.2s ease', background: activeHistoryTab === 'p2p' ? '#F5A623' : 'transparent', color: activeHistoryTab === 'p2p' ? '#04342C' : '#8A9BB8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: activeHistoryTab === 'p2p' ? '0 4px 16px rgba(245,166,35,0.25)' : 'none' }}>
+          🤝 P2P Trade History
         </button>
-        <button onClick={() => setActiveHistoryTab('wallet')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '13px', background: activeHistoryTab === 'wallet' ? 'var(--gold)' : 'transparent', color: activeHistoryTab === 'wallet' ? '#000' : 'var(--text-secondary)' }}>
+        <button onClick={() => setActiveHistoryTab('wallet')} className="tx-tab-btn" style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.2s ease', background: activeHistoryTab === 'wallet' ? '#00C896' : 'transparent', color: activeHistoryTab === 'wallet' ? '#04342C' : '#8A9BB8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: activeHistoryTab === 'wallet' ? '0 4px 16px rgba(0,200,150,0.25)' : 'none' }}>
           💳 Wallet Transactions
         </button>
       </div>
@@ -413,25 +421,25 @@ const TransactionHistory = () => {
       {activeHistoryTab === 'p2p' ? (
         <>
           {/* P2P Trades Summary Header */}
-          <div className="card glass-card" style={{ padding: '24px', background: 'linear-gradient(135deg, rgba(245, 197, 24, 0.05) 0%, rgba(0, 212, 160, 0.05) 100%)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>P2P Trading Portfolio</h3>
+          <div style={{ background: 'linear-gradient(135deg, rgba(245,166,35,0.06) 0%, rgba(0,200,150,0.04) 100%)', border: '1px solid rgba(245,166,35,0.12)', borderRadius: '18px', padding: '24px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '18px' }}>P2P Trading Portfolio</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '20px' }}>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Trades Completed</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff' }}>{p2pStats.totalTrades}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Trades Done</div>
+                <div style={{ fontSize: '26px', fontWeight: 600, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{p2pStats.totalTrades}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total USDT Bought</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: '#00d4a0' }}>+${p2pStats.usdtBought.toFixed(2)}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total Bought</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#00C896', fontFamily: "'JetBrains Mono', monospace" }}>+${p2pStats.usdtBought.toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total USDT Sold</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: '#ef4444' }}>-${p2pStats.usdtSold.toFixed(2)}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total Sold</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#FF4D4D', fontFamily: "'JetBrains Mono', monospace" }}>-${p2pStats.usdtSold.toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Average Rating</div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {p2pStats.avgRating.toFixed(1)} <Star size={16} fill="var(--gold)" stroke="none" />
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Avg Rating</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#F5A623', fontFamily: "'JetBrains Mono', monospace", display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {p2pStats.avgRating.toFixed(1)} <Star size={16} fill="#F5A623" stroke="none" />
                 </div>
               </div>
             </div>
@@ -441,29 +449,32 @@ const TransactionHistory = () => {
           {renderVolumeChart()}
 
           {/* P2P Filters and Export */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select className="input" style={{ width: 'auto', marginBottom: 0 }} value={p2pFilterStatus} onChange={e => setP2pFilterStatus(e.target.value)}>
+          <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '14px', padding: '14px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={p2pFilterStatus} onChange={e => setP2pFilterStatus(e.target.value)}>
               <option value="all">All Statuses</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="disputed">Disputed</option>
+              <option value="completed">✅ Completed</option>
+              <option value="cancelled">❌ Cancelled</option>
+              <option value="disputed">⚠️ Disputed</option>
             </select>
-            <select className="input" style={{ width: 'auto', marginBottom: 0 }} value={p2pFilterType} onChange={e => setP2pFilterType(e.target.value)}>
+            <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={p2pFilterType} onChange={e => setP2pFilterType(e.target.value)}>
               <option value="all">All Types</option>
-              <option value="buy">Buy Trades</option>
-              <option value="sell">Sell Trades</option>
+              <option value="buy">🟢 Buy Trades</option>
+              <option value="sell">🔴 Sell Trades</option>
             </select>
-            <input type="date" className="input" style={{ width: 'auto', marginBottom: 0, fontSize: '12px' }} value={p2pDateRange.start} onChange={e => setP2pDateRange(p => ({ ...p, start: e.target.value }))} />
-            <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>to</span>
-            <input type="date" className="input" style={{ width: 'auto', marginBottom: 0, fontSize: '12px' }} value={p2pDateRange.end} onChange={e => setP2pDateRange(p => ({ ...p, end: e.target.value }))} />
+            <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={p2pDateRange.start} onChange={e => setP2pDateRange(p => ({ ...p, start: e.target.value }))} />
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>→</span>
+            <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={p2pDateRange.end} onChange={e => setP2pDateRange(p => ({ ...p, end: e.target.value }))} />
             
-            <button onClick={handleExportCSV} className="btn btn-ghost" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '10px 14px' }}>
-              <Download size={14} /> Export CSV
+            <button onClick={handleExportCSV} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '10px', color: '#F5A623', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s ease', whiteSpace: 'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.18)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.1)'; }}
+            >
+              <Download size={13} /> Export CSV
             </button>
           </div>
 
           {/* P2P Trades list (responsive table/cards) */}
-          <div className="card" style={{ padding: '0px', overflowX: 'auto' }}>
+          <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '18px', overflow: 'hidden' }}>
             {p2pTrades.length === 0 ? (
               <EmptyState icon="🤝" title="No Trades Found" subtitle="You haven't participated in any trades yet matching these filters." />
             ) : (
@@ -471,48 +482,48 @@ const TransactionHistory = () => {
                 {/* Desktop View Table */}
                 <table className="desktop-only" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Date</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Type</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Amount</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Rate</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Partner</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Status</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Rating Given</th>
+                    <tr style={{ borderBottom: '1px solid #1E2640', background: '#141827' }}>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Date</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Type</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Amount</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Rate</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Total</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Partner</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Status</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Rating Given</th>
                     </tr>
                   </thead>
                   <tbody>
                     {p2pTrades.map(t => {
                       const totalEtb = t.amountEth * (t.rate || 190);
                       return (
-                        <tr key={t._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <tr key={t._id} style={{ borderBottom: '1px solid #1E2640' }}>
                           <td style={{ padding: '16px', fontSize: '13px' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
-                          <td style={{ padding: '16px', fontSize: '13px', fontWeight: 800, color: t.tradeType === 'buy' ? '#00d4a0' : '#ef4444' }}>
+                          <td style={{ padding: '16px', fontSize: '13px', fontWeight: 600, color: t.tradeType === 'buy' ? '#00C896' : '#FF4D4D' }}>
                             {t.tradeType.toUpperCase()}
                           </td>
                           <td style={{ padding: '16px', fontSize: '13px', fontFamily: 'JetBrains Mono, monospace' }}>${t.amountEth.toFixed(2)}</td>
                           <td style={{ padding: '16px', fontSize: '13px', fontFamily: 'JetBrains Mono, monospace' }}>{t.rate?.toFixed(2) || '---'} ETB</td>
-                          <td style={{ padding: '16px', fontSize: '13px', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{totalEtb.toFixed(2)} ETB</td>
+                          <td style={{ padding: '16px', fontSize: '13px', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{totalEtb.toFixed(2)} ETB</td>
                           <td style={{ padding: '16px', fontSize: '13px', fontWeight: 600 }}>@{t.counterparty || 'user'}</td>
                           <td style={{ padding: '16px', fontSize: '12px' }}>
                             <span style={{
-                              fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase',
-                              color: t.status === 'completed' ? '#00d4a0' : t.status === 'cancelled' ? '#ef4444' : '#f5c518',
-                              background: t.status === 'completed' ? 'rgba(0,212,160,0.1)' : t.status === 'cancelled' ? 'rgba(239,68,68,0.1)' : 'rgba(245,197,24,0.1)'
+                              fontWeight: 600, fontSize: '10px', padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase',
+                              color: t.status === 'completed' ? '#00C896' : t.status === 'cancelled' ? '#FF4D4D' : '#F5A623',
+                              background: t.status === 'completed' ? 'rgba(0,200,150,0.12)' : t.status === 'cancelled' ? 'rgba(255,77,77,0.12)' : 'rgba(245,166,35,0.12)'
                             }}>{t.status}</span>
                           </td>
                           <td style={{ padding: '16px', fontSize: '13px' }}>
                             {t.ratingGiven ? (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--gold)', fontWeight: 700 }}>
-                                {t.ratingGiven} <Star size={12} fill="var(--gold)" stroke="none" />
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#F5A623', fontWeight: 600 }}>
+                                {t.ratingGiven} <Star size={12} fill="#F5A623" stroke="none" />
                               </span>
                             ) : t.status === 'completed' ? (
                               <button onClick={() => setRatingTrade(t)} className="btn btn-sm btn-gold" style={{ padding: '4px 8px', fontSize: '11px' }}>
                                 Rate
                               </button>
                             ) : (
-                              <span style={{ color: 'var(--text-3)' }}>---</span>
+                              <span style={{ color: '#8A9BB8' }}>---</span>
                             )}
                           </td>
                         </tr>
@@ -526,38 +537,38 @@ const TransactionHistory = () => {
                   {p2pTrades.map(t => {
                     const totalEtb = t.amountEth * (t.rate || 190);
                     return (
-                      <div key={t._id} style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div key={t._id} style={{ padding: '16px', background: '#1A1F32', borderRadius: '12px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{new Date(t.createdAt).toLocaleDateString()}</span>
+                          <span style={{ fontSize: '11px', color: '#8A9BB8' }}>{new Date(t.createdAt).toLocaleDateString()}</span>
                           <span style={{
-                            fontWeight: 800, fontSize: '10px', padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase',
-                            color: t.status === 'completed' ? '#00d4a0' : t.status === 'cancelled' ? '#ef4444' : '#f5c518',
-                            background: t.status === 'completed' ? 'rgba(0,212,160,0.1)' : t.status === 'cancelled' ? 'rgba(239,68,68,0.1)' : 'rgba(245,197,24,0.1)'
+                            fontWeight: 600, fontSize: '10px', padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase',
+                            color: t.status === 'completed' ? '#00C896' : t.status === 'cancelled' ? '#FF4D4D' : '#F5A623',
+                            background: t.status === 'completed' ? 'rgba(0,200,150,0.12)' : t.status === 'cancelled' ? 'rgba(255,77,77,0.12)' : 'rgba(245,166,35,0.12)'
                           }}>{t.status}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 800, color: t.tradeType === 'buy' ? '#00d4a0' : '#ef4444' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: t.tradeType === 'buy' ? '#00C896' : '#FF4D4D' }}>
                             {t.tradeType.toUpperCase()}
                           </span>
-                          <span style={{ fontSize: '16px', fontWeight: 900, fontFamily: 'JetBrains Mono, monospace' }}>${t.amountEth.toFixed(2)} USDT</span>
+                          <span style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>${t.amountEth.toFixed(2)} USDT</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8A9BB8' }}>
                           <span>Rate: {t.rate || '---'} ETB</span>
                           <span>Total: <b>{totalEtb.toFixed(0)} ETB</b></span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #1E2640', paddingTop: '8px' }}>
                           <span>Partner: <b>@{t.counterparty}</b></span>
                           <div>
                             {t.ratingGiven ? (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--gold)', fontWeight: 700, fontSize: '12px' }}>
-                                {t.ratingGiven} <Star size={12} fill="var(--gold)" stroke="none" />
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#F5A623', fontWeight: 600, fontSize: '12px' }}>
+                                {t.ratingGiven} <Star size={12} fill="#F5A623" stroke="none" />
                               </span>
                             ) : t.status === 'completed' ? (
                               <button onClick={() => setRatingTrade(t)} className="btn btn-sm btn-gold" style={{ padding: '4px 8px', fontSize: '11px' }}>
                                 Rate Trade
                               </button>
                             ) : (
-                              <span style={{ color: 'var(--text-3)' }}>---</span>
+                              <span style={{ color: '#8A9BB8' }}>---</span>
                             )}
                           </div>
                         </div>
@@ -572,65 +583,70 @@ const TransactionHistory = () => {
       ) : (
         <>
           {/* Wallet Transactions Summary Header */}
-          <div className="card glass-card" style={{ padding: '24px', background: 'linear-gradient(135deg, rgba(245, 197, 24, 0.05) 0%, rgba(0, 212, 160, 0.05) 100%)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '16px' }}>This Month</h3>
+          <div style={{ background: 'linear-gradient(135deg, rgba(0,200,150,0.06) 0%, rgba(245,166,35,0.04) 100%)', border: '1px solid rgba(0,200,150,0.12)', borderRadius: '18px', padding: '24px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '18px' }}>Wallet Summary</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total In 📥</div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#00d4a0' }}>+${walletSummary.in.toFixed(2)}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total In 📥</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#00C896', fontFamily: "'JetBrains Mono', monospace" }}>+${walletSummary.in.toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total Out 📤</div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#ef4444' }}>-${walletSummary.out.toFixed(2)}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total Out 📤</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#FF4D4D', fontFamily: "'JetBrains Mono', monospace" }}>-${walletSummary.out.toFixed(2)}</div>
               </div>
-              <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '20px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Net Balance</div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>${(walletSummary.in - walletSummary.out).toFixed(2)}</div>
+              <div style={{ borderLeft: '1px solid #1E2640', paddingLeft: '20px' }}>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Net Balance</div>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>${(walletSummary.in - walletSummary.out).toFixed(2)}</div>
               </div>
             </div>
           </div>
 
           {/* Wallet Filters */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-              <input type="text" placeholder="Search by hash or note..." className="input" style={{ paddingLeft: '40px', marginBottom: 0 }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '14px', padding: '14px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ flex: 2, minWidth: '180px', position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
+              <input type="text" placeholder="Search by hash or note..." style={{ width: '100%', paddingLeft: '36px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', outline: 'none' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
-            <select className="input" style={{ width: 'auto', marginBottom: 0 }} value={filterType} onChange={e => setFilterType(e.target.value)}>
+            <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={filterType} onChange={e => setFilterType(e.target.value)}>
               <option value="all">All Types</option>
-              <option value="deposit">Deposits</option>
-              <option value="withdrawal">Withdrawals</option>
+              <option value="deposit">📥 Deposits</option>
+              <option value="withdrawal">📤 Withdrawals</option>
             </select>
-            <input type="date" className="input" style={{ width: 'auto', marginBottom: 0, fontSize: '12px' }} value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} />
-            <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>to</span>
-            <input type="date" className="input" style={{ width: 'auto', marginBottom: 0, fontSize: '12px' }} value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} />
+            <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} />
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>→</span>
+            <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} />
           </div>
 
           {/* Wallet List */}
-          <div className="card" style={{ padding: '8px' }}>
+          <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '18px', padding: '12px' }}>
             {transactions.length === 0 ? (
               <EmptyState icon="💸" title="No Transactions Found" subtitle="It looks like you haven't made any deposits or withdrawals yet matching your filters." />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {transactions.map(tx => (
-                  <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderRadius: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setSelectedTx(tx)}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {tx.type === 'deposit' ? <ArrowDownLeft color="#00d4a0" /> : <ArrowUpRight color="#ef4444" />}
+                  <div key={tx.id} className="hist-row" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', borderRadius: '12px', background: '#1A1F32', border: '1px solid #1E2640', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setSelectedTx(tx)}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: tx.type === 'deposit' ? 'rgba(0,200,150,0.12)' : 'rgba(255,77,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {tx.type === 'deposit' ? <ArrowDownLeft color="#00C896" size={20} /> : <ArrowUpRight color="#FF4D4D" size={20} />}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700 }}>{tx.type.toUpperCase()}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{new Date(tx.created_at).toLocaleString()}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{tx.type === 'deposit' ? 'Deposit Received' : 'Withdrawal Sent'}</div>
+                      <div style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '2px' }}>{new Date(tx.created_at).toLocaleString()}</div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: tx.type === 'deposit' ? '#00d4a0' : '#fff' }}>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: tx.type === 'deposit' ? '#00C896' : '#FF4D4D', fontFamily: "'JetBrains Mono', monospace" }}>
                         {tx.type === 'deposit' ? '+' : '-'}${tx.amount_usd.toFixed(2)}
                       </div>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: tx.status === 'completed' ? '#00d4a0' : '#f5c518' }}>
-                        {tx.status.toUpperCase()}
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '99px', textTransform: 'uppercase', background: tx.status === 'completed' ? 'rgba(0,200,150,0.12)' : 'rgba(245,166,35,0.12)', color: tx.status === 'completed' ? '#00C896' : '#F5A623' }}>
+                          {tx.status}
+                        </span>
                       </div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); downloadReceipt(tx); }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px' }}>
-                      <Download size={16} />
+                    <button onClick={(e) => { e.stopPropagation(); downloadReceipt(tx); }} style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '8px', color: '#F5A623', cursor: 'pointer', padding: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.15)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.08)'; }}
+                    >
+                      <Download size={14} />
                     </button>
                   </div>
                 ))}
@@ -677,7 +693,7 @@ const TransactionHistory = () => {
       {/* ─── WALLET TRANSACTION DETAIL MODAL ─── */}
       {selectedTx && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px' }} onClick={() => setSelectedTx(null)}>
-          <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 197, 24, 0.15)', border: '2px solid #f5c518', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
+          <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 197, 24, 0.15)', border: '2px solid #F5A623', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelectedTx(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.05)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#44403c', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -711,7 +727,7 @@ const TransactionHistory = () => {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => downloadReceipt(selectedTx)} style={{ flex: 1, padding: '12px', background: '#f5c518', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Download PDF</button>
+              <button onClick={() => downloadReceipt(selectedTx)} style={{ flex: 1, padding: '12px', background: '#F5A623', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Download PDF</button>
               <button onClick={() => setSelectedTx(null)} style={{ flex: 1, padding: '12px', background: '#e7e5e4', color: '#44403c', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Close</button>
             </div>
           </div>

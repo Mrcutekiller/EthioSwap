@@ -16,13 +16,13 @@ const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
 /* ── Status badge with colored dot ────────────────────────── */
 const StatusBadge = ({ status }) => {
   const map = {
-    completed: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Completed' },
-    approved: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Approved' },
+    completed: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Completed' },
+    approved: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Approved' },
     pending: { bg: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', label: 'Pending' },
     failed: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Failed' },
     rejected: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Rejected' },
     cancelled: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Cancelled' },
-    open: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', label: 'Open' },
+    open: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Open' },
     closed: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Closed' }
   };
   const s = status?.toLowerCase() || '';
@@ -57,7 +57,7 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {[1, 2].map((_, i) => (
-          <div key={i} className="skeleton" style={{ height: '180px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.07)' }} />
+          <div key={i} className="skeleton" style={{ height: '180px', borderRadius: '10px', border: '1px solid #1E2640' }} />
         ))}
       </div>
     );
@@ -121,7 +121,7 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
 
   if (deposit === undefined) {
     return (
-      <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid rgba(255,255,255,0.07)' }} />
+      <div className="skeleton" style={{ width: '100%', height: '140px', border: '1px solid #1E2640' }} />
     );
   }
 
@@ -129,7 +129,7 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
 
   return (
     <div onClick={() => onImageClick && onImageClick(getImageUrl(screenshotUrl))} style={{ width: '100%', display: 'block', cursor: 'pointer' }}>
-      <img src={getImageUrl(screenshotUrl)} alt="Proof of Deposit" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.07)', background: '#0a0c12', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
+      <img src={getImageUrl(screenshotUrl)} alt="Proof of Deposit" style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #1E2640', background: '#0a0c12', transition: 'transform 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'} />
     </div>
   );
 };
@@ -608,7 +608,7 @@ const AdminPanel = ({ user }) => {
     finally { setWithdrawingEarnings(false); }
   };
 
-  const cs = { background: '#111318', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '24px' };
+  const cs = { background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', padding: '24px' };
   const rate = settings?.etbRatePerDollar ?? 190;
 
   const getImageUrl = (src) => {
@@ -918,8 +918,8 @@ const AdminPanel = ({ user }) => {
         }}>
           <div style={{
             background: '#1a1d26',
-            border: `1px solid ${alertType === 'error' ? 'rgba(244,63,94,0.4)' : 'rgba(0,212,160,0.4)'}`,
-            borderLeft: `4px solid ${alertType === 'error' ? '#f43f5e' : '#00d4a0'}`,
+            border: `1px solid ${alertType === 'error' ? 'rgba(244,63,94,0.4)' : 'rgba(0,200,150,0.4)'}`,
+            borderLeft: `4px solid ${alertType === 'error' ? '#f43f5e' : '#00C896'}`,
             borderRadius: '12px',
             padding: '14px 18px',
             display: 'flex',
@@ -927,8 +927,8 @@ const AdminPanel = ({ user }) => {
             gap: '12px',
             fontSize: '13px',
             fontWeight: 600,
-            color: alertType === 'error' ? '#f43f5e' : '#00d4a0',
-            boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${alertType === 'error' ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)'}`,
+            color: alertType === 'error' ? '#f43f5e' : '#00C896',
+            boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${alertType === 'error' ? 'rgba(244,63,94,0.1)' : 'rgba(0,200,150,0.1)'}`,
           }}>
             <span style={{ fontSize: '18px', flexShrink: 0 }}>
               {alertType === 'error' ? '✗' : '✓'}
@@ -1063,17 +1063,17 @@ const AdminPanel = ({ user }) => {
               
               {/* Rate hero banner */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(0,212,160,0.12) 0%, rgba(0,212,160,0.02) 100%)',
-                border: '1px solid rgba(0,212,160,0.25)', borderRadius: '14px', padding: '20px 24px',
+                background: 'linear-gradient(135deg, rgba(0,200,150,0.12) 0%, rgba(0,200,150,0.02) 100%)',
+                border: '1px solid rgba(0,200,150,0.25)', borderRadius: '14px', padding: '20px 24px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden'
               }}>
-                <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(0,212,160,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(0,200,150,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
                 <div>
-                  <div style={{ fontSize: '11px', color: '#00d4a0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Live Platform Exchange Rates</div>
+                  <div style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Live Platform Exchange Rates</div>
                   <div style={{ fontSize: '20px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span>Buy: <strong style={{ color: '#00d4a0' }}>$1 = {settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                    <span>Buy: <strong style={{ color: '#00C896' }}>$1 = {settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
                     <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                    <span>Sell: <strong style={{ color: '#00d4a0' }}>$1 = {settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                    <span>Sell: <strong style={{ color: '#00C896' }}>$1 = {settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
                   </div>
                 </div>
                 <button onClick={() => setActiveTab('settings')} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
@@ -1195,7 +1195,7 @@ const AdminPanel = ({ user }) => {
                         <svg viewBox="0 0 600 200" width="100%" height="100%" style={{ overflow: 'visible', display: 'block' }}>
                           <defs>
                             <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#00d4a0" />
+                              <stop offset="0%" stopColor="#00C896" />
                               <stop offset="100%" stopColor="rgba(0, 212, 160, 0.2)" />
                             </linearGradient>
                           </defs>
@@ -1416,7 +1416,7 @@ const AdminPanel = ({ user }) => {
                                   cy="50"
                                   r="40"
                                   fill="transparent"
-                                  stroke="#00d4a0"
+                                  stroke="#00C896"
                                   strokeWidth="10"
                                   strokeDasharray={`${strokeCompleted} ${circ}`}
                                   strokeDashoffset="0"
@@ -1453,7 +1453,7 @@ const AdminPanel = ({ user }) => {
                               {/* Donut Legend */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00d4a0' }} />
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00C896' }} />
                                   <span style={{ color: '#8b92a8' }}>Completed: </span>
                                   <strong style={{ color: '#f0f2f8' }}>{compP.toFixed(0)}% ({dist.completed})</strong>
                                 </div>
@@ -1565,7 +1565,7 @@ const AdminPanel = ({ user }) => {
                                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</td>
                                   <td style={{ fontWeight: 600 }}>@{trader.username}</td>
                                   <td>{trader.count}</td>
-                                  <td style={{ color: '#00d4a0', fontWeight: 700 }}>
+                                  <td style={{ color: '#00C896', fontWeight: 700 }}>
                                     {(trader.volume ?? 0).toFixed(4)} ETH
                                   </td>
                                 </tr>
@@ -1640,7 +1640,7 @@ const AdminPanel = ({ user }) => {
                         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>⚡ Real-Time Trades Feed</h3>
                         <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Showing the 10 most recent trades on the platform</p>
                       </div>
-                      <span className="pill-badge" style={{ background: 'rgba(0,212,160,0.1)', color: '#00d4a0' }}>
+                      <span className="pill-badge" style={{ background: 'rgba(0,200,150,0.1)', color: '#00C896' }}>
                         Live Feed
                       </span>
                     </div>
@@ -1716,7 +1716,7 @@ const AdminPanel = ({ user }) => {
                   <span style={{ fontSize: '18px' }}>💰</span>
                   <div style={{ fontSize: '14px' }}>
                     <span style={{ color: '#8b92a8' }}>Platform Earnings Pool: </span>
-                    <strong style={{ color: '#00d4a0', fontSize: '15px' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)} USD</strong>
+                    <strong style={{ color: '#00C896', fontSize: '15px' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)} USD</strong>
                   </div>
                 </div>
                 <button
@@ -1736,9 +1736,9 @@ const AdminPanel = ({ user }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                <div className="card-premium" style={{ borderLeft: '3px solid #00d4a0' }}>
+                <div className="card-premium" style={{ borderLeft: '3px solid #00C896' }}>
                   <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8', textTransform: 'uppercase', marginBottom: '6px' }}>Cumulative Commission Earned</div>
-                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00d4a0' }}>${(m?.totalMyProfit ?? 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00C896' }}>${(m?.totalMyProfit ?? 0).toFixed(2)}</div>
                   <div style={{ fontSize: '13px', color: '#4e5567', marginTop: '6px' }}>
                     ≈ {Math.round((m?.totalMyProfit ?? 0) * rate).toLocaleString()} ETB processed
                   </div>
@@ -1746,7 +1746,7 @@ const AdminPanel = ({ user }) => {
 
                 <div className="card-premium">
                   <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8', textTransform: 'uppercase', marginBottom: '6px' }}>withdrawable available balance</div>
-                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00d4a0' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#00C896' }}>${(adminEarnings?.walletBalance ?? 0).toFixed(2)}</div>
                   <div style={{ fontSize: '13px', color: '#4e5567', marginTop: '6px' }}>Available on-chain USDT pool</div>
                 </div>
               </div>
@@ -1759,7 +1759,7 @@ const AdminPanel = ({ user }) => {
                   { label: 'Commission Rate', v: `${settings?.commissionValue ?? 1.0}%`, em: '⚙️' },
                   { label: 'Locked in Escrow', v: `$${(adminEarnings?.walletLocked ?? 0).toFixed(2)}`, em: '🔒' }
                 ].map((item, idx) => (
-                  <div key={idx} style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                  <div key={idx} style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '12px', padding: '16px' }}>
                     <div style={{ fontSize: '16px', marginBottom: '4px' }}>{item.em}</div>
                     <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', marginBottom: '2px' }}>{item.label}</div>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#f0f2f8' }}>{item.v}</div>
@@ -1806,8 +1806,8 @@ const AdminPanel = ({ user }) => {
                         type="button"
                         onClick={() => setWithdrawAmount((adminEarnings?.walletBalance ?? 0).toFixed(2))}
                         style={{
-                          position: 'absolute', right: '8px', background: 'rgba(0,212,160,0.12)', color: '#00d4a0',
-                          border: '1px solid rgba(0,212,160,0.25)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px',
+                          position: 'absolute', right: '8px', background: 'rgba(0,200,150,0.12)', color: '#00C896',
+                          border: '1px solid rgba(0,200,150,0.25)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px',
                           fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)'
                         }}
                       >
@@ -1948,7 +1948,7 @@ const AdminPanel = ({ user }) => {
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{
-                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
                                 }}>
                                   {(req.username || 'U').charAt(0).toUpperCase()}
@@ -1956,7 +1956,7 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
+                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
                             <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
                             <td>
                               <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -2135,7 +2135,7 @@ const AdminPanel = ({ user }) => {
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{
-                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
                                 }}>
                                   {(req.username || 'U').charAt(0).toUpperCase()}
@@ -2143,10 +2143,10 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00d4a0', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
+                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
                             <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
                             <td>
-                              <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px', color: '#00d4a0' }}>
+                              <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px', color: '#00C896' }}>
                                 {req.destinationAddress ? `${req.destinationAddress.substring(0, 8)}...${req.destinationAddress.substring(req.destinationAddress.length - 8)}` : 'N/A'}
                               </span>
                             </td>
@@ -2288,7 +2288,7 @@ const AdminPanel = ({ user }) => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
-                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
                                 display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '12px', fontWeight: 700, paddingLeft: '9px', paddingTop: '3px'
                               }}>
                                 {(u.username || 'U').charAt(0).toUpperCase()}
@@ -2345,7 +2345,7 @@ const AdminPanel = ({ user }) => {
                   const split = splitPercent[disputeId] || 50;
 
                   return (
-                    <div key={disputeId} style={{ background: '#0a0c12', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div key={disputeId} style={{ background: '#0a0c12', border: '1px solid #1E2640', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{tradeId.substring(0, 8).toUpperCase()}</div>
@@ -2354,12 +2354,12 @@ const AdminPanel = ({ user }) => {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#00d4a0' }}>{dispute.amountEth ? dispute.amountEth.toFixed(4) : '0.00'} USDT</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#00C896' }}>{dispute.amountEth ? dispute.amountEth.toFixed(4) : '0.00'} USDT</div>
                           <span style={{ fontSize: '10px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>DISPUTED</span>
                         </div>
                       </div>
 
-                      <div style={{ background: '#111318', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
                           <span style={{ color: '#8b92a8' }}>Fiat Amount:</span>
                           <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>{dispute.amountEtb} ETB</div>
@@ -2486,18 +2486,18 @@ const AdminPanel = ({ user }) => {
                         onClick={() => setSelectedTicket(t)}
                         style={{
                           background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#0a0c12',
-                          border: isSelected ? '1px solid #00d4a0' : '1px solid rgba(255,255,255,0.06)',
+                          border: isSelected ? '1px solid #00C896' : '1px solid rgba(255,255,255,0.06)',
                           borderRadius: '10px', padding: '12px', cursor: 'pointer', transition: 'all 0.15s ease'
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, fontSize: '13px' }}>@{t.username}</span>
-                          <span style={{ fontSize: '9px', textTransform: 'uppercase', color: t.status === 'open' ? '#00d4a0' : '#8b92a8', fontWeight: 700 }}>
+                          <span style={{ fontSize: '9px', textTransform: 'uppercase', color: t.status === 'open' ? '#00C896' : '#8b92a8', fontWeight: 700 }}>
                             {t.status}
                           </span>
                         </div>
                         {lastMsg && (
-                          <div style={{ fontSize: '11px', color: isUnreadByAdmin ? '#00d4a0' : '#8b92a8', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: isUnreadByAdmin ? 700 : 400 }}>
+                          <div style={{ fontSize: '11px', color: isUnreadByAdmin ? '#00C896' : '#8b92a8', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: isUnreadByAdmin ? 700 : 400 }}>
                             {isUnreadByAdmin ? '✉️ ' : ''}{lastMsg.message}
                           </div>
                         )}
@@ -2516,7 +2516,7 @@ const AdminPanel = ({ user }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: '14px', marginBottom: '14px' }}>
                       <div>
                         <h4 style={{ margin: 0, fontSize: '15px' }}>Support Chat with @{selectedTicket.username}</h4>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Ticket Status: <strong style={{ color: '#00d4a0' }}>{selectedTicket.status.toUpperCase()}</strong></p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#8b92a8' }}>Ticket Status: <strong style={{ color: '#00C896' }}>{selectedTicket.status.toUpperCase()}</strong></p>
                       </div>
                       {selectedTicket.status === 'open' && (
                         <button
@@ -2545,7 +2545,7 @@ const AdminPanel = ({ user }) => {
                             style={{
                               alignSelf: isAdmin ? 'flex-end' : 'flex-start',
                               maxWidth: '75%',
-                              background: isAdmin ? '#00d4a0' : 'rgba(255,255,255,0.04)',
+                              background: isAdmin ? '#00C896' : 'rgba(255,255,255,0.04)',
                               color: isAdmin ? '#0d1117' : '#f0f2f8',
                               padding: '10px 14px',
                               borderRadius: isAdmin ? '12px 12px 0 12px' : '12px 12px 12px 0',
@@ -2695,7 +2695,7 @@ const AdminPanel = ({ user }) => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
-                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700
                               }}>
                                 {(u.username || 'U').charAt(0).toUpperCase()}
@@ -2718,7 +2718,7 @@ const AdminPanel = ({ user }) => {
                           <td style={{ color: '#8b92a8', fontSize: '13px' }}>
                             {new Date(u.joinedAt).toLocaleDateString()}
                           </td>
-                          <td style={{ color: '#00d4a0', fontWeight: 700 }}>
+                          <td style={{ color: '#00C896', fontWeight: 700 }}>
                             ${(u.ethBalance || 0).toFixed(2)}
                           </td>
                           <td>
@@ -2727,7 +2727,7 @@ const AdminPanel = ({ user }) => {
                                 🚫 BANNED
                               </span>
                             ) : (
-                              <span style={{ fontSize: '12px', background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 8px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '12px', background: 'rgba(0,200,150,0.1)', color: '#00C896', padding: '2px 8px', borderRadius: '4px' }}>
                                 Active
                               </span>
                             )}
@@ -2824,7 +2824,7 @@ const AdminPanel = ({ user }) => {
                         let tagColor = '#8b92a8';
                         const act = log.action?.toLowerCase();
                         if (act.includes('approve') || act.includes('unban') || act.includes('unsuspend')) {
-                          tagBg = 'rgba(0, 212, 160, 0.1)'; tagColor = '#00d4a0';
+                          tagBg = 'rgba(0, 212, 160, 0.1)'; tagColor = '#00C896';
                         } else if (act.includes('reject') || act.includes('ban') || act.includes('suspend') || act.includes('remove')) {
                           tagBg = 'rgba(244, 63, 94, 0.1)'; tagColor = '#f43f5e';
                         } else if (act.includes('warn')) {
@@ -2845,7 +2845,7 @@ const AdminPanel = ({ user }) => {
                                 {log.action?.replace('_', ' ')}
                               </span>
                             </td>
-                            <td style={{ fontWeight: 600, color: '#00d4a0' }}>@{log.targetName}</td>
+                            <td style={{ fontWeight: 600, color: '#00C896' }}>@{log.targetName}</td>
                             <td style={{ color: '#8b92a8', minWidth: '200px' }}>{log.details}</td>
                           </tr>
                         );
@@ -2926,7 +2926,7 @@ const AdminPanel = ({ user }) => {
                       </div>
                       <div style={{ background: '#0a0c12', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase' }}>Ratings Given Today</div>
-                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#00d4a0', marginTop: '6px' }}>{p2pRatingsData?.todayCount || 0}</div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#00C896', marginTop: '6px' }}>{p2pRatingsData?.todayCount || 0}</div>
                       </div>
                     </div>
 
@@ -2999,7 +2999,7 @@ const AdminPanel = ({ user }) => {
                                     🚩 FLAGGED
                                   </span>
                                 ) : (
-                                  <span style={{ color: '#00d4a0', background: 'rgba(0,212,160,0.1)', border: '1px solid rgba(0,212,160,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700 }}>
+                                  <span style={{ color: '#00C896', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700 }}>
                                     ✓ CLEAN
                                   </span>
                                 )}
@@ -3127,7 +3127,7 @@ const AdminPanel = ({ user }) => {
                                     <button 
                                       onClick={() => handleApproveReview(rev._id)} 
                                       className="btn-premium-primary" 
-                                      style={{ padding: '6px 12px', fontSize: '11px', background: '#00d4a0', color: '#000' }}
+                                      style={{ padding: '6px 12px', fontSize: '11px', background: '#00C896', color: '#000' }}
                                     >
                                       ✓ Approve
                                     </button>
@@ -3163,7 +3163,7 @@ const AdminPanel = ({ user }) => {
               <form onSubmit={handleSaveSettings} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '900px' }}>
                 {/* Column 1: Exchange & Fees */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase' }}>💱 Exchange Rates & Commissions</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase' }}>💱 Exchange Rates & Commissions</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Buying Rate ($1 ETB)</label>
                     <input type="number" step="0.01" className="input-premium" value={etbRate} onChange={e => setEtbRate(e.target.value)} required />
@@ -3200,7 +3200,7 @@ const AdminPanel = ({ user }) => {
 
                 {/* Column 2: Limits & Security */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#f5c518', textTransform: 'uppercase' }}>🛡️ Limits & Security Settings</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase' }}>🛡️ Limits & Security Settings</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Min Deposit ($)</label>
@@ -3451,7 +3451,7 @@ const AdminPanel = ({ user }) => {
                         EthioSwap is completely immune to traditional SQL Injection attacks. The database layer is powered by **Convex**, a serverless document store. 
                         All backend handlers are written in strict TypeScript and compiled. Data querying is done programmatically using Convex document indices:
                       </p>
-                      <pre style={{ background: '#07090e', padding: '12px', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace', color: '#00d4a0', overflowX: 'auto', margin: 0 }}>
+                      <pre style={{ background: '#07090e', padding: '12px', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace', color: '#00C896', overflowX: 'auto', margin: 0 }}>
 {`// Safe index-based search
 const user = await ctx.db
   .query("users")
@@ -3598,11 +3598,11 @@ const user = await ctx.db
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
 
                       {/* Telegram Toggle */}
-                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid #1E2640', borderRadius: '12px', padding: '16px' }}>
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <strong style={{ fontSize: '14px', color: '#fff' }}>Telegram Bot Channel</strong>
-                            <span className="pill-badge" style={{ backgroundColor: settings?.isTelegramChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isTelegramChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
+                            <span className="pill-badge" style={{ backgroundColor: settings?.isTelegramChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,200,150,0.1)', color: settings?.isTelegramChannelDisabled ? '#f43f5e' : '#00C896' }}>
                               {settings?.isTelegramChannelDisabled ? 'MUTED' : 'ACTIVE'}
                             </span>
                           </div>
@@ -3615,7 +3615,7 @@ const user = await ctx.db
                           className="btn-premium"
                           style={{
                             background: settings?.isTelegramChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                            color: settings?.isTelegramChannelDisabled ? '#00d4a0' : '#f43f5e',
+                            color: settings?.isTelegramChannelDisabled ? '#00C896' : '#f43f5e',
                             border: '1px solid currentColor',
                             fontSize: '12px',
                             padding: '8px',
@@ -3629,11 +3629,11 @@ const user = await ctx.db
                       </div>
 
                       {/* Email Toggle */}
-                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px' }}>
+                      <div className="security-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px', background: 'rgba(255,255,255,0.015)', border: '1px solid #1E2640', borderRadius: '12px', padding: '16px' }}>
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <strong style={{ fontSize: '14px', color: '#fff' }}>Email Alert Channel</strong>
-                            <span className="pill-badge" style={{ backgroundColor: settings?.isEmailChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,212,160,0.1)', color: settings?.isEmailChannelDisabled ? '#f43f5e' : '#00d4a0' }}>
+                            <span className="pill-badge" style={{ backgroundColor: settings?.isEmailChannelDisabled ? 'rgba(244,63,94,0.1)' : 'rgba(0,200,150,0.1)', color: settings?.isEmailChannelDisabled ? '#f43f5e' : '#00C896' }}>
                               {settings?.isEmailChannelDisabled ? 'MUTED' : 'ACTIVE'}
                             </span>
                           </div>
@@ -3646,7 +3646,7 @@ const user = await ctx.db
                           className="btn-premium"
                           style={{ 
                             background: settings?.isEmailChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
-                            color: settings?.isEmailChannelDisabled ? '#00d4a0' : '#f43f5e',
+                            color: settings?.isEmailChannelDisabled ? '#00C896' : '#f43f5e',
                             border: '1px solid currentColor',
                             fontSize: '12px', 
                             padding: '8px', 
@@ -3732,8 +3732,8 @@ const user = await ctx.db
                                 <td>
                                   <span style={{ 
                                     padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
-                                    backgroundColor: log.status === 'delivered' ? 'rgba(0,212,160,0.1)' : log.status === 'failed' ? 'rgba(244,63,94,0.1)' : 'rgba(251,191,36,0.1)',
-                                    color: log.status === 'delivered' ? '#00d4a0' : log.status === 'failed' ? '#f43f5e' : '#fbbf24'
+                                    backgroundColor: log.status === 'delivered' ? 'rgba(0,200,150,0.1)' : log.status === 'failed' ? 'rgba(244,63,94,0.1)' : 'rgba(251,191,36,0.1)',
+                                    color: log.status === 'delivered' ? '#00C896' : log.status === 'failed' ? '#f43f5e' : '#fbbf24'
                                   }}>
                                     {log.status.toUpperCase()}
                                   </span>
@@ -3795,7 +3795,7 @@ const user = await ctx.db
                               let badgeBg = 'rgba(255,255,255,0.05)';
                               let badgeColor = '#8b92a8';
                               if (log.status === 'success') {
-                                badgeBg = 'rgba(0,212,160,0.1)'; badgeColor = '#00d4a0';
+                                badgeBg = 'rgba(0,200,150,0.1)'; badgeColor = '#00C896';
                               } else if (log.status.startsWith('failed_expired')) {
                                 badgeBg = 'rgba(251,191,36,0.1)'; badgeColor = '#fbbf24';
                               } else if (log.status.startsWith('failed') || log.status === 'invalidated') {
@@ -3870,7 +3870,7 @@ const user = await ctx.db
               <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ background: '#0a0c12', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,212,160,0.1)', color: '#00d4a0',
+                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,200,150,0.1)', color: '#00C896',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
                   }}>
                     {(req.username || 'U').charAt(0).toUpperCase()}
@@ -3884,7 +3884,7 @@ const user = await ctx.db
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
-                    <strong style={{ color: '#00d4a0' }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
+                    <strong style={{ color: '#00C896' }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
@@ -3896,7 +3896,7 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>TxID / Reference:</span>
-                    <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{req.senderReference || 'No hash reference'}</strong>
+                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{req.senderReference || 'No hash reference'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Submitted at:</span>
@@ -3954,7 +3954,7 @@ const user = await ctx.db
               <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ background: '#0a0c12', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,212,160,0.1)', color: '#00d4a0',
+                    width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,200,150,0.1)', color: '#00C896',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
                   }}>
                     {(req.username || 'U').charAt(0).toUpperCase()}
@@ -3980,7 +3980,7 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Destination Address:</span>
-                    <span style={{ color: '#00d4a0', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', wordBreak: 'break-all', display: 'block', marginTop: '4px' }}>
+                    <span style={{ color: '#00C896', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', wordBreak: 'break-all', display: 'block', marginTop: '4px' }}>
                       {req.destinationAddress || 'N/A'}
                     </span>
                   </div>
@@ -4033,7 +4033,7 @@ const user = await ctx.db
                 
                 {/* Visual side-by-side comparison */}
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
                   <KycImages 
                     userId={u._id} 
                     getImageUrl={getImageUrl} 
@@ -4047,7 +4047,7 @@ const user = await ctx.db
 
                 {/* Form fields section */}
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00d4a0', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '6px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '6px' }}>
                     📝 Auto-Extracted Registration Fields
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
@@ -4064,7 +4064,7 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>ID Card Number:</span>
-                    <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>
+                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>
                       {u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}
                     </strong>
                   </div>
@@ -4095,7 +4095,7 @@ const user = await ctx.db
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
-                      style={{ border: '1px solid rgba(255,255,255,0.07)' }}
+                      style={{ border: '1px solid #1E2640' }}
                     >
                       💬 Send Message
                     </button>
@@ -4106,7 +4106,7 @@ const user = await ctx.db
                         setUserDrawerTab('activity');
                       }}
                       className="btn-premium-ghost"
-                      style={{ border: '1px solid rgba(255,255,255,0.07)' }}
+                      style={{ border: '1px solid #1E2640' }}
                     >
                       ⚠️ Warn User
                     </button>
@@ -4115,7 +4115,7 @@ const user = await ctx.db
                     <button
                       onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
                       className="btn-premium-ghost"
-                      style={{ border: '1px solid rgba(255,255,255,0.07)', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
+                      style={{ border: '1px solid #1E2640', color: u.isSuspended ? '#00C896' : '#f43f5e' }}
                     >
                       {u.isSuspended ? '✅ Unban User' : '🚫 Ban User'}
                     </button>
@@ -4126,7 +4126,7 @@ const user = await ctx.db
                         }
                       }}
                       className="btn-premium-ghost"
-                      style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#f43f5e' }}
+                      style={{ border: '1px solid #1E2640', color: '#f43f5e' }}
                     >
                       🗑️ Remove User
                     </button>
@@ -4210,9 +4210,9 @@ const user = await ctx.db
                     onClick={() => setUserDrawerTab(tb.id)}
                     style={{
                       flex: 1, padding: '10px 8px', border: 'none', background: 'transparent',
-                      color: userDrawerTab === tb.id ? '#00d4a0' : '#8b92a8',
+                      color: userDrawerTab === tb.id ? '#00C896' : '#8b92a8',
                       fontSize: '11px', fontWeight: userDrawerTab === tb.id ? 700 : 500,
-                      cursor: 'pointer', borderBottom: userDrawerTab === tb.id ? '2px solid #00d4a0' : '2px solid transparent',
+                      cursor: 'pointer', borderBottom: userDrawerTab === tb.id ? '2px solid #00C896' : '2px solid transparent',
                       transition: 'all 0.15s ease', whiteSpace: 'nowrap'
                     }}
                   >
@@ -4229,7 +4229,7 @@ const user = await ctx.db
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0a0c12', borderRadius: '12px', padding: '16px' }}>
                       <div style={{
-                        width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0',
+                        width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden', flexShrink: 0
                       }}>
                         {u.kycSelfie && u.kycSelfie.startsWith('http') ? (
@@ -4241,7 +4241,7 @@ const user = await ctx.db
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
-                          {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,212,160,0.1)', color: '#00d4a0', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
+                          {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,200,150,0.1)', color: '#00C896', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
                           {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
                         <span style={{ fontSize: '11px', color: '#8b92a8', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>Ref: {u._id}</span>
@@ -4254,7 +4254,7 @@ const user = await ctx.db
                       <div style={{ display: 'grid', gridTemplateColumns: width < 480 ? '1fr' : '1fr 1fr', gap: '10px' }}>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Available USD</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${(u.ethBalance || 0).toFixed(2)}</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00C896', marginTop: '2px' }}>${(u.ethBalance || 0).toFixed(2)}</div>
                         </div>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Locked Escrow</div>
@@ -4262,7 +4262,7 @@ const user = await ctx.db
                         </div>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Deposited</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00d4a0', marginTop: '2px' }}>${sumDeposits.toFixed(2)}</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00C896', marginTop: '2px' }}>${sumDeposits.toFixed(2)}</div>
                         </div>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Withdrawn</div>
@@ -4294,8 +4294,8 @@ const user = await ctx.db
                     {/* Address block */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span style={{ fontSize: '12px', color: '#8b92a8' }}>On-chain TRC20 / ERC20 wallet address:</span>
-                      <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00d4a0', wordBreak: 'break-all', flex: 1 }}>{u.ethAddress}</span>
+                      <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid #1E2640', borderRadius: '8px', padding: '10px', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00C896', wordBreak: 'break-all', flex: 1 }}>{u.ethAddress}</span>
                         <button
                           onClick={() => { navigator.clipboard.writeText(u.ethAddress); showAlert('✓ Address copied!'); }}
                           style={{ border: 'none', background: 'rgba(255,255,255,0.05)', color: '#8b92a8', borderRadius: '4px', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', flexShrink: 0 }}
@@ -4332,10 +4332,10 @@ const user = await ctx.db
                               return (
                                 <tr key={tx.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                                   <td style={{ padding: '10px', color: '#8b92a8' }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
-                                  <td style={{ padding: '10px', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
+                                  <td style={{ padding: '10px', fontWeight: 700, color: isDep ? '#00C896' : '#f43f5e' }}>
                                     {tx.type?.toUpperCase()}
                                   </td>
-                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: isDep ? '#00d4a0' : '#f43f5e' }}>
+                                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: isDep ? '#00C896' : '#f43f5e' }}>
                                     {isDep ? '+' : '-'}${(tx.amountUSD ?? tx.amountUsd ?? 0).toFixed(2)}
                                   </td>
                                   <td style={{ padding: '10px', color: '#8b92a8', fontSize: '11px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
@@ -4374,7 +4374,7 @@ const user = await ctx.db
                           <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
                           <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00d4a0', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}</strong></div>
                         </div>
                       </>
                     )}
@@ -4534,7 +4534,7 @@ const user = await ctx.db
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
-                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}
+                      style={{ flex: 1, border: '1px solid #1E2640', fontSize: '12px' }}
                     >
                       💬 Send Direct Message
                     </button>
@@ -4545,7 +4545,7 @@ const user = await ctx.db
                         setActiveTab('logs');
                       }}
                       className="btn-premium-ghost"
-                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px' }}
+                      style={{ flex: 1, border: '1px solid #1E2640', fontSize: '12px' }}
                     >
                       📜 View Audit Logs
                     </button>
@@ -4556,7 +4556,7 @@ const user = await ctx.db
                     <button
                       onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
                       className="btn-premium-ghost"
-                      style={{ flex: 1, border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: u.isSuspended ? '#00d4a0' : '#f43f5e' }}
+                      style={{ flex: 1, border: '1px solid #1E2640', fontSize: '12px', color: u.isSuspended ? '#00C896' : '#f43f5e' }}
                     >
                       {u.isSuspended ? '✅ Activate (Unban)' : '🚫 Suspend Account (Ban)'}
                     </button>

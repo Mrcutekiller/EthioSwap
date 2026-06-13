@@ -159,14 +159,14 @@ const SettingsPage = ({ user, onLogout }) => {
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
       <div className="page-header" style={{ marginBottom: '24px' }}>
-        <h1 className="page-title" style={{ fontSize: '24px', fontWeight: 800 }}>{t('Settings')}</h1>
-        <p className="page-subtitle" style={{ fontSize: '14px', color: 'var(--text-3)' }}>Manage your account and preferences</p>
+        <h1 className="page-title" style={{ fontSize: '24px', fontWeight: 600, color: '#fff' }}>{t('Settings')}</h1>
+        <p className="page-subtitle" style={{ fontSize: '14px', color: '#8A9BB8' }}>Manage your account and preferences</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Language Selector */}
         <div className="card">
-          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#fff' }}>
             <Globe size={16} /> {t('Language')} / ቋንቋ
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -189,29 +189,29 @@ const SettingsPage = ({ user, onLogout }) => {
 
         {/* 2FA Settings */}
         <div className="card">
-          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#fff' }}>
             <Shield size={16} /> Two-Factor Authentication
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600 }}>Enable 2FA</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Extra security for withdrawals and login</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>Enable 2FA</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Extra security for withdrawals and login</div>
               </div>
               <div
                 onClick={async () => {
                   const newState = !user.twoFaEnabled;
                   await updateUser({ twoFaEnabled: newState });
                 }}
-                style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.twoFaEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.twoFaEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+                style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.twoFaEnabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.twoFaEnabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
               >
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
               </div>
             </div>
             
             {user.twoFaEnabled && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-3)' }}>Verification Method</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: '#1A1F32', borderRadius: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Verification Method</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <button className={`btn btn-sm ${user.twoFaMethod === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'email' })}>
                     <Mail size={14} /> Email
@@ -228,23 +228,23 @@ const SettingsPage = ({ user, onLogout }) => {
 
       {/* Notification Channels */}
       <div className="card">
-        <div className="section-title">{t('Notification Channels')}</div>
+        <div className="section-title" style={{ fontWeight: 600, color: '#fff' }}>{t('Notification Channels')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Telegram Toggle & Connect - REMOVED */}
           
           {/* Email Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #1E2640' }}>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>Email Alerts</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>Receive trade alerts on {user.email || 'your email'}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>Email Alerts</div>
+              <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Receive trade alerts on {user.email || 'your email'}</div>
             </div>
             <div
               onClick={async () => {
                 await updateUser({ emailEnabled: !user.emailEnabled });
               }}
-              style={{ width: '44px', height: '26px', borderRadius: '13px', background: user.emailEnabled ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${user.emailEnabled ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+              style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.emailEnabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.emailEnabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
             >
-              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.emailEnabled ? '20px' : '2px', transition: 'left 0.2s ease' }} />
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.emailEnabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
             </div>
           </div>
         </div>
@@ -252,19 +252,19 @@ const SettingsPage = ({ user, onLogout }) => {
 
       {/* Notification Preferences */}
       <div className="card">
-        <div className="section-title">Notification Preferences</div>
+        <div className="section-title" style={{ fontWeight: 600, color: '#fff' }}>Notification Preferences</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
           {notifTypes.map((n, i, arr) => (
-            <div key={n.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div key={n.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: i < arr.length - 1 ? '1px solid #1E2640' : 'none' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-1)' }}>{n.label}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{n.desc}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{n.label}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8' }}>{n.desc}</div>
               </div>
               <div
                 onClick={() => toggleNotif(n.key)}
-                style={{ width: '44px', height: '26px', borderRadius: '13px', background: notifPrefs[n.key] !== false ? 'var(--gold)' : 'var(--bg-elevated)', border: `1px solid ${notifPrefs[n.key] !== false ? 'var(--gold)' : 'var(--border)'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease', flexShrink: 0 }}
+                style={{ width: '44px', height: '24px', borderRadius: '12px', background: notifPrefs[n.key] !== false ? '#00C896' : '#1A1F32', border: `1px solid ${notifPrefs[n.key] !== false ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease', flexShrink: 0 }}
               >
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: notifPrefs[n.key] !== false ? '20px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: notifPrefs[n.key] !== false ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
               </div>
             </div>
           ))}
@@ -272,8 +272,8 @@ const SettingsPage = ({ user, onLogout }) => {
       </div>
 
       {/* Security Tips */}
-      <div className="card" style={{ background: 'var(--gold-bg)', border: '1px solid var(--border-active)' }}>
-        <div className="section-title" style={{ color: 'var(--gold-light)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="card" style={{ background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.2)' }}>
+        <div className="section-title" style={{ color: '#F5A623', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>🛡️</span> Security Tips
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -283,8 +283,8 @@ const SettingsPage = ({ user, onLogout }) => {
             'Always verify bank transfers in your bank app before releasing USD.',
             'Use secure PIN lock to protect your wallet access.'
           ].map((tip, i) => (
-            <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '11px', color: 'var(--text-2)', lineHeight: '1.4' }}>
-              <span style={{ color: 'var(--gold-light)' }}>•</span>
+            <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#8A9BB8', lineHeight: '1.4' }}>
+              <span style={{ color: '#F5A623' }}>•</span>
               {tip}
             </div>
           ))}
@@ -293,16 +293,16 @@ const SettingsPage = ({ user, onLogout }) => {
 
       {/* About */}
       <div className="card">
-        <div className="section-title">About</div>
+        <div className="section-title" style={{ fontWeight: 600, color: '#fff' }}>About</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
           {[
             { label: 'App Version', value: '2.0.0' },
             { label: 'Network', value: 'Sepolia Testnet' },
             { label: 'Fee Structure', value: '0.5% max $0.50' },
           ].map((row, i, arr) => (
-            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>{row.label}</span>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-1)' }}>{row.value}</span>
+            <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid #1E2640' : 'none' }}>
+              <span style={{ fontSize: '13px', color: '#8A9BB8' }}>{row.label}</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{row.value}</span>
             </div>
           ))}
         </div>
@@ -316,10 +316,10 @@ const SettingsPage = ({ user, onLogout }) => {
       {/* Disconnect Telegram — password confirmation modal */}
       {showDisconnectPwd && (
         <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="modal-box" style={{ width: '100%', maxWidth: '380px', padding: '24px 20px', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>⚠ Disconnect Telegram</h3>
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.5' }}>
-              <b style={{ color: '#EF4444' }}>This will block you from logging in</b> until you reconnect Telegram. To confirm, enter your account password.
+          <div className="modal-box" style={{ width: '100%', maxWidth: '380px', padding: '24px 20px', background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>⚠ Disconnect Telegram</h3>
+            <p style={{ fontSize: '12px', color: '#8A9BB8', marginBottom: '16px', lineHeight: '1.5' }}>
+              <b style={{ color: '#FF4D4D' }}>This will block you from logging in</b> until you reconnect Telegram. To confirm, enter your account password.
             </p>
 
             <form onSubmit={handleDisconnectConfirm} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -331,8 +331,8 @@ const SettingsPage = ({ user, onLogout }) => {
                 style={{
                   width: '100%',
                   height: '44px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--border)',
+                  background: '#0B0E1A',
+                  border: '1px solid #1E2640',
                   borderRadius: '10px',
                   color: '#ffffff',
                   fontSize: '14px',
@@ -343,18 +343,18 @@ const SettingsPage = ({ user, onLogout }) => {
                 autoFocus
               />
 
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', userSelect: 'none', fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.4 }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', userSelect: 'none', fontSize: '12px', color: '#8A9BB8', lineHeight: 1.4 }}>
                 <input
                   type="checkbox"
                   checked={disconnectConfirm}
                   onChange={e => setDisconnectConfirm(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: '#EF4444', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
+                  style={{ width: '16px', height: '16px', accentColor: '#FF4D4D', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
                 />
                 <span>I understand I will not be able to log in until I reconnect Telegram.</span>
               </label>
 
               {disconnectError && (
-                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
+                <div style={{ color: '#FF4D4D', fontSize: '12px', textAlign: 'left', background: 'rgba(255, 77, 77, 0.08)', border: '1px solid rgba(255, 77, 77, 0.2)', padding: '10px', borderRadius: '8px' }}>
                   ⚠ {disconnectError}
                 </div>
               )}
@@ -366,11 +366,11 @@ const SettingsPage = ({ user, onLogout }) => {
                 style={{
                   height: '44px',
                   fontSize: '14px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: disconnectLoading ? '#1f2937' : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                  background: disconnectLoading ? '#1f2937' : '#FF4D4D',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '10px',

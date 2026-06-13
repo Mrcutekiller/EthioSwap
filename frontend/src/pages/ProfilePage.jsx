@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "convex-api";
 import { 
   Copy, 
@@ -90,7 +90,7 @@ const SecurityLock = ({ onVerify, onClose }) => {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5, 7, 12, 0.98)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(12px)' }}>
       <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', padding: '24px' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.1)', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <Lock size={32} />
         </div>
         <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Security Check</h3>
@@ -105,10 +105,10 @@ const SecurityLock = ({ onVerify, onClose }) => {
             style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', fontSize: '24px', textAlign: 'center', letterSpacing: '1em', color: '#fff', marginBottom: '16px', outline: 'none' }}
             autoFocus
           />
-          {error && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '16px' }}>{error}</p>}
+          {error && <p style={{ color: '#FF4D4D', fontSize: '12px', marginBottom: '16px' }}>{error}</p>}
           <div style={{ display: 'flex', gap: '12px' }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" style={{ flex: 2, padding: '14px', borderRadius: '12px', background: '#f5c518', color: '#000', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Unlock</button>
+            <button type="submit" style={{ flex: 2, padding: '14px', borderRadius: '12px', background: '#F5A623', color: '#000', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Unlock</button>
           </div>
         </form>
       </div>
@@ -196,6 +196,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [showAddAcc, setShowAddAcc] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurityLock, setShowSecurityLock] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [securityAction, setSecurityAction] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -397,25 +399,25 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     switch (user.kycStatus) {
       case 'approved': 
         return (
-          <span className="badge" style={{ background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', border: '1px solid rgba(0, 212, 160, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
+          <span className="badge" style={{ background: 'rgba(0, 200, 150, 0.12)', color: '#00C896', border: '1px solid rgba(0, 200, 150, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
             ✓ Verified
           </span>
         );
       case 'pending':  
         return (
-          <span className="badge" style={{ background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', border: '1px solid rgba(245, 197, 24, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
+          <span className="badge" style={{ background: 'rgba(245, 166, 35, 0.12)', color: '#F5A623', border: '1px solid rgba(245, 166, 35, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
             ⏳ Under Review
           </span>
         );
       case 'rejected': 
         return (
-          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
+          <span className="badge" style={{ background: 'rgba(255, 77, 77, 0.12)', color: '#FF4D4D', border: '1px solid rgba(255, 77, 77, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
             ✗ Rejected
           </span>
         );
       default:         
         return (
-          <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-3)', border: '1px solid var(--border)', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '99px' }}>
+          <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--muted)', border: '1px solid var(--border)', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '99px' }}>
             Not Verified
           </span>
         );
@@ -433,8 +435,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const qrData = `EthiSwap Digital ID\nName: ${fullName}\nEmail: ${email}\nUsername: ${user.username}\nID: ${user.numericId || '—'}\nUSDT-ERC20: ${ethAddr}\nUSDT-TRC20: ${tronAddr}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120&data=${encodeURIComponent(qrData)}`;
 
-  // Default to Cyberpunk Coder if no custom kycSelfie is selected
-  const userAvatar = user.kycSelfie ? getAvatarUrl(user.kycSelfie) : getAvatarUrl(AVATAR_TEMPLATES[0].svg);
+  // Default to profilePicUrl or DEFAULT_AVATAR_SVG
+  const userAvatar = user.profilePicUrl || (user.kycSelfie ? getAvatarUrl(user.kycSelfie) : getAvatarUrl(DEFAULT_AVATAR_SVG));
 
   // Split name into first and last for vertical stacked typography
   const nameParts = fullName.trim().split(/\s+/);
@@ -449,7 +451,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         .rainbow-ring {
           padding: 4px;
           border-radius: 50%;
-          background: linear-gradient(45deg, #00d4a0, #f5c518, #3b82f6, #ec4899, #00d4a0);
+          background: linear-gradient(45deg, #00C896, #F5A623, #3b82f6, #ec4899, #00C896);
           background-size: 200% 200%;
           animation: rainbow-rotate 4s linear infinite;
         }
@@ -469,7 +471,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
           transition: all 0.2s ease;
         }
         .stat-card:hover {
-          border-color: #f5c518;
+          border-color: #F5A623;
           transform: translateY(-2px);
         }
         .action-btn {
@@ -488,9 +490,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
           transition: all 0.2s ease;
         }
         .action-btn:hover {
-          background: rgba(245, 197, 24, 0.05);
-          border-color: #f5c518;
-          color: #f5c518;
+          background: rgba(245, 166, 35, 0.05);
+          border-color: #F5A623;
+          color: #F5A623;
         }
         .badge-grid {
           display: grid;
@@ -541,14 +543,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         }
         .id-card-back {
           transform: rotateY(180deg);
-          background: #111318;
+          background: #141827;
         }
       `}</style>
 
       {/* ─── DIGITAL ID CARD & CONTROL per Item #10 ─── */}
       <div className="card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>Digital Identity Card</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff' }}>Digital Identity Card</h3>
           <div style={{ 
             display: 'flex', 
             background: 'rgba(255,255,255,0.05)', 
@@ -563,9 +565,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 borderRadius: '7px', 
                 border: 'none', 
                 fontSize: '11px', 
-                fontWeight: 700,
-                background: !isFlipped ? 'var(--gold)' : 'transparent',
-                color: !isFlipped ? '#000' : 'var(--text-3)',
+                fontWeight: 600,
+                background: !isFlipped ? 'var(--teal)' : 'transparent',
+                color: !isFlipped ? '#04342C' : 'var(--muted)',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -579,9 +581,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 borderRadius: '7px', 
                 border: 'none', 
                 fontSize: '11px', 
-                fontWeight: 700,
-                background: isFlipped ? 'var(--gold)' : 'transparent',
-                color: isFlipped ? '#000' : 'var(--text-3)',
+                fontWeight: 600,
+                background: isFlipped ? 'var(--teal)' : 'transparent',
+                color: isFlipped ? '#04342C' : 'var(--muted)',
                 cursor: 'pointer',
                 transition: 'all 0.2'
               }}
@@ -640,7 +642,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '9px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Status</span>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: user.kycStatus === 'approved' ? '#00d4a0' : '#f5c518' }}>{user.kycStatus?.toUpperCase() || 'NEW'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: user.kycStatus === 'approved' ? '#00C896' : '#F5A623' }}>{user.kycStatus?.toUpperCase() || 'NEW'}</div>
                 </div>
               </div>
             </div>
@@ -661,28 +663,28 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       {/* ─── BALANCE & POINTS ──────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
         <div className="stat-card">
-          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Available Balance</span>
-          <div style={{ fontSize: '24px', fontWeight: 900, color: '#00d4a0' }}>${(user.ethBalance ?? 0).toFixed(2)}</div>
-          <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>USD Escrow Wallet</span>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Available Balance</span>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: '#00C896' }}>${(user.ethBalance ?? 0).toFixed(2)}</div>
+          <span style={{ fontSize: '10px', color: 'var(--muted)' }}>USD Escrow Wallet</span>
         </div>
       </div>
 
       {/* ─── QUICK ACTIONS ─────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '12px' }}>
         <button className="action-btn" onClick={() => {/* handle deposit */}}>
-          <div style={{ background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', padding: '10px', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', padding: '10px', borderRadius: '12px' }}>
             <Plus size={24} />
           </div>
           <span>Deposit</span>
         </button>
         <button className="action-btn" onClick={() => triggerSecurity('withdraw')}>
-          <div style={{ background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', padding: '10px', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(245, 166, 35, 0.1)', color: '#F5A623', padding: '10px', borderRadius: '12px' }}>
             <RefreshCw size={24} />
           </div>
           <span>Withdraw</span>
         </button>
         <button className="action-btn" onClick={() => {/* navigate to trades */}}>
-          <div style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '10px', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', padding: '10px', borderRadius: '12px' }}>
             <ChevronRight size={24} />
           </div>
           <span>Trade</span>
@@ -693,18 +695,18 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       {user.kycStatus === 'approved' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
-          background: 'linear-gradient(135deg, rgba(0,212,160,0.08) 0%, rgba(0,180,135,0.04) 100%)',
-          border: '1.5px solid rgba(0,212,160,0.3)',
+          background: 'linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(0,180,135,0.04) 100%)',
+          border: '1.5px solid rgba(0,200,150,0.3)',
           display: 'flex', alignItems: 'center', gap: '16px',
         }}>
           <div style={{
             width: 52, height: 52, borderRadius: '16px', flexShrink: 0,
-            background: 'rgba(0,212,160,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,200,150,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 26,
           }}>✅</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#00d4a0', marginBottom: '2px' }}>Identity Verified</div>
-            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: '#00C896', marginBottom: '2px' }}>Identity Verified</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
               Your KYC is approved. You can trade freely on EthioSwap.
             </div>
           </div>
@@ -712,14 +714,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       ) : user.kycStatus === 'pending' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
-          background: 'linear-gradient(135deg, rgba(245,197,24,0.08) 0%, rgba(200,150,0,0.04) 100%)',
-          border: '1.5px solid rgba(245,197,24,0.3)',
+          background: 'linear-gradient(135deg, rgba(245,166,35,0.08) 0%, rgba(200,150,0,0.04) 100%)',
+          border: '1.5px solid rgba(245,166,35,0.3)',
           display: 'flex', alignItems: 'center', gap: '16px',
         }}>
-          <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,197,24,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>⏳</div>
+          <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,166,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>⏳</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#f5c518', marginBottom: '2px' }}>Under Review</div>
-            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: '#F5A623', marginBottom: '2px' }}>Under Review</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
               Your documents are being reviewed by our team. Usually takes under 24 hours.
             </div>
           </div>
@@ -727,15 +729,15 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       ) : user.kycStatus === 'rejected' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
-          background: 'rgba(239,68,68,0.06)', border: '1.5px solid rgba(239,68,68,0.3)',
+          background: 'rgba(255,77,77,0.06)', border: '1.5px solid rgba(255,77,77,0.3)',
           display: 'flex', flexDirection: 'column', gap: '14px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>❌</div>
+            <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(255,77,77,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>❌</div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#ef4444', marginBottom: '2px' }}>Verification Rejected</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#FF4D4D', marginBottom: '2px' }}>Verification Rejected</div>
               {user.kycRejectionReason && (
-                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.4 }}>
                   Reason: <span style={{ color: '#fca5a5' }}>{user.kycRejectionReason}</span>
                 </div>
               )}
@@ -745,7 +747,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             onClick={() => setShowKYC(true)}
             style={{
               padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-              background: '#ef4444', color: '#fff', fontWeight: 800, fontSize: '14px',
+              background: '#FF4D4D', color: '#fff', fontWeight: 600, fontSize: '14px',
               fontFamily: 'var(--font)', width: '100%',
             }}
           >
@@ -756,24 +758,24 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         /* NOT STARTED — the most important CTA */
         <div style={{
           borderRadius: '20px', overflow: 'hidden',
-          border: '1.5px solid rgba(245,197,24,0.35)',
-          background: 'linear-gradient(135deg, #111318 0%, rgba(245,197,24,0.05) 100%)',
+          border: '1.5px solid rgba(245,166,35,0.35)',
+          background: 'linear-gradient(135deg, #141827 0%, rgba(245,166,35,0.05) 100%)',
         }}>
           {/* Top urgency banner */}
           <div style={{
-            background: 'rgba(245,197,24,0.12)', padding: '10px 20px',
-            borderBottom: '1px solid rgba(245,197,24,0.15)',
-            fontSize: '11px', fontWeight: 700, color: '#f5c518', textAlign: 'center',
+            background: 'rgba(245,166,35,0.12)', padding: '10px 20px',
+            borderBottom: '1px solid rgba(245,166,35,0.15)',
+            fontSize: '11px', fontWeight: 600, color: '#F5A623', textAlign: 'center',
             letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>
             ⚠️ Required to Trade on EthioSwap
           </div>
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '18px' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,197,24,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🛡️</div>
+              <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,166,35,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🛡️</div>
               <div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Verify Your Identity</div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '17px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>Verify Your Identity</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 }}>
                   Complete a quick KYC check to unlock deposits, withdrawals, and P2P trading.
                 </div>
               </div>
@@ -784,14 +786,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < kycSteps.length - 1 ? '10px' : '18px' }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: s.done ? 'rgba(0,212,160,0.15)' : 'rgba(255,255,255,0.05)',
-                  border: `1.5px solid ${s.done ? '#00d4a0' : 'rgba(255,255,255,0.1)'}`,
-                  fontSize: '12px', fontWeight: 800,
-                  color: s.done ? '#00d4a0' : '#6b7280',
+                  background: s.done ? 'rgba(0,200,150,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: `1.5px solid ${s.done ? '#00C896' : 'rgba(255,255,255,0.1)'}`,
+                  fontSize: '12px', fontWeight: 600,
+                  color: s.done ? '#00C896' : '#8A9BB8',
                 }}>
                   {s.done ? '✓' : i + 1}
                 </div>
-                <span style={{ fontSize: '13px', color: s.done ? '#00d4a0' : '#9ca3af', fontWeight: s.done ? 700 : 400 }}>{s.label}</span>
+                <span style={{ fontSize: '13px', color: s.done ? '#00C896' : 'var(--muted)', fontWeight: s.done ? 600 : 400 }}>{s.label}</span>
               </div>
             ))}
 
@@ -799,16 +801,16 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               onClick={() => setShowKYC(true)}
               style={{
                 width: '100%', padding: '16px', borderRadius: '14px', border: 'none',
-                cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 800, fontSize: '16px',
-                background: 'linear-gradient(135deg, #f5c518, #e5a800)',
-                color: '#000',
-                boxShadow: '0 4px 20px rgba(245,197,24,0.35)',
+                cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '16px',
+                background: '#00C896',
+                color: '#04342C',
+                boxShadow: '0 4px 20px rgba(0,200,150,0.35)',
                 transition: 'all 0.2s',
               }}
             >
               🪪 Start Identity Verification →
             </button>
-            <div style={{ fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '10px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'center', marginTop: '10px' }}>
               Takes 2–3 minutes · Your data is encrypted and secure
             </div>
           </div>
@@ -822,18 +824,18 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             ✈️
           </div>
           <div>
-            <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-1)', margin: 0 }}>Telegram Bot Connection</h3>
-            <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0 }}>Receive trade alerts and secure OTP codes on Telegram</p>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0 }}>Telegram Bot Connection</h3>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>Receive trade alerts and secure OTP codes on Telegram</p>
           </div>
         </div>
 
         {user.telegramChatId ? (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,212,160,0.03)', border: '1px solid rgba(0,212,160,0.15)', padding: '12px 16px', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,200,150,0.03)', border: '1px solid rgba(0,200,150,0.15)', padding: '12px 16px', borderRadius: '12px' }}>
             <div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4a0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#00C896', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 🟢 Connected
               </span>
-              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>Chat ID: {user.telegramChatId}</span>
+              <span style={{ fontSize: '10px', color: 'var(--muted)' }}>Chat ID: {user.telegramChatId}</span>
             </div>
             <button 
               onClick={() => {
@@ -851,7 +853,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               Link your account to our Telegram bot <b>@EthioSwap_Bot</b> to get rich alerts and check trade statuses even before your account is verified.
             </p>
             {linkCode ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,197,24,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,166,35,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                   <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
                   <strong
@@ -861,12 +863,12 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                         setTimeout(() => setCodeCopied(false), 2000);
                       });
                     }}
-                    style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace', cursor: 'pointer', padding: '4px 12px', borderRadius: '8px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.15)', userSelect: 'all', transition: 'all 0.2s ease' }}
+                    style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace', cursor: 'pointer', padding: '4px 12px', borderRadius: '8px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.15)', userSelect: 'all', transition: 'all 0.2s ease' }}
                     title="Click to copy code"
                   >
                     {linkCode}
                   </strong>
-                  <span style={{ fontSize: '10px', color: codeCopied ? '#00d4a0' : 'var(--text-3)', marginTop: '4px', fontWeight: codeCopied ? 700 : 400 }}>
+                  <span style={{ fontSize: '10px', color: codeCopied ? '#00C896' : 'var(--muted)', marginTop: '4px', fontWeight: codeCopied ? 600 : 400 }}>
                     {codeCopied
                       ? '✓ Copied to clipboard!'
                       : timeRemaining > 0
@@ -914,24 +916,24 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
       {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
       <div className="card glass-card" style={{ padding: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Performance Stats</h3>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: '#fff' }}>Performance Stats</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Average Star Rating</span>
-            <span style={{ fontWeight: 700, color: 'var(--gold)' }}>⭐ {(user.avg_rating || user.averageRating || 5.0).toFixed(1)} / 5.0</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Average Star Rating</span>
+            <span style={{ fontWeight: 600, color: 'var(--gold)' }}>⭐ {(user.avg_rating || user.averageRating || 5.0).toFixed(1)} / 5.0</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Positive Feedback</span>
-            <span style={{ fontWeight: 700, color: '#00d4a0' }}>👍 {user.positive_percentage || 100}% positive</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Positive Feedback</span>
+            <span style={{ fontWeight: 600, color: '#00C896' }}>👍 {user.positive_percentage || 100}% positive</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Total Completed Trades</span>
-            <span style={{ fontWeight: 700 }}>{user.totalCompletedTrades || user.totalTrades || 0} trades</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Total Completed Trades</span>
+            <span style={{ fontWeight: 600 }}>{user.totalCompletedTrades || user.totalTrades || 0} trades</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-3)', fontSize: '13px' }}>Member Since</span>
-            <span style={{ fontWeight: 700 }}>{joinDate}</span>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Member Since</span>
+            <span style={{ fontWeight: 600 }}>{joinDate}</span>
           </div>
         </div>
       </div>
@@ -941,11 +943,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Lock size={20} style={{ color: 'var(--text-3)' }} />
+              <Lock size={20} style={{ color: 'var(--muted)' }} />
             </div>
             <div>
-              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-1)' }}>Confidential ID Data</h4>
-              <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>Protected by security lock</p>
+              <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Confidential ID Data</h4>
+              <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Protected by security lock</p>
             </div>
           </div>
           <button 
@@ -964,8 +966,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
       {/* ─── WRITE A REVIEW ──────────────────────────────────── */}
       <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-1)' }}>Write a Review About Us</h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: '#fff' }}>Write a Review About Us</h3>
+        <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>
           Share your experience with EthioSwap. Your review will appear on our landing page.
         </p>
 
@@ -976,7 +978,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 const rating = Math.max(0, Math.min(5, Math.round(Number(myReview.rating) || 5)));
                 return (
                   <>
-                    {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#f5c518', fontSize: '16px' }}>★</span>)}
+                    {Array.from({ length: rating }).map((_, i) => <span key={i} style={{ color: '#F5A623', fontSize: '16px' }}>★</span>)}
                     {Array.from({ length: 5 - rating }).map((_, i) => <span key={i} style={{ color: '#3a3a3a', fontSize: '16px' }}>★</span>)}
                   </>
                 );
@@ -985,7 +987,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             <p style={{ fontSize: '13px', color: 'var(--text-2)', fontStyle: 'italic', margin: '0 0 16px 0', lineHeight: 1.6 }}>"{myReview.content}"</p>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => setReviewEditing(true)} className="btn btn-ghost" style={{ fontSize: '12px', flex: 1 }}>✏️ Edit Review</button>
-              <button onClick={handleDeleteReview} className="btn btn-ghost" style={{ fontSize: '12px', color: '#ef4444', flex: 1 }}>🗑️ Delete Review</button>
+              <button onClick={handleDeleteReview} className="btn btn-ghost" style={{ fontSize: '12px', color: '#FF4D4D', flex: 1 }}>🗑️ Delete Review</button>
             </div>
           </div>
         ) : (
@@ -994,7 +996,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', display: 'block', marginBottom: '6px' }}>Your Rating</label>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {[1, 2, 3, 4, 5].map(star => (
-                  <button key={star} onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', padding: 0, color: star <= reviewRating ? '#f5c518' : '#3a3a3a' }}>★</button>
+                  <button key={star} onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', padding: 0, color: star <= reviewRating ? '#F5A623' : '#3a3a3a' }}>★</button>
                 ))}
               </div>
             </div>
@@ -1021,15 +1023,15 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       </div>
 
       {/* ─── DANGER ZONE: DELETE ACCOUNT ──────────────────────── */}
-      <div className="card" style={{ padding: '20px', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.02)' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '8px', color: '#ef4444' }}>Danger Zone</h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
+      <div className="card" style={{ padding: '20px', border: '1px solid rgba(255, 77, 77, 0.2)', background: 'rgba(255, 77, 77, 0.02)' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: '#FF4D4D' }}>Danger Zone</h3>
+        <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>
           Once you delete your account, there is no going back. Please be certain.
         </p>
         <button 
           onClick={() => setShowDeleteConfirm(true)} 
           className="btn btn-danger" 
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', background: 'rgba(255, 77, 77, 0.1)', border: '1px solid rgba(255, 77, 77, 0.3)', color: '#FF4D4D' }}
         >
           🗑️ Delete My Account
         </button>
@@ -1068,8 +1070,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '30px 24px', position: 'relative', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.3)', boxShadow: '0 20px 40px rgba(239, 68, 68, 0.1)' }}>
             <div style={{ width: '56px', height: '56px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 16px' }}>⚠️</div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px', color: '#FFF' }}>Delete Account</h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.6', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px', color: '#FFF' }}>Delete Account</h3>
+            <p style={{ fontSize: '14px', color: 'var(--muted)', lineHeight: '1.6', marginBottom: '24px' }}>
               Are you sure? This action is permanent and cannot be undone. All your balance, trade history, and profile data will be deleted forever.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -1090,7 +1092,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                   }
                 }} 
                 className="btn btn-danger" 
-                style={{ flex: 1, height: '44px', background: '#EF4444', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, height: '44px', background: '#FF4D4D', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: 600, cursor: 'pointer' }}
               >
                 Yes, I am sure
               </button>
@@ -1106,11 +1108,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             <button onClick={() => setShowEditProfile(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
               ✕
             </button>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px', color: 'var(--text-1)' }}>Edit Profile</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#fff' }}>Edit Profile</h3>
             
             <form onSubmit={handleEditProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Full Name</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Full Name</label>
                 <input 
                   type="text" 
                   className="input" 
@@ -1122,7 +1124,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Phone Number</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Phone Number</label>
                 <input 
                   type="text" 
                   className="input" 
@@ -1134,7 +1136,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Email Address</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Email Address</label>
                 <input 
                   type="email" 
                   className="input" 
@@ -1146,7 +1148,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>New Password (leave blank to keep current)</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>New Password (leave blank to keep current)</label>
                 <input 
                   type="password" 
                   className="input" 
@@ -1172,9 +1174,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       {/* Profile Update OTP Modal */}
       {showProfileOtp && (
         <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#111318', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Profile Security Verification</h3>
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#141827', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>Profile Security Verification</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px', lineHeight: '1.4' }}>
               Confirm your identity by entering the 6-digit OTP code to update your profile details.
             </p>
 
@@ -1232,12 +1234,12 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 style={{
                   height: '44px',
                   fontSize: '14px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
-                  color: '#0A0C12',
+                  background: '#00C896',
+                  color: '#04342C',
                   border: 'none',
                   borderRadius: '10px',
                   width: '100%',
@@ -1250,7 +1252,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
             <div style={{ marginTop: '14px' }}>
               {profileResendTimer > 0 ? (
-                <span style={{ fontSize: '11px', color: '#6b7280' }}>Resend code in {profileResendTimer}s</span>
+                <span style={{ fontSize: '11px', color: '#8A9BB8' }}>Resend code in {profileResendTimer}s</span>
               ) : (
                 <button
                   type="button"

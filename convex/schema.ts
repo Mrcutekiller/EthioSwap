@@ -50,6 +50,12 @@ export default defineSchema({
     kycIdFront: v.optional(v.any()),
     kycIdBack: v.optional(v.any()),
     
+    // Additional profile details
+    country: v.optional(v.union(v.string(), v.null())),
+    city: v.optional(v.union(v.string(), v.null())),
+    work: v.optional(v.union(v.string(), v.null())),
+    profilePic: v.optional(v.union(v.string(), v.null())),
+    
     // Ratings & Verification
     averageRating: v.optional(v.number()),
     avg_rating: v.optional(v.number()),

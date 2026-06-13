@@ -7,9 +7,9 @@ const Leaderboard = ({ user }) => {
   const [category, setCategory] = useState('trades'); // 'trades' | 'volume' | 'referrals'
 
   const categories = [
-    { id: 'trades', label: 'Top Traders', icon: <TrendingUp size={18} />, color: '#00d4a0' },
+    { id: 'trades', label: 'Top Traders', icon: <TrendingUp size={18} />, color: '#00C896' },
     { id: 'volume', label: 'Top Volume', icon: <Award size={18} />, color: '#3b82f6' },
-    { id: 'referrals', label: 'Top Referrers', icon: <Users size={18} />, color: '#f5c518' },
+    { id: 'referrals', label: 'Top Referrers', icon: <Users size={18} />, color: '#F5A623' },
   ];
 
   const allUsers = useQuery(api.users.listAll);
@@ -42,7 +42,7 @@ const Leaderboard = ({ user }) => {
       {/* ─── HEADER SECTION ───────────────────────────────────── */}
       <div className="card" style={{ padding: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 197, 24, 0.1) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-        <Trophy size={48} style={{ color: '#f5c518', marginBottom: '12px' }} />
+        <Trophy size={48} style={{ color: '#F5A623', marginBottom: '12px' }} />
         <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', marginBottom: '4px' }}>Monthly Hall of Fame</h2>
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>Compete for the top spots and win exclusive rewards!</p>
       </div>
@@ -104,7 +104,7 @@ const Leaderboard = ({ user }) => {
                     width: '32px', 
                     fontSize: '18px', 
                     fontWeight: 900, 
-                    color: i === 0 ? '#f5c518' : (i === 1 ? '#cbd5e1' : (i === 2 ? '#92400e' : 'rgba(255,255,255,0.3)')),
+                    color: i === 0 ? '#F5A623' : (i === 1 ? '#cbd5e1' : (i === 2 ? '#92400e' : 'rgba(255,255,255,0.3)')),
                     textAlign: 'center'
                   }}>
                     {i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : entry.rank))}
@@ -121,7 +121,7 @@ const Leaderboard = ({ user }) => {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       @{entry.username}
-                      {entry.isVerified && <span style={{ color: '#00d4a0', fontSize: '12px' }}>✅</span>}
+                      {entry.isVerified && <span style={{ color: '#00C896', fontSize: '12px' }}>✅</span>}
                     </div>
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {entry.badge ? `${entry.badge} Trader` : 'Newcomer'}
@@ -145,7 +145,7 @@ const Leaderboard = ({ user }) => {
 
       {/* ─── REWARDS INFO ─────────────────────────────────────── */}
       <div className="card" style={{ padding: '20px', background: 'rgba(245, 197, 24, 0.03)', border: '1px dashed rgba(245, 197, 24, 0.2)' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#f5c518', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#F5A623', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           🎁 Monthly Top 3 Rewards
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

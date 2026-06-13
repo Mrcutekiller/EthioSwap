@@ -58,7 +58,7 @@ const NotificationBell = ({ user }) => {
         style={{
           background: 'none',
           border: 'none',
-          color: unreadCount > 0 ? '#f5c518' : '#8b92a8',
+          color: unreadCount > 0 ? '#F5A623' : '#8b92a8',
           cursor: 'pointer',
           padding: '8px',
           display: 'flex',
@@ -74,7 +74,7 @@ const NotificationBell = ({ user }) => {
             position: 'absolute',
             top: '4px',
             right: '4px',
-            background: '#ef4444',
+            background: '#FF4D4D',
             color: 'white',
             borderRadius: '50%',
             width: '16px',
@@ -102,7 +102,7 @@ const NotificationBell = ({ user }) => {
             top: '44px',
             right: '0',
             width: '320px',
-            background: '#111318',
+            background: '#141827',
             border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: '16px',
             boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
@@ -117,7 +117,7 @@ const NotificationBell = ({ user }) => {
               {unreadCount > 0 && (
                 <button 
                   onClick={markAllAsRead}
-                  style={{ background: 'none', border: 'none', color: '#f5c518', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ background: 'none', border: 'none', color: '#F5A623', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Mark all as read
                 </button>
@@ -137,7 +137,7 @@ const NotificationBell = ({ user }) => {
                     style={{
                       padding: '14px 16px',
                       borderBottom: '1px solid rgba(255,255,255,0.03)',
-                      background: n.is_read ? 'transparent' : 'rgba(245,197,24,0.03)',
+                      background: n.is_read ? 'transparent' : 'rgba(245,166,35,0.03)',
                       display: 'flex',
                       gap: '12px',
                       position: 'relative',
@@ -154,7 +154,7 @@ const NotificationBell = ({ user }) => {
                       </div>
                     </div>
                     {!n.is_read && (
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f5c518', marginTop: '6px' }} />
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F5A623', marginTop: '6px' }} />
                     )}
                   </div>
                 ))

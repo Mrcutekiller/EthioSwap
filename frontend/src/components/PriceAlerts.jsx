@@ -83,10 +83,10 @@ const PriceAlerts = () => {
                     {alert.is_triggered ? `Triggered ${new Date(alert.triggered_at).toLocaleDateString()}` : alert.is_active ? 'Active' : 'Paused'}
                   </div>
                 </div>
-                <button onClick={() => handleToggle(alert.id, alert.is_active)} style={{ background: 'none', border: 'none', color: alert.is_active ? '#00d4a0' : 'var(--text-3)', cursor: 'pointer', padding: '4px' }}>
+                <button onClick={() => handleToggle(alert.id, alert.is_active)} style={{ background: 'none', border: 'none', color: alert.is_active ? '#00C896' : 'var(--text-3)', cursor: 'pointer', padding: '4px' }}>
                   {alert.is_active ? <Bell size={18} /> : <BellOff size={18} />}
                 </button>
-                <button onClick={() => handleDelete(alert.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}>
+                <button onClick={() => handleDelete(alert.id)} style={{ background: 'none', border: 'none', color: '#FF4D4D', cursor: 'pointer', padding: '4px' }}>
                   <Trash2 size={16} />
                 </button>
               </div>

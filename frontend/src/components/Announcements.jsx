@@ -31,7 +31,7 @@ const Announcements = ({ user }) => {
     info: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.2)', icon: <Info size={18} color="#3b82f6" />, text: '#3b82f6' },
     warning: { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.2)', icon: <AlertTriangle size={18} color="#f59e0b" />, text: '#f59e0b' },
     success: { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.2)', icon: <CheckCircle size={18} color="#10b981" />, text: '#10b981' },
-    urgent: { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.2)', icon: <AlertCircle size={18} color="#ef4444" />, text: '#ef4444' },
+    urgent: { bg: 'rgba(255,77,77, 0.1)', border: 'rgba(255,77,77, 0.2)', icon: <AlertCircle size={18} color="#FF4D4D" />, text: '#FF4D4D' },
   };
 
   const style = colors[announcement.type] || colors.info;

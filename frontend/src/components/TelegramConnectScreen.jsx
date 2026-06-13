@@ -120,8 +120,8 @@ const TelegramConnectScreen = ({
         </div>
       ) : tgLinkCode ? (
         <div style={{
-          background: 'rgba(255,215,0,0.04)',
-          border: '1px solid rgba(255,215,0,0.25)',
+          background: 'rgba(245,166,35,0.04)',
+          border: '1px solid rgba(245,166,35,0.25)',
           borderRadius: '16px',
           padding: '20px',
           display: 'flex',
@@ -136,8 +136,8 @@ const TelegramConnectScreen = ({
               fontSize: '36px',
               fontWeight: 900,
               letterSpacing: '8px',
-              color: '#FFD700',
-              textShadow: '0 0 20px rgba(255,215,0,0.4)',
+              color: '#F5A623',
+              textShadow: '0 0 20px rgba(245,166,35,0.4)',
               userSelect: 'all',
             }}>
               {tgLinkCode}
@@ -182,8 +182,8 @@ const TelegramConnectScreen = ({
       ) : (
         <div style={{
           textAlign: 'center', padding: '20px',
-          background: 'rgba(239,68,68,0.06)',
-          border: '1px solid rgba(239,68,68,0.2)',
+          background: 'rgba(255,77,77,0.06)',
+          border: '1px solid rgba(255,77,77,0.2)',
           borderRadius: '14px',
         }}>
           <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>

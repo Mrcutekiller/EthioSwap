@@ -4,6 +4,7 @@ import LandingPage, { FloatingBill } from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import P2PListings from './components/P2PListings.jsx';
+import UserDashboard from './components/UserDashboard.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import TradeRoom from './components/TradeRoom.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
@@ -11,6 +12,9 @@ import TransactionHistory from './pages/TransactionHistory.jsx';
 import AppLockScreen from './components/AppLockScreen.jsx';
 import { NotificationCenter, useNotifCount } from './components/NotificationCenter.jsx';
 import SupportWidget from './components/SupportWidget.jsx';
+import NotificationsPage from './pages/NotificationsPage.jsx';
+import ScanPage from './pages/ScanPage.jsx';
+import SellerProfilePage from './pages/SellerProfilePage.jsx';
 import Logo from './components/Logo.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { convex } from './convexClient';
@@ -48,6 +52,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [work, setWork] = useState('');
+  const [profilePic, setProfilePic] = useState('');
+  const [profilePicPreview, setProfilePicPreview] = useState('');
+  const [uploadingPic, setUploadingPic] = useState(false);
   const [localError, setLocalError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
@@ -141,6 +151,48 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     return () => clearTimeout(timer);
   }, [email, mode]);
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setLocalError("Image size must be less than 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePicPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    setUploadingPic(true);
+    try {
+      const uploadUrl = await convex.mutation(api.users.generateUploadUrl);
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!response.ok) {
+        throw new Error("HTTP error " + response.status);
+      }
+      const { storageId } = await response.json();
+      setProfilePic(storageId);
+    } catch (err) {
+      console.error("Profile picture upload failed, falling back to base64:", err);
+      // Wait for reader to load base64 if not already loaded
+      const base64 = reader.result || await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onloadend = () => resolve(r.result);
+        r.readAsDataURL(file);
+      });
+      setProfilePic(base64);
+    } finally {
+      setUploadingPic(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
@@ -157,8 +209,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         setLocalError('Please resolve the errors on the form before submitting.');
         return;
       }
-      if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age) {
-        setLocalError('Please fill in all registration fields.');
+      if (!username || !password || !confirmPassword || !email || !fullName || !phone || !age || !country || !city || !work) {
+        setLocalError('Please fill in all registration fields, including country, city, and work.');
         return;
       }
       if (password !== confirmPassword) {
@@ -169,9 +221,8 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
         setLocalError('You must be at least 18 years old to join.');
         return;
       }
-      const result = await register(username, password, phone, email, fullName, age);
+      const result = await register(username, password, phone, email, fullName, age, country, city, work, profilePic);
       if (!result) return;
-      // Don't toggle if register succeeded (user is already logged in)
     }
   };
 
@@ -188,20 +239,20 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
     <div style={{ minHeight: '100vh', width: '100%', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .input:focus { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(245,197,24,0.15) !important; }
+        .input:focus { border-color: var(--gold) !important; box-shadow: 0 0 40px rgba(245,166,35,0.15) !important; }
         .input:-webkit-autofill,
         .input:-webkit-autofill:hover, 
         .input:-webkit-autofill:focus, 
         .input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px #111318 inset !important;
+          -webkit-box-shadow: 0 0 0 30px #141827 inset !important;
           -webkit-text-fill-color: #ffffff !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>
       
       {/* Background decoration */}
-      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,197,24,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
-      <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(0,212,160,0.06) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(0,200,150,0.06) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
       {/* Main Flex Wrapper: side-by-side on desktop, stacked on mobile */}
       <div style={{
@@ -388,6 +439,30 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 
             {mode === 'register' && (
               <>
+                {/* Profile Picture Upload */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
+                  <div style={{ position: 'relative', width: '90px', height: '90px', borderRadius: '50%', border: '2.5px dashed var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }} onClick={() => document.getElementById('pic-upload').click()}>
+                    {profilePicPreview ? (
+                      <img src={profilePicPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'var(--text-3)' }}>
+                        <i className="ti ti-camera" style={{ fontSize: '28px' }}></i>
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Add Photo</span>
+                      </div>
+                    )}
+                    {uploadingPic && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700 }}>
+                        <div style={{ width: '14px', height: '14px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginRight: '6px' }}></div>
+                        <span>Uploading...</span>
+                      </div>
+                    )}
+                  </div>
+                  <input id="pic-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+                  {profilePic && !uploadingPic && (
+                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>✓ Picture attached</span>
+                  )}
+                </div>
+
                 <div className="auth-input-group">
                   <input 
                     className="auth-input" 
@@ -408,7 +483,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     <input
                       className="auth-input"
                       type="tel"
-                      placeholder="0912 345 678 or +251…"
+                      placeholder="Phone: 0912..."
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
                     />
@@ -425,6 +500,42 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                     />
                     <i className="auth-input-icon ti ti-calendar-event"></i>
                   </div>
+                </div>
+
+                {/* Country and City */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="auth-input-group">
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="Country" 
+                      value={country} 
+                      onChange={e => setCountry(e.target.value)} 
+                    />
+                    <i className="auth-input-icon ti ti-world"></i>
+                  </div>
+                  <div className="auth-input-group">
+                    <input 
+                      className="auth-input" 
+                      type="text" 
+                      placeholder="City" 
+                      value={city} 
+                      onChange={e => setCity(e.target.value)} 
+                    />
+                    <i className="auth-input-icon ti ti-map-pin"></i>
+                  </div>
+                </div>
+
+                {/* Work Field */}
+                <div className="auth-input-group">
+                  <input 
+                    className="auth-input" 
+                    type="text" 
+                    placeholder="Work / Occupation" 
+                    value={work} 
+                    onChange={e => setWork(e.target.value)} 
+                  />
+                  <i className="auth-input-icon ti ti-briefcase"></i>
                 </div>
               </>
             )}
@@ -459,7 +570,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #FFD700 0%, #FFE082 100%)',
+                background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)',
                 color: '#0A0C12',
                 border: 'none',
                 borderRadius: '14px',
@@ -501,14 +612,150 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
   );
 };
 
+// ── Page titles ──
+const PAGE_TITLES = {
+  home: 'Home',
+  p2p: 'Trade',
+  wallet: 'Wallet',
+  transactions: 'History',
+  notifications: 'Notifications',
+  profile: 'Profile',
+  settings: 'Settings',
+  admin: 'Admin',
+  scan: 'Scan QR',
+  sellerProfile: 'Trader Profile',
+};
+
+// ── Desktop Sidebar ──
+const DesktopSidebar = ({ page, setPage, user, logout }) => {
+  const navItems = [
+    { id: 'home', icon: 'ti ti-home', label: 'Home' },
+    { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
+    { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
+    { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
+    { id: 'notifications', icon: 'ti ti-bell', label: 'Notifications' },
+    { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
+    { id: 'settings', icon: 'ti ti-settings', label: 'Settings' },
+  ];
+  if (user?.role === 'admin') navItems.push({ id: 'admin', icon: 'ti ti-shield-star', label: 'Admin' });
+
+  return (
+    <aside style={{
+      position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh',
+      background: 'var(--surface)', borderRight: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column', zIndex: 100,
+    }}>
+      {/* Logo */}
+      <div style={{ padding: '24px 20px 32px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setPage('home')}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px', flexShrink: 0 }}>E</div>
+        <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)' }}>EthioSwap</span>
+      </div>
+
+      {/* Nav Links */}
+      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 8px' }}>
+        {navItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => setPage(item.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px',
+              borderRadius: '10px', fontSize: '14px', fontWeight: 400,
+              color: page === item.id ? 'var(--teal)' : 'var(--muted)',
+              background: page === item.id ? 'rgba(0,200,150,0.08)' : 'transparent',
+              borderLeft: page === item.id ? '3px solid var(--teal)' : '3px solid transparent',
+              transition: 'all 0.15s ease', width: '100%', textAlign: 'left',
+            }}
+            onMouseEnter={e => { if (page !== item.id) e.currentTarget.style.background = 'var(--surface2)'; }}
+            onMouseLeave={e => { if (page !== item.id) e.currentTarget.style.background = 'transparent'; }}
+          >
+            <i className={item.icon} style={{ fontSize: '20px' }}></i>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* User Info */}
+      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '13px', flexShrink: 0 }}>
+            {user?.username?.[0]?.toUpperCase() || 'U'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.fullName || user?.username || 'User'}</span>
+            <span style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{user?.id || 'ES-XXXXXXX'}</span>
+          </div>
+        </div>
+        <button onClick={logout} style={{ padding: '8px', borderRadius: '8px', color: 'var(--muted)', transition: 'all 0.15s', flexShrink: 0 }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,77,77,0.1)'; e.currentTarget.style.color = 'var(--danger)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}
+        >
+          <i className="ti ti-logout" style={{ fontSize: '18px' }}></i>
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+// ── Mobile Bottom Nav ──
+const MobileBottomNav = ({ page, setPage }) => {
+  const tabs = [
+    { id: 'home', icon: 'ti ti-home', label: 'Home' },
+    { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
+    { id: 'scan', icon: 'ti ti-scan', label: 'Scan', center: true },
+    { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
+    { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
+  ];
+
+  return (
+    <nav style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, height: 'var(--bottom-nav-h)',
+      background: 'var(--surface)', borderTop: '1px solid var(--border)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px', zIndex: 100,
+    }}>
+      {tabs.map(tab => (
+        tab.center ? (
+          <button
+            key={tab.id}
+            onClick={() => setPage(tab.id)}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0', position: 'relative',
+            }}
+          >
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '-20px',
+              boxShadow: '0 4px 16px rgba(0,200,150,0.3)',
+            }}>
+              <i className={tab.icon} style={{ fontSize: '24px' }}></i>
+            </div>
+          </button>
+        ) : (
+          <button
+            key={tab.id}
+            onClick={() => setPage(tab.id)}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 12px',
+              color: page === tab.id ? 'var(--teal)' : 'var(--muted)', background: 'none', border: 'none',
+              fontSize: '10px', fontWeight: 400, transition: 'color 0.15s',
+            }}
+          >
+            <i className={tab.icon} style={{ fontSize: '22px' }}></i>
+            <span>{tab.label}</span>
+          </button>
+        )
+      ))}
+    </nav>
+  );
+};
+
 // ── Main App ──────────────────────────────────────────────────
 const AppContent = () => {
   const { user, logout, isLocked, setIsLocked } = useAuth();
-  const [page, setPage] = useState('home'); // home, trade, wallet, p2p, profile, settings, transactions, admin
-  const [authMode, setAuthMode] = useState('login'); // login, register
+  const [page, setPage] = useState('home');
+  const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sellerId, setSellerId] = useState(null);
   const notifCount = useNotifCount();
   const [width, setWidth] = useState(window.innerWidth);
 
@@ -518,7 +765,6 @@ const AppContent = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Session check: if user is set but no session token, force logout
   useEffect(() => {
     if (user) {
       const session = localStorage.getItem('ethioswap_session');
@@ -529,232 +775,105 @@ const AppContent = () => {
     }
   }, [user]);
 
-  // If locked, show lock screen first
+  // Navigate to seller profile
+  const navigateToSeller = (id) => {
+    setSellerId(id);
+    setPage('sellerProfile');
+  };
+
   if (isLocked) {
     return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
   }
 
-  // If not logged in, show landing page or auth
   if (!user) {
     return showAuth ? (
-      <AuthForm 
-        mode={authMode} 
-        onToggle={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} 
-        onBackToHome={() => setShowAuth(false)} 
+      <AuthForm
+        mode={authMode}
+        onToggle={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+        onBackToHome={() => setShowAuth(false)}
       />
     ) : (
-      <LandingPage 
-        onGetStarted={() => { setAuthMode('register'); setShowAuth(true); }} 
-        onSignIn={() => { setAuthMode('login'); setShowAuth(true); }} 
-        systemSettings={null} 
+      <LandingPage
+        onGetStarted={() => { setAuthMode('register'); setShowAuth(true); }}
+        onSignIn={() => { setAuthMode('login'); setShowAuth(true); }}
+        systemSettings={null}
       />
     );
   }
 
-  // ── Logged-in Dashboard ──
+  const isDesktop = width >= 768;
+  const pageTitle = PAGE_TITLES[page] || 'EthioSwap';
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'var(--bg-base)', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      paddingBottom: '80px' // Space for mobile nav
-    }}>
-      {/* Top Navbar */}
-      <div style={{ 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 100, 
-        background: 'rgba(10, 12, 18, 0.85)', 
-        backdropFilter: 'blur(20px)', 
-        borderBottom: '1px solid var(--border)',
-        padding: '12px 20px'
-      }}>
-        <div style={{ 
-          maxWidth: '1200px', 
-          margin: '0 auto', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setPage('home')}>
-            <Logo size={32} />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-1)', fontFamily: 'var(--font-heading)' }}>EthioSwap</span>
-          </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      {/* Desktop Sidebar */}
+      {isDesktop && <DesktopSidebar page={page} setPage={setPage} user={user} logout={logout} />}
 
-          {/* Desktop Nav */}
-          {width >= 768 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-              <button onClick={() => setPage('home')} className={`nav-btn ${page === 'home' ? 'active' : ''}`}>Home</button>
-              <button onClick={() => setPage('p2p')} className={`nav-btn ${page === 'p2p' ? 'active' : ''}`}>P2P</button>
-              <button onClick={() => setPage('wallet')} className={`nav-btn ${page === 'wallet' ? 'active' : ''}`}>Wallet</button>
-              <button onClick={() => setPage('transactions')} className={`nav-btn ${page === 'transactions' ? 'active' : ''}`}>History</button>
-              {user.role === 'admin' && <button onClick={() => setPage('admin')} className={`nav-btn ${page === 'admin' ? 'active' : ''}`}>Admin</button>}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={() => setShowNotifications(!showNotifications)} className="btn btn-ghost" style={{ padding: '10px 12px', position: 'relative' }}>
-              <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
-              {notifCount > 0 && <div className="notif-dot" style={{ position: 'absolute', top: '6px', right: '6px' }}></div>}
-            </button>
-            
-            {/* Desktop Profile & Logout */}
-            {width >= 768 && (
-              <>
-                <button onClick={() => setPage('profile')} className="btn btn-ghost" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ 
-                    width: '32px', height: '32px', borderRadius: '50%', 
-                    background: 'linear-gradient(135deg, #FFD700, #FF6B00)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '14px', fontWeight: 800, color: '#0A0C12'
-                  }}>
-                    {user.username?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-1)' }}>@{user.username}</span>
-                </button>
-                <button onClick={logout} className="btn btn-ghost" style={{ padding: '8px 14px' }}>
-                  <i className="ti ti-logout" style={{ fontSize: '18px' }}></i>
-                </button>
-              </>
-            )}
-
-            {/* Mobile Menu Button */}
-            {width < 768 && (
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="btn btn-ghost" style={{ padding: '10px 12px' }}>
-                <i className={`ti ti-${isMobileMenuOpen ? 'x' : 'menu-2'}`} style={{ fontSize: '20px' }}></i>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Notifications Panel (Right Sidebar) */}
-      {showNotifications && (
-        <NotificationCenter onClose={() => setShowNotifications(false)} />
-      )}
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && width < 768 && (
+      {/* Mobile Top Bar */}
+      {!isDesktop && (
         <div style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: '80%',
-          maxWidth: '300px',
-          height: '100%',
-          background: 'var(--bg-surface)',
-          zIndex: 200,
-          borderLeft: '1px solid var(--border)',
-          padding: '24px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          animation: 'slideInRight 0.3s ease',
+          position: 'sticky', top: 0, zIndex: 90, background: 'rgba(11,14,26,0.92)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--border)', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <style>{`
-            @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-          `}</style>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ 
-                width: '40px', height: '40px', borderRadius: '50%', 
-                background: 'linear-gradient(135deg, #FFD700, #FF6B00)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '16px', fontWeight: 800, color: '#0A0C12'
-              }}>
-                {user.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-1)' }}>@{user.username}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>{user.email}</div>
-              </div>
-            </div>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="btn btn-ghost" style={{ padding: '8px' }}>
-              <i className="ti ti-x" style={{ fontSize: '22px' }}></i>
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>EthioSwap</span>
           </div>
-
-          <button onClick={() => { setPage('profile'); setIsMobileMenuOpen(false); }} className="btn btn-ghost" style={{ justifyContent: 'flex-start', gap: '12px', padding: '12px' }}>
-            <i className="ti ti-user" style={{ fontSize: '20px' }}></i>
-            <span style={{ fontSize: '15px', fontWeight: 600 }}>Profile</span>
-          </button>
-          <button onClick={() => { setPage('settings'); setIsMobileMenuOpen(false); }} className="btn btn-ghost" style={{ justifyContent: 'flex-start', gap: '12px', padding: '12px' }}>
-            <i className="ti ti-settings" style={{ fontSize: '20px' }}></i>
-            <span style={{ fontSize: '15px', fontWeight: 600 }}>Settings</span>
-          </button>
-          {user.role === 'admin' && (
-            <button onClick={() => { setPage('admin'); setIsMobileMenuOpen(false); }} className="btn btn-ghost" style={{ justifyContent: 'flex-start', gap: '12px', padding: '12px' }}>
-              <i className="ti ti-shield-star" style={{ fontSize: '20px' }}></i>
-              <span style={{ fontSize: '15px', fontWeight: 600 }}>Admin Panel</span>
-            </button>
-          )}
-          <div style={{ flex: 1 }}></div>
-          <button onClick={logout} className="btn btn-ghost btn-danger" style={{ justifyContent: 'flex-start', gap: '12px', padding: '12px' }}>
-            <i className="ti ti-logout" style={{ fontSize: '20px' }}></i>
-            <span style={{ fontSize: '15px', fontWeight: 600 }}>Logout</span>
+          <button onClick={() => setPage('notifications')} style={{ padding: '8px', position: 'relative', color: 'var(--text)' }}>
+            <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
+            {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--danger)', border: '2px solid var(--bg)' }}></div>}
           </button>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        width: '100%', 
-        padding: '20px' 
+      <main style={{
+        marginLeft: isDesktop ? 'var(--sidebar-w)' : 0,
+        minHeight: '100vh',
+        padding: isDesktop ? '32px' : '16px',
+        paddingBottom: !isDesktop ? 'calc(var(--bottom-nav-h) + 24px)' : '32px',
       }}>
-        {page === 'home' && <P2PListings />}
-        {page === 'p2p' && <P2PListings />}
-        {page === 'wallet' && <WalletCard />}
-        {page === 'profile' && <ProfilePage />}
-        {page === 'settings' && <SettingsPage />}
-        {page === 'transactions' && <TransactionHistory />}
-        {page === 'admin' && user.role === 'admin' && <AdminPanel />}
+        <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }} className="page-fade">
+          {/* Desktop Top Bar */}
+          {isDesktop && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text)' }}>{pageTitle}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button onClick={() => setPage('notifications')} style={{ padding: '10px', borderRadius: '10px', color: 'var(--text)', position: 'relative', transition: 'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
+                  {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--danger)', border: '2px solid var(--bg)' }}></div>}
+                </button>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }} onClick={() => setPage('profile')}>
+                  {user?.username?.[0]?.toUpperCase() || 'U'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {page === 'home' && <UserDashboard onNavigate={setPage} onNavigateToSeller={navigateToSeller} />}
+          {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
+          {page === 'wallet' && <WalletCard />}
+          {page === 'profile' && <ProfilePage />}
+          {page === 'settings' && <SettingsPage />}
+          {page === 'transactions' && <TransactionHistory />}
+          {page === 'admin' && user.role === 'admin' && <AdminPanel />}
+          {page === 'notifications' && <NotificationsPage setPage={setPage} />}
+          {page === 'scan' && <ScanPage setPage={setPage} />}
+          {page === 'sellerProfile' && <SellerProfilePage sellerId={sellerId} setPage={setPage} />}
+        </div>
       </main>
 
-      {/* Trade Room (Overlay Modal) */}
-      {/* The TradeRoom component manages its own visibility based on URL/state */}
+      {/* Overlays */}
       <TradeRoom />
-
-      {/* Support Widget */}
       <SupportWidget />
+      {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
 
-      {/* Mobile Bottom Navigation */}
-      {width < 768 && (
-        <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          background: 'rgba(10, 12, 18, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '1px solid var(--border)',
-          padding: '8px 24px 16px',
-          display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-          zIndex: 90,
-        }}>
-          {[
-            { id: 'home', icon: 'home', label: 'Home' },
-            { id: 'p2p', icon: 'exchange', label: 'P2P' },
-            { id: 'wallet', icon: 'wallet', label: 'Wallet' },
-            { id: 'profile', icon: 'user', label: 'Profile' }
-          ].map(item => (
-            <button
-              key={item.id}
-              onClick={() => setPage(item.id)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: '4px', padding: '8px 16px',
-                color: page === item.id ? 'var(--gold)' : 'var(--text-3)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <i className={`ti ti-${item.icon}`} style={{ fontSize: '22px' }}></i>
-              <span style={{ fontSize: '11px', fontWeight: 600 }}>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      )}
+      {/* Mobile Bottom Nav */}
+      {!isDesktop && <MobileBottomNav page={page} setPage={setPage} />}
     </div>
   );
 };

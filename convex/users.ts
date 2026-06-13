@@ -9,7 +9,22 @@ export const get = query({
   args: { id: v.optional(v.id("users")) },
   handler: async (ctx, args) => {
     if (!args.id) return null;
-    return await ctx.db.get(args.id);
+    const user = await ctx.db.get(args.id);
+    if (!user) return null;
+
+    let profilePicUrl = null;
+    if (user.profilePic) {
+      if (user.profilePic.startsWith("data:") || user.profilePic.startsWith("http")) {
+        profilePicUrl = user.profilePic;
+      } else {
+        profilePicUrl = await ctx.storage.getUrl(user.profilePic);
+      }
+    }
+
+    return {
+      ...user,
+      profilePicUrl,
+    };
   },
 });
 
@@ -82,6 +97,10 @@ export const create = mutation({
     ethAddress: v.string(),
     ethPrivateKey: v.string(),
     age: v.optional(v.union(v.number(), v.null())),
+    country: v.optional(v.union(v.string(), v.null())),
+    city: v.optional(v.union(v.string(), v.null())),
+    work: v.optional(v.union(v.string(), v.null())),
+    profilePic: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const normalizedUsername = args.username.trim().toLowerCase();
@@ -115,6 +134,7 @@ export const create = mutation({
       : args.phone;
 
     const { password, phone: _ignored, ...userData } = args;
+    console.log('Creating user with data fields:', Object.keys(userData));
 
     const status = "active";
     const kycStatus = args.role === "admin" ? "approved" : "none";
@@ -207,7 +227,30 @@ export const authenticate = query({
 
     const { passwordHash, ...safeUser } = user;
     console.log('Authentication successful for:', safeUser.username);
-    return { status: "success", user: safeUser };
+
+    let profilePicUrl = null;
+    if (safeUser.profilePic) {
+      try {
+        if (safeUser.profilePic.startsWith("data:") || safeUser.profilePic.startsWith("http")) {
+          profilePicUrl = safeUser.profilePic;
+        } else if (ctx.storage) {
+          profilePicUrl = await ctx.storage.getUrl(safeUser.profilePic);
+        } else {
+          profilePicUrl = safeUser.profilePic;
+        }
+      } catch (storageError) {
+        console.warn('Unable to resolve profilePic URL during authentication:', storageError);
+        profilePicUrl = safeUser.profilePic;
+      }
+    }
+
+    return {
+      status: "success",
+      user: {
+        ...safeUser,
+        profilePicUrl,
+      },
+    };
   },
 });
 
@@ -826,5 +869,20 @@ export const logoutUser = mutation({
     return { success: true };
   },
 });
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getFileUrl = query({
+  args: { storageId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 
 

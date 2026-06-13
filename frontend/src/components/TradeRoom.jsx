@@ -28,7 +28,7 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px'
     }}>
       <div className="card glass-card" style={{ maxWidth: '420px', width: '100%', padding: '28px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00d4a0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(0,200,150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
           <CheckCircle size={32} />
         </div>
         <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Trade Complete!</h3>
@@ -51,8 +51,8 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
             <Star 
               key={s} 
               size={36} 
-              fill={s <= stars ? '#f5c518' : 'none'} 
-              color={s <= stars ? '#f5c518' : 'rgba(255,255,255,0.15)'} 
+              fill={s <= stars ? '#F5A623' : 'none'} 
+              color={s <= stars ? '#F5A623' : 'rgba(255,255,255,0.15)'} 
               style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
               onClick={() => setStars(s)}
             />
@@ -165,7 +165,7 @@ const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, 
       gap: '16px'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <AlertTriangle size={20} color="#ef4444" />
+        <AlertTriangle size={20} color="#FF4D4D" />
         <div>
           <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#fff' }}>Escrow Dispute Active</h3>
           <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#8b92a8' }}>Escrow is frozen. Upload proof of payment (Telebirr/CBE receipt screenshot) for admin review.</p>
@@ -322,14 +322,14 @@ const TradeRoom = () => {
               className={selectedTradeId === trade._id ? "premium-glow" : ""}
               style={{
                 padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                background: selectedTradeId === trade._id ? 'rgba(245, 197, 24, 0.05)' : 'var(--bg-elevated)',
-                border: `1px solid ${selectedTradeId === trade._id ? '#f5c518' : 'var(--border)'}`,
+                background: selectedTradeId === trade._id ? 'rgba(245,166,35, 0.05)' : 'var(--bg-elevated)',
+                border: `1px solid ${selectedTradeId === trade._id ? '#F5A623' : 'var(--border)'}`,
                 transition: 'all 0.2s'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user._id === trade.buyerId ? trade.sellerName : trade.buyerName}</span>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00d4a0' : '#f5c518' }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623' }}>
                   {trade.status.toUpperCase()}
                 </span>
               </div>
@@ -345,7 +345,7 @@ const TradeRoom = () => {
           {/* Status Header */}
           <div className="card glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(245, 197, 24, 0.1)', color: '#f5c518', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(245,166,35, 0.1)', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Shield size={24} />
               </div>
               <div>
@@ -365,8 +365,8 @@ const TradeRoom = () => {
               )}
               {activeTrade.status !== 'completed' && activeTrade.status !== 'cancelled' && (
                 <>
-                  <button className="btn btn-ghost" style={{ color: '#ef4444' }} onClick={handleCancel}>{t('Cancel Trade')}</button>
-                  <button className="btn btn-ghost" style={{ color: '#ef4444' }} onClick={handleOpenDispute}>{t('Open Dispute')}</button>
+                  <button className="btn btn-ghost" style={{ color: '#FF4D4D' }} onClick={handleCancel}>{t('Cancel Trade')}</button>
+                  <button className="btn btn-ghost" style={{ color: '#FF4D4D' }} onClick={handleOpenDispute}>{t('Open Dispute')}</button>
                 </>
               )}
             </div>
