@@ -103,66 +103,74 @@ export const create = mutation({
     profilePic: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const normalizedUsername = args.username.trim().toLowerCase();
-    const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
-    
-    console.log('=== CREATE USER ===');
-    console.log('Normalized username:', normalizedUsername);
-    console.log('Normalized email:', normalizedEmail);
-
-    if (normalizedEmail) {
-      const existing = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-        .first();
-      if (existing) {
-        throw new Error("Email already registered");
+    try {
+      const normalizedUsername = args.username.trim().toLowerCase();
+      const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
+      
+      if (normalizedEmail) {
+        const existing = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+          .first();
+        if (existing) {
+          throw new Error("Email already registered");
+        }
       }
+
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+        .first();
+      if (existingUser) {
+        throw new Error("Username already taken");
+      }
+
+      let normalizedPhone = args.phone || null;
+      if (args.phone) {
+        try {
+          const result = normalizeEthiopianPhone(args.phone);
+          normalizedPhone = result.e164 || args.phone;
+        } catch {
+          normalizedPhone = args.phone;
+        }
+      }
+
+      const passwordHash = sha256Sync(args.password);
+      const status = "active";
+      const kycStatus = args.role === "admin" ? "approved" : "none";
+
+      const userId = await ctx.db.insert("users", {
+        username: normalizedUsername,
+        email: normalizedEmail,
+        fullName: args.fullName || null,
+        role: args.role,
+        phone: normalizedPhone,
+        ethAddress: args.ethAddress,
+        ethPrivateKey: args.ethPrivateKey,
+        age: args.age ?? null,
+        country: args.country || null,
+        city: args.city || null,
+        work: args.work || null,
+        profilePic: args.profilePic || null,
+        passwordHash,
+        etbBalance: 0,
+        ethBalance: 0,
+        ethLocked: 0,
+        reputation: 100,
+        totalTrades: 0,
+        joinedAt: new Date().toISOString(),
+        kycStatus,
+        paymentAccounts: [],
+        isSuspended: false,
+        status,
+        smsEnabled: false,
+      });
+
+      return { userId };
+    } catch (err: any) {
+      console.error("CREATE USER ERROR:", err);
+      throw new Error(err?.message || "Failed to create user");
     }
-
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
-      .first();
-    if (existingUser) {
-      throw new Error("Username already taken");
-    }
-
-    // Normalize the phone to E.164 so SMS always works
-    const normalizedPhone = args.phone
-      ? normalizeEthiopianPhone(args.phone).e164 || args.phone
-      : args.phone;
-
-    const { password, phone: _ignored, ...userData } = args;
-    console.log('Creating user with data fields:', Object.keys(userData));
-
-    const status = "active";
-    const kycStatus = args.role === "admin" ? "approved" : "none";
-
-    const passwordHash = sha256Sync(password);
-    console.log('Password hash generated, length:', passwordHash.length);
-
-    const userId = await ctx.db.insert("users", {
-      ...userData,
-      username: normalizedUsername,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      passwordHash,
-      etbBalance: 0,
-      ethBalance: 0,
-      ethLocked: 0,
-      reputation: 100,
-      totalTrades: 0,
-      joinedAt: new Date().toISOString(),
-      kycStatus,
-      paymentAccounts: [],
-      isSuspended: false,
-      status,
-      smsEnabled: false,
-    });
-
-    console.log('User created with ID:', userId);
-    return { userId };
   },
 });
 
