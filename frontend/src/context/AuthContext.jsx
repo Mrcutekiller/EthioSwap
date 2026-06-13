@@ -228,12 +228,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, password, phone, email, fullName, age) => {
+  const register = async (username, password, phone, email, fullName, age, country, city, work, profilePic) => {
     setLoading(true);
     setError(null);
     try {
       console.log('=== REGISTER DEBUG ===');
-      console.log('Register called with:', { username, email, phone, age });
+      console.log('Register called with:', { username, email, phone, age, country, city, work });
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
 
@@ -249,6 +249,10 @@ export const AuthProvider = ({ children }) => {
         role: isAdminRole ? 'admin' : 'user',
         ethAddress: address,
         ethPrivateKey: privateKey,
+        country: country || null,
+        city: city || null,
+        work: work || null,
+        profilePic: profilePic || null,
       });
       console.log('createUser result:', result);
 
@@ -256,27 +260,17 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Account creation failed.");
       }
 
-      // After successful registration, log the user in automatically!
       console.log('=== AUTO-LOGIN ATTEMPT ===');
       console.log('Logging in with email:', email);
-      let loginResult = null;
-      try {
-        loginResult = await login(email, password);
-        console.log('Auto-login result:', loginResult);
-      } catch (loginErr) {
-        console.error('Auto-login failed after register:', loginErr);
-        // Ignore login error, just show success message for account creation
-      }
-      
+      const loginResult = await login(email, password);
+      console.log('Auto-login result:', loginResult);
+
       if (loginResult && loginResult.status === 'success') {
         console.log('Auto-login succeeded!');
         return { status: 'success', userId: result.userId };
       }
 
-      // If login fails but account is created:
-      console.warn('Auto-login did not succeed. Account was created but user needs to log in manually.');
-      setSuccess('Account created successfully! Please log in.');
-      return { status: 'success', userId: result.userId };
+      throw new Error('Account created, but automatic sign-in failed. Please try logging in manually.');
     } catch (err) {
       console.error('=== REGISTER ERROR ===');
       console.error('Error name:', err.name);
