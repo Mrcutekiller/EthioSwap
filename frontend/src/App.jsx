@@ -542,7 +542,7 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
                 color: '#0A0C12',
                 border: 'none',
                 borderRadius: '14px',
-                boxShadow: '0 8px 30px rgba(255, 215, 0, 0.2)',
+                boxShadow: '0 8px 30px rgba(245, 166, 35, 0.2)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
                 transition: 'all 0.2s ease',

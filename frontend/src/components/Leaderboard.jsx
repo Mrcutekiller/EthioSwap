@@ -41,7 +41,7 @@ const Leaderboard = ({ user }) => {
       
       {/* ─── HEADER SECTION ───────────────────────────────────── */}
       <div className="card" style={{ padding: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 197, 24, 0.1) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 166, 35, 0.1) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
         <Trophy size={48} style={{ color: '#F5A623', marginBottom: '12px' }} />
         <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', marginBottom: '4px' }}>Monthly Hall of Fame</h2>
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>Compete for the top spots and win exclusive rewards!</p>
@@ -95,8 +95,8 @@ const Leaderboard = ({ user }) => {
                     gap: '16px',
                     padding: '16px',
                     borderRadius: '12px',
-                    background: isCurrentUser ? 'rgba(245, 197, 24, 0.08)' : 'transparent',
-                    border: isCurrentUser ? '1px solid rgba(245, 197, 24, 0.2)' : '1px solid transparent',
+                    background: isCurrentUser ? 'rgba(245, 166, 35, 0.08)' : 'transparent',
+                    border: isCurrentUser ? '1px solid rgba(245, 166, 35, 0.2)' : '1px solid transparent',
                     transition: 'all 0.2s'
                   }}
                 >
@@ -144,7 +144,7 @@ const Leaderboard = ({ user }) => {
       </div>
 
       {/* ─── REWARDS INFO ─────────────────────────────────────── */}
-      <div className="card" style={{ padding: '20px', background: 'rgba(245, 197, 24, 0.03)', border: '1px dashed rgba(245, 197, 24, 0.2)' }}>
+      <div className="card" style={{ padding: '20px', background: 'rgba(245, 166, 35, 0.03)', border: '1px dashed rgba(245, 166, 35, 0.2)' }}>
         <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#F5A623', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           🎁 Monthly Top 3 Rewards
         </h4>

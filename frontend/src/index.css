@@ -29,6 +29,7 @@
   --gold-light:      var(--gold);
   --gold-bg:         rgba(245, 166, 35, 0.1);
   --gold-glow:       rgba(245, 166, 35, 0.25);
+  --border-active:   var(--gold);
 
   /* Derived status colors */
   --status-success-bg:   rgba(0, 200, 150, 0.12);
@@ -230,7 +231,7 @@ input, textarea, select { font-family: inherit; }
 
 .input-premium:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.1);
 }
 
 .btn-premium {
@@ -289,7 +290,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.4); }
+  0% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
   70% { box-shadow: 0 0 0 10px rgba(245, 197, 24, 0); }
   100% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0); }
 }
@@ -3727,20 +3728,20 @@ input:focus-visible {
 
 /* ── Premium Glow Cards & Buttons ── */
 .premium-glow {
-  box-shadow: 0 0 25px rgba(245, 197, 24, 0.08);
+  box-shadow: 0 0 25px rgba(245, 166, 35, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .premium-glow:hover {
-  box-shadow: 0 0 40px rgba(245, 197, 24, 0.25);
+  box-shadow: 0 0 40px rgba(245, 166, 35, 0.25);
   transform: translateY(-2px);
 }
 
 .premium-glow-teal {
-  box-shadow: 0 0 25px rgba(0, 212, 160, 0.08);
+  box-shadow: 0 0 25px rgba(0, 200, 150, 0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .premium-glow-teal:hover {
-  box-shadow: 0 0 40px rgba(0, 212, 160, 0.25);
+  box-shadow: 0 0 40px rgba(0, 200, 150, 0.25);
   transform: translateY(-2px);
 }
 
@@ -3777,7 +3778,7 @@ input:focus-visible {
 }
 .floating-input:focus {
   border-color: var(--gold) !important;
-  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15) !important;
 }
 
 /* ── Rank Badges ── */
@@ -3800,9 +3801,9 @@ input:focus-visible {
   background: rgba(6, 15, 28, 0.7) !important;
   backdrop-filter: blur(30px) !important;
   -webkit-backdrop-filter: blur(30px) !important;
-  border: 1px solid rgba(255, 215, 0, 0.15) !important;
+  border: 1px solid rgba(245, 166, 35, 0.15) !important;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
-              0 0 50px rgba(255, 215, 0, 0.03), 
+              0 0 50px rgba(245, 166, 35, 0.03), 
               inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   border-radius: 28px !important;
   padding: 48px 40px !important;
@@ -3810,9 +3811,9 @@ input:focus-visible {
 }
 
 .auth-card:hover {
-  border-color: rgba(255, 215, 0, 0.25) !important;
+  border-color: rgba(245, 166, 35, 0.25) !important;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), 
-              0 0 50px rgba(255, 215, 0, 0.06), 
+              0 0 50px rgba(245, 166, 35, 0.06), 
               inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -3838,7 +3839,7 @@ input:focus-visible {
 .auth-input:focus {
   border-color: var(--gold) !important;
   background: rgba(1, 11, 19, 0.9) !important;
-  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.12), 
+  box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.12), 
               0 8px 20px rgba(0, 0, 0, 0.3) !important;
 }
 

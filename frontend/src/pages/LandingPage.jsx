@@ -574,7 +574,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     const rotateX = ((centerY - y) / centerY) * 6; // max 6deg
     const rotateY = ((x - centerX) / centerX) * 6; // max 6deg
     card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
-    card.style.borderColor = 'rgba(245, 197, 24, 0.3)';
+    card.style.borderColor = 'rgba(245, 166, 35, 0.3)';
     card.style.boxShadow = '0 0 0 1px rgba(245,166,35,0.3)';
   };
 
@@ -697,7 +697,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         :root {
           --gold: #F5A623;
           --gold-bright: #ffdf5e;
-          --gold-muted: rgba(245, 197, 24, 0.1);
+          --gold-muted: rgba(245, 166, 35, 0.1);
           --bg: #020203;
           --card: #0a0a0b;
           --card-hover: #111114;
@@ -740,7 +740,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         }
         .premium-card:hover {
           border-color: var(--gold-muted);
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(245, 197, 24, 0.02) 100%);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(245, 166, 35, 0.02) 100%);
           transform: translateY(-8px);
         }
 
@@ -819,11 +819,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           border: none;
           cursor: pointer;
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 20px rgba(245, 197, 24, 0.3);
+          box-shadow: 0 4px 20px rgba(245, 166, 35, 0.3);
         }
         .btn-saas-primary:hover {
           transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 15px 40px rgba(245, 197, 24, 0.5);
+          box-shadow: 0 15px 40px rgba(245, 166, 35, 0.5);
         }
         
         .nav-item-saas {
@@ -860,7 +860,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         }
         .feature-card:hover {
           transform: translateY(-10px);
-          border-color: rgba(245, 197, 24, 0.3);
+          border-color: rgba(245, 166, 35, 0.3);
           box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
         }
         .feature-card:hover::before { opacity: 1; }
@@ -973,7 +973,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   onMouseOver={e => e.currentTarget.style.color = '#F5A623'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
                   {link.label}
                 </a>
-                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 197, 24, 0.15)', width: '100%' }} />}
+                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 166, 35, 0.15)', width: '100%' }} />}
               </div>
             ))}
           </div>
@@ -997,8 +997,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 display: 'inline-flex', 
                 alignItems: 'center', 
                 gap: '10px', 
-                background: 'rgba(245, 197, 24, 0.05)', 
-                border: '1px solid rgba(245, 197, 24, 0.1)', 
+                background: 'rgba(245, 166, 35, 0.05)', 
+                border: '1px solid rgba(245, 166, 35, 0.1)', 
                 borderRadius: '50px', 
                 padding: '8px 20px', 
                 marginBottom: '24px',
@@ -1149,7 +1149,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   { step: '03', t: 'Complete the Trade', d: 'Escrow automatically secures the transaction until funds arrive.', icon: '🛡️' },
                 ].map((step, idx) => (
                   <div key={idx} className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', gap: '20px', transitionDelay: `${idx * 150}ms` }}>
-                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 0 15px rgba(245, 197, 24, 0.1)' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--bg)', border: '2px solid var(--gold)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, boxShadow: '0 0 15px rgba(245, 166, 35, 0.1)' }}>
                       {step.icon}
                     </div>
                     <div>

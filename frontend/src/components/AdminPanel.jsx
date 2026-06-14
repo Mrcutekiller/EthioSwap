@@ -16,13 +16,13 @@ const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
 /* ── Status badge with colored dot ────────────────────────── */
 const StatusBadge = ({ status }) => {
   const map = {
-    completed: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Completed' },
-    approved: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Approved' },
+    completed: { bg: 'rgba(0, 200, 150, 0.1)', color: '#00C896', label: 'Completed' },
+    approved: { bg: 'rgba(0, 200, 150, 0.1)', color: '#00C896', label: 'Approved' },
     pending: { bg: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', label: 'Pending' },
     failed: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Failed' },
     rejected: { bg: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', label: 'Rejected' },
     cancelled: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Cancelled' },
-    open: { bg: 'rgba(0, 212, 160, 0.1)', color: '#00C896', label: 'Open' },
+    open: { bg: 'rgba(0, 200, 150, 0.1)', color: '#00C896', label: 'Open' },
     closed: { bg: 'rgba(255, 255, 255, 0.05)', color: '#8b92a8', label: 'Closed' }
   };
   const s = status?.toLowerCase() || '';
@@ -753,9 +753,9 @@ const AdminPanel = ({ user }) => {
       {/* ── STYLE INJECTIONS ── */}
       <style>{`
         @keyframes pulse-gold {
-          0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
-          70% { box-shadow: 0 0 0 6px rgba(255, 215, 0, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+          0% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(245, 166, 35, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
         }
         .pulse-badge { animation: pulse-gold 2s infinite; }
         .sidebar-nav::-webkit-scrollbar { width: 4px; }
@@ -864,9 +864,9 @@ const AdminPanel = ({ user }) => {
         .border-\\[var\\(--border-hover\\)\\] { border-color: var(--border-hover); }
         .text-\\[var\\(--text-secondary\\)\\] { color: var(--text-secondary); }
         .text-\\[var\\(--text-primary\\)\\] { color: var(--text-primary); }
-        .bg-\\[var\\(--gold\\)\\]\\/10 { background-color: rgba(255, 215, 0, 0.1); }
+        .bg-\\[var\\(--gold\\)\\]\\/10 { background-color: rgba(245, 166, 35, 0.1); }
         .text-\\[var\\(--gold\\)\\] { color: var(--gold); }
-        .bg-\\[var\\(--teal\\)\\]\\/10 { background-color: rgba(0, 212, 160, 0.1); }
+        .bg-\\[var\\(--teal\\)\\]\\/10 { background-color: rgba(0, 200, 150, 0.1); }
         .text-\\[var\\(--teal\\)\\] { color: var(--teal); }
         .bg-orange-500\\/10 { background-color: rgba(249, 115, 22, 0.1); }
         .text-orange-400 { color: #fb923c; }
@@ -1196,7 +1196,7 @@ const AdminPanel = ({ user }) => {
                           <defs>
                             <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="0%" stopColor="#00C896" />
-                              <stop offset="100%" stopColor="rgba(0, 212, 160, 0.2)" />
+                              <stop offset="100%" stopColor="rgba(0, 200, 150, 0.2)" />
                             </linearGradient>
                           </defs>
 
@@ -1702,7 +1702,7 @@ const AdminPanel = ({ user }) => {
                 left: '268px',
                 right: '28px',
                 background: 'rgba(17, 19, 24, 0.85)',
-                border: '1px solid rgba(0, 212, 160, 0.25)',
+                border: '1px solid rgba(0, 200, 150, 0.25)',
                 borderRadius: '50px',
                 padding: '12px 28px',
                 display: 'flex',
@@ -1948,7 +1948,7 @@ const AdminPanel = ({ user }) => {
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{
-                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
                                 }}>
                                   {(req.username || 'U').charAt(0).toUpperCase()}
@@ -2135,7 +2135,7 @@ const AdminPanel = ({ user }) => {
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{
-                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
+                                  width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700
                                 }}>
                                   {(req.username || 'U').charAt(0).toUpperCase()}
@@ -2288,7 +2288,7 @@ const AdminPanel = ({ user }) => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
-                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                                 display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '12px', fontWeight: 700, paddingLeft: '9px', paddingTop: '3px'
                               }}>
                                 {(u.username || 'U').charAt(0).toUpperCase()}
@@ -2485,7 +2485,7 @@ const AdminPanel = ({ user }) => {
                         key={t._id}
                         onClick={() => setSelectedTicket(t)}
                         style={{
-                          background: isSelected ? 'rgba(0, 212, 160, 0.08)' : '#0a0c12',
+                          background: isSelected ? 'rgba(0, 200, 150, 0.08)' : '#0a0c12',
                           border: isSelected ? '1px solid #00C896' : '1px solid rgba(255,255,255,0.06)',
                           borderRadius: '10px', padding: '12px', cursor: 'pointer', transition: 'all 0.15s ease'
                         }}
@@ -2695,7 +2695,7 @@ const AdminPanel = ({ user }) => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
-                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
+                                width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700
                               }}>
                                 {(u.username || 'U').charAt(0).toUpperCase()}
@@ -2824,7 +2824,7 @@ const AdminPanel = ({ user }) => {
                         let tagColor = '#8b92a8';
                         const act = log.action?.toLowerCase();
                         if (act.includes('approve') || act.includes('unban') || act.includes('unsuspend')) {
-                          tagBg = 'rgba(0, 212, 160, 0.1)'; tagColor = '#00C896';
+                          tagBg = 'rgba(0, 200, 150, 0.1)'; tagColor = '#00C896';
                         } else if (act.includes('reject') || act.includes('ban') || act.includes('suspend') || act.includes('remove')) {
                           tagBg = 'rgba(244, 63, 94, 0.1)'; tagColor = '#f43f5e';
                         } else if (act.includes('warn')) {
@@ -3269,7 +3269,7 @@ const AdminPanel = ({ user }) => {
                   }
                   .security-card:hover {
                     background: rgba(255, 255, 255, 0.03);
-                    border-color: rgba(255, 215, 0, 0.15);
+                    border-color: rgba(245, 166, 35, 0.15);
                     transform: translateY(-2px);
                   }
                   .security-btn-red {
@@ -3614,7 +3614,7 @@ const user = await ctx.db
                           onClick={() => handleToggleChannel('isTelegramChannelDisabled', settings?.isTelegramChannelDisabled || false)}
                           className="btn-premium"
                           style={{
-                            background: settings?.isTelegramChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)',
+                            background: settings?.isTelegramChannelDisabled ? 'rgba(0, 200, 150, 0.2)' : 'rgba(244, 63, 94, 0.2)',
                             color: settings?.isTelegramChannelDisabled ? '#00C896' : '#f43f5e',
                             border: '1px solid currentColor',
                             fontSize: '12px',
@@ -3645,7 +3645,7 @@ const user = await ctx.db
                           onClick={() => handleToggleChannel('isEmailChannelDisabled', settings?.isEmailChannelDisabled || false)} 
                           className="btn-premium"
                           style={{ 
-                            background: settings?.isEmailChannelDisabled ? 'rgba(0, 212, 160, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
+                            background: settings?.isEmailChannelDisabled ? 'rgba(0, 200, 150, 0.2)' : 'rgba(244, 63, 94, 0.2)', 
                             color: settings?.isEmailChannelDisabled ? '#00C896' : '#f43f5e',
                             border: '1px solid currentColor',
                             fontSize: '12px', 
@@ -4229,7 +4229,7 @@ const user = await ctx.db
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0a0c12', borderRadius: '12px', padding: '16px' }}>
                       <div style={{
-                        width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 212, 160, 0.1)', color: '#00C896',
+                        width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden', flexShrink: 0
                       }}>
                         {u.kycSelfie && u.kycSelfie.startsWith('http') ? (

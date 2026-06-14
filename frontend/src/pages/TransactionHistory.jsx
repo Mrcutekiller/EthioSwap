@@ -405,7 +405,7 @@ const TransactionHistory = () => {
         .hist-row:hover { background: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.08) !important; }
         .tx-tab-btn { transition: all 0.2s ease !important; }
         .tx-tab-btn:hover { opacity: 0.85; }
-        .filter-select:focus { border-color: rgba(255,215,0,0.3) !important; outline: none; }
+        .filter-select:focus { border-color: rgba(245,166,35,0.3) !important; outline: none; }
       `}</style>
       
       {/* ─── Premium Tab Header ─── */}
@@ -693,7 +693,7 @@ const TransactionHistory = () => {
       {/* ─── WALLET TRANSACTION DETAIL MODAL ─── */}
       {selectedTx && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px' }} onClick={() => setSelectedTx(null)}>
-          <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 197, 24, 0.15)', border: '2px solid #F5A623', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
+          <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 166, 35, 0.15)', border: '2px solid #F5A623', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelectedTx(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.05)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#44403c', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>

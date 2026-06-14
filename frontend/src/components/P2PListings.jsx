@@ -258,7 +258,7 @@ const P2PListings = () => {
       case 'Dashen Bank':
         return { bg: 'rgba(255, 145, 0, 0.08)', border: 'rgba(255, 145, 0, 0.25)', text: '#ffb74d' }; // Dashen orange
       case 'Bank of Abyssinia':
-        return { bg: 'rgba(245, 197, 24, 0.08)', border: 'rgba(245, 197, 24, 0.25)', text: '#F5A623' }; // Abyssinia gold
+        return { bg: 'rgba(245, 166, 35, 0.08)', border: 'rgba(245, 166, 35, 0.25)', text: '#F5A623' }; // Abyssinia gold
       case 'Awash Bank':
         return { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.25)', text: '#ff7676' }; // Awash red
       case 'Wegagen Bank':
@@ -286,7 +286,7 @@ const P2PListings = () => {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .premium-dashboard-card:hover {
-          border-color: rgba(255, 215, 0, 0.15);
+          border-color: rgba(245, 166, 35, 0.15);
           transform: translateY(-2px);
           box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
         }
@@ -452,7 +452,7 @@ const P2PListings = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        background: 'linear-gradient(135deg, rgba(245, 197, 24, 0.05) 0%, rgba(6, 15, 28, 0.95) 100%)',
+        background: 'linear-gradient(135deg, rgba(245, 166, 35, 0.05) 0%, rgba(6, 15, 28, 0.95) 100%)',
         padding: '18px 22px', 
         borderRadius: '16px', 
         border: '1px solid rgba(255,255,255,0.06)',
@@ -604,8 +604,8 @@ const P2PListings = () => {
               transition: 'all 0.2s ease',
             }}
             onFocus={e => {
-              e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.3)';
-              e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(245, 166, 35, 0.3)';
+              e.currentTarget.style.boxShadow = '0 0 15px rgba(245, 166, 35, 0.05)';
             }}
             onBlur={e => {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
@@ -645,7 +645,7 @@ const P2PListings = () => {
             transition: 'all 0.2s ease',
           }}
           onFocus={e => {
-            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.3)';
+            e.currentTarget.style.borderColor = 'rgba(245, 166, 35, 0.3)';
           }}
           onBlur={e => {
             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
