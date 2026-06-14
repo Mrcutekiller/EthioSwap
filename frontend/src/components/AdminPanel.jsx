@@ -514,15 +514,19 @@ const AdminPanel = ({ user }) => {
     try {
       if (approve) {
         await supabase.from('users').update({ kyc_status: 'approved', kyc_rejection_reason: null, is_verified_trader: true }).eq('id', userId);
+        await supabase.from('notifications').insert({ user_id: userId, type: 'kyc_approved', title: 'KYC Approved!', message: 'Your identity verification has been approved. You can now access all trading features.', is_read: false });
         showAlert('KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
         if (reason === null) return;
         if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
         await supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
+        await supabase.from('notifications').insert({ user_id: userId, type: 'kyc_rejected', title: 'KYC Rejected', message: `Your KYC was rejected. Reason: ${reason}. Please resubmit.`, is_read: false });
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
+      const { data: updatedUsers } = await supabase.from('users').select('*');
+      setAllUsersList(updatedUsers || []);
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
@@ -645,9 +649,10 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      const newMessage = { sender_id: user?.id || 'usr_admin', message: supportReplyText.trim(), timestamp: new Date().toISOString() };
+      const newMessage = { sender_id: user?.id || 'usr_admin', sender_name: 'Admin', message: supportReplyText.trim(), timestamp: new Date().toISOString() };
       const messages = [...(selectedTicket.messages || []), newMessage];
       await supabase.from('support_tickets').update({ messages }).eq('id', selectedTicket.id);
+      await supabase.from('notifications').insert({ user_id: selectedTicket.user_id, type: 'support_reply', title: 'Support Reply', message: 'Admin has replied to your support ticket.', is_read: false });
       setSupportReplyText('');
       setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages } : t));
       setSelectedTicket(prev => ({ ...prev, messages }));
@@ -2500,7 +2505,7 @@ const AdminPanel = ({ user }) => {
                             </span>
                           </td>
                           <td>
-                            <StatusBadge status={u.kycStatus} />
+                            <StatusBadge status={u.kyc_status} />
                           </td>
                           <td onClick={e => e.stopPropagation()}>
                             <button onClick={() => setSelectedKycDetailId(u.id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
@@ -2802,7 +2807,7 @@ const AdminPanel = ({ user }) => {
                 u.phone?.toLowerCase().includes(query) ||
                 u.id?.toString().toLowerCase().includes(query);
                 
-              const isVerified = u.kycStatus === 'approved';
+              const isVerified = u.kyc_status === 'approved';
               const matchesKyc = userFilterKyc === 'all' ||
                 (userFilterKyc === 'verified' && isVerified) ||
                 (userFilterKyc === 'unverified' && !isVerified);
@@ -2908,13 +2913,13 @@ const AdminPanel = ({ user }) => {
                             </div>
                           </td>
                           <td>
-                            <StatusBadge status={u.kycStatus} />
+                            <StatusBadge status={u.kyc_status} />
                           </td>
                           <td style={{ color: '#8b92a8', fontSize: '13px' }}>
-                            {new Date(u.joinedAt).toLocaleDateString()}
+                            {new Date(u.joined_at).toLocaleDateString()}
                           </td>
                           <td style={{ color: '#00C896', fontWeight: 700 }}>
-                            ${(u.ethBalance || 0).toFixed(2)}
+                            ${(u.eth_balance || 0).toFixed(2)}
                           </td>
                           <td>
                             {u.is_suspended ? (
@@ -3170,12 +3175,12 @@ const AdminPanel = ({ user }) => {
                               <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No trade ratings found</td>
                             </tr>
                           ) : filteredP2pRatings.map((rating) => (
-                            <tr key={rating._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rating.ratedId)}>
+                            <tr key={rating.id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rating.ratedId)}>
                               <td>
                                 <strong style={{ color: 'var(--gold)' }}>@{rating.ratedUsername}</strong>
                               </td>
                               <td>@{rating.raterUsername}</td>
-                              <td style={{ textTransform: 'uppercase', fontSize: '11px', color: '#8b92a8' }}>{rating.raterType}</td>
+                              <td style={{ textTransform: 'uppercase', fontSize: '11px', color: '#8b92a8' }}>{rating.rater_type}</td>
                               <td style={{ color: 'var(--gold)', whiteSpace: 'nowrap' }}>
                                 {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
                               </td>
@@ -3183,13 +3188,13 @@ const AdminPanel = ({ user }) => {
                                 {rating.comment ? `"${rating.comment}"` : '—'}
                               </td>
                               <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-                                {new Date(rating.createdAt).toLocaleDateString()}
+                                {new Date(rating.created_at).toLocaleDateString()}
                               </td>
                               <td style={{ fontSize: '12.5px', color: '#f43f5e', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {rating.lowRatingReason || '—'}
                               </td>
                               <td>
-                                {rating.isFlagged ? (
+                                {rating.is_flagged ? (
                                   <span style={{ color: '#f43f5e', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700 }}>
                                     🚩 FLAGGED
                                   </span>
@@ -3201,12 +3206,12 @@ const AdminPanel = ({ user }) => {
                               </td>
                               <td onClick={e => e.stopPropagation()}>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  {!rating.isFlagged && (
+                                  {!rating.is_flagged && (
                                     <button 
                                       onClick={() => {
                                         const reason = prompt("Enter reason for flagging this rating:");
                                         if (reason) {
-                                          flagFakeRatingMutation({ adminId: user._id, ratingId: rating._id, flaggedReason: reason })
+                                          flagFakeRatingMutation({ adminId: user._id, ratingId: rating.id, flaggedReason: reason })
                                             .then(() => alert("Rating flagged successfully."))
                                             .catch(err => alert("Error: " + err.message));
                                         }
@@ -3220,7 +3225,7 @@ const AdminPanel = ({ user }) => {
                                   <button 
                                     onClick={() => {
                                       if (window.confirm("Are you sure you want to permanently delete this rating?")) {
-                                        deleteTradeRatingMutation({ adminId: user._id, ratingId: rating._id })
+                                        deleteTradeRatingMutation({ adminId: user._id, ratingId: rating.id })
                                           .then(() => alert("Rating deleted successfully."))
                                           .catch(err => alert("Error: " + err.message));
                                       }
@@ -4206,7 +4211,7 @@ const user = await ctx.db
 
       {/* ── 3. KYC SUBMISSIONS DETAILS DRAWER ── */}
       {selectedKycDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord._id === selectedKycDetailId);
+        const u = allUsersList?.find(userRecord => userRecord.id === selectedKycDetailId);
         if (!u) return null;
         return (
           <>
@@ -4231,10 +4236,10 @@ const user = await ctx.db
                     userId={u.id} 
                     getImageUrl={getImageUrl} 
                     onImageClick={setActiveLightboxImage} 
-                    kycIdFront={u.kycIdFront}
-                    kycIdBack={u.kycIdBack}
-                    kycSelfie={u.kycSelfie}
-                    kycDocument={u.kycDocument}
+                    kycIdFront={u.kyc_id_front}
+                    kycIdBack={u.kyc_id_back}
+                    kycSelfie={u.kyc_selfie}
+                    kycDocument={u.kyc_document}
                   />
                 </div>
 
@@ -4263,11 +4268,11 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Join Date:</span>
-                    <span style={{ color: '#8b92a8' }}>{new Date(u.joinedAt).toLocaleDateString()}</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(u.joined_at).toLocaleDateString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Submission Status:</span>
-                    <StatusBadge status={u.kycStatus} />
+                    <StatusBadge status={u.kyc_status} />
                   </div>
                 </div>
 
@@ -4354,11 +4359,11 @@ const user = await ctx.db
 
       {/* ── 4. COMPLETE USER DIRECTORY & MODERATION DRAWER ── */}
       {selectedUserDetailId && (() => {
-        const u = allUsersList?.find(userRecord => userRecord._id === selectedUserDetailId);
+        const u = allUsersList?.find(userRecord => userRecord.id === selectedUserDetailId);
         if (!u) return null;
 
         const isMe = u.id === user?._id;
-        const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
+        const totalBal = (u.eth_balance || 0) + (u.eth_locked || 0);
         const etbVal = totalBal * rate;
 
         // Dynamic Calculations
@@ -4384,7 +4389,7 @@ const user = await ctx.db
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>👤 Member Profile Administration</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>Join Date: {new Date(u.joinedAt).toLocaleDateString()}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>Join Date: {new Date(u.joined_at).toLocaleDateString()}</span>
                 </div>
                 <button onClick={() => setSelectedUserDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -4425,8 +4430,8 @@ const user = await ctx.db
                         width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden', flexShrink: 0
                       }}>
-                        {u.kycSelfie && u.kycSelfie.startsWith('http') ? (
-                          <img src={u.kycSelfie} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {u.kyc_selfie && u.kyc_selfie.startsWith('http') ? (
+                          <img src={u.kyc_selfie} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           (u.username || 'U').charAt(0).toUpperCase()
                         )}
@@ -4447,11 +4452,11 @@ const user = await ctx.db
                       <div style={{ display: 'grid', gridTemplateColumns: width < 480 ? '1fr' : '1fr 1fr', gap: '10px' }}>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Available USD</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00C896', marginTop: '2px' }}>${(u.ethBalance || 0).toFixed(2)}</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#00C896', marginTop: '2px' }}>${(u.eth_balance || 0).toFixed(2)}</div>
                         </div>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Locked Escrow</div>
-                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>${(u.ethLocked || 0).toFixed(2)}</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#fbbf24', marginTop: '2px' }}>${(u.eth_locked || 0).toFixed(2)}</div>
                         </div>
                         <div style={{ background: '#0a0c12', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ fontSize: '10px', color: '#8b92a8', textTransform: 'uppercase' }}>Total Deposited</div>
@@ -4480,7 +4485,7 @@ const user = await ctx.db
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px', alignItems: 'center' }}>
                         <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>KYC Status Badge:</span>
-                        <StatusBadge status={u.kycStatus} />
+                        <StatusBadge status={u.kyc_status} />
                       </div>
                     </div>
 
@@ -4488,9 +4493,9 @@ const user = await ctx.db
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span style={{ fontSize: '12px', color: '#8b92a8' }}>On-chain TRC20 / ERC20 wallet address:</span>
                       <div style={{ display: 'flex', gap: '8px', background: '#0a0c12', border: '1px solid #1E2640', borderRadius: '8px', padding: '10px', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00C896', wordBreak: 'break-all', flex: 1 }}>{u.ethAddress}</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#00C896', wordBreak: 'break-all', flex: 1 }}>{u.eth_address}</span>
                         <button
-                          onClick={() => { navigator.clipboard.writeText(u.ethAddress); showAlert('✓ Address copied!'); }}
+                          onClick={() => { navigator.clipboard.writeText(u.eth_address); showAlert('✓ Address copied!'); }}
                           style={{ border: 'none', background: 'rgba(255,255,255,0.05)', color: '#8b92a8', borderRadius: '4px', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', flexShrink: 0 }}
                         >
                           Copy
@@ -4524,12 +4529,12 @@ const user = await ctx.db
                               const isDep = tx.type === 'deposit';
                               return (
                                 <tr key={tx.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                  <td style={{ padding: '10px', color: '#8b92a8' }}>{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                  <td style={{ padding: '10px', color: '#8b92a8' }}>{new Date(tx.created_at).toLocaleDateString()}</td>
                                   <td style={{ padding: '10px', fontWeight: 700, color: isDep ? '#00C896' : '#f43f5e' }}>
                                     {tx.type?.toUpperCase()}
                                   </td>
                                   <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700, color: isDep ? '#00C896' : '#f43f5e' }}>
-                                    {isDep ? '+' : '-'}${(tx.amountUSD ?? tx.amountUsd ?? 0).toFixed(2)}
+                                    {isDep ? '+' : '-'}${(tx.amount_usd ?? tx.amountUsd ?? 0).toFixed(2)}
                                   </td>
                                   <td style={{ padding: '10px', color: '#8b92a8', fontSize: '11px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.note}>
                                     {tx.note}
@@ -4548,7 +4553,7 @@ const user = await ctx.db
                 {userDrawerTab === 'kyc' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Identity Documents Verification Check</div>
-                    {u.kycStatus === 'none' ? (
+                    {u.kyc_status === 'none' ? (
                       <div style={{ textAlign: 'center', padding: '40px', color: '#4e5567', background: '#0a0c12', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.06)' }}>
                         🪪 Identity files have not been uploaded by this user yet.
                       </div>
@@ -4558,10 +4563,10 @@ const user = await ctx.db
                           userId={u.id} 
                           getImageUrl={getImageUrl} 
                           onImageClick={setActiveLightboxImage} 
-                          kycIdFront={u.kycIdFront}
-                          kycIdBack={u.kycIdBack}
-                          kycSelfie={u.kycSelfie}
-                          kycDocument={u.kycDocument}
+                          kycIdFront={u.kyc_id_front}
+                          kycIdBack={u.kyc_id_back}
+                          kycSelfie={u.kyc_selfie}
+                          kycDocument={u.kyc_document}
                         />
                         <div className="card-premium" style={{ background: '#0a0c12', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
@@ -4587,13 +4592,13 @@ const user = await ctx.db
                         {received.length === 0 ? (
                           <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No ratings received yet</div>
                         ) : received.map((rating) => (
-                          <div key={rating._id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div key={rating.id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ color: 'var(--gold)', letterSpacing: '1px', fontSize: '12px' }}>
                                 {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
                               </span>
                               <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                                {new Date(rating.createdAt).toLocaleDateString()}
+                                {new Date(rating.created_at).toLocaleDateString()}
                               </span>
                             </div>
                             {rating.comment && (
@@ -4602,16 +4607,16 @@ const user = await ctx.db
                               </p>
                             )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '11px', color: 'var(--text-3)' }}>
-                              <span>From @{rating.partnerUsername} ({rating.raterType})</span>
+                              <span>From @{rating.rater_username} ({rating.rater_type})</span>
                               <div style={{ display: 'flex', gap: '8px' }}>
-                                {rating.isFlagged ? (
+                                {rating.is_flagged ? (
                                   <span style={{ color: '#f43f5e', fontWeight: 700 }}>🚩 FLAGGED</span>
                                 ) : (
                                   <button 
                                     onClick={() => {
                                       const reason = prompt("Enter flag reason:");
                                       if (reason) {
-                                        flagFakeRatingMutation({ adminId: user._id, ratingId: rating._id, flaggedReason: reason })
+                                        flagFakeRatingMutation({ adminId: user._id, ratingId: rating.id, flaggedReason: reason })
                                           .then(() => alert("Rating flagged."))
                                           .catch(err => alert(err.message));
                                       }
@@ -4624,7 +4629,7 @@ const user = await ctx.db
                                 <button 
                                   onClick={() => {
                                     if (window.confirm("Delete this rating permanently?")) {
-                                      deleteTradeRatingMutation({ adminId: user._id, ratingId: rating._id })
+                                      deleteTradeRatingMutation({ adminId: user._id, ratingId: rating.id })
                                         .then(() => alert("Rating deleted."))
                                         .catch(err => alert(err.message));
                                     }
@@ -4645,13 +4650,13 @@ const user = await ctx.db
                         {given.length === 0 ? (
                           <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', fontSize: '13px' }}>No ratings given yet</div>
                         ) : given.map((rating) => (
-                          <div key={rating._id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div key={rating.id} style={{ padding: '14px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ color: 'var(--gold)', letterSpacing: '1px', fontSize: '12px' }}>
                                 {'★'.repeat(rating.rating) + '☆'.repeat(5 - rating.rating)}
                               </span>
                               <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                                {new Date(rating.createdAt).toLocaleDateString()}
+                                {new Date(rating.created_at).toLocaleDateString()}
                               </span>
                             </div>
                             {rating.comment && (
@@ -4660,7 +4665,7 @@ const user = await ctx.db
                               </p>
                             )}
                             <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-                              To @{rating.partnerUsername}
+                              To @{rating.rater_username}
                             </div>
                           </div>
                         ))}

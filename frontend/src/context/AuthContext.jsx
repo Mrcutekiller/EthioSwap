@@ -831,6 +831,13 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
       setSuccess('KYC submitted successfully! Awaiting admin review.');
       await updateUser({ kyc_status: 'pending' });
+      // Notify admin
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          await createNotification(admin.id, 'kyc_new', 'New KYC Submission', `@${user.username} has submitted KYC documents for review.`);
+        }
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -860,6 +867,18 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const createNotification = async (userId, type, title, message) => {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type,
+        title,
+        message,
+        is_read: false,
+      });
+    } catch (err) { /* silent fail */ }
   };
 
   const acknowledgeWarning = async (warningId) => {
@@ -936,7 +955,7 @@ export const AuthProvider = ({ children }) => {
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails,
       setError, setSuccess, setIsLocked,
-      loadSystemSettings
+      loadSystemSettings, createNotification
     }}>
       {children}
     </AuthContext.Provider>

@@ -73,6 +73,11 @@ const SupportWidget = () => {
         }).select().single();
         if (error) throw error;
         setTicket(created);
+        // Notify admin
+        const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+        if (admins) for (const a of admins) {
+          await supabase.from('notifications').insert({ user_id: a.id, type: 'support_new', title: 'New Support Ticket', message: `@${user.username} opened a new support ticket.`, is_read: false });
+        }
       } else {
         const updatedMessages = [...(ticket.messages || []), newMessage];
         await supabase.from('support_tickets').update({ messages: updatedMessages, status: 'open' }).eq('id', ticket.id);
