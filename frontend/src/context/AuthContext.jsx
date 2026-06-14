@@ -666,6 +666,11 @@ export const AuthProvider = ({ children }) => {
         .eq('id', req.user_id);
       if (balanceErr) throw balanceErr;
 
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+      }
+
       setSuccess(`Deposit approved! $${netCredit.toFixed(2)} credited (${platformFeePercent}% fee deducted).`);
     } catch (err) {
       setError(err.message);
@@ -724,6 +729,11 @@ export const AuthProvider = ({ children }) => {
         .eq('id', id);
       if (updateErr) throw updateErr;
 
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+      }
+
       setSuccess(`Success! $${withdrawAmount.toFixed(2)} sent to ${req.address || 'wallet'} ($${platformFee.toFixed(2)} fee deducted).`);
     } catch (err) {
       setError(err.message);
@@ -740,6 +750,46 @@ export const AuthProvider = ({ children }) => {
       setSuccess('Withdrawal rejected.');
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const withdrawAdminEarnings = async (amountUsd, destinationAddress, network) => {
+    if (!user) return;
+    try {
+      const { data: settingsData } = await supabase
+        .from('system_settings')
+        .select('collected_fees_eth')
+        .limit(1)
+        .single();
+
+      const currentFees = settingsData?.collected_fees_eth || 0;
+      if (currentFees < amountUsd) {
+        throw new Error(`Insufficient platform balance. Available: $${currentFees.toFixed(2)}`);
+      }
+
+      const { error: insertErr } = await supabase.from('admin_withdrawals').insert({
+        admin_id: user.id,
+        amount_usd: amountUsd,
+        amount_eth: amountUsd / ETH_USD_PRICE,
+        destination_address: destinationAddress,
+        network: network || 'TRC20',
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      });
+      if (insertErr) throw insertErr;
+
+      const { error: updateErr } = await supabase
+        .from('system_settings')
+        .update({ collected_fees_eth: currentFees - amountUsd })
+        .eq('id', settingsData.id);
+      if (updateErr) throw updateErr;
+
+      setSuccess(`Withdrawal of $${amountUsd.toFixed(2)} USD submitted successfully!`);
+      loadSystemSettings();
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      throw err;
     }
   };
 
@@ -1049,7 +1099,7 @@ export const AuthProvider = ({ children }) => {
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails,
       setError, setSuccess, setIsLocked,
-      loadSystemSettings, createNotification
+      loadSystemSettings, createNotification, withdrawAdminEarnings
     }}>
       {children}
     </AuthContext.Provider>

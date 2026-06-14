@@ -156,7 +156,8 @@ const AdminPanel = ({ user }) => {
     logout,
     loadSystemSettings,
     createListing,
-    trades
+    trades,
+    withdrawAdminEarnings
   } = useAuth();
 
   const [width, setWidth] = useState(window.innerWidth);
@@ -274,6 +275,7 @@ const AdminPanel = ({ user }) => {
   const [p2pRatingsData, setP2pRatingsData] = useState([]);
   const [userRatingsHistory, setUserRatingsHistory] = useState([]);
   const [allTrades, setAllTrades] = useState([]);
+  const [adminWithdrawals, setAdminWithdrawals] = useState([]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -303,6 +305,7 @@ const AdminPanel = ({ user }) => {
     if (!user || user.role !== 'admin') return;
     supabase.from('listings').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllListings(data || []));
     supabase.from('trades').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllTrades(data || []));
+    supabase.from('admin_withdrawals').select('*').order('created_at', { ascending: false }).then(({ data }) => setAdminWithdrawals(data || []));
   }, [user]);
 
   useEffect(() => {
@@ -695,11 +698,12 @@ const AdminPanel = ({ user }) => {
 
     setWithdrawingEarnings(true);
     try {
-      // Mocked for Convex migration
-      console.log('Would request admin withdrawal:', { amt, withdrawAddress });
-      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD requested!`);
+      await withdrawAdminEarnings(amt, withdrawAddress, 'TRC20');
+      showAlert(`✓ Withdrawal of $${amt.toFixed(2)} USD completed!`);
       setWithdrawAddress('');
       setWithdrawAmount('');
+      const { data: sett } = await supabase.from('system_settings').select('*').limit(1).single();
+      if (sett) setAdminEarnings({ walletBalance: sett.collected_fees_eth || 0 });
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setWithdrawingEarnings(false); }
   };
@@ -720,22 +724,34 @@ const AdminPanel = ({ user }) => {
   const liveNewUsersThisWeek = allUsersList?.filter(u => new Date(u.created_at || u.joined_at).getTime() >= oneWeekAgo).length ?? 0;
   
   const approvedDeposits = allDepositReqs?.filter(r => r.status === 'approved') ?? [];
-  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + (r.amount_usd ?? r.amountUSD ?? r.amountUsd ?? 0), 0);
+  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + (r.amount_usd ?? 0), 0);
 
-  // ── Bezier Chart Calculations ──────────────────────────────
-  const totalMyProfit = settings?.collected_fees_eth ?? settings?.collectedFeesETH ?? 0;
+  // ── Earnings Calculations ──────────────────────────────────
+  const depositFeePercent = settings?.deposit_fee_percent ?? 5.0;
+  const withdrawalFeePercent = settings?.withdrawal_fee_percent ?? 5.0;
+
+  const totalDepositFees = approvedDeposits.reduce((s, r) => s + (r.amount_usd ?? 0) * (depositFeePercent / 100), 0);
+  const approvedWithdrawals = allWithdrawalReqs?.filter(r => r.status === 'approved' || r.status === 'completed') ?? [];
+  const totalWithdrawalFees = approvedWithdrawals.reduce((s, r) => s + (r.amount_usd ?? 0) * (withdrawalFeePercent / 100), 0);
+  const totalMyProfit = totalDepositFees + totalWithdrawalFees;
+
   const approvedDepositsThisWeek = allDepositReqs?.filter(r => 
     r.status === 'approved' && 
-    new Date(r.created_at || r.createdAt).getTime() >= oneWeekAgo
+    new Date(r.created_at).getTime() >= oneWeekAgo
   ) ?? [];
-  const depositFeePercent = settings?.deposit_fee_percent ?? settings?.depositFeePercent ?? 1.0;
-  const depositFeesThisWeek = approvedDepositsThisWeek.reduce((s, r) => s + (r.amount_usd ?? r.amountUSD ?? r.amountUsd ?? 0) * (depositFeePercent / 100), 0);
+  const depositFeesThisWeek = approvedDepositsThisWeek.reduce((s, r) => s + (r.amount_usd ?? 0) * (depositFeePercent / 100), 0);
+  const approvedWithdrawalsThisWeek = allWithdrawalReqs?.filter(r =>
+    (r.status === 'approved' || r.status === 'completed') &&
+    new Date(r.created_at).getTime() >= oneWeekAgo
+  ) ?? [];
+  const withdrawalFeesThisWeek = approvedWithdrawalsThisWeek.reduce((s, r) => s + (r.amount_usd ?? 0) * (withdrawalFeePercent / 100), 0);
+  const feesThisWeek = depositFeesThisWeek + withdrawalFeesThisWeek;
 
   const m = {
     totalMyProfit,
-    feesThisWeek: depositFeesThisWeek,
+    feesThisWeek,
     buyCount: allDepositReqs?.filter(r => r.status === 'approved').length ?? 0,
-    sellCount: allWithdrawalReqs?.filter(r => r.status === 'approved').length ?? 0
+    sellCount: allWithdrawalReqs?.filter(r => r.status === 'approved' || r.status === 'completed').length ?? 0
   };
   const realVolume = liveTotalDeposit || 150.0;
   const realUsers = liveTotalUsers || 12;
@@ -1923,6 +1939,31 @@ const AdminPanel = ({ user }) => {
                     {withdrawingEarnings ? '⏳ Processing Withdrawal…' : '💸 Withdraw Earnings to Binance'}
                   </button>
                 </form>
+              </div>
+
+              {/* Withdrawal History */}
+              <div className="card-premium" style={{ maxWidth: '640px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600 }}>📋 Withdrawal History</h3>
+                {adminWithdrawals.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#4e5567', fontSize: '13px' }}>No withdrawals yet</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {adminWithdrawals.map(w => (
+                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#0a0c12', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#f0f2f8' }}>${(w.amount_usd || 0).toFixed(2)} USD</div>
+                          <div style={{ fontSize: '11px', color: '#4e5567' }}>→ {w.destination_address ? w.destination_address.slice(0, 12) + '…' : 'N/A'} ({w.network || 'TRC20'})</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '99px', background: w.status === 'completed' ? 'rgba(0,200,150,0.12)' : w.status === 'pending' ? 'rgba(245,166,35,0.12)' : 'rgba(244,63,94,0.12)', color: w.status === 'completed' ? '#00C896' : w.status === 'pending' ? '#F5A623' : '#f43f5e' }}>
+                            {w.status.toUpperCase()}
+                          </span>
+                          <div style={{ fontSize: '11px', color: '#4e5567', marginTop: '4px' }}>{new Date(w.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>
