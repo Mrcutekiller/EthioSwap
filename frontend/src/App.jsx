@@ -538,7 +538,7 @@ const AppContent = () => {
           {page === 'profile' && <ProfilePage />}
           {page === 'settings' && <SettingsPage />}
           {page === 'transactions' && <TransactionHistory />}
-          {page === 'admin' && user.role === 'admin' && <AdminPanel />}
+          {page === 'admin' && user.role === 'admin' && <AdminPanel user={user} />}
           {page === 'notifications' && <NotificationsPage setPage={setPage} />}
           {page === 'scan' && <ScanPage setPage={setPage} />}
           {page === 'sellerProfile' && <SellerProfilePage sellerId={sellerId} setPage={setPage} />}
