@@ -14,11 +14,12 @@
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@supabase/supabase-js": "^2.108.1",
-
     "ethers": "^6.13.1",
+    "html5-qrcode": "^2.3.8",
     "i18next": "^26.3.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.379.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.8",

@@ -115,8 +115,8 @@ const SecurityLock = ({ onVerify, onClose }) => {
   );
 };
 
-const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, updateSensitiveDetails, updateUser } = useAuth();
+const ProfilePage = () => {
+  const { user, wallet, savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, updateUser } = useAuth();
   
 
   const [showKYC, setShowKYC] = useState(false);
@@ -138,13 +138,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [editName, setEditName] = useState(user?.full_name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
-  const [editPassword, setEditPassword] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
   const [newBank, setNewBank] = useState('CBE');
   const [newAccNum, setNewAccNum] = useState('');
   const [newHolder, setNewHolder] = useState('');
   const [activeLightboxImage, setActiveLightboxImage] = useState(null);
+  const [profilePicFile, setProfilePicFile] = useState(null);
+  const [profilePicPreview, setProfilePicPreview] = useState(null);
 
   // Review state
   const [myReview, setMyReview] = useState(null);
@@ -154,19 +155,19 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
-    if (user?._id) {
-      // Fetch user review from Convex if needed
+    if (user?.id) {
+      // Fetch user review from Supabase if needed
       // For now, using mock or skipping to fix build
     }
-  }, [user?._id]);
+  }, [user?.id]);
 
   const handleSubmitReview = async () => {
     if (!reviewContent.trim()) return;
     setReviewLoading(true);
     try {
       if (myReview) {
-        await updateReview(myReview._id, reviewRating, reviewContent);
-        setMyReview({ ...myReview, rating: reviewRating, content: reviewContent, updatedAt: new Date().toISOString() });
+        await updateReview(myReview.id, reviewRating, reviewContent);
+        setMyReview({ ...myReview, rating: reviewRating, content: reviewContent, updated_at: new Date().toISOString() });
       } else {
         await submitReview(reviewRating, reviewContent);
         // Refetch review
@@ -225,24 +226,36 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     setEditLoading(true);
     try {
       const updates = {};
+      if (editName !== (user?.full_name || '')) updates.full_name = editName;
       if (editPhone !== (user?.phone || '')) updates.phone = editPhone;
       if (editEmail !== (user?.email || '')) updates.email = editEmail;
-      if (editPassword !== '') updates.password = editPassword;
-      
-      if (editName !== (user?.full_name || '')) {
-        await updateUser({ full_name: editName });
-      }
 
       if (Object.keys(updates).length > 0) {
-        await updateSensitiveDetails(null, updates);
+        await updateUser(updates);
       }
       alert('✓ Profile updated successfully!');
       setShowEditProfile(false);
-      setEditPassword('');
     } catch (err) {
       alert('Error updating profile: ' + err.message);
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleProfilePicUpload = async () => {
+    if (!profilePicFile) return;
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        await updateUser({ profile_pic: base64 });
+        setProfilePicFile(null);
+        setProfilePicPreview(null);
+        alert('✓ Profile picture updated!');
+      };
+      reader.readAsDataURL(profilePicFile);
+    } catch (err) {
+      alert('Error uploading profile picture: ' + err.message);
     }
   };
 
@@ -537,12 +550,66 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       </div>
 
       {/* ─── BALANCE & POINTS ──────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div className="stat-card">
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Available Balance</span>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#00C896' }}>${(user.eth_balance ?? 0).toFixed(2)}</div>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>ETH Balance</span>
+          <div style={{ fontSize: '20px', fontWeight: 600, color: '#00C896' }}>${(user.eth_balance ?? 0).toFixed(2)}</div>
           <span style={{ fontSize: '10px', color: 'var(--muted)' }}>USD Escrow Wallet</span>
         </div>
+        <div className="stat-card">
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>ETB Balance</span>
+          <div style={{ fontSize: '20px', fontWeight: 600, color: '#F5A623' }}>ETB {(user.etb_balance ?? 0).toFixed(2)}</div>
+          <span style={{ fontSize: '10px', color: 'var(--muted)' }}>Ethiopian Birr</span>
+        </div>
+      </div>
+
+      {/* ─── USER INFO ──────────────────────────────────────── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: '#fff' }}>Personal Information</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Full Name</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.full_name || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Username</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>@{user.username || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Email</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.email || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Phone</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.phone || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Country</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.country || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>City</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.city || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Work</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>{user.work || '—'}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Trading ID</span>
+            <span style={{ fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font-mono)' }}>#{user.numeric_id || '—'}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowEditProfile(true)}
+          style={{
+            width: '100%', marginTop: '16px', padding: '12px', borderRadius: '12px',
+            background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+            color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+          }}
+        >
+          ✏️ Edit Profile
+        </button>
       </div>
 
       {/* ─── QUICK ACTIONS ─────────────────────────────────────── */}
@@ -891,6 +958,62 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             
             <form onSubmit={handleEditProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Profile Picture</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0 }}>
+                    <img
+                      src={profilePicPreview || user.profile_pic || getAvatarUrl(DEFAULT_AVATAR_SVG)}
+                      alt="Profile"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      id="profile-pic-upload"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) { alert('File must be less than 5MB'); return; }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setProfilePicPreview(reader.result);
+                          setProfilePicFile(file);
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('profile-pic-upload').click()}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                        color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >
+                      📷 Change Photo
+                    </button>
+                    {profilePicFile && (
+                      <button
+                        type="button"
+                        onClick={handleProfilePicUpload}
+                        style={{
+                          marginTop: '8px', padding: '8px 16px', borderRadius: '8px',
+                          background: '#00C896', border: 'none',
+                          color: '#04342C', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        ✓ Save Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Full Name</label>
                 <input 
                   type="text" 
@@ -923,17 +1046,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                   onChange={e => setEditEmail(e.target.value)} 
                   placeholder="Enter email address"
                   required
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>New Password (leave blank to keep current)</label>
-                <input 
-                  type="password" 
-                  className="input" 
-                  value={editPassword} 
-                  onChange={e => setEditPassword(e.target.value)} 
-                  placeholder="••••••••"
                 />
               </div>
 

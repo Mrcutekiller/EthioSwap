@@ -255,10 +255,12 @@ export const AuthProvider = ({ children }) => {
       if (data.user) {
         const { error: profileError } = await supabase
           .from('users')
-          .update({
+          .upsert({
+            id: data.user.id,
             username,
             full_name: fullName,
             phone,
+            email,
             age: age ? Number(age) : null,
             role: isAdminRole ? 'admin' : 'user',
             eth_address: address,
@@ -267,8 +269,7 @@ export const AuthProvider = ({ children }) => {
             city: city || null,
             work: work || null,
             profile_pic: profilePic || null,
-          })
-          .eq('id', data.user.id);
+          }, { onConflict: 'id' });
 
         if (profileError) throw profileError;
 
