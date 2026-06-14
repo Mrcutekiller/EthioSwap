@@ -9,3 +9,5 @@ dist/
 .idea/
 .vscode/
 *.log
+ethioswap-web/
+test-run.js
