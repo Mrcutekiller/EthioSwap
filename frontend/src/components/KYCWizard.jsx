@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 const KYCWizard = ({ user, onComplete, onClose }) => {
   const [step, setStep] = useState(1); // 1=intro, 2=info, 3=id-front, 4=id-back, 5=face, 6=done
-  const [fullName, setFullName] = useState(user.fullName || '');
+  const [fullName, setFullName] = useState(user.full_name || '');
   const [kycPhone, setKycPhone] = useState(user.phone || '');
   const [age, setAge] = useState(user.age !== undefined && user.age !== null ? String(user.age) : '');
   const [idType, setIdType] = useState('National ID Card');
@@ -195,12 +195,12 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
     setLoading(true); setError('');
     try {
       const updates = {
-        kycStatus: 'pending',
-        kycStep: 'pending',
-        kycIdFront: idFront,
-        kycIdBack: idBack,
-        kycSelfie: selfieCapture,
-        kycData: {
+        kyc_status: 'pending',
+        kyc_step: 'pending',
+        kyc_id_front: idFront,
+        kyc_id_back: idBack,
+        kyc_selfie: selfieCapture,
+        kyc_data: {
           name: fullName,
           phone: kycPhone,
           age: parseInt(age, 10) || 18,
@@ -209,7 +209,7 @@ const KYCWizard = ({ user, onComplete, onClose }) => {
           idNumber: idNumber,
           birthDate: `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`,
         },
-        fullName: fullName,
+        full_name: fullName,
         phone: kycPhone,
       };
       setStep(6); // Done

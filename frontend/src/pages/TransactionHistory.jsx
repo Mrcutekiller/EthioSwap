@@ -87,7 +87,7 @@ const TransactionHistory = () => {
       note: tx.senderReference || tx.adminNote || 'Deposit',
       tx_hash: tx._id || tx.id,
       from: tx.walletType || 'External Account',
-      to: user.fullName || user.username || 'My Wallet',
+      to: user.full_name || user.username || 'My Wallet',
       platform_fee: 0,
     }));
     const withdrawals = (myWithdrawalReqs || []).map(tx => ({
@@ -98,7 +98,7 @@ const TransactionHistory = () => {
       created_at: tx.createdAt,
       note: tx.adminNote || 'Withdrawal',
       tx_hash: tx.walletAddress || tx._id || tx.id,
-      from: user.fullName || user.username || 'My Wallet',
+      from: user.full_name || user.username || 'My Wallet',
       to: tx.walletAddress || tx.walletType || 'External Destination',
       platform_fee: 0,
     }));

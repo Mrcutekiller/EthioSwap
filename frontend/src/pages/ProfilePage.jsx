@@ -129,13 +129,13 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('openKyc') === 'true' && user?.kycStatus === 'none') {
+    if (params.get('openKyc') === 'true' && user?.kyc_status === 'none') {
       setShowKYC(true);
     }
-  }, [user?.kycStatus]);
+  }, [user?.kyc_status]);
   
   // Edit Profile Form State
-  const [editName, setEditName] = useState(user?.fullName || '');
+  const [editName, setEditName] = useState(user?.full_name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPassword, setEditPassword] = useState('');
@@ -205,7 +205,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       accountNumber: newAccNum.trim(),
       holderName: newHolder.trim(),
     };
-    const currentList = user.paymentAccounts || [];
+    const currentList = user.payment_accounts || [];
     const updatedList = [...currentList, newAcc];
     await savePaymentAccounts(updatedList);
     setNewAccNum('');
@@ -215,7 +215,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
   const handleDeleteAccount = async (id) => {
     if (!window.confirm('Delete this payment account profile?')) return;
-    const currentList = user.paymentAccounts || [];
+    const currentList = user.payment_accounts || [];
     const updatedList = currentList.filter(a => a.id !== id);
     await savePaymentAccounts(updatedList);
   };
@@ -229,8 +229,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       if (editEmail !== (user?.email || '')) updates.email = editEmail;
       if (editPassword !== '') updates.password = editPassword;
       
-      if (editName !== (user?.fullName || '')) {
-        await updateUser({ fullName: editName });
+      if (editName !== (user?.full_name || '')) {
+        await updateUser({ full_name: editName });
       }
 
       if (Object.keys(updates).length > 0) {
@@ -266,13 +266,13 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
 
   const kycSteps = [
     { key: 'registered', label: 'Account Created', done: true },
-    { key: 'id_uploaded', label: 'ID / Passport Uploaded', done: ['id_uploaded', 'pending', 'approved'].includes(user.kycStep) },
-    { key: 'face_captured', label: 'Selfie Verified', done: ['pending', 'approved'].includes(user.kycStep) || user.kycSelfie },
-    { key: 'approved', label: 'Admin Approved', done: user.kycStatus === 'approved' },
+    { key: 'id_uploaded', label: 'ID / Passport Uploaded', done: ['id_uploaded', 'pending', 'approved'].includes(user.kyc_step) },
+    { key: 'face_captured', label: 'Selfie Verified', done: ['pending', 'approved'].includes(user.kyc_step) || user.kyc_selfie },
+    { key: 'approved', label: 'Admin Approved', done: user.kyc_status === 'approved' },
   ];
 
   const kycStatusBadge = () => {
-    switch (user.kycStatus) {
+    switch (user.kyc_status) {
       case 'approved': 
         return (
           <span className="badge" style={{ background: 'rgba(0, 200, 150, 0.12)', color: '#00C896', border: '1px solid rgba(0, 200, 150, 0.25)', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px' }}>
@@ -300,19 +300,19 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     }
   };
 
-  const joinDate = user.joinedAt
-    ? new Date(user.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const joinDate = user.joined_at
+    ? new Date(user.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'Recently';
 
-  const fullName = user.fullName || user.kycData?.name || user.displayName || user.username;
+  const fullName = user.full_name || user.kyc_data?.name || user.display_name || user.username;
   const email = user.email || 'No email registered';
-  const ethAddr = user.ethAddress || '—';
-  const tronAddr = getTronAddress(user.ethAddress);
-  const qrData = `EthiSwap Digital ID\nName: ${fullName}\nEmail: ${email}\nUsername: ${user.username}\nID: ${user.numericId || '—'}\nUSDT-ERC20: ${ethAddr}\nUSDT-TRC20: ${tronAddr}`;
+  const ethAddr = user.eth_address || '—';
+  const tronAddr = getTronAddress(user.eth_address);
+  const qrData = `EthiSwap Digital ID\nName: ${fullName}\nEmail: ${email}\nUsername: ${user.username}\nID: ${user.numeric_id || '—'}\nUSDT-ERC20: ${ethAddr}\nUSDT-TRC20: ${tronAddr}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120&data=${encodeURIComponent(qrData)}`;
 
   // Default to profilePicUrl or DEFAULT_AVATAR_SVG
-  const userAvatar = user.profilePicUrl || (user.kycSelfie ? getAvatarUrl(user.kycSelfie) : getAvatarUrl(DEFAULT_AVATAR_SVG));
+  const userAvatar = user.profile_pic || (user.kyc_selfie ? getAvatarUrl(user.kyc_selfie) : getAvatarUrl(DEFAULT_AVATAR_SVG));
 
   // Split name into first and last for vertical stacked typography
   const nameParts = fullName.trim().split(/\s+/);
@@ -499,11 +499,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                   <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Trades</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>{user.totalTrades || 0}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>{user.trade_count || 0}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Volume</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>${(user.totalVolume || 0).toLocaleString()}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>${(user.total_volume || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -514,11 +514,11 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Trading ID</span>
-                  <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '2px', color: '#fff' }}>#{user.numericId || '0000'}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '2px', color: '#fff' }}>#{user.numeric_id || '0000'}</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '9px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Status</span>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: user.kycStatus === 'approved' ? '#00C896' : '#F5A623' }}>{user.kycStatus?.toUpperCase() || 'NEW'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: user.kyc_status === 'approved' ? '#00C896' : '#F5A623' }}>{user.kyc_status?.toUpperCase() || 'NEW'}</div>
                 </div>
               </div>
             </div>
@@ -540,7 +540,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
         <div className="stat-card">
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Available Balance</span>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#00C896' }}>${(user.ethBalance ?? 0).toFixed(2)}</div>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: '#00C896' }}>${(user.eth_balance ?? 0).toFixed(2)}</div>
           <span style={{ fontSize: '10px', color: 'var(--muted)' }}>USD Escrow Wallet</span>
         </div>
       </div>
@@ -568,7 +568,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
       </div>
 
       {/* ─── IDENTITY VERIFICATION (KYC) ──────────────────────── */}
-      {user.kycStatus === 'approved' ? (
+      {user.kyc_status === 'approved' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
           background: 'linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(0,180,135,0.04) 100%)',
@@ -587,7 +587,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             </div>
           </div>
         </div>
-      ) : user.kycStatus === 'pending' ? (
+      ) : user.kyc_status === 'pending' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
           background: 'linear-gradient(135deg, rgba(245,166,35,0.08) 0%, rgba(200,150,0,0.04) 100%)',
@@ -602,7 +602,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             </div>
           </div>
         </div>
-      ) : user.kycStatus === 'rejected' ? (
+      ) : user.kyc_status === 'rejected' ? (
         <div style={{
           borderRadius: '20px', padding: '20px',
           background: 'rgba(255,77,77,0.06)', border: '1.5px solid rgba(255,77,77,0.3)',
@@ -612,9 +612,9 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
             <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(255,77,77,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>❌</div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#FF4D4D', marginBottom: '2px' }}>Verification Rejected</div>
-              {user.kycRejectionReason && (
+              {user.kyc_rejection_reason && (
                 <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.4 }}>
-                  Reason: <span style={{ color: '#fca5a5' }}>{user.kycRejectionReason}</span>
+                  Reason: <span style={{ color: '#fca5a5' }}>{user.kyc_rejection_reason}</span>
                 </div>
               )}
             </div>
@@ -699,7 +699,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Average Star Rating</span>
-            <span style={{ fontWeight: 600, color: 'var(--gold)' }}>⭐ {(user.avg_rating || user.averageRating || 5.0).toFixed(1)} / 5.0</span>
+            <span style={{ fontWeight: 600, color: 'var(--gold)' }}>⭐ {(user.avg_rating || 5.0).toFixed(1)} / 5.0</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Positive Feedback</span>
@@ -707,7 +707,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Total Completed Trades</span>
-            <span style={{ fontWeight: 600 }}>{user.totalCompletedTrades || user.totalTrades || 0} trades</span>
+            <span style={{ fontWeight: 600 }}>{user.trade_count || 0} trades</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

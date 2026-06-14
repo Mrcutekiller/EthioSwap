@@ -54,8 +54,8 @@ const P2PListings = () => {
     if (selectedListing) {
       if (selectedListing.type === 'buy') {
         // Taker is seller, so default to taker's own first saved payment account
-        if (user.paymentAccounts && user.paymentAccounts.length > 0) {
-          setChosenPaymentAccount(user.paymentAccounts[0]);
+        if (user.payment_accounts && user.payment_accounts.length > 0) {
+          setChosenPaymentAccount(user.payment_accounts[0]);
         } else {
           setChosenPaymentAccount(null);
         }
@@ -1209,7 +1209,7 @@ const P2PListings = () => {
                       Check which bank or wallet accounts you want to accept ETB transfers into for this listing:
                     </p>
                     
-                    {(!user.paymentAccounts || user.paymentAccounts.length === 0) ? (
+                    {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
                       <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
                         <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
@@ -1222,7 +1222,7 @@ const P2PListings = () => {
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {user.paymentAccounts.map(acc => {
+                        {user.payment_accounts.map(acc => {
                           const sel = linkedAccounts.some(la => la.id === acc.id);
                           const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
                           return (
@@ -1263,7 +1263,7 @@ const P2PListings = () => {
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" disabled={createType === 'sell' && (!user.paymentAccounts || user.paymentAccounts.length === 0)} className="btn btn-gold" style={{ flex: 2 }}>Create Listing</button>
+                <button type="submit" disabled={createType === 'sell' && (!user.payment_accounts || user.payment_accounts.length === 0)} className="btn btn-gold" style={{ flex: 2 }}>Create Listing</button>
               </div>
             </form>
           </div>
@@ -1382,7 +1382,7 @@ const P2PListings = () => {
                 /* Taker is seller: Taker chooses ONE of THEIR OWN accounts to receive payment */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label className="input-label" style={{ marginBottom: '2px' }}>Receive Payout Into (My Bank/Wallet)</label>
-                  {(!user.paymentAccounts || user.paymentAccounts.length === 0) ? (
+                  {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
                     <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
                       <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
                       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
@@ -1395,7 +1395,7 @@ const P2PListings = () => {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {user.paymentAccounts.map(acc => {
+                      {user.payment_accounts.map(acc => {
                         const sel = chosenPaymentAccount?.id === acc.id;
                         const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
                         return (

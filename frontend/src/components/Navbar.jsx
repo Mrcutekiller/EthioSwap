@@ -11,7 +11,7 @@ const Navbar = () => {
   const activeTradesCount = trades.filter(t => t.status === 'payment_pending' || t.status === 'paid' || t.status === 'disputed').length;
 
   const getKycBadge = () => {
-    switch (user.kycStatus) {
+    switch (user.kyc_status) {
       case 'approved':
         return <span className="badge badge-success"><Shield size={12} /> Verified</span>;
       case 'pending':

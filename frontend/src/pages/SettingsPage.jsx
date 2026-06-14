@@ -14,7 +14,7 @@ const SettingsPage = ({ user, onLogout }) => {
     setLang(newLang);
     localStorage.setItem('ethioswap_language', newLang);
     if (user) {
-      await updateUser({ preferredLanguage: newLang });
+      await updateUser({ preferred_language: newLang });
     }
   };
 
@@ -81,23 +81,23 @@ const SettingsPage = ({ user, onLogout }) => {
               </div>
               <div
                 onClick={async () => {
-                  const newState = !user.twoFaEnabled;
-                  await updateUser({ twoFaEnabled: newState });
+                  const newState = !user.two_fa_enabled;
+                  await updateUser({ two_fa_enabled: newState });
                 }}
-                style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.twoFaEnabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.twoFaEnabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+                style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.two_fa_enabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.two_fa_enabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
               >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.twoFaEnabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.two_fa_enabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
               </div>
             </div>
             
-            {user.twoFaEnabled && (
+            {user.two_fa_enabled && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '12px', background: '#1A1F32', borderRadius: '12px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Verification Method</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <button className={`btn btn-sm ${user.twoFaMethod === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'email' })}>
+                  <button className={`btn btn-sm ${user.two_fa_method === 'email' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ two_fa_method: 'email' })}>
                     <Mail size={14} /> Email
                   </button>
-                  <button className={`btn btn-sm ${user.twoFaMethod === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ twoFaMethod: 'sms' })}>
+                  <button className={`btn btn-sm ${user.two_fa_method === 'sms' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => updateUser({ two_fa_method: 'sms' })}>
                     <Smartphone size={14} /> SMS
                   </button>
                 </div>
@@ -121,11 +121,11 @@ const SettingsPage = ({ user, onLogout }) => {
             </div>
             <div
               onClick={async () => {
-                await updateUser({ emailEnabled: !user.emailEnabled });
+                await updateUser({ email_enabled: !user.email_enabled });
               }}
-              style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.emailEnabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.emailEnabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
+              style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.email_enabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.email_enabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
             >
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.emailEnabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.email_enabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
             </div>
           </div>
         </div>
