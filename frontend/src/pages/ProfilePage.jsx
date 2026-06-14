@@ -116,76 +116,8 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) => {
-  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, sendOtp, updateSensitiveDetails, updateUser } = useAuth();
+  const { savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, updateSensitiveDetails, updateUser } = useAuth();
   
-  const [showProfileOtp, setShowProfileOtp] = useState(false);
-  const [profileOtpCode, setProfileOtpCode] = useState('');
-  const [profileSendingOtp, setProfileSendingOtp] = useState(false);
-  const [profileResendTimer, setProfileResendTimer] = useState(0);
-  const [profileOtpError, setProfileOtpError] = useState('');
-
-
-  const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
-  const [deepLink, setDeepLink] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [codeCopied, setCodeCopied] = useState(false);
-  const [tgGenerating, setTgGenerating] = useState(false);
-
-  useEffect(() => {
-    if (user?.telegramLinkCode && user?.telegramLinkExpires) {
-      const remaining = user.telegramLinkExpires - Date.now();
-      if (remaining > 0) {
-        setLinkCode(user.telegramLinkCode);
-        setTimeRemaining(remaining);
-        setDeepLink(`https://t.me/EthioSwap_Bot?start=${user.telegramLinkCode}`);
-      }
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (timeRemaining <= 0) {
-      setLinkCode('');
-      return;
-    }
-    const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1000) {
-          clearInterval(timer);
-          setLinkCode('');
-          return 0;
-        }
-        return prev - 1000;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeRemaining]);
-
-  const formatCountdown = (ms) => {
-    const s = Math.max(0, Math.ceil(ms / 1000));
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const handleGenerateTelegramCode = async (autoOpen = true) => {
-    try {
-      setTgGenerating(true);
-      const targetId = user.id;
-      if (!targetId) { alert("User ID not found."); return; }
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-      await supabase.from('users').update({ telegram_link_code: code, telegram_link_expires: expiresAt }).eq('id', targetId);
-      setLinkCode(code);
-      setTimeRemaining(10 * 60 * 1000);
-      const deepLinkUrl = `https://t.me/EthioSwap_Bot?start=${code}`;
-      setDeepLink(deepLinkUrl);
-      if (autoOpen) window.open(deepLinkUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      alert("Error generating Telegram link code: " + err.message);
-    } finally {
-      setTgGenerating(false);
-    }
-  };
 
   const [showKYC, setShowKYC] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -288,61 +220,8 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     await savePaymentAccounts(updatedList);
   };
 
-  useEffect(() => {
-    if (profileResendTimer <= 0) return;
-    const interval = setInterval(() => {
-      setProfileResendTimer(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [profileResendTimer]);
-
-  const triggerProfileOtp = async () => {
-    setProfileSendingOtp(true);
-    setProfileOtpError('');
-    try {
-      await sendOtp(user._id, 'sensitive_change');
-      setProfileResendTimer(60);
-    } catch (err) {
-      setProfileOtpError(err.message);
-    } finally {
-      setProfileSendingOtp(false);
-    }
-  };
-
   const handleEditProfile = async (e) => {
     e.preventDefault();
-    const hasSensitive = editPhone !== (user?.phone || '') || editEmail !== (user?.email || '') || editPassword !== '';
-
-    if (hasSensitive) {
-      if (!user.telegramLinked || !user.telegramChatId) {
-        alert('Please connect Telegram in Settings before editing sensitive profile details.');
-        return;
-      }
-      setShowProfileOtp(true);
-      setProfileOtpCode('');
-      setProfileOtpError('');
-      await triggerProfileOtp();
-    } else {
-      setEditLoading(true);
-      try {
-        await updateUser({ fullName: editName });
-        alert('✓ Profile updated successfully!');
-        setShowEditProfile(false);
-      } catch (err) {
-        alert('Error updating profile: ' + err.message);
-      } finally {
-        setEditLoading(false);
-      }
-    }
-  };
-
-  const handleProfileOtpVerifyAndSubmit = async (e) => {
-    e.preventDefault();
-    setProfileOtpError('');
-    if (profileOtpCode.length !== 6) {
-      setProfileOtpError('Please enter the 6-digit OTP code.');
-      return;
-    }
     setEditLoading(true);
     try {
       const updates = {};
@@ -354,13 +233,14 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         await updateUser({ fullName: editName });
       }
 
-      await updateSensitiveDetails(profileOtpCode, updates);
+      if (Object.keys(updates).length > 0) {
+        await updateSensitiveDetails(null, updates);
+      }
       alert('✓ Profile updated successfully!');
-      setShowProfileOtp(false);
       setShowEditProfile(false);
       setEditPassword('');
     } catch (err) {
-      setProfileOtpError(err.message);
+      alert('Error updating profile: ' + err.message);
     } finally {
       setEditLoading(false);
     }
@@ -813,103 +693,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
         </div>
       )}
 
-      {/* ─── TELEGRAM BOT CONNECTION ─────────────────────────── */}
-      <div className="card" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(42, 171, 238, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#2AABEE' }}>
-            ✈️
-          </div>
-          <div>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0 }}>Telegram Bot Connection</h3>
-            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: 0 }}>Receive trade alerts and secure OTP codes on Telegram</p>
-          </div>
-        </div>
-
-        {user.telegramChatId ? (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,200,150,0.03)', border: '1px solid rgba(0,200,150,0.15)', padding: '12px 16px', borderRadius: '12px' }}>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#00C896', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🟢 Connected
-              </span>
-              <span style={{ fontSize: '10px', color: 'var(--muted)' }}>Chat ID: {user.telegramChatId}</span>
-            </div>
-            <button 
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'settings' }));
-              }} 
-              className="btn btn-sm btn-ghost" 
-              style={{ padding: '6px 12px', fontSize: '11px', textDecoration: 'underline', color: 'var(--gold-light)' }}
-            >
-              Configure
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: 0, lineHeight: 1.4 }}>
-              Link your account to our Telegram bot <b>@EthioSwap_Bot</b> to get rich alerts and check trade statuses even before your account is verified.
-            </p>
-            {linkCode ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(245,166,35,0.04)', borderRadius: '10px', border: '1px dashed var(--gold)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Linking Code</span>
-                  <strong
-                    onClick={() => {
-                      navigator.clipboard.writeText(linkCode).then(() => {
-                        setCodeCopied(true);
-                        setTimeout(() => setCodeCopied(false), 2000);
-                      });
-                    }}
-                    style={{ fontSize: '22px', letterSpacing: '2px', color: 'var(--gold)', fontFamily: 'monospace', cursor: 'pointer', padding: '4px 12px', borderRadius: '8px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.15)', userSelect: 'all', transition: 'all 0.2s ease' }}
-                    title="Click to copy code"
-                  >
-                    {linkCode}
-                  </strong>
-                  <span style={{ fontSize: '10px', color: codeCopied ? '#00C896' : 'var(--muted)', marginTop: '4px', fontWeight: codeCopied ? 600 : 400 }}>
-                    {codeCopied
-                      ? '✓ Copied to clipboard!'
-                      : timeRemaining > 0
-                        ? `Expires in ${formatCountdown(timeRemaining)} — Tap code to copy`
-                        : '⏱ Code expired'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.4 }}>
-                    Tap the button below to open Telegram with the code pre-filled. Just hit <b>Send</b>.
-                  </div>
-                  <a
-                    href={deepLink || `https://t.me/EthioSwap_Bot?start=${linkCode}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-sm"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', padding: '8px', borderRadius: '6px', fontWeight: 700, background: 'linear-gradient(135deg, #2AABEE 0%, #229ED9 100%)', color: '#fff', border: 'none' }}
-                  >
-                    ✈️ Open & Send Code in Telegram
-                  </a>
-                  {timeRemaining <= 0 && (
-                    <button
-                      onClick={() => handleGenerateTelegramCode(true)}
-                      disabled={tgGenerating}
-                      style={{ background: 'transparent', border: '1px dashed var(--border)', borderRadius: '6px', color: 'var(--gold-light)', padding: '6px', fontSize: '11px', fontWeight: 700, cursor: tgGenerating ? 'wait' : 'pointer' }}
-                    >
-                      {tgGenerating ? '⏳ Generating…' : '🔄 Generate a new code'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => handleGenerateTelegramCode(true)}
-                disabled={tgGenerating}
-                className="btn btn-gold btn-full btn-sm"
-                style={{ padding: '8px 12px', borderRadius: '6px', fontWeight: 600 }}
-              >
-                {tgGenerating ? '⏳ Opening Telegram…' : '🔌 Connect Telegram Bot'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* ─── STATS SUMMARY ─────────────────────────────────────── */}
       <div className="card glass-card" style={{ padding: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: '#fff' }}>Performance Stats</h3>
@@ -1163,119 +946,6 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
                 {editLoading ? 'Saving Changes...' : 'Save Profile Updates'}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Update OTP Modal */}
-      {showProfileOtp && (
-        <div className="overlay modal-center" style={{ zIndex: 1100, position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div className="modal-box" style={{ width: '100%', maxWidth: '340px', padding: '24px 20px', textAlign: 'center', background: '#141827', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: 'var(--shadow-lg)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>Profile Security Verification</h3>
-            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px', lineHeight: '1.4' }}>
-              Confirm your identity by entering the 6-digit OTP code to update your profile details.
-            </p>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '10px 14px',
-              background: 'rgba(42,171,238,0.08)',
-              border: '1px solid rgba(42,171,238,0.25)',
-              borderRadius: '10px',
-              marginBottom: '16px',
-            }}>
-              <i className="ti ti-brand-telegram" style={{ fontSize: '18px', color: '#2AABEE' }}></i>
-              <span style={{ fontSize: '12px', color: 'var(--text-1)', fontWeight: 700 }}>
-                Code sent to @EthioSwap_Bot
-              </span>
-            </div>
-
-            <form onSubmit={handleProfileOtpVerifyAndSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="000000"
-                value={profileOtpCode}
-                onChange={e => setProfileOtpCode(e.target.value.replace(/\D/g, ''))}
-                style={{
-                  width: '100%',
-                  height: '48px',
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  color: '#ffffff',
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  letterSpacing: '6px',
-                  outline: 'none',
-                }}
-                className="input"
-                autoFocus
-              />
-
-              {profileOtpError && (
-                <div style={{ color: 'var(--status-danger-text)', fontSize: '12px', textAlign: 'left', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '8px' }}>
-                  ⚠ {profileOtpError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={editLoading || profileSendingOtp}
-                className="btn btn-gold btn-full"
-                style={{
-                  height: '44px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#00C896',
-                  color: '#04342C',
-                  border: 'none',
-                  borderRadius: '10px',
-                  width: '100%',
-                  cursor: 'pointer',
-                }}
-              >
-                {editLoading ? '⏳ Saving...' : 'Verify & Update Profile'}
-              </button>
-            </form>
-
-            <div style={{ marginTop: '14px' }}>
-              {profileResendTimer > 0 ? (
-                <span style={{ fontSize: '11px', color: '#8A9BB8' }}>Resend code in {profileResendTimer}s</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => triggerProfileOtp()}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--gold-light)',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Resend Code
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowProfileOtp(false)}
-              className="btn btn-ghost btn-sm btn-full"
-              style={{ marginTop: '12px', width: '100%' }}
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
