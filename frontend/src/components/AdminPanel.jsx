@@ -335,7 +335,7 @@ const AdminPanel = ({ user }) => {
       charts: {
         dailyVolume: Object.entries(dailyVolume).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, vol]) => ({ date, volume: vol })),
         weeklyUsers: Object.entries(weeklyUsers).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, count]) => ({ date, count })),
-        distribution: { buyers: allUsersList.filter(u => u.trade_count > 0).length || 0, sellers: allUsersList.filter(u => u.trade_count > 0).length || 0, hold: 0 },
+        distribution: { completed: (allDepositReqs || []).filter(r => r.status === 'approved').length, cancelled: (allDepositReqs || []).filter(r => r.status === 'rejected').length, disputed: disputes.length },
       },
       flaggedAccounts,
       topTraders: topTraders.map(t => ({ username: t.username, trades: t.trade_count || t.total_trades || 0, volume: t.total_volume || 0 })),
@@ -697,19 +697,19 @@ const AdminPanel = ({ user }) => {
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const liveTotalUsers = allUsersList?.length ?? 0;
-  const liveNewUsersThisWeek = allUsersList?.filter(u => new Date(u.joinedAt).getTime() >= oneWeekAgo).length ?? 0;
+  const liveNewUsersThisWeek = allUsersList?.filter(u => new Date(u.created_at || u.joined_at).getTime() >= oneWeekAgo).length ?? 0;
   
   const approvedDeposits = allDepositReqs?.filter(r => r.status === 'approved') ?? [];
-  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + (r.amountUSD ?? r.amountUsd ?? 0), 0);
+  const liveTotalDeposit = approvedDeposits.reduce((s, r) => s + (r.amount_usd ?? r.amountUSD ?? r.amountUsd ?? 0), 0);
 
   // ── Bezier Chart Calculations ──────────────────────────────
-  const totalMyProfit = settings?.collectedFeesETH ?? 0;
+  const totalMyProfit = settings?.collected_fees_eth ?? settings?.collectedFeesETH ?? 0;
   const approvedDepositsThisWeek = allDepositReqs?.filter(r => 
     r.status === 'approved' && 
-    new Date(r.createdAt).getTime() >= oneWeekAgo
+    new Date(r.created_at || r.createdAt).getTime() >= oneWeekAgo
   ) ?? [];
-  const depositFeePercent = settings?.depositFeePercent ?? 1.0;
-  const depositFeesThisWeek = approvedDepositsThisWeek.reduce((s, r) => s + (r.amountUSD ?? r.amountUsd ?? 0) * (depositFeePercent / 100), 0);
+  const depositFeePercent = settings?.deposit_fee_percent ?? settings?.depositFeePercent ?? 1.0;
+  const depositFeesThisWeek = approvedDepositsThisWeek.reduce((s, r) => s + (r.amount_usd ?? r.amountUSD ?? r.amountUsd ?? 0) * (depositFeePercent / 100), 0);
 
   const m = {
     totalMyProfit,
@@ -759,10 +759,10 @@ const AdminPanel = ({ user }) => {
     const rows = (allDepositReqs || []).map((req, idx) => [
       idx + 1,
       `@${req.username}`,
-      (req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
-      Math.round(req.amountUSD * rate),
-      req.walletType,
-      new Date(req.createdAt).toLocaleString(),
+      (req.amount_usd ?? req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
+      Math.round(req.amount_usd ?? req.amountUSD ?? 0),
+      req.wallet_type || req.walletType,
+      new Date(req.created_at || req.createdAt).toLocaleString(),
       req.status
     ]);
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -1295,7 +1295,8 @@ const AdminPanel = ({ user }) => {
 
                           {/* Bars */}
                           {(() => {
-                            const data = adminAnalytics.charts.dailyVolume;
+                            const data = adminAnalytics?.charts?.dailyVolume || [];
+                            if (data.length === 0) return <text x="300" y="100" textAnchor="middle" fill="#4e5567" fontSize="12">No deposit data yet</text>;
                             const maxVal = Math.max(...data.map(d => d.volume), 10);
                             const barWidth = 12;
                             const gap = (540 - (data.length * barWidth)) / (data.length - 1);
@@ -1386,13 +1387,14 @@ const AdminPanel = ({ user }) => {
                           })}
 
                           {(() => {
-                            const data = adminAnalytics.charts.weeklyUsers;
+                            const data = adminAnalytics?.charts?.weeklyUsers || [];
+                            if (data.length < 2) return <text x="300" y="90" textAnchor="middle" fill="#4e5567" fontSize="12">Not enough data yet</text>;
                             const maxVal = Math.max(...data.map(d => d.count), 5);
                             const w = 540;
                             const points = data.map((d, i) => {
                               const x = 30 + i * (w / (data.length - 1));
                               const y = 160 - (d.count / maxVal) * 130;
-                              return { x, y, val: d.count, week: d.week };
+                              return { x, y, val: d.count, week: d.date || d.week };
                             });
 
                             // Build path D
@@ -1465,8 +1467,8 @@ const AdminPanel = ({ user }) => {
                       {/* Donut SVG */}
                       <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '160px', gap: '20px' }}>
                         {(() => {
-                          const dist = adminAnalytics.charts.distribution;
-                          const total = dist.completed + dist.cancelled + dist.disputed;
+                          const dist = adminAnalytics?.charts?.distribution || { completed: 0, cancelled: 0, disputed: 0 };
+                          const total = (dist.completed || 0) + (dist.cancelled || 0) + (dist.disputed || 0);
                           if (total === 0) {
                             return <div style={{ fontSize: '12px', color: '#8b92a8' }}>No trades recorded yet</div>;
                           }
