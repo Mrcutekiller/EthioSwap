@@ -82,6 +82,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loadUserProfile = async (userId) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const authRole = authUser?.user_metadata?.role || 'user';
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -89,6 +92,10 @@ export const AuthProvider = ({ children }) => {
       .single();
 
     if (data) {
+      if (data.role !== authRole) {
+        await supabase.from('users').update({ role: authRole }).eq('id', userId);
+        data.role = authRole;
+      }
       setUser(data);
       localStorage.setItem('ethioswap_user', JSON.stringify(data));
       return data;
@@ -96,14 +103,13 @@ export const AuthProvider = ({ children }) => {
 
     if (error) {
       console.error('Failed to load user profile:', error);
-      const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         const newProfile = {
           id: authUser.id,
           username: authUser.user_metadata?.username || authUser.email?.split('@')[0],
           email: authUser.email,
           full_name: authUser.user_metadata?.full_name || '',
-          role: authUser.user_metadata?.role || 'user',
+          role: authRole,
           status: 'active',
         };
         const { error: insertError } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
