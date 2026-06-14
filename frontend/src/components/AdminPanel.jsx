@@ -384,7 +384,7 @@ const AdminPanel = ({ user }) => {
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
   const [etbRateSell,      setEtbRateSell]     = useState('');
-  const [commissionValue,  setCommissionValue]  = useState('1.0');
+  const [commissionValue,  setCommissionValue]  = useState('5.0');
   const [depositFee,       setDepositFee]       = useState('1.0');
   const [withdrawFee,      setWithdrawFee]      = useState('1.0');
   const [minDeposit,       setMinDeposit]       = useState('1');
@@ -397,7 +397,7 @@ const AdminPanel = ({ user }) => {
     if (settings) {
       setEtbRate(settings.etb_rate_per_dollar);
       setEtbRateSell(settings.etb_rate_per_dollar_sell ?? settings.etb_rate_per_dollar ?? 186.0);
-      setCommissionValue(settings.commission_value?.toString() || '1.0');
+      setCommissionValue(settings.commission_value?.toString() || '5.0');
       setDepositFee(settings.deposit_fee_percent?.toString() || '1.0');
       setWithdrawFee(settings.withdrawal_fee_percent?.toString() || '1.0');
       setMinDeposit(settings.min_deposit_usd?.toString() || '1');
@@ -626,7 +626,7 @@ const AdminPanel = ({ user }) => {
       const updates = {
         etb_rate_per_dollar: parseFloat(etbRate) || 190.0,
         etb_rate_per_dollar_sell: parseFloat(etbRateSell) || 186.0,
-        commission_value: parseFloat(commissionValue) || 1.0,
+        commission_value: parseFloat(commissionValue) || 5.0,
         deposit_fee_percent: parseFloat(depositFee) || 1.0,
         withdrawal_fee_percent: parseFloat(withdrawFee) || 1.0,
         min_deposit_usd: parseFloat(minDeposit) || 1.0,
@@ -1870,7 +1870,7 @@ const AdminPanel = ({ user }) => {
                 {[
                   { label: 'Earned This Week', v: `$${(m?.feesThisWeek ?? 0).toFixed(2)}`, em: '📅' },
                   { label: 'All-Time Profit', v: `$${(m?.totalMyProfit ?? 0).toFixed(2)}`, em: '♾️' },
-                  { label: 'Commission Rate', v: `${settings?.commissionValue ?? 1.0}%`, em: '⚙️' },
+                  { label: 'Commission Rate', v: `${settings?.commissionValue ?? 5.0}%`, em: '⚙️' },
                   { label: 'Locked in Escrow', v: `$${(adminEarnings?.walletLocked ?? 0).toFixed(2)}`, em: '🔒' }
                 ].map((item, idx) => (
                   <div key={idx} style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '12px', padding: '16px' }}>

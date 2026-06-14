@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     flatFeePercent: 1.0,
     maxFeeUSD: 0.5,
     commissionType: 'percentage',
-    commissionValue: 1.0,
+    commissionValue: 5.0,
     isP2pFreePeriod: false
   });
   const [listings, setListings] = useState([]);
@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }) => {
         flatFeePercent: data.flat_fee_percent ?? 1.0,
         maxFeeUSD: data.max_fee_usd ?? 0.5,
         commissionType: data.commission_type ?? 'percentage',
-        commissionValue: data.commission_value ?? 1.0,
+        commissionValue: data.commission_value ?? 5.0,
         isP2pFreePeriod: data.is_p2p_free_period ?? false,
         depositFeePercent: data.deposit_fee_percent ?? 5.0,
         withdrawalFeePercent: data.withdrawal_fee_percent ?? 5.0,
