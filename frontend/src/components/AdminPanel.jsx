@@ -52,9 +52,9 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
   }, [userId]);
   const loading = !user && !hasDirectDocs;
 
-  const front = kycIdFront || user?.kycIdFront;
-  const back = kycIdBack || user?.kycIdBack || kycDocument || user?.kycDocument;
-  const selfie = kycSelfie || user?.kycSelfie;
+  const front = kycIdFront || user?.kyc_id_front;
+  const back = kycIdBack || user?.kyc_id_back || kycDocument || user?.kyc_document;
+  const selfie = kycSelfie || user?.kyc_selfie;
 
   if (loading) {
     return (
@@ -405,7 +405,7 @@ const AdminPanel = ({ user }) => {
   // ── Support auto-refresh ──────────────────────────────────────
   useEffect(() => {
     if (selectedTicket) {
-      const updated = supportTickets.find(t => t._id === selectedTicket._id);
+      const updated = supportTickets.find(t => t.id === selectedTicket.id);
       if (updated) setSelectedTicket(updated);
     }
   }, [supportTickets]);
@@ -424,7 +424,7 @@ const AdminPanel = ({ user }) => {
     { id: 'listings',  icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
     { id: 'reviews',   icon: 'ti-star',             title: 'Reviews',      badge: 0 },
     { id: 'disputes',  icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
-    { id: 'support',   icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].senderId !== user?.id && t.messages[t.messages.length - 1].senderId !== 'usr_admin').length },
+    { id: 'support',   icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].sender_id !== user?.id && t.messages[t.messages.length - 1].sender_id !== 'usr_admin').length },
     { id: 'earnings',  icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
     { id: 'comms',     icon: 'ti-message-share',    title: 'Comms & OTP Logs', badge: 0 },
     { id: 'settings',  icon: 'ti-settings',         title: 'System Settings', badge: 0 },
@@ -513,7 +513,7 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        await supabase.from('users').update({ kyc_status: 'verified', kyc_rejection_reason: null }).eq('id', userId);
+        await supabase.from('users').update({ kyc_status: 'approved', kyc_rejection_reason: null, is_verified_trader: true }).eq('id', userId);
         showAlert('KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
@@ -559,7 +559,7 @@ const AdminPanel = ({ user }) => {
 
       const currentTicket = { messages: [] };
       const newMessage = {
-        senderId: user.id,
+        sender_id: user.id,
         message: messageSubject.trim() ? `[Subject: ${messageSubject.trim()}]\n\n${messageBody}` : messageBody,
         timestamp: new Date().toISOString()
       };
@@ -1651,7 +1651,7 @@ const AdminPanel = ({ user }) => {
                               </tr>
                             ) : (
                               adminAnalytics.topTraders.map((trader, i) => (
-                                <tr key={i} style={{ cursor: 'pointer' }} onClick={() => { setSelectedUserDetailId(trader._id || trader.userId); setUserDrawerTab('profile'); }}>
+                                <tr key={i} style={{ cursor: 'pointer' }} onClick={() => { setSelectedUserDetailId(trader._id || trader.user_id); setUserDrawerTab('profile'); }}>
                                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</td>
                                   <td style={{ fontWeight: 600 }}>@{trader.username}</td>
                                   <td>{trader.count}</td>
@@ -2406,19 +2406,17 @@ const AdminPanel = ({ user }) => {
           {/* ════ KYC SUBMISSIONS AND ID VERIFICATION SCREEN ════ */}
           {activeTab === 'kyc' && (() => {
             const filteredKyc = (allUsersList || []).filter(u => {
-              // We want to list users who either have a pending KYC or completed KYC history
               const matchesSearch = !kycSearchQuery || 
                 u.username?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
-                u.fullName?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
+                u.full_name?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
                 u.email?.toLowerCase().includes(kycSearchQuery.toLowerCase());
               
               const matchesStatus = kycFilterStatus === 'all' ||
-                (kycFilterStatus === 'pending' && u.kycStatus === 'pending') ||
-                (kycFilterStatus === 'approved' && u.kycStatus === 'approved') ||
-                (kycFilterStatus === 'rejected' && u.kycStatus === 'rejected');
+                (kycFilterStatus === 'pending' && u.kyc_status === 'pending') ||
+                (kycFilterStatus === 'approved' && u.kyc_status === 'approved') ||
+                (kycFilterStatus === 'rejected' && u.kyc_status === 'rejected');
               
-              // Only users who have uploaded something (kycStatus exists and is not none)
-              const hasUploaded = u.kycStatus && u.kycStatus !== 'none';
+              const hasUploaded = u.kyc_status && u.kyc_status !== 'none';
               
               return matchesSearch && matchesStatus && hasUploaded;
             });
@@ -2476,8 +2474,8 @@ const AdminPanel = ({ user }) => {
                         </tr>
                       ) : filteredKyc.map(u => (
                         <tr
-                          key={u._id}
-                          onClick={() => setSelectedKycDetailId(u._id)}
+                          key={u.id}
+                          onClick={() => setSelectedKycDetailId(u.id)}
                           className="table-row-clickable"
                         >
                           <td>
@@ -2494,18 +2492,18 @@ const AdminPanel = ({ user }) => {
                               </div>
                             </div>
                           </td>
-                          <td style={{ fontWeight: 500 }}>{u.kycData?.name || u.fullName || 'Not Specified'}</td>
-                          <td style={{ color: '#8b92a8' }}>{u.kycData?.age || 'N/A'}</td>
+                          <td style={{ fontWeight: 500 }}>{u.kyc_data?.name || u.full_name || 'Not Specified'}</td>
+                          <td style={{ color: '#8b92a8' }}>{u.kyc_data?.age || 'N/A'}</td>
                           <td>
                             <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
-                              {u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}
+                              {u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}
                             </span>
                           </td>
                           <td>
                             <StatusBadge status={u.kycStatus} />
                           </td>
                           <td onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setSelectedKycDetailId(u._id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                            <button onClick={() => setSelectedKycDetailId(u.id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
                               Visual Checking →
                             </button>
                           </td>
@@ -2670,14 +2668,14 @@ const AdminPanel = ({ user }) => {
                   {supportTickets.length === 0 ? (
                     <div style={{ color: '#4e5567', textAlign: 'center', padding: '20px' }}>No support requests</div>
                   ) : supportTickets.map(t => {
-                    const isSelected = selectedTicket?._id === t._id;
+                    const isSelected = selectedTicket?.id === t.id;
                     const hasMessages = t.messages && t.messages.length > 0;
                     const lastMsg = hasMessages ? t.messages[t.messages.length - 1] : null;
-                    const isUnreadByAdmin = lastMsg && lastMsg.senderId !== user?.id && lastMsg.senderId !== 'usr_admin' && t.status === 'open';
+                    const isUnreadByAdmin = lastMsg && lastMsg.sender_id !== user?.id && lastMsg.sender_id !== 'usr_admin' && t.status === 'open';
 
                     return (
                       <div
-                        key={t._id}
+                        key={t.id}
                         onClick={() => setSelectedTicket(t)}
                         style={{
                           background: isSelected ? 'rgba(0, 200, 150, 0.08)' : '#0a0c12',
@@ -2717,7 +2715,9 @@ const AdminPanel = ({ user }) => {
                         <button
                           onClick={async () => {
                             if (!window.confirm("Close this support ticket?")) return;
-                            await closeTicket({ id: selectedTicket._id });
+                            await supabase.from('support_tickets').update({ status: 'closed' }).eq('id', selectedTicket.id);
+                            setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: 'closed' } : t));
+                            setSelectedTicket(prev => ({ ...prev, status: 'closed' }));
                             showAlert("Support ticket closed.");
                           }}
                           className="btn-premium-ghost"
@@ -2733,7 +2733,7 @@ const AdminPanel = ({ user }) => {
                       {(!selectedTicket.messages || selectedTicket.messages.length === 0) ? (
                         <div style={{ color: '#4e5567', textAlign: 'center', marginTop: '40px' }}>No messages in this session</div>
                       ) : selectedTicket.messages.map((msg, i) => {
-                        const isAdmin = msg.senderId === user?.id || msg.senderId === 'usr_admin';
+                        const isAdmin = msg.sender_id === user?.id || msg.sender_id === 'usr_admin';
                         return (
                           <div
                             key={i}
@@ -2807,7 +2807,7 @@ const AdminPanel = ({ user }) => {
                 (userFilterKyc === 'verified' && isVerified) ||
                 (userFilterKyc === 'unverified' && !isVerified);
                 
-              const isBanned = !!u.isSuspended;
+              const isBanned = !!u.is_suspended;
               const matchesBan = userFilterBan === 'all' ||
                 (userFilterBan === 'banned' && isBanned) ||
                 (userFilterBan === 'active' && !isBanned);
@@ -2877,12 +2877,12 @@ const AdminPanel = ({ user }) => {
                           </td>
                         </tr>
                       ) : filteredUsers.map(u => {
-                        const isMe = u._id === user?._id;
+                        const isMe = u.id === user?._id;
                         return (
                           <tr
-                            key={u._id}
+                            key={u.id}
                             onClick={() => {
-                              setSelectedUserDetailId(u._id);
+                              setSelectedUserDetailId(u.id);
                               setUserDrawerTab('profile'); // Reset drawer sub-tabs
                             }}
                             className="table-row-clickable"
@@ -2917,7 +2917,7 @@ const AdminPanel = ({ user }) => {
                             ${(u.ethBalance || 0).toFixed(2)}
                           </td>
                           <td>
-                            {u.isSuspended ? (
+                            {u.is_suspended ? (
                               <span style={{ fontSize: '12px', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(244,63,94,0.2)' }}>
                                 🚫 BANNED
                               </span>
@@ -2930,7 +2930,7 @@ const AdminPanel = ({ user }) => {
                           <td onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '8px' }}>
                             <button
                               onClick={() => {
-                                setSelectedUserDetailId(u._id);
+                                setSelectedUserDetailId(u.id);
                                 setUserDrawerTab('profile');
                               }}
                               className="btn-premium-ghost"
@@ -2941,7 +2941,7 @@ const AdminPanel = ({ user }) => {
                             {!isMe && (
                               <button
                                 onClick={async () => {
-                                  if (await handleRemoveUser(u._id, u.username)) {
+                                  if (await handleRemoveUser(u.id, u.username)) {
                                     // Refresh or update local state if needed
                                   }
                                 }}
@@ -4216,7 +4216,7 @@ const user = await ctx.db
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🛡️ KYC Document Checking</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u._id}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u.id}</span>
                 </div>
                 <button onClick={() => setSelectedKycDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -4228,7 +4228,7 @@ const user = await ctx.db
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded Verification Documents</div>
                   <KycImages 
-                    userId={u._id} 
+                    userId={u.id} 
                     getImageUrl={getImageUrl} 
                     onImageClick={setActiveLightboxImage} 
                     kycIdFront={u.kycIdFront}
@@ -4245,20 +4245,20 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Full Name:</span>
-                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not Specified'}</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.name || u.full_name || 'Not Specified'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Date of Birth / Age:</span>
-                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.age || 'Not Provided'}</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.age || 'Not Provided'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Document Type:</span>
-                    <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.idType || 'ID Card'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>ID Card Number:</span>
                     <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>
-                      {u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}
+                      {u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}
                     </strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
@@ -4284,7 +4284,7 @@ const user = await ctx.db
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u._id);
+                        setMessageComposerUserId(u.id);
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -4294,7 +4294,7 @@ const user = await ctx.db
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedUserDetailId(u._id);
+                        setSelectedUserDetailId(u.id);
                         setSelectedKycDetailId(null);
                         setUserDrawerTab('activity');
                       }}
@@ -4306,15 +4306,15 @@ const user = await ctx.db
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u.id, !!u.is_suspended)}
                       className="btn-premium-ghost"
-                      style={{ border: '1px solid #1E2640', color: u.isSuspended ? '#00C896' : '#f43f5e' }}
+                      style={{ border: '1px solid #1E2640', color: u.is_suspended ? '#00C896' : '#f43f5e' }}
                     >
-                      {u.isSuspended ? '✅ Unban User' : '🚫 Ban User'}
+                      {u.is_suspended ? '✅ Unban User' : '🚫 Ban User'}
                     </button>
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u._id, u.username)) {
+                        if (await handleRemoveUser(u.id, u.username)) {
                           setSelectedKycDetailId(null);
                         }
                       }}
@@ -4331,15 +4331,15 @@ const user = await ctx.db
               {/* KYC Decisions Toolbar */}
               <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleKYC(u._id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u.id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
                     ✓ Approve KYC
                   </button>
-                  <button onClick={() => handleKYC(u._id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleKYC(u.id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
                     ✗ Reject KYC
                   </button>
                 </div>
                 <button
-                  onClick={() => setResubmitUserId(u._id)}
+                  onClick={() => setResubmitUserId(u.id)}
                   className="btn-premium-warning"
                   style={{ width: '100%' }}
                 >
@@ -4357,13 +4357,13 @@ const user = await ctx.db
         const u = allUsersList?.find(userRecord => userRecord._id === selectedUserDetailId);
         if (!u) return null;
 
-        const isMe = u._id === user?._id;
+        const isMe = u.id === user?._id;
         const totalBal = (u.ethBalance || 0) + (u.ethLocked || 0);
         const etbVal = totalBal * rate;
 
         // Dynamic Calculations
-        const uDeposits = (allDepositReqs || []).filter(r => (r.userId === u._id || r.username === u.username) && r.status === 'approved');
-        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.userId === u._id || r.username === u.username) && r.status === 'approved');
+        const uDeposits = (allDepositReqs || []).filter(r => (r.user_id === u.id || r.username === u.username) && r.status === 'approved');
+        const uWithdrawals = (allWithdrawalReqs || []).filter(r => (r.user_id === u.id || r.username === u.username) && r.status === 'approved');
         const sumDeposits = uDeposits.reduce((s, r) => s + r.amountUSD, 0);
         const sumWithdrawals = uWithdrawals.reduce((s, r) => s + r.amountUSD, 0);
 
@@ -4435,9 +4435,9 @@ const user = await ctx.db
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{u.username}</span>
                           {u.gender && <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(0,200,150,0.1)', color: '#00C896', padding: '2px 6px', borderRadius: '4px' }}>{u.gender}</span>}
-                          {u.isSuspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
+                          {u.is_suspended && <span style={{ fontSize: '9px', fontWeight: 800, background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '2px 6px', borderRadius: '4px' }}>BANNED</span>}
                         </div>
-                        <span style={{ fontSize: '11px', color: '#8b92a8', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>Ref: {u._id}</span>
+                        <span style={{ fontSize: '11px', color: '#8b92a8', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>Ref: {u.id}</span>
                       </div>
                     </div>
 
@@ -4468,7 +4468,7 @@ const user = await ctx.db
                     <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px' }}>
                         <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>Full Name:</span>
-                        <span style={{ color: '#f0f2f8', fontWeight: 600, textAlign: 'right' }}>{u.fullName || u.kycData?.name || 'Not specified'}</span>
+                        <span style={{ color: '#f0f2f8', fontWeight: 600, textAlign: 'right' }}>{u.full_name || u.kyc_data?.name || 'Not specified'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '12px' }}>
                         <span style={{ color: '#8b92a8', whiteSpace: 'nowrap' }}>Email Address:</span>
@@ -4555,7 +4555,7 @@ const user = await ctx.db
                     ) : (
                       <>
                         <KycImages 
-                          userId={u._id} 
+                          userId={u.id} 
                           getImageUrl={getImageUrl} 
                           onImageClick={setActiveLightboxImage} 
                           kycIdFront={u.kycIdFront}
@@ -4565,9 +4565,9 @@ const user = await ctx.db
                         />
                         <div className="card-premium" style={{ background: '#0a0c12', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.idType || 'ID Card'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kycData?.name || u.fullName || 'Not specified'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{u.kycData?.idNumber || 'ETH-' + u._id.substring(0, 8).toUpperCase()}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.idType || 'ID Card'}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.name || u.full_name || 'Not specified'}</strong></div>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}</strong></div>
                         </div>
                       </>
                     )}
@@ -4723,7 +4723,7 @@ const user = await ctx.db
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => {
-                        setMessageComposerUserId(u._id);
+                        setMessageComposerUserId(u.id);
                         setMessageComposerUsername(u.username);
                       }}
                       className="btn-premium-ghost"
@@ -4747,16 +4747,16 @@ const user = await ctx.db
                   {/* Row 2: critical restrictions */}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => handleToggleSuspend(u._id, !!u.isSuspended)}
+                      onClick={() => handleToggleSuspend(u.id, !!u.is_suspended)}
                       className="btn-premium-ghost"
-                      style={{ flex: 1, border: '1px solid #1E2640', fontSize: '12px', color: u.isSuspended ? '#00C896' : '#f43f5e' }}
+                      style={{ flex: 1, border: '1px solid #1E2640', fontSize: '12px', color: u.is_suspended ? '#00C896' : '#f43f5e' }}
                     >
-                      {u.isSuspended ? '✅ Activate (Unban)' : '🚫 Suspend Account (Ban)'}
+                      {u.is_suspended ? '✅ Activate (Unban)' : '🚫 Suspend Account (Ban)'}
                     </button>
                     
                     <button
                       onClick={async () => {
-                        if (await handleRemoveUser(u._id, u.username)) {
+                        if (await handleRemoveUser(u.id, u.username)) {
                           setSelectedUserDetailId(null);
                         }
                       }}

@@ -813,7 +813,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const submitKycDetails = async (fullName, dob, idFront, idBack, selfie) => {
+  const submitKycDetails = async (fullName, kycData, idFront, idBack, selfie) => {
     if (!user) return;
     try {
       const { error } = await supabase
@@ -821,14 +821,15 @@ export const AuthProvider = ({ children }) => {
         .update({
           kyc_status: 'pending',
           kyc_full_name: fullName,
-          kyc_dob: dob,
+          kyc_dob: kycData?.birthDate || '',
+          kyc_data: kycData || {},
           kyc_id_front: idFront,
           kyc_id_back: idBack,
           kyc_selfie: selfie,
         })
         .eq('id', user.id);
       if (error) throw error;
-      setSuccess('KYC submitted successfully!');
+      setSuccess('KYC submitted successfully! Awaiting admin review.');
       await updateUser({ kyc_status: 'pending' });
     } catch (err) {
       setError(err.message);

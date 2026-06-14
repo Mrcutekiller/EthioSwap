@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { supabase } from '../lib/supabase.js';
 
 const getBotResponse = (text) => {
   const t = text.toLowerCase().trim();
@@ -41,9 +42,17 @@ const SupportWidget = () => {
   }, [ticket?.messages, botReply, isTyping]);
 
   const fetchTicket = async () => {
-    // Mocked for Convex migration
-    const data = null;
-    if (data) setTicket(data);
+    try {
+      const { data } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['open', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (data) setTicket(data);
+    } catch (e) { /* no existing ticket */ }
   };
 
   const handleSendMessage = async (e) => {
@@ -52,28 +61,38 @@ const SupportWidget = () => {
     const userText = messageText.trim();
     setLoading(true);
     try {
-      // Mocked for Convex migration
-      const newMessage = { senderId: user.id, senderName: user.username, message: userText, timestamp: new Date().toISOString() };
-      const updatedMessages = [...(ticket?.messages || []), newMessage];
-      setTicket({ ...(ticket || { id: 'mock-ticket', status: 'open' }), messages: updatedMessages });
+      const newMessage = { sender_id: user.id, sender_name: user.username, message: userText, timestamp: new Date().toISOString() };
+
+      if (!ticket || ticket.status === 'closed') {
+        const { data: created, error } = await supabase.from('support_tickets').insert({
+          user_id: user.id,
+          username: user.username,
+          subject: 'Support Request',
+          status: 'open',
+          messages: [newMessage],
+        }).select().single();
+        if (error) throw error;
+        setTicket(created);
+      } else {
+        const updatedMessages = [...(ticket.messages || []), newMessage];
+        await supabase.from('support_tickets').update({ messages: updatedMessages, status: 'open' }).eq('id', ticket.id);
+        setTicket({ ...ticket, messages: updatedMessages });
+      }
       setMessageText('');
 
       // Trigger chatbot auto-reply after a short delay
       setIsTyping(true);
-      setTimeout(() => {
+      setTimeout(async () => {
         setIsTyping(false);
         const botReplyText = getBotResponse(userText);
         if (botReplyText) {
-          const botMessage = {
-            senderId: 'bot',
-            senderName: 'EthioSwap Helper',
-            message: botReplyText,
-            timestamp: new Date().toISOString()
-          };
-          setTicket(prev => ({
-            ...(prev || { id: 'mock-ticket', status: 'open' }),
-            messages: [...(prev?.messages || []), botMessage]
-          }));
+          const botMessage = { sender_id: 'bot', sender_name: 'EthioSwap Helper', message: botReplyText, timestamp: new Date().toISOString() };
+          const currentTicket = ticket?.status !== 'closed' ? ticket : null;
+          if (currentTicket) {
+            const updated = [...(currentTicket.messages || []), botMessage];
+            await supabase.from('support_tickets').update({ messages: updated }).eq('id', currentTicket.id);
+            setTicket(prev => prev ? { ...prev, messages: updated } : prev);
+          }
         }
       }, 1200);
     } catch (e) { console.error(e); }
@@ -94,8 +113,15 @@ const SupportWidget = () => {
     if (!ticket || ticket.status === 'closed') {
       setLoading(true);
       try {
-        // Mocked for Convex migration
-        setTicket({ id: 'mock-ticket', status: 'open', messages: [] });
+        const { data, error } = await supabase.from('support_tickets').insert({
+          user_id: user.id,
+          username: user.username,
+          subject: 'Support Request',
+          status: 'open',
+          messages: [{ sender_id: 'system', sender_name: 'System', message: 'Chat started. A support agent will respond shortly.', timestamp: new Date().toISOString() }],
+        }).select().single();
+        if (error) throw error;
+        setTicket(data);
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     }
@@ -152,7 +178,7 @@ const SupportWidget = () => {
                     <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-3)', fontSize: '11px', padding: '10px' }}>Start a chat with our admin team. Send your message below.</div>
                   ) : (
                     ticket.messages.map((m, idx) => {
-                      const isMe = m.senderId === user.id;
+                      const isMe = m.sender_id === user.id;
                       return (
                         <div key={idx} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
                           <div style={{ padding: '8px 10px', borderRadius: isMe ? '10px 10px 2px 10px' : '10px 10px 10px 2px', background: isMe ? 'var(--gold-bg)' : 'var(--bg-elevated)', border: `1px solid ${isMe ? 'var(--border-active)' : 'var(--border)'}`, color: isMe ? 'var(--gold-light)' : 'var(--text-1)', fontSize: '11px', wordBreak: 'break-word' }}>{m.message}</div>

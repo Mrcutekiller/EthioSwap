@@ -908,7 +908,7 @@ const ProfilePage = () => {
             setShowKYC(false);
             await submitKycDetails(
               updatedUser.full_name,
-              updatedUser.kyc_data?.birthDate,
+              updatedUser.kyc_data,
               updatedUser.kyc_id_front,
               updatedUser.kyc_id_back,
               updatedUser.kyc_selfie
