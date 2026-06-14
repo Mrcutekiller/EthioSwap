@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
-      const isAdminRole = email.toLowerCase().includes('admin');
+      const isAdminRole = email.toLowerCase() === 'ethioswap@gmail.com';
 
       const { data, error: authError } = await supabase.auth.signUp({
         email,
