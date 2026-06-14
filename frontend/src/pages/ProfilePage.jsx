@@ -169,10 +169,16 @@ const ProfilePage = () => {
         await updateReview(myReview.id, reviewRating, reviewContent);
         setMyReview({ ...myReview, rating: reviewRating, content: reviewContent, updated_at: new Date().toISOString() });
       } else {
-        await submitReview(reviewRating, reviewContent);
-        // Refetch review
+        const result = await submitReview(reviewRating, reviewContent);
+        if (result !== false) {
+          setMyReview({ user_id: user.id, username: user.username, rating: reviewRating, content: reviewContent, created_at: new Date().toISOString() });
+          setReviewContent('');
+          setReviewRating(5);
+        }
       }
       setReviewEditing(false);
+    } catch (err) {
+      // error already shown via setError in auth context
     } finally { setReviewLoading(false); }
   };
 
@@ -901,11 +907,11 @@ const ProfilePage = () => {
           onComplete={async (updatedUser) => {
             setShowKYC(false);
             await submitKycDetails(
-              updatedUser.fullName,
-              updatedUser.kycData.birthDate,
-              updatedUser.kycIdFront,
-              updatedUser.kycIdBack,
-              updatedUser.kycSelfie
+              updatedUser.full_name,
+              updatedUser.kyc_data?.birthDate,
+              updatedUser.kyc_id_front,
+              updatedUser.kyc_id_back,
+              updatedUser.kyc_selfie
             );
           }}
         />

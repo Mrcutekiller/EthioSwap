@@ -516,7 +516,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const submitReview = async (rating, content) => {
-    if (!user) return;
+    if (!user) return false;
     try {
       const { error } = await supabase.from('reviews').insert({
         user_id: user.id,
@@ -526,8 +526,10 @@ export const AuthProvider = ({ children }) => {
       });
       if (error) throw error;
       setSuccess('Review submitted successfully!');
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     }
   };
 

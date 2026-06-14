@@ -523,9 +523,9 @@ const AdminPanel = ({ user }) => {
 
   const handleApproveReview = async (reviewId) => {
     try {
-      await supabase.from('reviews').update({ status: 'approved' }).eq('id', reviewId);
+      await supabase.from('reviews').update({ is_approved: true }).eq('id', reviewId);
       showAlert('Review approved successfully!');
-      setAllReviews(prev => prev.map(r => r.id === reviewId ? { ...r, status: 'approved' } : r));
+      setAllReviews(prev => prev.map(r => r.id === reviewId ? { ...r, is_approved: true } : r));
     } catch (err) {
       showAlert('Error approving review: ' + err.message, 'error');
     }
@@ -2891,8 +2891,8 @@ const AdminPanel = ({ user }) => {
           {/* ════ REVIEWS MANAGEMENT PAGE per Item #12 ════ */}
           {activeTab === 'reviews' && (() => {
             const testimonialsReviews = allReviews.filter(r => {
-              if (reviewFilterStatus === 'pending') return !r.isApproved;
-              if (reviewFilterStatus === 'approved') return r.isApproved;
+              if (reviewFilterStatus === 'pending') return !r.is_approved;
+              if (reviewFilterStatus === 'approved') return r.is_approved;
               return true;
             });
 
@@ -3149,11 +3149,11 @@ const AdminPanel = ({ user }) => {
                                 })()}
                               </td>
                               <td>
-                                <StatusBadge status={rev.isApproved ? 'approved' : 'pending'} />
+                                <StatusBadge status={rev.is_approved ? 'approved' : 'pending'} />
                               </td>
                               <td onClick={e => e.stopPropagation()}>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                  {!rev.isApproved && (
+                                  {!rev.is_approved && (
                                     <button 
                                       onClick={() => handleApproveReview(rev._id)} 
                                       className="btn-premium-primary" 
