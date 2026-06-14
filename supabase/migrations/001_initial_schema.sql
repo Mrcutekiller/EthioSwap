@@ -1,8 +1,40 @@
--- EthioSwap Supabase Schema
+-- EthioSwap Supabase Schema (Idempotent - safe to re-run)
 -- Migrated from Convex backend
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================
+-- DROP EXISTING TABLES (cascade foreign keys)
+-- ============================================
+DROP TABLE IF EXISTS notification_logs CASCADE;
+DROP TABLE IF EXISTS otp_attempts_logs CASCADE;
+DROP TABLE IF EXISTS otps CASCADE;
+DROP TABLE IF EXISTS dispute_audit_logs CASCADE;
+DROP TABLE IF EXISTS rate_history CASCADE;
+DROP TABLE IF EXISTS login_otps CASCADE;
+DROP TABLE IF EXISTS trade_ratings CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS withdraw_requests CASCADE;
+DROP TABLE IF EXISTS deposit_requests CASCADE;
+DROP TABLE IF EXISTS support_tickets CASCADE;
+DROP TABLE IF EXISTS admin_audit_logs CASCADE;
+DROP TABLE IF EXISTS system_settings CASCADE;
+DROP TABLE IF EXISTS exchange_rates CASCADE;
+DROP TABLE IF EXISTS disputes CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS trades CASCADE;
+DROP TABLE IF EXISTS listings CASCADE;
+DROP TABLE IF EXISTS trusted_devices CASCADE;
+DROP TABLE IF EXISTS telegram_link_tokens CASCADE;
+DROP TABLE IF EXISTS sessions CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS handle_new_user();
+DROP FUNCTION IF EXISTS update_last_active();
 
 -- ============================================
 -- USERS TABLE
@@ -15,37 +47,25 @@ CREATE TABLE users (
   display_name TEXT,
   phone TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-  
-  -- Auth
   password_hash TEXT,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'pending_verification', 'suspended')),
-  
-  -- Profile
   age INTEGER,
   bio TEXT,
   country TEXT,
   city TEXT,
   work TEXT,
   profile_pic TEXT,
-  
-  -- Balances
   balance_usd DECIMAL DEFAULT 0,
   balance_escrow DECIMAL DEFAULT 0,
   etb_balance DECIMAL DEFAULT 0,
   eth_balance DECIMAL DEFAULT 0,
   eth_locked DECIMAL DEFAULT 0,
-  
-  -- Trading stats
   trade_count INTEGER DEFAULT 0,
   total_trades INTEGER DEFAULT 0,
   total_volume DECIMAL DEFAULT 0,
   reputation INTEGER DEFAULT 100,
-  
-  -- Wallet
   eth_address TEXT,
   eth_private_key TEXT,
-  
-  -- KYC
   kyc_status TEXT DEFAULT 'none' CHECK (kyc_status IN ('none', 'pending', 'submitted', 'approved', 'rejected')),
   kyc_rejection_reason TEXT,
   kyc_id_image TEXT,
@@ -58,35 +78,23 @@ CREATE TABLE users (
   kyc_id_front TEXT,
   kyc_id_back TEXT,
   kyc_document JSONB,
-  
-  -- Verification
   is_verified_trader BOOLEAN DEFAULT FALSE,
   is_banned BOOLEAN DEFAULT FALSE,
   is_suspended BOOLEAN DEFAULT FALSE,
   is_flagged BOOLEAN DEFAULT FALSE,
   flagged_reason TEXT,
   numeric_id SERIAL,
-  
-  -- 2FA
   two_fa_enabled BOOLEAN DEFAULT FALSE,
   two_fa_method TEXT,
-  
-  -- Preferences
   theme_preference TEXT,
   preferred_language TEXT,
   onboarding_completed BOOLEAN DEFAULT FALSE,
   preferred_verification_method TEXT,
-  
-  -- Notification toggles
   sms_enabled BOOLEAN DEFAULT FALSE,
   telegram_enabled BOOLEAN DEFAULT FALSE,
   email_enabled BOOLEAN DEFAULT FALSE,
-  
-  -- Loyalty
   loyalty_points INTEGER DEFAULT 0,
   longest_streak INTEGER DEFAULT 0,
-  
-  -- Telegram
   telegram_chat_id TEXT,
   telegram_link_code TEXT,
   telegram_link_expires BIGINT,
@@ -94,22 +102,15 @@ CREATE TABLE users (
   telegram_link_token TEXT,
   telegram_connected BOOLEAN DEFAULT FALSE,
   telegram_connected_at TEXT,
-  
-  -- OTP
   otp_failures INTEGER DEFAULT 0,
   otp_locked_until BIGINT,
-  
-  -- Payment
   payment_accounts JSONB DEFAULT '[]',
   warnings JSONB DEFAULT '[]',
-  
-  -- Timestamps
   joined_at TIMESTAMPTZ DEFAULT NOW(),
   last_active TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for users
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_phone ON users(phone);
@@ -568,7 +569,6 @@ ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES
 -- ============================================
 
--- Users policies
 CREATE POLICY "Users can view own profile" ON users
   FOR SELECT USING (auth.uid() = id);
 
@@ -585,7 +585,6 @@ CREATE POLICY "Admins can update all users" ON users
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Listings policies
 CREATE POLICY "Anyone can view active listings" ON listings
   FOR SELECT USING (status = 'active');
 
@@ -603,7 +602,6 @@ CREATE POLICY "Admins can manage all listings" ON listings
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Trades policies
 CREATE POLICY "Users can view own trades" ON trades
   FOR SELECT USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
 
@@ -618,14 +616,12 @@ CREATE POLICY "Admins can manage all trades" ON trades
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Transactions policies
 CREATE POLICY "Users can view own transactions" ON transactions
   FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can create transactions" ON transactions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Notifications policies
 CREATE POLICY "Users can view own notifications" ON notifications
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -635,7 +631,6 @@ CREATE POLICY "Users can update own notifications" ON notifications
 CREATE POLICY "System can create notifications" ON notifications
   FOR INSERT WITH CHECK (true);
 
--- Reviews policies
 CREATE POLICY "Anyone can view approved reviews" ON reviews
   FOR SELECT USING (is_approved = true);
 
@@ -647,7 +642,6 @@ CREATE POLICY "Admins can manage all reviews" ON reviews
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Disputes policies
 CREATE POLICY "Users can view own disputes" ON disputes
   FOR SELECT USING (
     EXISTS (
@@ -665,7 +659,6 @@ CREATE POLICY "Admins can manage all disputes" ON disputes
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Support tickets policies
 CREATE POLICY "Users can view own tickets" ON support_tickets
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -680,7 +673,6 @@ CREATE POLICY "Admins can manage all tickets" ON support_tickets
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Deposit requests policies
 CREATE POLICY "Users can view own deposits" ON deposit_requests
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -692,7 +684,6 @@ CREATE POLICY "Admins can manage all deposits" ON deposit_requests
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Withdraw requests policies
 CREATE POLICY "Users can view own withdrawals" ON withdraw_requests
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -704,7 +695,6 @@ CREATE POLICY "Admins can manage all withdrawals" ON withdraw_requests
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Messages policies
 CREATE POLICY "Users can view trade messages" ON messages
   FOR SELECT USING (
     EXISTS (
@@ -723,7 +713,6 @@ CREATE POLICY "Users can create messages" ON messages
     )
   );
 
--- Trade ratings policies
 CREATE POLICY "Anyone can view trade ratings" ON trade_ratings
   FOR SELECT USING (true);
 
@@ -737,7 +726,6 @@ CREATE POLICY "Users can create ratings for own trades" ON trade_ratings
     )
   );
 
--- System settings policies
 CREATE POLICY "Anyone can view system settings" ON system_settings
   FOR SELECT USING (true);
 
@@ -746,7 +734,6 @@ CREATE POLICY "Admins can update system settings" ON system_settings
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Exchange rates policies
 CREATE POLICY "Anyone can view exchange rates" ON exchange_rates
   FOR SELECT USING (true);
 
@@ -755,32 +742,27 @@ CREATE POLICY "Admins can update exchange rates" ON exchange_rates
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Rate history policies
 CREATE POLICY "Anyone can view rate history" ON rate_history
   FOR SELECT USING (true);
 
--- Sessions policies
 CREATE POLICY "Users can view own sessions" ON sessions
   FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own sessions" ON sessions
   FOR DELETE USING (auth.uid() = user_id);
 
--- Trusted devices policies
 CREATE POLICY "Users can view own devices" ON trusted_devices
   FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage own devices" ON trusted_devices
   FOR ALL USING (auth.uid() = user_id);
 
--- OTP policies (admin/system access)
 CREATE POLICY "System can manage OTPs" ON otps
   FOR ALL USING (true);
 
 CREATE POLICY "System can manage login OTPs" ON login_otps
   FOR ALL USING (true);
 
--- Admin audit logs policies
 CREATE POLICY "Admins can view audit logs" ON admin_audit_logs
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
@@ -789,7 +771,6 @@ CREATE POLICY "Admins can view audit logs" ON admin_audit_logs
 CREATE POLICY "System can create audit logs" ON admin_audit_logs
   FOR INSERT WITH CHECK (true);
 
--- Notification logs policies
 CREATE POLICY "Users can view own notification logs" ON notification_logs
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -799,20 +780,15 @@ CREATE POLICY "System can create notification logs" ON notification_logs
 -- ============================================
 -- GRANT ACCESS TO API
 -- ============================================
-
--- Grant access to anon and authenticated roles
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-
--- Grant usage on sequences
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- ============================================
--- FUNCTIONS
+-- FUNCTIONS & TRIGGERS
 -- ============================================
 
--- Function to handle new user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -830,12 +806,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger for new user signup
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
--- Function to update user last_active
 CREATE OR REPLACE FUNCTION update_last_active()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -848,43 +822,25 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- INSERT DEFAULT SYSTEM SETTINGS
 -- ============================================
 INSERT INTO system_settings (
-  etb_rate_per_dollar,
-  etb_rate_per_dollar_sell,
-  flat_fee_percent,
-  max_fee_usd,
-  commission_type,
-  commission_value,
-  is_p2p_free_period,
-  deposit_fee_percent,
-  withdrawal_fee_percent,
-  min_deposit_usd,
-  min_withdrawal_usd,
-  min_p2p_listing_usd,
-  max_daily_withdrawal_usd,
-  points_per_trade,
-  is_leaderboard_enabled,
-  collected_fees_eth,
-  master_wallet_address,
-  master_wallet_balance_eth,
-  referral_bonus_points
+  etb_rate_per_dollar, etb_rate_per_dollar_sell, flat_fee_percent, max_fee_usd,
+  commission_type, commission_value, is_p2p_free_period, deposit_fee_percent,
+  withdrawal_fee_percent, min_deposit_usd, min_withdrawal_usd, min_p2p_listing_usd,
+  max_daily_withdrawal_usd, points_per_trade, is_leaderboard_enabled,
+  collected_fees_eth, master_wallet_address, master_wallet_balance_eth, referral_bonus_points
 ) VALUES (
-  55.0,
-  57.0,
-  0.0,
-  0.0,
-  'percentage',
-  0.0,
-  false,
-  0.0,
-  0.0,
-  1.0,
-  1.0,
-  10.0,
-  1000.0,
-  10,
-  true,
-  0.0,
-  '',
-  0.0,
-  50
+  55.0, 57.0, 0.0, 0.0, 'percentage', 0.0, false, 0.0, 0.0, 1.0, 1.0, 10.0, 1000.0, 10, true, 0.0, '', 0.0, 50
 );
+
+-- ============================================
+-- CREATE ADMIN USER
+-- Run this AFTER the above schema is created.
+-- Sign up via the app with email: admin@ethioswap.com
+-- The app code checks if email contains "admin" to assign admin role.
+-- ============================================
+
+-- Alternative: Create admin directly via Supabase Dashboard:
+-- 1. Go to Authentication → Users → Add User
+-- 2. Email: admin@ethioswap.com
+-- 3. Password: Admin123!
+-- 4. Then update the role in the users table:
+-- UPDATE users SET role = 'admin' WHERE email = 'admin@ethioswap.com';
