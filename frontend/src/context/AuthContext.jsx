@@ -60,9 +60,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserProfile(session.user.id);
+        loadUserProfile(session.user.id).then(() => setInitializing(false));
+      } else {
+        setInitializing(false);
       }
-      setInitializing(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -174,18 +175,8 @@ export const AuthProvider = ({ children }) => {
   const myTransactions = trades;
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('ethioswap_user');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        setUser(parsed);
-      } catch (e) {
-        localStorage.removeItem('ethioswap_user');
-      }
-    }
     loadSystemSettings();
     loadListings();
-    setInitializing(false);
   }, []);
 
   const setError = (message) => {
