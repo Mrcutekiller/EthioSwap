@@ -369,20 +369,6 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
                 </div>
                 <input id="profile-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e, setProfilePic, setProfilePicPreview)} />
               </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#ccc', fontWeight: 600, marginBottom: '8px', display: 'block' }}>National ID / Passport</label>
-                <div onClick={() => document.getElementById('id-upload').click()} style={{ width: '100%', minHeight: '100px', border: '2px dashed rgba(255,255,255,0.12)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-                  {idDocPreview ? (
-                    <img src={idDocPreview} alt="ID Preview" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '10px' }} />
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px' }}>
-                      <i className="ti ti-id" style={{ fontSize: '28px', color: '#F5A623' }}></i>
-                      <span style={{ fontSize: '13px', color: '#8B8FA3' }}>Tap to upload ID document</span>
-                    </div>
-                  )}
-                </div>
-                <input id="id-upload" type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => handleFile(e, setIdDoc, setIdDocPreview)} />
-              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)', borderRadius: '10px' }}>
                 <i className="ti ti-shield-check" style={{ fontSize: '18px', color: '#00C896' }}></i>
                 <span style={{ fontSize: '12px', color: '#8B8FA3' }}>Your data is encrypted & secure</span>
