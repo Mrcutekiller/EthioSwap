@@ -146,7 +146,7 @@ const RateTicker = ({ systemSettings }) => {
   );
 };
 
-const ActivityItem = ({ type, amount, status, date, counterparty }) => {
+const ActivityItem = ({ type, amount, status, date, counterparty, counterpartyPic }) => {
   const isDeposit = type === 'deposit';
   const isBuy = type === 'buy';
   const isPositive = isDeposit || isBuy;
@@ -170,8 +170,10 @@ const ActivityItem = ({ type, amount, status, date, counterparty }) => {
       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--surface2)'; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
-      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-        {typeIcon}
+      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, overflow: 'hidden' }}>
+        {counterpartyPic && (type === 'buy' || type === 'sell') ? (
+          <img src={counterpartyPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : typeIcon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
@@ -252,6 +254,7 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
         status: t.status,
         date: t.created_at,
         counterparty: isBuyer ? t.seller_name : t.buyer_name,
+        counterpartyPic: isBuyer ? t.seller_profile_pic : t.buyer_profile_pic,
       };
     });
     return [...deps, ...wds, ...p2p]

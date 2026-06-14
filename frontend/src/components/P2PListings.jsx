@@ -875,9 +875,14 @@ const P2PListings = () => {
                       fontSize: '13px', 
                       color: isBuyType ? '#00C896' : '#F5A623',
                       boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)'}`,
-                      flexShrink: 0
+                      flexShrink: 0,
+                      overflow: 'hidden'
                     }}>
-                      {(listing.seller_name || 'U').charAt(0).toUpperCase()}
+                      {listing.seller_profile_pic ? (
+                        <img src={listing.seller_profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        (listing.seller_name || 'U').charAt(0).toUpperCase()
+                      )}
                     </div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>

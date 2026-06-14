@@ -2487,9 +2487,10 @@ const AdminPanel = ({ user }) => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
                                 width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
-                                display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '12px', fontWeight: 700, paddingLeft: '9px', paddingTop: '3px'
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700,
+                                overflow: 'hidden', flexShrink: 0
                               }}>
-                                {(u.username || 'U').charAt(0).toUpperCase()}
+                                {u.profile_pic ? <img src={u.profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.username || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontWeight: 600 }}>@{u.username}</span>
@@ -2896,9 +2897,10 @@ const AdminPanel = ({ user }) => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div style={{
                                 width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700,
+                                overflow: 'hidden', flexShrink: 0
                               }}>
-                                {(u.username || 'U').charAt(0).toUpperCase()}
+                                {u.profile_pic ? <img src={u.profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.username || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontWeight: 600 }}>@{u.username}</span>
@@ -4430,11 +4432,9 @@ const user = await ctx.db
                         width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, overflow: 'hidden', flexShrink: 0
                       }}>
-                        {u.kyc_selfie && u.kyc_selfie.startsWith('http') ? (
-                          <img src={u.kyc_selfie} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          (u.username || 'U').charAt(0).toUpperCase()
-                        )}
+                        {u.profile_pic ? (
+                          <img src={u.profile_pic} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (u.username || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

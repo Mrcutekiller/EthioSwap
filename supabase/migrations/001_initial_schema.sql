@@ -123,6 +123,8 @@ CREATE INDEX idx_users_role ON users(role);
 CREATE TABLE listings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   seller_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  seller_name TEXT,
+  seller_profile_pic TEXT,
   amount_eth DECIMAL,
   min_limit_etb DECIMAL,
   max_limit_etb DECIMAL,

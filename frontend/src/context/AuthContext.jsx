@@ -158,6 +158,23 @@ export const AuthProvider = ({ children }) => {
       .eq('status', 'active');
 
     if (data) {
+      const listingsWithoutPic = data.filter(l => !l.seller_profile_pic && l.seller_id);
+      if (listingsWithoutPic.length > 0) {
+        const sellerIds = [...new Set(listingsWithoutPic.map(l => l.seller_id))];
+        const { data: sellers } = await supabase
+          .from('users')
+          .select('id, profile_pic')
+          .in('id', sellerIds);
+        if (sellers) {
+          const picMap = {};
+          sellers.forEach(s => { if (s.profile_pic) picMap[s.id] = s.profile_pic; });
+          data.forEach(l => {
+            if (!l.seller_profile_pic && picMap[l.seller_id]) {
+              l.seller_profile_pic = picMap[l.seller_id];
+            }
+          });
+        }
+      }
       setListings(data);
     }
   };
@@ -169,6 +186,27 @@ export const AuthProvider = ({ children }) => {
       .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
 
     if (data) {
+      const partyIds = [...new Set(data.flatMap(t => [t.buyer_id, t.seller_id]).filter(id => id && id !== userId))];
+      if (partyIds.length > 0) {
+        const { data: parties } = await supabase
+          .from('users')
+          .select('id, profile_pic, username')
+          .in('id', partyIds);
+        if (parties) {
+          const picMap = {};
+          const nameMap = {};
+          parties.forEach(p => {
+            if (p.profile_pic) picMap[p.id] = p.profile_pic;
+            if (p.username) nameMap[p.id] = p.username;
+          });
+          data.forEach(t => {
+            if (!t.buyer_profile_pic && picMap[t.buyer_id]) t.buyer_profile_pic = picMap[t.buyer_id];
+            if (!t.seller_profile_pic && picMap[t.seller_id]) t.seller_profile_pic = picMap[t.seller_id];
+            if (!t.buyer_name && nameMap[t.buyer_id]) t.buyer_name = nameMap[t.buyer_id];
+            if (!t.seller_name && nameMap[t.seller_id]) t.seller_name = nameMap[t.seller_id];
+          });
+        }
+      }
       setTrades(data);
     }
   };
@@ -362,6 +400,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const { error } = await supabase.from('listings').insert({
         seller_id: user.id,
+        seller_name: user.username,
+        seller_profile_pic: user.profile_pic || null,
         amount_eth: amountEth,
         min_limit_etb: minLimitEtb,
         max_limit_etb: maxLimitEtb,

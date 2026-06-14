@@ -319,7 +319,9 @@ const TradeRoom = () => {
       <div className="card glass-card" style={{ overflowY: 'auto', padding: '16px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px' }}>My Trades</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {trades.map(trade => (
+          {trades.map(trade => {
+            const partnerPic = user.id === trade.buyer_id ? trade.seller_profile_pic : trade.buyer_profile_pic;
+            return (
             <div 
               key={trade.id} 
               onClick={() => setSelectedTradeId(trade.id)}
@@ -331,15 +333,19 @@ const TradeRoom = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name}</span>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#F5A623', flexShrink: 0 }}>
+                  {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name || 'U').charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>@{user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name}</span>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623', flexShrink: 0 }}>
                   {trade.status.toUpperCase()}
                 </span>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{trade.amount_eth.toFixed(4)} ETH</div>
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
 
