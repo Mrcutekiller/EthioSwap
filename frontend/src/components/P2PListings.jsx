@@ -492,9 +492,9 @@ const P2PListings = () => {
               <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>USD</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
-              {wallet?.ethLocked > 0 && (
+              {wallet?.eth_locked > 0 && (
                 <span style={{ fontSize: '9px', color: '#EF4444', background: 'rgba(239, 68, 68, 0.1)', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
-                  🔒 ${(wallet.ethLocked).toFixed(2)} locked
+                  🔒 ${(wallet.eth_locked).toFixed(2)} locked
                 </span>
               )}
               <span style={{ fontSize: '11px', color: '#e0e0e0', fontWeight: 600 }}>
@@ -1127,7 +1127,7 @@ const P2PListings = () => {
                 <input
                   type="number" step="0.01" required
                   className="input"
-                  placeholder={`Available: $${wallet ? ((wallet.ethBalance ?? 0) - (wallet.ethLocked ?? 0)).toFixed(2) : '0.00'} USD`}
+                  placeholder={`Available: $${wallet ? ((wallet.eth_balance ?? 0) - (wallet.eth_locked ?? 0)).toFixed(2) : '0.00'} USD`}
                   value={amountEth}
                   onChange={e => setamountEth(e.target.value)}
                 />

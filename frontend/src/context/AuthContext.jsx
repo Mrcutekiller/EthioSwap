@@ -131,7 +131,23 @@ export const AuthProvider = ({ children }) => {
       .single();
 
     if (data) {
-      setSystemSettings(data);
+      setSystemSettings({
+        ...data,
+        etbRatePerDollar: data.etb_rate_per_dollar ?? 190.0,
+        etbRatePerDollarSell: data.etb_rate_per_dollar_sell ?? 186.0,
+        flatFeePercent: data.flat_fee_percent ?? 1.0,
+        maxFeeUSD: data.max_fee_usd ?? 0.5,
+        commissionType: data.commission_type ?? 'percentage',
+        commissionValue: data.commission_value ?? 1.0,
+        isP2pFreePeriod: data.is_p2p_free_period ?? false,
+        depositFeePercent: data.deposit_fee_percent ?? 5.0,
+        withdrawalFeePercent: data.withdrawal_fee_percent ?? 5.0,
+        minDepositUsd: data.min_deposit_usd ?? 1.0,
+        minWithdrawalUsd: data.min_withdrawal_usd ?? 10.0,
+        minP2pListingUsd: data.min_p2p_listing_usd ?? 1.0,
+        maxDailyWithdrawalUsd: data.max_daily_withdrawal_usd ?? 1000,
+        collectedFeesETH: data.collected_fees_eth ?? 0,
+      });
     }
   };
 
@@ -894,12 +910,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const wallet = user ? {
-    ethBalance: user.eth_balance || 0,
-    ethAvailable: (user.eth_balance || 0) - (user.eth_locked || 0),
-    ethLocked: user.eth_locked || 0,
-    etbBalance: user.etb_balance || 0,
-    ethAddress: user.eth_address || '',
-    numericId: user.numeric_id,
+    eth_balance: user.eth_balance || 0,
+    eth_available: (user.eth_balance || 0) - (user.eth_locked || 0),
+    eth_locked: user.eth_locked || 0,
+    etb_balance: user.etb_balance || 0,
+    eth_address: user.eth_address || '',
+    numeric_id: user.numeric_id,
   } : null;
 
   return (
