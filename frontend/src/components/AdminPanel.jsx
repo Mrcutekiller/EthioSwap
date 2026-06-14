@@ -154,7 +154,8 @@ const AdminPanel = ({ user }) => {
     rejectWithdrawalRequest,
     resolveDispute,
     logout,
-    loadSystemSettings
+    loadSystemSettings,
+    createListing
   } = useAuth();
 
   const [width, setWidth] = useState(window.innerWidth);
@@ -259,6 +260,12 @@ const AdminPanel = ({ user }) => {
   const [allReviews, setAllReviews] = useState([]);
   const [securityDetailModal, setSecurityDetailModal] = useState(null);
   const [legalPreviewModal, setLegalPreviewModal] = useState(null);
+  const [adminListingAmount, setAdminListingAmount] = useState('');
+  const [adminListingMinEtb, setAdminListingMinEtb] = useState('500');
+  const [adminListingMaxEtb, setAdminListingMaxEtb] = useState('50000');
+  const [adminListingType, setAdminListingType] = useState('sell');
+  const [adminListingLoading, setAdminListingLoading] = useState(false);
+  const [allListings, setAllListings] = useState([]);
   const [otpAttemptsLogs, setOtpAttemptsLogs] = useState([]);
   const [notificationLogs, setNotificationLogs] = useState([]);
   const [adminEarnings, setAdminEarnings] = useState(null);
@@ -288,6 +295,11 @@ const AdminPanel = ({ user }) => {
       if (sett.data) setAdminEarnings({ walletBalance: sett.data.collected_fees_eth || 0 });
     };
     load();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    supabase.from('listings').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllListings(data || []));
   }, [user]);
 
   useEffect(() => {
@@ -685,7 +697,7 @@ const AdminPanel = ({ user }) => {
   };
 
   const cs = { background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', padding: '24px' };
-  const rate = settings?.etbRatePerDollar ?? 190;
+  const rate = settings?.etb_rate_per_dollar ?? settings?.etbRatePerDollar ?? 190;
 
   const getImageUrl = (src) => {
     if (!src) return '';
@@ -1147,9 +1159,9 @@ const AdminPanel = ({ user }) => {
                 <div>
                   <div style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Live Platform Exchange Rates</div>
                   <div style={{ fontSize: '20px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span>Buy: <strong style={{ color: '#00C896' }}>$1 = {settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                    <span>Buy: <strong style={{ color: '#00C896' }}>$1 = {settings?.etb_rate_per_dollar ?? '—'} ETB</strong></span>
                     <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                    <span>Sell: <strong style={{ color: '#00C896' }}>$1 = {settings?.etbRatePerDollarSell ?? settings?.etbRatePerDollar ?? '—'} ETB</strong></span>
+                    <span>Sell: <strong style={{ color: '#00C896' }}>$1 = {settings?.etb_rate_per_dollar_sell ?? settings?.etb_rate_per_dollar ?? '—'} ETB</strong></span>
                   </div>
                 </div>
                 <button onClick={() => setActiveTab('settings')} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
@@ -1919,13 +1931,96 @@ const AdminPanel = ({ user }) => {
             </div>
           )}
 
-          {/* ════ LISTINGS TAB ════ */}
+          {/* LISTINGS TAB */}
           {activeTab === 'listings' && (
-            <div style={{ padding: '24px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '16px' }}>All Listings</h2>
-              <div style={{ background: '#141827', borderRadius: '16px', border: '1px solid #1E2640', padding: '20px', color: '#8b92a8', textAlign: 'center', fontSize: '14px' }}>
-                <i className="ti ti-list-search" style={{ fontSize: '36px', color: '#F5A623', display: 'block', marginBottom: '12px' }}></i>
-                P2P listings will appear here as sellers publish offers.
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>Manage Listings</h2>
+
+              <div style={{ background: '#141827', borderRadius: '16px', border: '1px solid #1E2640', padding: '20px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#F5A623', marginBottom: '14px' }}>Create New Listing (Admin)</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>TYPE</label>
+                    <select value={adminListingType} onChange={e => setAdminListingType(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }}>
+                      <option value="sell">Sell USDT</option>
+                      <option value="buy">Buy USDT</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>AMOUNT (USDT)</label>
+                    <input type="number" step="0.01" min="1" value={adminListingAmount} onChange={e => setAdminListingAmount(e.target.value)} placeholder="e.g. 100" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>MIN ETB</label>
+                    <input type="number" value={adminListingMinEtb} onChange={e => setAdminListingMinEtb(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>MAX ETB</label>
+                    <input type="number" value={adminListingMaxEtb} onChange={e => setAdminListingMaxEtb(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} />
+                  </div>
+                </div>
+                <button onClick={async () => {
+                  if (!adminListingAmount || parseFloat(adminListingAmount) <= 0) { showAlert('Enter a valid amount', 'error'); return; }
+                  setAdminListingLoading(true);
+                  try {
+                    const listRate = parseFloat(etbRate) || 190;
+                    await createListing(parseFloat(adminListingAmount), parseFloat(adminListingMinEtb) || 500, parseFloat(adminListingMaxEtb) || 50000, ['bank_transfer'], listRate, [], adminListingType);
+                    showAlert('Listing created!');
+                    const { data } = await supabase.from('listings').select('*').order('created_at', { ascending: false });
+                    setAllListings(data || []);
+                    setAdminListingAmount('');
+                  } catch (e) { showAlert(e.message, 'error'); }
+                  finally { setAdminListingLoading(false); }
+                }} disabled={adminListingLoading || !adminListingAmount} style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: adminListingLoading || !adminListingAmount ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)', color: adminListingLoading || !adminListingAmount ? '#8b92a8' : '#0A0C12', fontWeight: 700, fontSize: '14px', cursor: adminListingLoading || !adminListingAmount ? 'not-allowed' : 'pointer' }}>
+                  {adminListingLoading ? 'Publishing...' : 'Publish Listing'}
+                </button>
+              </div>
+
+              <div style={{ background: '#141827', borderRadius: '16px', border: '1px solid #1E2640', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #1E2640' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff', margin: 0 }}>All Listings ({allListings.length})</h3>
+                </div>
+                {allListings.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#8b92a8' }}>No listings yet</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #1E2640' }}>
+                          {['Type', 'Amount', 'Rate', 'Limits', 'Status', 'Date', 'Action'].map(h => (
+                            <th key={h} style={{ padding: '10px 16px', fontSize: '10px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allListings.map(listing => (
+                          <tr key={listing.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <td style={{ padding: '10px 16px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: listing.type === 'sell' ? 'rgba(0,200,150,0.1)' : 'rgba(245,166,35,0.1)', color: listing.type === 'sell' ? '#00C896' : '#F5A623', textTransform: 'uppercase' }}>{listing.type}</span>
+                            </td>
+                            <td style={{ padding: '10px 16px', fontSize: '12px', color: '#F5A623', fontFamily: 'monospace' }}>{listing.amount_eth} USDT</td>
+                            <td style={{ padding: '10px 16px', fontSize: '12px', color: '#fff' }}>{listing.custom_rate_etb} ETB</td>
+                            <td style={{ padding: '10px 16px', fontSize: '11px', color: '#8b92a8' }}>{listing.min_limit_etb} - {listing.max_limit_etb}</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: listing.status === 'active' ? 'rgba(0,200,150,0.1)' : 'rgba(139,146,168,0.1)', color: listing.status === 'active' ? '#00C896' : '#8b92a8', textTransform: 'uppercase' }}>{listing.status}</span>
+                            </td>
+                            <td style={{ padding: '10px 16px', fontSize: '11px', color: '#8b92a8' }}>{listing.created_at ? new Date(listing.created_at).toLocaleDateString() : '-'}</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <button onClick={async () => {
+                                const newStatus = listing.status === 'active' ? 'paused' : 'active';
+                                await supabase.from('listings').update({ status: newStatus }).eq('id', listing.id);
+                                setAllListings(prev => prev.map(l => l.id === listing.id ? { ...l, status: newStatus } : l));
+                                showAlert('Listing ' + (newStatus === 'active' ? 'activated' : 'paused'));
+                              }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #1E2640', background: 'transparent', color: listing.status === 'active' ? '#FF4D4D' : '#00C896', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                                {listing.status === 'active' ? 'Pause' : 'Activate'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
