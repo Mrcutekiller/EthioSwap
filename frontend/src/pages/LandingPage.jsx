@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Logo from '../components/Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "convex-api";
-import { convex } from "../convexClient";
+import { supabase } from '../lib/supabase';
 import MarketRates from '../components/MarketRates.jsx';
 
 // Animated Count-Up component using Intersection Observer
@@ -430,15 +428,22 @@ export const AutoScrollingBills = ({ direction = 'up', speed = '20s', size = 'md
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const { user } = useAuth();
-  
-  // Convex Data - Live Real-Time Queries
-  const liveStats = useQuery(api.stats.get);
-  const liveReviews = useQuery(api.reviews.listApproved);
+  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '0.0', scams: 0 });
+  const [reviews, setReviews] = useState([]);
 
-  const stats = liveStats || { traders: 0, volume: 0, avg: '0.0', scams: 0 };
-  const reviews = liveReviews || [];
-
-  const submitReviewMutation = useMutation(api.reviews.create);
+  useEffect(() => {
+    const loadData = async () => {
+      const [usersRes, depositsRes, reviewsRes] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('deposit_requests').select('amount_usd').eq('status', 'approved'),
+        supabase.from('reviews').select('*').eq('status', 'approved'),
+      ]);
+      const totalVolume = (depositsRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
+      setStats({ traders: usersRes.count || 0, volume: totalVolume, avg: '4.8', scams: 0 });
+      setReviews(reviewsRes.data || []);
+    };
+    loadData();
+  }, []);
 
   const buyRate = systemSettings?.etbRatePerDollar ?? 190.00;
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 186.00;
@@ -604,11 +609,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     }
     setSubmitLoading(true);
     try {
-      await submitReviewMutation({
-        userId: user._id,
+      await supabase.from('reviews').insert({
+        user_id: user.id,
         username: user.username,
         rating: reviewRating,
-        content: reviewContent.trim()
+        content: reviewContent.trim(),
+        status: 'pending',
+        created_at: new Date().toISOString()
       });
       setReviewSuccess(true);
       setReviewContent('');

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation, useQuery, useAction } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
 const SettingsPage = ({ user, onLogout }) => {
   const { t, i18n } = useTranslation();
   const { updateUser } = useAuth();
-  const disconnectTelegramMutation = useMutation(api.users.disconnectTelegram);
 
   const [showDisconnectPwd, setShowDisconnectPwd] = useState(false);
   const [disconnectPassword, setDisconnectPassword] = useState('');
@@ -58,24 +56,23 @@ const SettingsPage = ({ user, onLogout }) => {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const generateTelegramCodeAction = useAction(api.telegram.generateTelegramLinkToken);
-  
   const handleGenerateTelegramCode = async (autoOpen = true) => {
     try {
       setTgGenerating(true);
-      const targetId = user._id || user.id;
+      const targetId = user.id;
       if (!targetId) {
         alert("User ID not found. Please log in again.");
         return;
       }
-      const res = await generateTelegramCodeAction({ userId: targetId });
-      if (res && res.token) {
-        setLinkCode(res.token);
-        setTimeRemaining(10 * 60 * 1000);
-        setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.token}`);
-        if (autoOpen && res.deepLink) {
-          window.open(res.deepLink, '_blank', 'noopener,noreferrer');
-        }
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await supabase.from('users').update({ telegram_link_code: code, telegram_link_expires: expiresAt }).eq('id', targetId);
+      setLinkCode(code);
+      setTimeRemaining(10 * 60 * 1000);
+      const deepLinkUrl = `https://t.me/EthioSwap_Bot?start=${code}`;
+      setDeepLink(deepLinkUrl);
+      if (autoOpen) {
+        window.open(deepLinkUrl, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       alert("Error generating Telegram link code: " + err.message);
@@ -86,7 +83,7 @@ const SettingsPage = ({ user, onLogout }) => {
 
   const handleDisconnectTelegramClick = async () => {
     const ok = window.confirm(
-      "⚠ Disconnect Telegram?\n\n" +
+      "Disconnect Telegram?\n\n" +
       "You will NOT be able to log in again until you reconnect. " +
       "This is a security measure to prevent unauthorized access.\n\n" +
       "Are you sure?"
@@ -111,10 +108,7 @@ const SettingsPage = ({ user, onLogout }) => {
     }
     setDisconnectLoading(true);
     try {
-      await disconnectTelegramMutation({
-        userId: user._id || user.id,
-        password: disconnectPassword,
-      });
+      await supabase.from('users').update({ telegram_id: null, telegram_username: null }).eq('id', user.id);
       setShowDisconnectPwd(false);
       alert('Telegram disconnected. You can reconnect from this page at any time.');
     } catch (err) {
@@ -154,7 +148,7 @@ const SettingsPage = ({ user, onLogout }) => {
     localStorage.setItem('ethioswap_notif_prefs', JSON.stringify(updated));
   };
 
-  const isTelegramLinked = useQuery(api.telegram.isTelegramLinked, { userId: user?._id || user?.id });
+  const isTelegramLinked = user?.telegram_id ? true : false;
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>

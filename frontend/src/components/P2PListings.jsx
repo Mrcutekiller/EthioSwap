@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { supabase } from '../lib/supabase';
 import EmptyState from './EmptyState.jsx';
 import MarketRates from './MarketRates.jsx';
 
@@ -1501,9 +1502,46 @@ const P2PListings = () => {
   );
 };
 
-// Helper Trader Profile Modal Component to query Convex and display stats
+// Helper Trader Profile Modal Component to query stats and display
 const TraderProfileModal = ({ viewingTraderId, setViewingTraderId }) => {
-  const traderStats = useQuery(api.tradeRatings.getTraderProfileStats, { userId: viewingTraderId });
+  const [traderStats, setTraderStats] = useState(null);
+
+  useEffect(() => {
+    if (!viewingTraderId) return;
+    const loadStats = async () => {
+      const [userRes, ratingsRes, tradesRes] = await Promise.all([
+        supabase.from('users').select('id, username, kyc_status').eq('id', viewingTraderId).single(),
+        supabase.from('trade_ratings').select('*').eq('rated_user_id', viewingTraderId),
+        supabase.from('trades').select('id, status').or(`buyer_id.eq.${viewingTraderId},seller_id.eq.${viewingTraderId}`)
+      ]);
+      const user = userRes.data;
+      const ratings = ratingsRes.data || [];
+      const trades = tradesRes.data || [];
+      const totalRatings = ratings.length;
+      const avgRating = totalRatings > 0 ? ratings.reduce((s, r) => s + (r.stars || 0), 0) / totalRatings : 0;
+      const positiveRatings = ratings.filter(r => (r.stars || 0) >= 4).length;
+      const positivePercentage = totalRatings > 0 ? Math.round((positiveRatings / totalRatings) * 100) : 0;
+      const completedTrades = trades.filter(t => t.status === 'completed').length;
+      const disputes = trades.filter(t => t.status === 'disputed').length;
+      const breakdown = [5, 4, 3, 2, 1].map(stars => {
+        const count = ratings.filter(r => r.stars === stars).length;
+        return { stars, count, pct: totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0 };
+      });
+      setTraderStats({
+        username: user?.username || 'Trader',
+        kycApproved: user?.kyc_status === 'verified',
+        averageRating: avgRating,
+        totalRatings,
+        positivePercentage,
+        totalCompletedTrades: completedTrades,
+        totalDisputes: disputes,
+        resolvedDisputes: disputes,
+        breakdown,
+        recentReviews: ratings.slice(0, 5).map(r => ({ ...r, _id: r.id, createdAt: r.created_at }))
+      });
+    };
+    loadStats();
+  }, [viewingTraderId]);
 
   if (!traderStats) {
     return (

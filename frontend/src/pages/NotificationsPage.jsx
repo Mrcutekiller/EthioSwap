@@ -1,7 +1,6 @@
-import React from 'react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from 'convex-api';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { supabase } from '../lib/supabase';
 
 const truncateAddr = (addr) => {
   if (!addr || addr.length <= 8) return addr || '';
@@ -10,17 +9,26 @@ const truncateAddr = (addr) => {
 
 const NotificationsPage = ({ setPage }) => {
   const { user } = useAuth();
-  const notifications = useQuery(api.notifications.listForUser, user?._id ? { userId: user._id } : "skip") || [];
-  const mutateMarkAllRead = useMutation(api.notifications.markAllRead);
-  const mutateMarkAsRead = useMutation(api.notifications.markAsRead);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => setNotifications(data || []));
+  }, [user]);
 
   const markAllRead = async () => {
-    if (!user?._id) return;
-    try { await mutateMarkAllRead({ userId: user._id }); } catch (e) { console.error(e); }
+    if (!user?.id) return;
+    try {
+      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (e) { console.error(e); }
   };
 
   const markOneRead = async (notifId) => {
-    try { await mutateMarkAsRead({ id: notifId }); } catch (e) { console.error(e); }
+    try {
+      await supabase.from('notifications').update({ is_read: true }).eq('id', notifId);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+    } catch (e) { console.error(e); }
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from 'convex-api';
+import { supabase } from '../lib/supabase';
 import { ArrowDownLeft, ArrowUpRight, Repeat, Send, Download, Search, Calendar, FileText, Star, TrendingUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import EmptyState from '../components/EmptyState.jsx';
@@ -11,52 +10,61 @@ const TransactionHistory = () => {
   const { user, myDepositReqs, myWithdrawalReqs } = useAuth();
   const { t } = useTranslation();
 
-  const [activeHistoryTab, setActiveHistoryTab] = useState('p2p'); // 'p2p' | 'wallet'
+  const [activeHistoryTab, setActiveHistoryTab] = useState('p2p');
   
-  // Wallet Transactions Filters
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTx, setSelectedTx] = useState(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
-  // P2P Trade History Filters
-  const [p2pFilterStatus, setP2pFilterStatus] = useState('all'); // 'all' | 'completed' | 'cancelled' | 'disputed'
-  const [p2pFilterType, setP2pFilterType] = useState('all'); // 'all' | 'buy' | 'sell'
+  const [p2pFilterStatus, setP2pFilterStatus] = useState('all');
+  const [p2pFilterType, setP2pFilterType] = useState('all');
   const [p2pDateRange, setP2pDateRange] = useState({ start: '', end: '' });
 
-  // Rating Modal state
   const [ratingTrade, setRatingTrade] = useState(null);
   const [ratingStars, setRatingStars] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingError, setRatingError] = useState('');
 
-  // Fetch P2P trades from Convex
-  const p2pTradesRaw = useQuery(api.trades.listForUser, { userId: user?.id }) || [];
-  const submitRatingMutation = useMutation(api.trades.submitTradeRating);
+  const [p2pTradesRaw, setP2pTradesRaw] = useState([]);
 
-  // Map and sort P2P trades
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchTrades = async () => {
+      const { data } = await supabase
+        .from('trades')
+        .select('*')
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+      setP2pTradesRaw(data || []);
+    };
+    fetchTrades();
+  }, [user?.id]);
+
   const p2pTrades = useMemo(() => {
     let list = p2pTradesRaw.map(t => {
-      const isBuyer = user?.id === t.buyerId;
+      const isBuyer = user?.id === t.buyer_id;
       return {
         ...t,
         isBuyer,
         tradeType: isBuyer ? 'buy' : 'sell',
-        counterparty: isBuyer ? t.sellerName : t.buyerName,
+        counterparty: isBuyer ? t.seller_name : t.buyer_name,
+        buyerId: t.buyer_id,
+        sellerId: t.seller_id,
+        buyerName: t.buyer_name,
+        sellerName: t.seller_name,
+        amountEth: t.amount_eth,
+        createdAt: t.created_at,
+        _id: t.id,
       };
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    // Apply Status Filter
     if (p2pFilterStatus !== 'all') {
       list = list.filter(t => t.status === p2pFilterStatus);
     }
-
-    // Apply Type Filter
     if (p2pFilterType !== 'all') {
       list = list.filter(t => t.tradeType === p2pFilterType);
     }
-
-    // Apply Date Range Filter
     if (p2pDateRange.start) {
       list = list.filter(t => new Date(t.createdAt) >= new Date(p2pDateRange.start));
     }
@@ -65,14 +73,11 @@ const TransactionHistory = () => {
       endDate.setHours(23, 59, 59, 999);
       list = list.filter(t => new Date(t.createdAt) <= endDate);
     }
-
     return list;
   }, [p2pTradesRaw, p2pFilterStatus, p2pFilterType, p2pDateRange, user?.id]);
 
-  // Unified wallet transactions list (mapped from Convex)
   const transactions = useMemo(() => {
     if (!user) return [];
-    
     const deposits = (myDepositReqs || []).map(tx => ({
       id: tx._id || tx.id,
       type: 'deposit',
@@ -85,7 +90,6 @@ const TransactionHistory = () => {
       to: user.fullName || user.username || 'My Wallet',
       platform_fee: 0,
     }));
-
     const withdrawals = (myWithdrawalReqs || []).map(tx => ({
       id: tx._id || tx.id,
       type: 'withdrawal',
@@ -98,15 +102,12 @@ const TransactionHistory = () => {
       to: tx.walletAddress || tx.walletType || 'External Destination',
       platform_fee: 0,
     }));
-
     let combined = [...deposits, ...withdrawals].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-
     if (filterType !== 'all') {
       combined = combined.filter(tx => tx.type === filterType);
     }
-
     if (searchTerm.trim() !== '') {
       const q = searchTerm.toLowerCase();
       combined = combined.filter(tx => 
@@ -115,7 +116,6 @@ const TransactionHistory = () => {
         tx.id?.toLowerCase().includes(q)
       );
     }
-
     if (dateRange.start) {
       combined = combined.filter(tx => new Date(tx.created_at) >= new Date(dateRange.start));
     }
@@ -124,39 +124,31 @@ const TransactionHistory = () => {
       endDate.setHours(23, 59, 59, 999);
       combined = combined.filter(tx => new Date(tx.created_at) <= endDate);
     }
-
     return combined;
   }, [user, myDepositReqs, myWithdrawalReqs, filterType, searchTerm, dateRange]);
 
-  // Wallet summary
   const walletSummary = useMemo(() => {
     const totalIn = transactions
       .filter(tx => tx.type === 'deposit' && tx.status === 'completed')
       .reduce((sum, tx) => sum + tx.amount_usd, 0);
-    
     const totalOut = transactions
       .filter(tx => tx.type === 'withdrawal' && tx.status === 'completed')
       .reduce((sum, tx) => sum + tx.amount_usd, 0);
-
     return { in: totalIn, out: totalOut };
   }, [transactions]);
 
-  // P2P Trade Summary stats
   const completedP2pTrades = useMemo(() => {
     return p2pTradesRaw.filter(t => t.status === 'completed');
   }, [p2pTradesRaw]);
 
   const p2pStats = useMemo(() => {
     const totalTrades = completedP2pTrades.length;
-    
     const usdtBought = completedP2pTrades
-      .filter(t => t.buyerId === user?.id)
-      .reduce((sum, t) => sum + (t.amountEth || 0), 0);
-
+      .filter(t => t.buyer_id === user?.id)
+      .reduce((sum, t) => sum + (t.amount_eth || 0), 0);
     const usdtSold = completedP2pTrades
-      .filter(t => t.sellerId === user?.id)
-      .reduce((sum, t) => sum + (t.amountEth || 0), 0);
-
+      .filter(t => t.seller_id === user?.id)
+      .reduce((sum, t) => sum + (t.amount_eth || 0), 0);
     return {
       totalTrades,
       usdtBought,
@@ -165,7 +157,6 @@ const TransactionHistory = () => {
     };
   }, [completedP2pTrades, user?.id, user?.averageRating]);
 
-  // Monthly trading volume chart (last 6 months)
   const chartData = useMemo(() => {
     const months = [];
     const now = new Date();
@@ -178,43 +169,36 @@ const TransactionHistory = () => {
         volume: 0,
       });
     }
-
     completedP2pTrades.forEach(t => {
-      const date = new Date(t.createdAt);
+      const date = new Date(t.created_at);
       const m = date.getMonth();
       const y = date.getFullYear();
       const match = months.find(item => item.monthNum === m && item.year === y);
       if (match) {
-        match.volume += (t.amountEth || 0);
+        match.volume += (t.amount_eth || 0);
       }
     });
-
     return months;
   }, [completedP2pTrades]);
 
-  // Render SVG volume chart
   const renderVolumeChart = () => {
     const width = 500;
     const height = 150;
     const padding = 20;
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
-
     const volumes = chartData.map(d => d.volume);
     const maxVal = Math.max(...volumes, 10);
     const step = chartWidth / (chartData.length - 1);
-
     const points = chartData.map((d, i) => {
       const x = padding + i * step;
       const y = height - padding - (d.volume / maxVal) * chartHeight;
       return { x, y, label: d.label, volume: d.volume };
     });
-
     const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
     const areaPath = points.length > 0
       ? `${linePath} L${points[points.length - 1].x},${height - padding} L${points[0].x},${height - padding} Z`
       : '';
-
     return (
       <div className="premium-dashboard-card" style={{ padding: '20px', borderRadius: '16px', background: '#141827', border: '1px solid #1E2640' }}>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -227,14 +211,11 @@ const TransactionHistory = () => {
               <stop offset="100%" stopColor="var(--gold)" stopOpacity="0"/>
             </linearGradient>
           </defs>
-          
           <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           <line x1={padding} y1={height/2} x2={width - padding} y2={height/2} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-
           {areaPath && <path d={areaPath} fill="url(#areaGrad)" />}
           {linePath && <path d={linePath} fill="none" stroke="var(--gold)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-
           {points.map((p, i) => (
             <g key={i}>
               <circle cx={p.x} cy={p.y} r="4.5" fill="var(--gold)" stroke="var(--bg-surface)" strokeWidth="1.5" />
@@ -251,7 +232,6 @@ const TransactionHistory = () => {
     );
   };
 
-  // CSV Exporter
   const handleExportCSV = () => {
     const headers = ['Date', 'Type', 'Amount (USDT)', 'Rate (ETB/USDT)', 'Total (ETB)', 'Counterparty', 'Status', 'Rating Given'];
     const rows = p2pTrades.map(t => {
@@ -267,10 +247,8 @@ const TransactionHistory = () => {
         t.ratingGiven || 'Not Rated'
       ];
     });
-
     const csvContent = "data:text/csv;charset=utf-8," 
       + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
-    
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -280,15 +258,14 @@ const TransactionHistory = () => {
     document.body.removeChild(link);
   };
 
-  // Submit P2P Trade rating
   const handleRatingSubmit = async (e) => {
     e.preventDefault();
     setRatingError('');
     if (!ratingTrade) return;
-
     try {
-      await submitRatingMutation({
-        tradeId: ratingTrade._id,
+      await supabase.from('trade_ratings').insert({
+        trade_id: ratingTrade._id,
+        rater_id: user.id,
         rating: ratingStars,
         comment: ratingComment,
       });
@@ -300,100 +277,79 @@ const TransactionHistory = () => {
     }
   };
 
-  // Professional PDF Invoice Exporter
   const downloadReceipt = (tx) => {
     const doc = new jsPDF();
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(28, 25, 23);
     doc.text('EthioSwap Receipt', 20, 25);
-    
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(120, 113, 108);
     doc.text('Official Transaction Document', 20, 32);
     doc.text('Website: ethioswap.qzz.io', 20, 37);
     doc.text('TIN: 0048392019', 20, 42);
-    
     doc.setDrawColor(231, 229, 228);
     doc.setLineWidth(0.5);
     doc.line(20, 48, 190, 48);
-    
     doc.setFontSize(11);
     doc.setTextColor(68, 64, 60);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Receipt No:', 20, 58);
     doc.setFont("helvetica", "normal");
     doc.text(`REC-${tx.id.substring(0, 8).toUpperCase()}`, 60, 58);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Date & Time:', 20, 66);
     doc.setFont("helvetica", "normal");
     doc.text(new Date(tx.created_at).toLocaleString(), 60, 66);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Type:', 20, 74);
     doc.setFont("helvetica", "normal");
     doc.text(tx.type.toUpperCase(), 60, 74);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Status:', 20, 82);
     doc.setFont("helvetica", "normal");
     doc.text(tx.status.toUpperCase(), 60, 82);
-    
     doc.line(20, 90, 190, 90);
-    
     doc.setFont("helvetica", "bold");
     doc.text('From:', 20, 100);
     doc.setFont("helvetica", "normal");
     doc.text(tx.from, 60, 100);
-    
     doc.setFont("helvetica", "bold");
     doc.text('To:', 20, 108);
     doc.setFont("helvetica", "normal");
     doc.text(tx.to, 60, 108);
-    
     doc.line(20, 116, 190, 116);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Subtotal:', 20, 126);
     doc.setFont("helvetica", "normal");
     doc.text(`$${tx.amount_usd.toFixed(2)} USD`, 60, 126);
-    
     doc.setFont("helvetica", "bold");
     doc.text('Fees:', 20, 134);
     doc.setFont("helvetica", "normal");
     doc.text('$0.00 USD', 60, 134);
-    
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
     doc.setTextColor(4, 120, 87);
     doc.text('Total Net:', 20, 144);
     doc.text(`$${tx.amount_usd.toFixed(2)} USD`, 60, 144);
-    
     doc.setDrawColor(231, 229, 228);
     doc.line(20, 152, 190, 152);
-    
     doc.setFontSize(10);
     doc.setTextColor(120, 113, 108);
     doc.text('Authorized Signature:', 120, 165);
-    
     doc.setFont("times", "italic");
     doc.setFontSize(14);
     doc.setTextColor(29, 78, 216);
     doc.text('Biruk Fikru', 120, 175);
-    
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(120, 113, 108);
     doc.text('CEO, EthioSwap', 120, 181);
-    
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(5, 150, 105);
     doc.text('[ SECURED BY ETHIOSWAP ]', 20, 175);
-    
     doc.save(`EthioSwap_Receipt_${tx.id.substring(0, 8)}.pdf`);
   };
 
@@ -408,7 +364,6 @@ const TransactionHistory = () => {
         .filter-select:focus { border-color: rgba(245,166,35,0.3) !important; outline: none; }
       `}</style>
       
-      {/* ─── Premium Tab Header ─── */}
       <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '20px', padding: '6px', display: 'flex', gap: '6px' }}>
         <button onClick={() => setActiveHistoryTab('p2p')} className="tx-tab-btn" style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.2s ease', background: activeHistoryTab === 'p2p' ? '#F5A623' : 'transparent', color: activeHistoryTab === 'p2p' ? '#04342C' : '#8A9BB8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: activeHistoryTab === 'p2p' ? '0 4px 16px rgba(245,166,35,0.25)' : 'none' }}>
           🤝 P2P Trade History
@@ -420,7 +375,6 @@ const TransactionHistory = () => {
 
       {activeHistoryTab === 'p2p' ? (
         <>
-          {/* P2P Trades Summary Header */}
           <div style={{ background: 'linear-gradient(135deg, rgba(245,166,35,0.06) 0%, rgba(0,200,150,0.04) 100%)', border: '1px solid rgba(245,166,35,0.12)', borderRadius: '18px', padding: '24px' }}>
             <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '18px' }}>P2P Trading Portfolio</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '20px' }}>
@@ -445,21 +399,19 @@ const TransactionHistory = () => {
             </div>
           </div>
 
-          {/* SVG volume chart */}
           {renderVolumeChart()}
 
-          {/* P2P Filters and Export */}
           <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '14px', padding: '14px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={p2pFilterStatus} onChange={e => setP2pFilterStatus(e.target.value)}>
               <option value="all">All Statuses</option>
-              <option value="completed">✅ Completed</option>
-              <option value="cancelled">❌ Cancelled</option>
-              <option value="disputed">⚠️ Disputed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="disputed">Disputed</option>
             </select>
             <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={p2pFilterType} onChange={e => setP2pFilterType(e.target.value)}>
               <option value="all">All Types</option>
-              <option value="buy">🟢 Buy Trades</option>
-              <option value="sell">🔴 Sell Trades</option>
+              <option value="buy">Buy Trades</option>
+              <option value="sell">Sell Trades</option>
             </select>
             <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={p2pDateRange.start} onChange={e => setP2pDateRange(p => ({ ...p, start: e.target.value }))} />
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>→</span>
@@ -473,13 +425,11 @@ const TransactionHistory = () => {
             </button>
           </div>
 
-          {/* P2P Trades list (responsive table/cards) */}
           <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '18px', overflow: 'hidden' }}>
             {p2pTrades.length === 0 ? (
               <EmptyState icon="🤝" title="No Trades Found" subtitle="You haven't participated in any trades yet matching these filters." />
             ) : (
               <>
-                {/* Desktop View Table */}
                 <table className="desktop-only" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1E2640', background: '#141827' }}>
@@ -532,7 +482,6 @@ const TransactionHistory = () => {
                   </tbody>
                 </table>
 
-                {/* Mobile View Cards */}
                 <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' }}>
                   {p2pTrades.map(t => {
                     const totalEtb = t.amountEth * (t.rate || 190);
@@ -582,16 +531,15 @@ const TransactionHistory = () => {
         </>
       ) : (
         <>
-          {/* Wallet Transactions Summary Header */}
           <div style={{ background: 'linear-gradient(135deg, rgba(0,200,150,0.06) 0%, rgba(245,166,35,0.04) 100%)', border: '1px solid rgba(0,200,150,0.12)', borderRadius: '18px', padding: '24px' }}>
             <h3 style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '18px' }}>Wallet Summary</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total In 📥</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total In</div>
                 <div style={{ fontSize: '22px', fontWeight: 600, color: '#00C896', fontFamily: "'JetBrains Mono', monospace" }}>+${walletSummary.in.toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total Out 📤</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '6px', fontWeight: 600 }}>Total Out</div>
                 <div style={{ fontSize: '22px', fontWeight: 600, color: '#FF4D4D', fontFamily: "'JetBrains Mono', monospace" }}>-${walletSummary.out.toFixed(2)}</div>
               </div>
               <div style={{ borderLeft: '1px solid #1E2640', paddingLeft: '20px' }}>
@@ -601,7 +549,6 @@ const TransactionHistory = () => {
             </div>
           </div>
 
-          {/* Wallet Filters */}
           <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '14px', padding: '14px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ flex: 2, minWidth: '180px', position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
@@ -609,15 +556,14 @@ const TransactionHistory = () => {
             </div>
             <select className="filter-select" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit', fontWeight: 600 }} value={filterType} onChange={e => setFilterType(e.target.value)}>
               <option value="all">All Types</option>
-              <option value="deposit">📥 Deposits</option>
-              <option value="withdrawal">📤 Withdrawals</option>
+              <option value="deposit">Deposits</option>
+              <option value="withdrawal">Withdrawals</option>
             </select>
             <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} />
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>→</span>
             <input type="date" style={{ flex: 1, minWidth: '130px', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', fontSize: '12px', fontFamily: 'inherit' }} value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} />
           </div>
 
-          {/* Wallet List */}
           <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '18px', padding: '12px' }}>
             {transactions.length === 0 ? (
               <EmptyState icon="💸" title="No Transactions Found" subtitle="It looks like you haven't made any deposits or withdrawals yet matching your filters." />
@@ -656,7 +602,6 @@ const TransactionHistory = () => {
         </>
       )}
 
-      {/* ─── P2P TRADE RATING MODAL ─── */}
       {ratingTrade && (
         <div className="overlay modal-center" style={{ zIndex: 1100 }}>
           <div className="modal-box" style={{ maxWidth: '360px' }}>
@@ -664,9 +609,7 @@ const TransactionHistory = () => {
             <p style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '16px' }}>
               How was your experience trading with <b>@{ratingTrade.counterparty}</b>?
             </p>
-
             <form onSubmit={handleRatingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Star selector */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                 {[1, 2, 3, 4, 5].map(star => (
                   <button type="button" key={star} onClick={() => setRatingStars(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
@@ -674,13 +617,8 @@ const TransactionHistory = () => {
                   </button>
                 ))}
               </div>
-
-              {/* Comment */}
               <textarea placeholder="Write a short comment (optional)..." className="input" style={{ width: '100%', height: '80px', fontSize: '13px' }} value={ratingComment} onChange={e => setRatingComment(e.target.value)} />
-              
-              {ratingError && <div style={{ color: 'var(--status-danger-text)', fontSize: '12px' }}>⚠️ {ratingError}</div>}
-
-              {/* Buttons */}
+              {ratingError && <div style={{ color: 'var(--status-danger-text)', fontSize: '12px' }}>{ratingError}</div>}
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" onClick={() => setRatingTrade(null)} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="btn btn-gold" style={{ flex: 1 }}>Submit Rating</button>
@@ -690,7 +628,6 @@ const TransactionHistory = () => {
         </div>
       )}
 
-      {/* ─── WALLET TRANSACTION DETAIL MODAL ─── */}
       {selectedTx && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px' }} onClick={() => setSelectedTx(null)}>
           <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 166, 35, 0.15)', border: '2px solid #F5A623', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
@@ -721,7 +658,7 @@ const TransactionHistory = () => {
             </div>
             <div style={{ borderTop: '2px dashed #e7e5e4', margin: '16px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '4px 8px', color: '#059669', fontSize: '9px', fontWeight: 900 }}>🔒 SECURED</div>
+              <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '4px 8px', color: '#059669', fontSize: '9px', fontWeight: 900 }}>SECURED</div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ borderTop: '1px solid #d1d5db', width: '110px', textAlign: 'center', fontSize: '9px', color: '#78716c', paddingTop: '4px' }}>Biruk Fikru</div>
               </div>

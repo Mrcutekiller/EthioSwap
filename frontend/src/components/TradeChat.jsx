@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Check, CheckCheck, AlertCircle, X, ZoomIn, Clock, Shield, AlertTriangle } from 'lucide-react';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 
 const ImageZoomModal = ({ src, onClose }) => (
   <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -20,38 +19,43 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const [newMessage, setNewMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [zoomImage, setZoomImage] = useState(null);
+  const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const isBuyer = user?.id === buyerId;
   const isActive = ['payment_pending', 'paid', 'disputed'].includes(tradeStatus);
   const isFinished = ['completed', 'cancelled'].includes(tradeStatus);
 
-  const messagesFromQuery = useQuery(api.messages.listForTrade, user ? { tradeId, userId: user._id || user.id } : "skip") || [];
-  const sendMessageMutation = useMutation(api.messages.send);
-  const markAsReadMutation = useMutation(api.messages.markAsRead);
-
-  const messages = messagesFromQuery.map(m => ({
-    id: m._id,
-    sender_id: m.senderId,
-    message_text: m.messageText,
-    message_type: m.messageType,
-    created_at: m.createdAt,
-    is_read: m.isRead,
-    sender: { username: m.senderUsername || 'User', selected_avatar: null }
-  }));
+  useEffect(() => {
+    if (!tradeId || !user?.id) return;
+    const loadMessages = async () => {
+      const { data } = await supabase.from('messages').select('*').eq('trade_id', tradeId).order('created_at', { ascending: true });
+      setMessages((data || []).map(m => ({
+        id: m.id,
+        sender_id: m.sender_id,
+        message_text: m.message_text,
+        message_type: m.message_type,
+        created_at: m.created_at,
+        is_read: m.is_read,
+        sender: { username: m.sender_username || 'User', selected_avatar: null }
+      })));
+    };
+    loadMessages();
+    const channel = supabase.channel(`messages:${tradeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `trade_id=eq.${tradeId}` }, loadMessages).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tradeId, user?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  // Mark messages as read when loaded and unread messages from counterparty exist
   useEffect(() => {
     if (messages.length > 0 && user?.id) {
       const hasUnread = messages.some(m => m.sender_id !== user.id && !m.is_read);
       if (hasUnread) {
-        markAsReadMutation({ tradeId, userId: user.id || user._id }).catch(console.error);
+        supabase.from('messages').update({ is_read: true }).eq('trade_id', tradeId).neq('sender_id', user.id).eq('is_read', false).catch(console.error);
       }
     }
-  }, [messages, tradeId, user?.id, markAsReadMutation]);
+  }, [messages, tradeId, user?.id]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -61,13 +65,13 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     setNewMessage('');
 
     try {
-      await sendMessageMutation({
-        tradeId,
-        senderId: user.id,
-        senderUsername: user.username,
-        messageText: msgText,
-        messageType: 'text',
-        userId: user.id || user._id,
+      await supabase.from('messages').insert({
+        trade_id: tradeId,
+        sender_id: user.id,
+        sender_username: user.username,
+        message_text: msgText,
+        message_type: 'text',
+        is_read: false
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error sending message');
@@ -92,13 +96,13 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Data = reader.result;
-        await sendMessageMutation({
-          tradeId,
-          senderId: user.id,
-          senderUsername: user.username,
-          messageText: base64Data,
-          messageType: 'image',
-          userId: user.id || user._id,
+        await supabase.from('messages').insert({
+          trade_id: tradeId,
+          sender_id: user.id,
+          sender_username: user.username,
+          message_text: base64Data,
+          message_type: 'image',
+          is_read: false
         });
       };
       reader.onerror = () => {

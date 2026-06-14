@@ -1,7 +1,6 @@
-import React from 'react';
-import { useQuery } from 'convex/react';
-import { api } from 'convex-api';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { supabase } from '../lib/supabase';
 
 const truncateAddr = (addr) => {
   if (!addr || addr.length <= 8) return addr || '';
@@ -10,7 +9,12 @@ const truncateAddr = (addr) => {
 
 const SellerProfilePage = ({ sellerId, setPage }) => {
   const { user: currentUser } = useAuth();
-  const seller = useQuery(api.users.get, sellerId ? { id: sellerId } : "skip");
+  const [seller, setSeller] = useState(null);
+
+  useEffect(() => {
+    if (!sellerId) return;
+    supabase.from('users').select('*').eq('id', sellerId).single().then(({ data }) => setSeller(data));
+  }, [sellerId]);
 
   if (!seller) {
     return (

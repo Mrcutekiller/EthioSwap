@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import KYCWizard from '../components/KYCWizard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useMutation, useQuery, useAction } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 import { 
   Copy, 
   Shield, 
@@ -125,9 +124,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
   const [profileResendTimer, setProfileResendTimer] = useState(0);
   const [profileOtpError, setProfileOtpError] = useState('');
 
-  const deleteAccountMutation = useMutation(api.users.remove);
-  
-  const generateTelegramCodeMutation = useMutation(api.users.generateTelegramLinkCode);
+
   const [linkCode, setLinkCode] = useState(user?.telegramLinkCode || '');
   const [deepLink, setDeepLink] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -170,20 +167,19 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const generateTelegramCodeAction = useAction(api.telegram.generateTelegramLinkToken);
-
   const handleGenerateTelegramCode = async (autoOpen = true) => {
     try {
       setTgGenerating(true);
-      const res = await generateTelegramCodeAction({ userId: user.id || user._id });
-      if (res && res.token) {
-        setLinkCode(res.token);
-        setTimeRemaining(10 * 60 * 1000);
-        setDeepLink(res.deepLink || `https://t.me/EthioSwap_Bot?start=${res.token}`);
-        if (autoOpen && res.deepLink) {
-          window.open(res.deepLink, '_blank', 'noopener,noreferrer');
-        }
-      }
+      const targetId = user.id;
+      if (!targetId) { alert("User ID not found."); return; }
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await supabase.from('users').update({ telegram_link_code: code, telegram_link_expires: expiresAt }).eq('id', targetId);
+      setLinkCode(code);
+      setTimeRemaining(10 * 60 * 1000);
+      const deepLinkUrl = `https://t.me/EthioSwap_Bot?start=${code}`;
+      setDeepLink(deepLinkUrl);
+      if (autoOpen) window.open(deepLinkUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
       alert("Error generating Telegram link code: " + err.message);
     } finally {
@@ -1085,7 +1081,7 @@ const ProfilePage = ({ user, wallet, apiBase, onUserUpdate, systemSettings }) =>
               <button 
                 onClick={async () => {
                   try {
-                    await deleteAccountMutation({ id: user._id });
+                    await supabase.from('users').delete().eq('id', user.id);
                     logout();
                   } catch (err) {
                     alert("Failed to delete account: " + err.message);

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
-import { useQuery, useMutation, useAction } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 import { notify } from '../lib/notify';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */
@@ -46,7 +45,11 @@ const WALLET_META = {
 /* ── Lazy KYC Images Viewer ─────────────────────────────────── */
 const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, kycSelfie, kycDocument }) => {
   const hasDirectDocs = kycIdFront || kycIdBack || kycSelfie || kycDocument;
-  const user = useQuery(api.users.get, { id: userId });
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from('users').select('*').eq('id', userId).single().then(({ data }) => setUser(data));
+  }, [userId]);
   const loading = !user && !hasDirectDocs;
 
   const front = kycIdFront || user?.kycIdFront;
@@ -116,7 +119,11 @@ const KycImages = ({ userId, getImageUrl, onImageClick, kycIdFront, kycIdBack, k
 
 /* ── Lazy Deposit Screenshot Viewer ─────────────────────────── */
 const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
-  const deposit = useQuery(api.depositRequests.get, { id: requestId });
+  const [deposit, setDeposit] = useState(null);
+  useEffect(() => {
+    if (!requestId) return;
+    supabase.from('deposit_requests').select('*').eq('id', requestId).single().then(({ data }) => setDeposit(data));
+  }, [requestId]);
   const screenshotUrl = deposit?.screenshotUrl;
 
   if (deposit === undefined) {
@@ -237,53 +244,77 @@ const AdminPanel = ({ user }) => {
     setTimeout(() => setAlertMsg(null), 3500);
   };
 
-  // ── Convex Data Fetching ──────────────────────────────────
-  const settings = useQuery(api.systemSettings.get);
-  const allUsersList = useQuery(api.users.listAll) || [];
-  const kycQueue = useQuery(api.users.listKycQueue) || [];
-  const auditLogs = useQuery(api.adminAuditLogs.list) || [];
-  const adminAnalytics = useQuery(api.stats.getAdminAnalytics, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip");
-  const disputes = useQuery(api.trades.listDisputed) || [];
-  const supportTickets = useQuery(api.supportTickets.listAll) || [];
-  const allReviews = useQuery(api.reviews.listAll) || [];
-  
-  // OTP & Notification Logs
-  const otpAttemptsLogs = useQuery(api.otp.getOtpAttemptsLogs, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip") || [];
-  const notificationLogs = useQuery(api.otp.getNotificationLogs, user && user.role === 'admin' ? { userId: user._id || user.id } : "skip") || [];
-  const resendNotificationAction = useAction(api.otp.resendNotification);
-
-  // Mutations
-  const updateSettingsMutation = useMutation(api.systemSettings.update);
-  const addAuditLog = useMutation(api.adminAuditLogs.insert);
-  const updateUserStatus = useMutation(api.users.updateStatus);
-  const updateKycStatus = useMutation(api.users.updateKycStatus);
-  const removeUserMutation = useMutation(api.users.remove);
-  const addWarningMutation = useMutation(api.users.addWarning);
-  const replyToTicket = useMutation(api.supportTickets.reply);
-  const closeTicket = useMutation(api.supportTickets.close);
-  const approveReviewMutation = useMutation(api.reviews.approve);
-  const removeReviewMutation = useMutation(api.reviews.remove);
-
+  // ── Supabase Data Fetching ────────────────────────────────
+  const [settings, setSettings] = useState(null);
+  const [allUsersList, setAllUsersList] = useState([]);
+  const [kycQueue, setKycQueue] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [adminAnalytics, setAdminAnalytics] = useState(null);
+  const [disputes, setDisputes] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
+  const [otpAttemptsLogs, setOtpAttemptsLogs] = useState([]);
+  const [notificationLogs, setNotificationLogs] = useState([]);
   const [adminEarnings, setAdminEarnings] = useState(null);
-
-  useEffect(() => {
-    if (settings) {
-      setAdminEarnings({ walletBalance: settings.collectedFeesETH || 0 });
-    }
-  }, [settings]);
-
   const [selectedUserTxs, setSelectedUserTxs] = useState([]);
-  const userTxs = useQuery(api.trades.listForUser, selectedUserDetailId ? { userId: selectedUserDetailId } : "skip");
-  
-  const p2pRatingsData = useQuery(api.tradeRatings.listAllTradeRatings, user?._id ? { adminId: user._id } : "skip");
-  const userRatingsHistory = useQuery(api.tradeRatings.getUserRatingsHistory, selectedUserDetailId && user?._id ? { adminId: user._id, targetUserId: selectedUserDetailId } : "skip");
+  const [p2pRatingsData, setP2pRatingsData] = useState([]);
+  const [userRatingsHistory, setUserRatingsHistory] = useState([]);
 
-  const flagFakeRatingMutation = useMutation(api.tradeRatings.flagFakeRating);
-  const deleteTradeRatingMutation = useMutation(api.tradeRatings.deleteTradeRating);
-  
   useEffect(() => {
-    if (userTxs) setSelectedUserTxs(userTxs);
-  }, [userTxs]);
+    if (!user || user.role !== 'admin') return;
+    const load = async () => {
+      const [sett, users, kyc, logs, disp, tickets, revs] = await Promise.all([
+        supabase.from('system_settings').select('*').eq('id', 1).single(),
+        supabase.from('users').select('*'),
+        supabase.from('users').select('*').in('kyc_status', ['pending', 'resubmit']),
+        supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('trades').select('*').eq('status', 'disputed'),
+        supabase.from('support_tickets').select('*'),
+        supabase.from('reviews').select('*'),
+      ]);
+      setSettings(sett.data);
+      setAllUsersList(users.data || []);
+      setKycQueue(kyc.data || []);
+      setAuditLogs(logs.data || []);
+      setDisputes(disp.data || []);
+      setSupportTickets(tickets.data || []);
+      setAllReviews(revs.data || []);
+      if (sett.data) setAdminEarnings({ walletBalance: sett.data.collected_fees_eth || 0 });
+    };
+    load();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    const loadLogs = async () => {
+      const [otp, notif] = await Promise.all([
+        supabase.from('otp_attempts_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('notification_logs').select('*').order('created_at', { ascending: false }),
+      ]);
+      setOtpAttemptsLogs(otp.data || []);
+      setNotificationLogs(notif.data || []);
+    };
+    loadLogs();
+  }, [user]);
+
+  useEffect(() => {
+    if (!selectedUserDetailId) return;
+    supabase.from('trades').select('*').or(`buyer_id.eq.${selectedUserDetailId},seller_id.eq.${selectedUserDetailId}`).then(({ data }) => setSelectedUserTxs(data || []));
+  }, [selectedUserDetailId]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('trade_ratings').select('*').then(({ data }) => setP2pRatingsData(data || []));
+  }, [user]);
+
+  useEffect(() => {
+    if (!selectedUserDetailId || !user?.id) return;
+    supabase.from('trade_ratings').select('*').eq('rated_user_id', selectedUserDetailId).then(({ data }) => setUserRatingsHistory(data || []));
+  }, [selectedUserDetailId, user]);
+
+  const resendNotification = async (userId, type) => {
+    await supabase.rpc('resend_notification', { p_user_id: userId, p_type: type });
+  };
 
   // ── Settings state ──────────────────────────────────────────
   const [etbRate,          setEtbRate]         = useState('');
@@ -299,16 +330,16 @@ const AdminPanel = ({ user }) => {
 
   useEffect(() => {
     if (settings) {
-      setEtbRate(settings.etbRatePerDollar);
-      setEtbRateSell(settings.etbRatePerDollarSell ?? settings.etbRatePerDollar ?? 186.0);
-      setCommissionValue(settings.commissionValue?.toString() || '1.0');
-      setDepositFee(settings.depositFeePercent?.toString() || '1.0');
-      setWithdrawFee(settings.withdrawalFeePercent?.toString() || '1.0');
-      setMinDeposit(settings.minDepositUSD?.toString() || '1');
-      setMinWithdraw(settings.minWithdrawalUSD?.toString() || '10');
-      setMinP2pListing(settings.minP2pListingUSD?.toString() || '1');
-      setMaxDailyWithdraw(settings.maxDailyWithdrawalUSD?.toString() || '1000');
-      setIsP2pFreePeriod(settings.isP2pFreePeriod ?? false);
+      setEtbRate(settings.etb_rate_per_dollar);
+      setEtbRateSell(settings.etb_rate_per_dollar_sell ?? settings.etb_rate_per_dollar ?? 186.0);
+      setCommissionValue(settings.commission_value?.toString() || '1.0');
+      setDepositFee(settings.deposit_fee_percent?.toString() || '1.0');
+      setWithdrawFee(settings.withdrawal_fee_percent?.toString() || '1.0');
+      setMinDeposit(settings.min_deposit_usd?.toString() || '1');
+      setMinWithdraw(settings.min_withdrawal_usd?.toString() || '10');
+      setMinP2pListing(settings.min_p2p_listing_usd?.toString() || '1');
+      setMaxDailyWithdraw(settings.max_daily_withdrawal_usd?.toString() || '1000');
+      setIsP2pFreePeriod(settings.is_p2p_free_period ?? false);
     }
   }, [settings]);
 
@@ -350,18 +381,13 @@ const AdminPanel = ({ user }) => {
     if (!selectedUserDetailId || !warnMessage.trim()) return;
     setWarnLoading(true);
     try {
-      await addWarningMutation({ id: selectedUserDetailId, message: warnMessage });
-      
-      // Add audit log
-      await addAuditLog({
-        adminId: user._id,
-        adminUsername: user.username,
-        action: 'warn_user',
-        targetId: selectedUserDetailId,
-        details: `Issued warning: ${warnMessage}`
+      const { data: existing } = await supabase.from('users').select('warnings').eq('id', selectedUserDetailId).single();
+      const warnings = [...(existing?.warnings || []), { message: warnMessage, created_at: new Date().toISOString() }];
+      await supabase.from('users').update({ warnings }).eq('id', selectedUserDetailId);
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: user.id, admin_username: user.username, action: 'warn_user', target_id: selectedUserDetailId, details: `Issued warning: ${warnMessage}`
       });
-
-      showAlert("⚠️ User warning has been issued successfully.");
+      showAlert("User warning has been issued successfully.");
       setWarnMessage('');
     } catch (err) {
       showAlert("Error sending warning: " + err.message, "error");
@@ -374,39 +400,32 @@ const AdminPanel = ({ user }) => {
     const actionText = currentSuspended ? "activate" : "suspend";
     if (!window.confirm(`Are you sure you want to ${actionText} this user?`)) return;
     try {
-      await updateUserStatus({ id: userId, isSuspended: !currentSuspended });
-      
-      await addAuditLog({
-        adminId: user._id,
-        adminUsername: user.username,
-        action: currentSuspended ? 'unsuspend_user' : 'suspend_user',
-        targetId: userId,
+      await supabase.from('users').update({ is_suspended: !currentSuspended }).eq('id', userId);
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: user.id, admin_username: user.username,
+        action: currentSuspended ? 'unsuspend_user' : 'suspend_user', target_id: userId,
         details: `${currentSuspended ? 'Unsuspended' : 'Suspended'} user account`
       });
-
       showAlert(`User account successfully ${currentSuspended ? 'activated' : 'suspended'}.`);
+      setAllUsersList(prev => prev.map(u => u.id === userId ? { ...u, is_suspended: !currentSuspended } : u));
     } catch (err) {
       showAlert("Error updating user status: " + err.message, "error");
     }
   };
 
   const handleRemoveUser = async (userId, username) => {
-    if (userId === user._id) {
-      showAlert("❌ Safety Guard: You cannot delete your own administrator account.", "error");
+    if (userId === user.id) {
+      showAlert("Safety Guard: You cannot delete your own administrator account.", "error");
       return false;
     }
-    if (!window.confirm(`⚠️ WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return false;
+    if (!window.confirm(`WARNING! Are you absolutely sure you want to completely REMOVE @${username}?\nThis will permanently delete their account and listings. This action is IRREVERSIBLE!`)) return false;
     try {
-      await removeUserMutation({ id: userId });
-      
-      await addAuditLog({
-        adminId: user._id,
-        adminUsername: user.username,
-        action: 'remove_user',
-        details: `Permanently removed user: @${username}`
+      await supabase.from('users').delete().eq('id', userId);
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: user.id, admin_username: user.username, action: 'remove_user', details: `Permanently removed user: @${username}`
       });
-
       showAlert("User account permanently removed.");
+      setAllUsersList(prev => prev.filter(u => u.id !== userId));
       return true;
     } catch (err) {
       showAlert("Error removing user: " + err.message, "error");
@@ -432,13 +451,13 @@ const AdminPanel = ({ user }) => {
   const handleKYC = async (userId, approve) => {
     try {
       if (approve) {
-        await updateKycStatus({ id: userId, status: 'verified' });
-        showAlert('✓ KYC verification has been approved!');
+        await supabase.from('users').update({ kyc_status: 'verified', kyc_rejection_reason: null }).eq('id', userId);
+        showAlert('KYC verification has been approved!');
       } else {
         const reason = prompt('Please specify rejection reason:');
         if (reason === null) return;
         if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
-        await updateKycStatus({ id: userId, status: 'rejected', rejectionReason: reason });
+        await supabase.from('users').update({ kyc_status: 'rejected', kyc_rejection_reason: reason }).eq('id', userId);
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
@@ -450,8 +469,8 @@ const AdminPanel = ({ user }) => {
     if (!resubmitUserId || !resubmitReason.trim()) return;
     setSubmittingResubmit(true);
     try {
-      await updateKycStatus({ id: resubmitUserId, status: 'none', rejectionReason: resubmitReason });
-      showAlert('⚠ Resubmission request processed successfully.');
+      await supabase.from('users').update({ kyc_status: 'none', kyc_rejection_reason: resubmitReason }).eq('id', resubmitUserId);
+      showAlert('Resubmission request processed successfully.');
       setResubmitUserId(null);
       setResubmitReason('');
       setSelectedKycDetailId(null);
@@ -499,8 +518,9 @@ const AdminPanel = ({ user }) => {
 
   const handleApproveReview = async (reviewId) => {
     try {
-      await approveReviewMutation({ id: reviewId });
-      showAlert('✓ Review approved successfully!');
+      await supabase.from('reviews').update({ status: 'approved' }).eq('id', reviewId);
+      showAlert('Review approved successfully!');
+      setAllReviews(prev => prev.map(r => r.id === reviewId ? { ...r, status: 'approved' } : r));
     } catch (err) {
       showAlert('Error approving review: ' + err.message, 'error');
     }
@@ -509,8 +529,9 @@ const AdminPanel = ({ user }) => {
   const handleRejectReview = async (reviewId) => {
     if (!window.confirm('Are you sure you want to reject and delete this review?')) return;
     try {
-      await removeReviewMutation({ id: reviewId });
+      await supabase.from('reviews').delete().eq('id', reviewId);
       showAlert('Review rejected and deleted.');
+      setAllReviews(prev => prev.filter(r => r.id !== reviewId));
     } catch (e) { showAlert(e.message, 'error'); }
   };
 
@@ -528,29 +549,26 @@ const AdminPanel = ({ user }) => {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    if (!settings?._id) {
+    if (!settings?.id) {
       showAlert('Error: Settings document not found.', 'error');
       return;
     }
     setSavingSettings(true);
     try {
-      await updateSettingsMutation({
-        id: settings._id,
-        updates: {
-          etbRatePerDollar: parseFloat(etbRate) || 190.0,
-          etbRatePerDollarSell: parseFloat(etbRateSell) || 186.0,
-          commissionValue: parseFloat(commissionValue) || 1.0,
-          depositFeePercent: parseFloat(depositFee) || 1.0,
-          withdrawalFeePercent: parseFloat(withdrawFee) || 1.0,
-          minDepositUSD: parseFloat(minDeposit) || 1.0,
-          minWithdrawalUSD: parseFloat(minWithdraw) || 10.0,
-          minP2pListingUSD: parseFloat(minP2pListing) || 1.0,
-          maxDailyWithdrawalUSD: parseFloat(maxDailyWithdraw) || 1000,
-          isP2pFreePeriod: isP2pFreePeriod,
-        },
-        adminId: user._id,
-      });
-      showAlert('✓ Settings saved successfully!');
+      await supabase.from('system_settings').update({
+        etb_rate_per_dollar: parseFloat(etbRate) || 190.0,
+        etb_rate_per_dollar_sell: parseFloat(etbRateSell) || 186.0,
+        commission_value: parseFloat(commissionValue) || 1.0,
+        deposit_fee_percent: parseFloat(depositFee) || 1.0,
+        withdrawal_fee_percent: parseFloat(withdrawFee) || 1.0,
+        min_deposit_usd: parseFloat(minDeposit) || 1.0,
+        min_withdrawal_usd: parseFloat(minWithdraw) || 10.0,
+        min_p2p_listing_usd: parseFloat(minP2pListing) || 1.0,
+        max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw) || 1000,
+        is_p2p_free_period: isP2pFreePeriod,
+        updated_at: new Date().toISOString()
+      }).eq('id', settings.id);
+      showAlert('Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
   };
@@ -559,12 +577,12 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     if (!supportReplyText.trim() || !selectedTicket) return;
     try {
-      await replyToTicket({
-        id: selectedTicket._id,
-        senderId: user?._id || 'usr_admin',
-        text: supportReplyText.trim()
-      });
+      const newMessage = { sender_id: user?.id || 'usr_admin', message: supportReplyText.trim(), timestamp: new Date().toISOString() };
+      const messages = [...(selectedTicket.messages || []), newMessage];
+      await supabase.from('support_tickets').update({ messages }).eq('id', selectedTicket.id);
       setSupportReplyText('');
+      setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages } : t));
+      setSelectedTicket(prev => ({ ...prev, messages }));
     } catch (e) { showAlert(e.message, 'error'); }
   };
   const handleApproveDeposit = async (id) => {

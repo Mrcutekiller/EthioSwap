@@ -3,8 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTranslation } from 'react-i18next';
 import TradeChat from './TradeChat.jsx';
 import { Star, Shield, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Upload, FileImage } from 'lucide-react';
-import { useQuery } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 
 const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   const [stars, setStars] = useState(5);
@@ -113,8 +112,13 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
 };
 
 const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, setSuccess }) => {
-  const dispute = useQuery(api.trades.getDisputeForTrade, { tradeId: trade._id });
+  const [dispute, setDispute] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!trade?._id) return;
+    supabase.from('disputes').select('*').eq('trade_id', trade._id).single().then(({ data }) => setDispute(data));
+  }, [trade?._id]);
 
   if (!dispute) return null;
 

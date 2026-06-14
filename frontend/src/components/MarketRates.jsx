@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
-import { api } from 'convex-api';
+import { supabase } from '../lib/supabase';
 
 const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
-  const data = useQuery(api.listings.getCalculatorData);
+  const [data, setData] = useState(null);
 
-  const [mode, setMode] = useState('buy'); // 'buy' means visitor buys USDT, 'sell' means visitor sells USDT
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: listings } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('status', 'active');
+      
+      if (!listings || listings.length === 0) {
+        setData({ bestBuyRate: 190, bestSellRate: 186, bestBuyOfferId: null, bestSellOfferId: null, rateHistory: [] });
+        return;
+      }
+
+      const buyOffers = listings.filter(l => l.type === 'buy');
+      const sellOffers = listings.filter(l => l.type === 'sell');
+      
+      const bestBuyRate = buyOffers.length > 0 ? Math.max(...buyOffers.map(o => o.rate)) : 190;
+      const bestSellRate = sellOffers.length > 0 ? Math.min(...sellOffers.map(o => o.rate)) : 186;
+      const bestBuyOfferId = buyOffers.find(o => o.rate === bestBuyRate)?.id || null;
+      const bestSellOfferId = sellOffers.find(o => o.rate === bestSellRate)?.id || null;
+
+      setData({ bestBuyRate, bestSellRate, bestBuyOfferId, bestSellOfferId, rateHistory: [] });
+    };
+    fetchData();
+  }, []);
+
+  const [mode, setMode] = useState('buy');
   const [usdtAmount, setUsdtAmount] = useState('');
   const [etbAmount, setEtbAmount] = useState('');
   const [lastEdited, setLastEdited] = useState('usdt');
@@ -16,7 +40,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
 
   const currentRate = mode === 'buy' ? bestBuyRate : bestSellRate;
 
-  // Auto-calculate on mode or rate change
   useEffect(() => {
     if (lastEdited === 'usdt' && usdtAmount !== '') {
       const val = parseFloat(usdtAmount) * currentRate;
@@ -31,10 +54,7 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
     const val = e.target.value;
     setUsdtAmount(val);
     setLastEdited('usdt');
-    if (val === '') {
-      setEtbAmount('');
-      return;
-    }
+    if (val === '') { setEtbAmount(''); return; }
     const calculated = parseFloat(val) * currentRate;
     setEtbAmount(isNaN(calculated) ? '' : calculated.toFixed(2));
   };
@@ -43,10 +63,7 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
     const val = e.target.value;
     setEtbAmount(val);
     setLastEdited('etb');
-    if (val === '') {
-      setUsdtAmount('');
-      return;
-    }
+    if (val === '') { setUsdtAmount(''); return; }
     const calculated = parseFloat(val) / currentRate;
     setUsdtAmount(isNaN(calculated) ? '' : calculated.toFixed(4));
   };
@@ -71,7 +88,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Rate Display Card */}
       <div style={{
         padding: '28px',
         borderRadius: '20px',
@@ -94,7 +110,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
         </div>
       </div>
 
-      {/* SVG Sparkline */}
       <div style={{ padding: '20px', borderRadius: '20px', background: '#141827', border: '1px solid #1E2640' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-3)', marginBottom: '12px', fontWeight: 600 }}>
           <span>24h Trend Chart</span>
@@ -120,7 +135,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
         </svg>
       </div>
 
-      {/* Calculator Inputs Card */}
       <div style={{ padding: '28px', borderRadius: '20px', background: '#141827', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ display: 'flex', background: '#0a0a0a', borderRadius: '12px', padding: '4px', border: '1px solid #1E2640' }}>
           <button onClick={() => setMode('buy')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer', background: mode === 'buy' ? 'var(--gold)' : 'transparent', color: mode === 'buy' ? '#0a0a0a' : 'var(--text-3)', transition: 'all 0.2s' }}>
@@ -131,7 +145,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
           </button>
         </div>
 
-        {/* USDT Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <label style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 700 }}>USDT</label>
           <div style={{ position: 'relative' }}>
@@ -140,7 +153,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
           </div>
         </div>
 
-        {/* ETB Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <label style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: 700 }}>ETB</label>
           <div style={{ position: 'relative' }}>
@@ -150,7 +162,6 @@ const MarketRates = ({ onSelectOffer, isLoggedIn }) => {
         </div>
       </div>
 
-      {/* Best Offers Section */}
       <div style={{ padding: '24px', borderRadius: '20px', background: '#141827', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,200,150,0.08)', padding: '14px 16px', borderRadius: '12px', border: '1px solid rgba(0,200,150,0.2)' }}>
           <div>

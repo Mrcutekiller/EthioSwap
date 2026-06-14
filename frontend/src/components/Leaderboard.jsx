@@ -1,10 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Trophy, Award, TrendingUp, Users, Search, ChevronRight } from 'lucide-react';
-import { useQuery } from "convex/react";
-import { api } from "convex-api";
+import { supabase } from '../lib/supabase';
 
 const Leaderboard = ({ user }) => {
-  const [category, setCategory] = useState('trades'); // 'trades' | 'volume' | 'referrals'
+  const [category, setCategory] = useState('trades');
+  const [allUsers, setAllUsers] = useState(undefined);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data } = await supabase.from('users').select('*');
+      setAllUsers(data || []);
+    };
+    fetchUsers();
+  }, []);
 
   const categories = [
     { id: 'trades', label: 'Top Traders', icon: <TrendingUp size={18} />, color: '#00C896' },
@@ -12,34 +20,30 @@ const Leaderboard = ({ user }) => {
     { id: 'referrals', label: 'Top Referrers', icon: <Users size={18} />, color: '#F5A623' },
   ];
 
-  const allUsers = useQuery(api.users.listAll);
-
   const leaderboardData = useMemo(() => {
     if (allUsers === undefined) return undefined;
     if (allUsers.length === 0) return [];
     
-    // Sort users based on active category
     const sorted = [...allUsers].sort((a, b) => {
-      const valA = category === 'trades' ? (a.totalTrades ?? 0) : (category === 'volume' ? (a.totalVolume ?? 0) : (a.successfulInvites ?? 0));
-      const valB = category === 'trades' ? (b.totalTrades ?? 0) : (category === 'volume' ? (b.totalVolume ?? 0) : (b.successfulInvites ?? 0));
+      const valA = category === 'trades' ? (a.total_trades ?? 0) : (category === 'volume' ? (a.total_volume ?? 0) : (a.successful_invites ?? 0));
+      const valB = category === 'trades' ? (b.total_trades ?? 0) : (category === 'volume' ? (b.total_volume ?? 0) : (b.successful_invites ?? 0));
       return valB - valA;
     });
 
     return sorted.map((u, i) => ({
-      id: u._id,
+      id: u.id,
       username: u.username,
       rank: i + 1,
-      avatar: u.selectedAvatar || u.selected_avatar || "",
-      isVerified: u.is_verified_trader || u.kycStatus === 'approved',
-      badge: u.kycStatus === 'approved' ? 'Verified' : 'Novice',
-      score: category === 'trades' ? (u.totalTrades ?? 0) : (category === 'volume' ? (u.totalVolume ?? 0) : (u.successfulInvites ?? 0))
+      avatar: u.selected_avatar || "",
+      isVerified: u.is_verified_trader || u.kyc_status === 'approved',
+      badge: u.kyc_status === 'approved' ? 'Verified' : 'Novice',
+      score: category === 'trades' ? (u.total_trades ?? 0) : (category === 'volume' ? (u.total_volume ?? 0) : (u.successful_invites ?? 0))
     }));
   }, [allUsers, category]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
-      {/* ─── HEADER SECTION ───────────────────────────────────── */}
       <div className="card" style={{ padding: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(245, 166, 35, 0.1) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
         <Trophy size={48} style={{ color: '#F5A623', marginBottom: '12px' }} />
@@ -47,7 +51,6 @@ const Leaderboard = ({ user }) => {
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>Compete for the top spots and win exclusive rewards!</p>
       </div>
 
-      {/* ─── CATEGORY SELECTOR ─────────────────────────────────── */}
       <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '16px', padding: '6px', gap: '6px' }}>
         {categories.map(cat => (
           <button
@@ -75,7 +78,6 @@ const Leaderboard = ({ user }) => {
         ))}
       </div>
 
-      {/* ─── LEADERBOARD LIST ───────────────────────────────────── */}
       <div className="card" style={{ padding: '8px' }}>
         {leaderboardData === undefined ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>Loading rankings...</div>
@@ -143,10 +145,9 @@ const Leaderboard = ({ user }) => {
         )}
       </div>
 
-      {/* ─── REWARDS INFO ─────────────────────────────────────── */}
       <div className="card" style={{ padding: '20px', background: 'rgba(245, 166, 35, 0.03)', border: '1px dashed rgba(245, 166, 35, 0.2)' }}>
         <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#F5A623', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          🎁 Monthly Top 3 Rewards
+          Monthly Top 3 Rewards
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', display: 'flex', justifyContent: 'space-between' }}>
