@@ -152,7 +152,8 @@ const AdminPanel = ({ user }) => {
     allWithdrawalReqs,
     approveWithdrawalRequest,
     rejectWithdrawalRequest,
-    resolveDispute
+    resolveDispute,
+    logout
   } = useAuth();
 
   const [width, setWidth] = useState(window.innerWidth);
@@ -1044,7 +1045,7 @@ const AdminPanel = ({ user }) => {
         </nav>
 
         <div className="mt-auto border-t border-[var(--border)] p-2">
-          <button onClick={() => { if(window.confirm('Sign out of admin?')) window.location.reload(); }} className="flex items-center gap-3 px-5 py-3 text-[13px] font-bold text-[var(--error)] hover:bg-red-500/5 transition-all w-full text-left">
+          <button onClick={() => { if(window.confirm('Sign out of admin?')) logout(); }} className="flex items-center gap-3 px-5 py-3 text-[13px] font-bold text-[var(--error)] hover:bg-red-500/5 transition-all w-full text-left">
             <i className="ti ti-logout text-[17px]"></i>
             Sign Out
           </button>
@@ -1857,6 +1858,28 @@ const AdminPanel = ({ user }) => {
                 </form>
               </div>
 
+            </div>
+          )}
+
+          {/* ════ TRADES TAB ════ */}
+          {activeTab === 'trades' && (
+            <div style={{ padding: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '16px' }}>All Trades</h2>
+              <div style={{ background: '#141827', borderRadius: '16px', border: '1px solid #1E2640', padding: '20px', color: '#8b92a8', textAlign: 'center', fontSize: '14px' }}>
+                <i className="ti ti-arrows-right-left" style={{ fontSize: '36px', color: '#F5A623', display: 'block', marginBottom: '12px' }}></i>
+                Trades data will appear here as users complete P2P transactions.
+              </div>
+            </div>
+          )}
+
+          {/* ════ LISTINGS TAB ════ */}
+          {activeTab === 'listings' && (
+            <div style={{ padding: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '16px' }}>All Listings</h2>
+              <div style={{ background: '#141827', borderRadius: '16px', border: '1px solid #1E2640', padding: '20px', color: '#8b92a8', textAlign: 'center', fontSize: '14px' }}>
+                <i className="ti ti-list-search" style={{ fontSize: '36px', color: '#F5A623', display: 'block', marginBottom: '12px' }}></i>
+                P2P listings will appear here as sellers publish offers.
+              </div>
             </div>
           )}
 

@@ -122,8 +122,10 @@ const WalletCard = () => {
     if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
     if (!depTxId.trim()) { setError('Please enter your Transaction ID / Reference'); return; }
     setDepLoading(true);
+    setSuccess('Processing deposit...');
     try {
       await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
+      setSuccess(`Success! $${depYouReceive.toFixed(2)} added to your wallet (${platformFeePercent}% fee deducted).`);
       setDepAmt(''); setDepTxId(''); setDepStep(1);
     } catch (err) { setError(err.message); }
     finally { setDepLoading(false); }
@@ -134,9 +136,13 @@ const WalletCard = () => {
     if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
     if (!wdAddr.trim()) { setError('Enter a wallet address'); return; }
     setWdLoading(true);
+    setSuccess('Processing withdrawal...');
     try {
       const res = await withdrawETH(wdAmtNum, wdAddr, '', wdNet.toUpperCase());
-      if (res && res.success) { setWdAmt(''); setWdAddr(''); setWdStep(1); }
+      if (res && res.success) {
+        setSuccess(`Success! $${wdAmtNum.toFixed(2)} sent to ${wdAddr.substring(0, 10)}...`);
+        setWdAmt(''); setWdAddr(''); setWdStep(1);
+      }
     } catch (err) { setError(err.message); }
     finally { setWdLoading(false); }
   };
