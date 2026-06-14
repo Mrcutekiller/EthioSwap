@@ -842,7 +842,7 @@ INSERT INTO system_settings (
   max_daily_withdrawal_usd, points_per_trade, is_leaderboard_enabled,
   collected_fees_eth, master_wallet_address, master_wallet_balance_eth, referral_bonus_points
 ) VALUES (
-  55.0, 57.0, 0.0, 0.0, 'percentage', 0.0, false, 0.0, 0.0, 1.0, 1.0, 10.0, 1000.0, 10, true, 0.0, '', 0.0, 50
+  55.0, 57.0, 0.0, 0.0, 'percentage', 5.0, false, 5.0, 5.0, 1.0, 1.0, 10.0, 1000.0, 10, true, 0.0, '', 0.0, 50
 );
 
 -- ============================================
