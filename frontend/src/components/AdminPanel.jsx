@@ -153,7 +153,8 @@ const AdminPanel = ({ user }) => {
     approveWithdrawalRequest,
     rejectWithdrawalRequest,
     resolveDispute,
-    logout
+    logout,
+    loadSystemSettings
   } = useAuth();
 
   const [width, setWidth] = useState(window.innerWidth);
@@ -256,6 +257,8 @@ const AdminPanel = ({ user }) => {
   const [disputes, setDisputes] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
   const [allReviews, setAllReviews] = useState([]);
+  const [securityDetailModal, setSecurityDetailModal] = useState(null);
+  const [legalPreviewModal, setLegalPreviewModal] = useState(null);
   const [otpAttemptsLogs, setOtpAttemptsLogs] = useState([]);
   const [notificationLogs, setNotificationLogs] = useState([]);
   const [adminEarnings, setAdminEarnings] = useState(null);
@@ -299,6 +302,47 @@ const AdminPanel = ({ user }) => {
     };
     loadLogs();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    if (!allUsersList.length && !allDepositReqs) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayTrades = (allDepositReqs || []).filter(r => r.created_at && r.created_at.slice(0, 10) === today);
+    const todayVolume = todayTrades.reduce((s, r) => s + (r.amount_usd || 0), 0);
+    const todaySignups = allUsersList.filter(u => u.created_at && u.created_at.slice(0, 10) === today).length;
+    const flaggedAccounts = allUsersList.filter(u => u.is_flagged || u.is_banned || u.is_suspended);
+    const topTraders = [...allUsersList].sort((a, b) => (b.trade_count || b.total_trades || 0) - (a.trade_count || a.total_trades || 0)).slice(0, 5);
+    const dailyVolume = {};
+    (allDepositReqs || []).filter(r => r.status === 'approved' && r.created_at).forEach(r => {
+      const d = r.created_at.slice(0, 10);
+      dailyVolume[d] = (dailyVolume[d] || 0) + (r.amount_usd || 0);
+    });
+    const weeklyUsers = {};
+    allUsersList.forEach(u => {
+      if (u.created_at) {
+        const d = u.created_at.slice(0, 10);
+        weeklyUsers[d] = (weeklyUsers[d] || 0) + 1;
+      }
+    });
+    setAdminAnalytics({
+      today: {
+        completedTrades: todayTrades.length,
+        volume: todayVolume,
+        newSignups: todaySignups,
+        openDisputes: disputes.length,
+        pendingKyc: kycQueue.length,
+      },
+      charts: {
+        dailyVolume: Object.entries(dailyVolume).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, vol]) => ({ date, volume: vol })),
+        weeklyUsers: Object.entries(weeklyUsers).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, count]) => ({ date, count })),
+        distribution: { buyers: allUsersList.filter(u => u.trade_count > 0).length || 0, sellers: allUsersList.filter(u => u.trade_count > 0).length || 0, hold: 0 },
+      },
+      flaggedAccounts,
+      topTraders: topTraders.map(t => ({ username: t.username, trades: t.trade_count || t.total_trades || 0, volume: t.total_volume || 0 })),
+      highlyDisputedUsers: [],
+      recentTrades: (allDepositReqs || []).slice(0, 10).map(r => ({ buyer: r.username, amount: r.amount_usd, status: r.status, created_at: r.created_at })),
+    });
+  }, [allUsersList, allDepositReqs, disputes, kycQueue]);
 
   useEffect(() => {
     if (!selectedUserDetailId) return;
@@ -580,6 +624,7 @@ const AdminPanel = ({ user }) => {
         }
       }
       showAlert('Settings saved successfully!');
+      await loadSystemSettings();
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }
   };
@@ -3283,8 +3328,6 @@ const AdminPanel = ({ user }) => {
 
           {/* ════ SECURITY CENTER SCREEN ════ */}
           {activeTab === 'security' && (() => {
-            const [securityDetailModal, setSecurityDetailModal] = useState(null);
-            const [legalPreviewModal, setLegalPreviewModal] = useState(null);
 
             const handleRunDiagnostics = () => {
               setSuccess('Security diagnostics initiated...');

@@ -934,7 +934,8 @@ export const AuthProvider = ({ children }) => {
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails,
-      setError, setSuccess, setIsLocked
+      setError, setSuccess, setIsLocked,
+      loadSystemSettings
     }}>
       {children}
     </AuthContext.Provider>

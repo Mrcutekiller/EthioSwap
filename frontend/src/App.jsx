@@ -484,7 +484,7 @@ const MobileBottomNav = ({ page, setPage }) => {
 };
 
 const AppContent = () => {
-  const { user, logout, isLocked, setIsLocked } = useAuth();
+  const { user, logout, isLocked, setIsLocked, systemSettings } = useAuth();
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
@@ -513,7 +513,7 @@ const AppContent = () => {
     return showAuth ? (
       <AuthForm mode={authMode} onToggle={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} onBackToHome={() => setShowAuth(false)} />
     ) : (
-      <LandingPage onGetStarted={() => { setAuthMode('register'); setShowAuth(true); }} onSignIn={() => { setAuthMode('login'); setShowAuth(true); }} systemSettings={null} />
+      <LandingPage onGetStarted={() => { setAuthMode('register'); setShowAuth(true); }} onSignIn={() => { setAuthMode('login'); setShowAuth(true); }} systemSettings={systemSettings} />
     );
   }
 
