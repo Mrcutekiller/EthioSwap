@@ -79,27 +79,27 @@ const TransactionHistory = () => {
   const transactions = useMemo(() => {
     if (!user) return [];
     const deposits = (myDepositReqs || []).map(tx => ({
-      id: tx._id || tx.id,
+      id: tx.id,
       type: 'deposit',
-      amount_usd: tx.amountUsd || tx.amountUSD || 0,
+      amount_usd: tx.amount_usd || 0,
       status: tx.status === 'approved' ? 'completed' : tx.status,
-      created_at: tx.createdAt,
-      note: tx.senderReference || tx.adminNote || 'Deposit',
-      tx_hash: tx._id || tx.id,
-      from: tx.walletType || 'External Account',
+      created_at: tx.created_at,
+      note: tx.sender_reference || tx.admin_note || 'Deposit',
+      tx_hash: tx.id,
+      from: tx.wallet_type || 'External Account',
       to: user.full_name || user.username || 'My Wallet',
       platform_fee: 0,
     }));
     const withdrawals = (myWithdrawalReqs || []).map(tx => ({
-      id: tx._id || tx.id,
+      id: tx.id,
       type: 'withdrawal',
-      amount_usd: tx.amountUSD || 0,
+      amount_usd: tx.amount_usd || 0,
       status: tx.status === 'completed' || tx.status === 'approved' ? 'completed' : tx.status,
-      created_at: tx.createdAt,
-      note: tx.adminNote || 'Withdrawal',
-      tx_hash: tx.walletAddress || tx._id || tx.id,
+      created_at: tx.created_at,
+      note: tx.admin_note || 'Withdrawal',
+      tx_hash: tx.destination_address || tx.id,
       from: user.full_name || user.username || 'My Wallet',
-      to: tx.walletAddress || tx.walletType || 'External Destination',
+      to: tx.destination_address || tx.wallet_type || 'External Destination',
       platform_fee: 0,
     }));
     let combined = [...deposits, ...withdrawals].sort(

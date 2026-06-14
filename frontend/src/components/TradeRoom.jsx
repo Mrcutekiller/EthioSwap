@@ -19,7 +19,7 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
     onSubmit(stars, review, lowRatingReason);
   };
 
-  const partnerName = trade.buyerId === ratedUserId ? trade.buyerName : trade.sellerName;
+  const partnerName = trade.buyer_id === ratedUserId ? trade.buyer_name : trade.seller_name;
 
   return (
     <div style={{
@@ -116,15 +116,15 @@ const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, 
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    if (!trade?._id) return;
-    supabase.from('disputes').select('*').eq('trade_id', trade._id).single().then(({ data }) => setDispute(data));
-  }, [trade?._id]);
+    if (!trade?.id) return;
+    supabase.from('disputes').select('*').eq('trade_id', trade.id).single().then(({ data }) => setDispute(data));
+  }, [trade?.id]);
 
   if (!dispute) return null;
 
-  const isBuyer = user._id === trade.buyerId;
-  const myEvidence = isBuyer ? (dispute.buyerEvidence || []) : (dispute.sellerEvidence || []);
-  const theirEvidence = isBuyer ? (dispute.sellerEvidence || []) : (dispute.buyerEvidence || []);
+  const isBuyer = user.id === trade.buyer_id;
+  const myEvidence = isBuyer ? (dispute.buyer_evidence || []) : (dispute.seller_evidence || []);
+  const theirEvidence = isBuyer ? (dispute.seller_evidence || []) : (dispute.buyer_evidence || []);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -144,7 +144,7 @@ const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, 
     reader.onload = async (event) => {
       try {
         const base64String = event.target.result;
-        await uploadDisputeEvidence(trade._id, base64String);
+        await uploadDisputeEvidence(trade.id, base64String);
         setSuccess('Dispute evidence uploaded successfully!');
       } catch (err) {
         setError(err.message);
@@ -228,15 +228,15 @@ const TradeRoom = () => {
   const [skippedTrades, setSkippedTrades] = useState({});
   const [timeRemaining, setTimeRemaining] = useState('');
 
-  const activeTrade = trades.find(t => t._id === selectedTradeId);
+  const activeTrade = trades.find(t => t.id === selectedTradeId);
 
   useEffect(() => {
     if (activeTrade && activeTrade.status === 'completed' && activeTrade.ratingGiven === null) {
-      if (skippedTrades[activeTrade._id]) {
+      if (skippedTrades[activeTrade.id]) {
         setShowRating(false);
         return;
       }
-      const completedTime = activeTrade.completedAt ? new Date(activeTrade.completedAt).getTime() : Date.now();
+      const completedTime = activeTrade.completed_at ? new Date(activeTrade.completed_at).getTime() : Date.now();
       const expired = Date.now() - completedTime > 48 * 60 * 60 * 1000;
       if (!expired) {
         setShowRating(true);
@@ -246,7 +246,7 @@ const TradeRoom = () => {
     } else {
       setShowRating(false);
     }
-  }, [activeTrade?._id, activeTrade?.status, activeTrade?.ratingGiven, skippedTrades]);
+  }, [activeTrade?.id, activeTrade?.status, activeTrade?.ratingGiven, skippedTrades]);
 
   useEffect(() => {
     if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') {
@@ -255,7 +255,7 @@ const TradeRoom = () => {
     }
 
     const interval = setInterval(() => {
-      const created = new Date(activeTrade.createdAt).getTime();
+      const created = new Date(activeTrade.created_at).getTime();
       const expires = created + (30 * 60 * 1000); // 30 mins window
       const now = new Date().getTime();
       const diff = expires - now;
@@ -275,21 +275,21 @@ const TradeRoom = () => {
 
   const handleMarkPaid = async () => {
     if (!window.confirm("Confirm that you have sent the payment?")) return;
-    await markTradeAsPaid(activeTrade._id);
+    await markTradeAsPaid(activeTrade.id);
   };
 
   const handleRelease = async () => {
     if (!window.confirm("Confirm that you have received the payment? This will release the ETH to the buyer.")) return;
-    await releaseEscrow(activeTrade._id);
+    await releaseEscrow(activeTrade.id);
   };
 
   const handleCancel = async () => {
     if (!window.confirm("Are you sure you want to cancel this trade?")) return;
-    await cancelTrade(activeTrade._id);
+    await cancelTrade(activeTrade.id);
   };
 
   const handleOpenDispute = async () => {
-    const created = new Date(activeTrade.createdAt).getTime();
+    const created = new Date(activeTrade.created_at).getTime();
     const elapsed = Date.now() - created;
     if (elapsed < 30 * 60 * 1000) {
       const remainingMins = Math.ceil((30 * 60 * 1000 - elapsed) / (60 * 1000));
@@ -297,12 +297,12 @@ const TradeRoom = () => {
       return;
     }
     const reason = prompt("Why are you opening a dispute?");
-    if (reason) await openDispute(activeTrade._id, reason);
+    if (reason) await openDispute(activeTrade.id, reason);
   };
 
   const handleRatingSubmit = async (stars, review, lowRatingReason) => {
     try {
-      await submitRating(activeTrade._id, stars, review, lowRatingReason);
+      await submitRating(activeTrade.id, stars, review, lowRatingReason);
       setShowRating(false);
     } catch (err) {
       setError(err.message);
@@ -321,23 +321,23 @@ const TradeRoom = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {trades.map(trade => (
             <div 
-              key={trade._id} 
-              onClick={() => setSelectedTradeId(trade._id)}
-              className={selectedTradeId === trade._id ? "premium-glow" : ""}
+              key={trade.id} 
+              onClick={() => setSelectedTradeId(trade.id)}
+              className={selectedTradeId === trade.id ? "premium-glow" : ""}
               style={{
                 padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                background: selectedTradeId === trade._id ? 'rgba(245,166,35, 0.05)' : 'var(--bg-elevated)',
-                border: `1px solid ${selectedTradeId === trade._id ? '#F5A623' : 'var(--border)'}`,
+                background: selectedTradeId === trade.id ? 'rgba(245,166,35, 0.05)' : 'var(--bg-elevated)',
+                border: `1px solid ${selectedTradeId === trade.id ? '#F5A623' : 'var(--border)'}`,
                 transition: 'all 0.2s'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user._id === trade.buyerId ? trade.sellerName : trade.buyerName}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>@{user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name}</span>
                 <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623' }}>
                   {trade.status.toUpperCase()}
                 </span>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{trade.amountEth.toFixed(4)} ETH</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{trade.amount_eth.toFixed(4)} ETH</div>
             </div>
           ))}
         </div>
@@ -353,7 +353,7 @@ const TradeRoom = () => {
                 <Shield size={24} />
               </div>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Trade #{activeTrade._id.substring(0, 8)}</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Trade #{activeTrade.id.substring(0, 8)}</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-3)' }}>
                   <Clock size={14} /> {timeRemaining || 'Trade Locked'}
                 </div>
@@ -361,10 +361,10 @@ const TradeRoom = () => {
             </div>
             
             <div style={{ display: 'flex', gap: '10px' }}>
-              {user._id === activeTrade.buyerId && activeTrade.status === 'payment_pending' && (
+              {user.id === activeTrade.buyer_id && activeTrade.status === 'payment_pending' && (
                 <button className="btn btn-indigo" onClick={handleMarkPaid}>{t('I Have Sent Payment')}</button>
               )}
-              {user._id === activeTrade.sellerId && activeTrade.status === 'paid' && (
+              {user.id === activeTrade.seller_id && activeTrade.status === 'paid' && (
                 <button className="btn btn-teal" onClick={handleRelease}>{t('I Received Payment')}</button>
               )}
               {activeTrade.status !== 'completed' && activeTrade.status !== 'cancelled' && (
@@ -388,15 +388,15 @@ const TradeRoom = () => {
 
           {/* Chat Component */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <TradeChat tradeId={activeTrade._id} sellerId={activeTrade.sellerId} buyerId={activeTrade.buyerId} />
+            <TradeChat tradeId={activeTrade.id} sellerId={activeTrade.seller_id} buyerId={activeTrade.buyer_id} />
           </div>
 
           {showRating && (
             <RatingModal 
               trade={activeTrade} 
-              ratedUserId={user._id === activeTrade.buyerId ? activeTrade.sellerId : activeTrade.buyerId} 
+              ratedUserId={user.id === activeTrade.buyer_id ? activeTrade.seller_id : activeTrade.buyer_id} 
               onClose={() => {
-                setSkippedTrades(prev => ({ ...prev, [activeTrade._id]: true }));
+                setSkippedTrades(prev => ({ ...prev, [activeTrade.id]: true }));
                 setShowRating(false);
               }}
               onSubmit={handleRatingSubmit}

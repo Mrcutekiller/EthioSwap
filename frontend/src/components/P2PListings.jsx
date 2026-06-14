@@ -39,7 +39,7 @@ const P2PListings = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBuyModal, setShowBuyModal]    = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
-  const [tradeamountEth, setTradeamountEth]   = useState('');
+  const [tradeamount_eth, setTradeamount_eth]   = useState('');
   const [tradeError, setTradeError]           = useState('');
   const [chosenPaymentAccount, setChosenPaymentAccount] = useState(null);
   const [kycDismissed, setKycDismissed] = useState(false);
@@ -61,8 +61,8 @@ const P2PListings = () => {
         }
       } else {
         // Maker is seller, default to listing's payment account
-        if (selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
-          setChosenPaymentAccount(selectedListing.paymentAccounts[0]);
+        if (selectedListing.payment_accounts && selectedListing.payment_accounts.length > 0) {
+          setChosenPaymentAccount(selectedListing.payment_accounts[0]);
         } else {
           setChosenPaymentAccount(null);
         }
@@ -74,7 +74,7 @@ const P2PListings = () => {
 
   // Create form state
   const [createType,      setCreateType]      = useState('sell'); // 'sell' | 'buy'
-  const [amountEth,       setamountEth]       = useState('');
+  const [amount_eth,       setamount_eth]       = useState('');
   const [minLimit,        setMinLimit]         = useState('');
   const [maxLimit,        setMaxLimit]         = useState('');
   const [linkedAccounts,  setLinkedAccounts]  = useState([]);
@@ -105,12 +105,12 @@ const P2PListings = () => {
       alert('Please link at least one of your saved payment accounts.');
       return;
     }
-    if (!amountEth || !minLimit || !maxLimit) {
+    if (!amount_eth || !minLimit || !maxLimit) {
       alert('Please fill in all fields.');
       return;
     }
     const minP2pListing = systemSettings?.minP2pListingUSD ?? 1.0;
-    if (parseFloat(amountEth) < minP2pListing) {
+    if (parseFloat(amount_eth) < minP2pListing) {
       alert(`Minimum ad amount is $${minP2pListing.toFixed(2)} USD.`);
       return;
     }
@@ -131,7 +131,7 @@ const P2PListings = () => {
     }
       
     await createListing(
-      parseFloat(amountEth), 
+      parseFloat(amount_eth), 
       parseFloat(minLimit), 
       parseFloat(maxLimit), 
       selectedPayments, 
@@ -140,7 +140,7 @@ const P2PListings = () => {
       createType
     );
     
-    setamountEth(''); setMinLimit(''); setMaxLimit('');
+    setamount_eth(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
     setShowCreateModal(false);
   };
@@ -153,17 +153,17 @@ const P2PListings = () => {
       return;
     }
     setTradeError('');
-    const amt = parseFloat(tradeamountEth);
+    const amt = parseFloat(tradeamount_eth);
     const minP2pListingVal = systemSettings?.minP2pListingUSD ?? 1.0;
     if (isNaN(amt) || amt < minP2pListingVal) { setTradeError(`Minimum transaction amount is $${minP2pListingVal.toFixed(2)} USD.`); return; }
-    if (amt > selectedListing.amountEth) {
-      setTradeError(`Maximum available is $${(selectedListing.amountEth ?? 0).toFixed(2)} USD.`);
+    if (amt > selectedListing.amount_eth) {
+      setTradeError(`Maximum available is $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD.`);
       return;
     }
-    const effectiveRate = selectedListing.customRateEtb || rate;
+    const effectiveRate = selectedListing.custom_rate_etb || rate;
     const totalEtb = amt * effectiveRate;
-    if (totalEtb < selectedListing.minLimitEtb || totalEtb > selectedListing.maxLimitEtb) {
-      setTradeError(`Total (${Math.round(totalEtb).toLocaleString()} ETB) must be between ${selectedListing.minLimitEtb.toLocaleString()} – ${selectedListing.maxLimitEtb.toLocaleString()} ETB.`);
+    if (totalEtb < selectedListing.min_limit_etb || totalEtb > selectedListing.max_limit_etb) {
+      setTradeError(`Total (${Math.round(totalEtb).toLocaleString()} ETB) must be between ${selectedListing.min_limit_etb.toLocaleString()} – ${selectedListing.max_limit_etb.toLocaleString()} ETB.`);
       return;
     }
     
@@ -173,45 +173,45 @@ const P2PListings = () => {
         return;
       }
     } else {
-      if (!chosenPaymentAccount && selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0) {
+      if (!chosenPaymentAccount && selectedListing.payment_accounts && selectedListing.payment_accounts.length > 0) {
         setTradeError('Please select a bank/wallet of the seller to pay to.');
         return;
       }
     }
     
-    const trade = await initiateTrade(selectedListing._id, amt, chosenPaymentAccount);
-    if (trade) { setSelectedListing(null); setTradeamountEth(''); setShowBuyModal(false); }
+    const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
+    if (trade) { setSelectedListing(null); setTradeamount_eth(''); setShowBuyModal(false); }
   };
 
   // ── Filter and Sort listings ──────────────────────────────
   const filtered = listings
     .filter(l => {
       const matchesType = p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy');
-      const matchesPayment = filterPayment === 'All' || l.paymentMethods.includes(filterPayment);
+      const matchesPayment = filterPayment === 'All' || l.payment_methods.includes(filterPayment);
       
       let matchesAmount = true;
       if (filterAmountRange === 'under50') {
-        matchesAmount = l.amountEth < 50;
+        matchesAmount = l.amount_eth < 50;
       } else if (filterAmountRange === '50to200') {
-        matchesAmount = l.amountEth >= 50 && l.amountEth <= 200;
+        matchesAmount = l.amount_eth >= 50 && l.amount_eth <= 200;
       } else if (filterAmountRange === 'over200') {
-        matchesAmount = l.amountEth > 200;
+        matchesAmount = l.amount_eth > 200;
       }
 
       // Search matches username or payment method
       const term = searchQuery.toLowerCase().trim();
       const matchesSearch = !term || 
-        (l.sellerName || '').toLowerCase().includes(term) ||
-        (l.paymentMethods || []).some(p => p.toLowerCase().includes(term));
+        (l.seller_name || '').toLowerCase().includes(term) ||
+        (l.payment_methods || []).some(p => p.toLowerCase().includes(term));
 
       const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
-      const matchesKyc = !onlyKyc || l.sellerKycStatus === 'verified';
+      const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified';
 
       return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc;
     })
     .sort((a, b) => {
-      const rateA = a.customRateEtb || rate;
-      const rateB = b.customRateEtb || rate;
+      const rateA = a.custom_rate_etb || rate;
+      const rateB = b.custom_rate_etb || rate;
       
       if (sortBy === 'rate_asc') {
         return rateA - rateB;
@@ -839,8 +839,8 @@ const P2PListings = () => {
       ) : (
         <div className="p2p-listings-grid">
           {filtered.map((listing, index) => {
-            const effectiveRate = listing.customRateEtb || rate;
-            const isOwnListing = listing.sellerId === user?._id || listing.sellerId === user?.id;
+            const effectiveRate = listing.custom_rate_etb || rate;
+            const isOwnListing = listing.seller_id === user?.id || listing.seller_id === user?.id;
             const isBuyType = listing.type === 'buy';
             return (
               <div 
@@ -877,18 +877,18 @@ const P2PListings = () => {
                       boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)'}`,
                       flexShrink: 0
                     }}>
-                      {(listing.sellerName || 'U').charAt(0).toUpperCase()}
+                      {(listing.seller_name || 'U').charAt(0).toUpperCase()}
                     </div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span 
-                          onClick={(e) => { e.stopPropagation(); setViewingTraderId(listing.sellerId); }}
+                          onClick={(e) => { e.stopPropagation(); setViewingTraderId(listing.seller_id); }}
                           style={{ fontWeight: 600, fontSize: '14px', color: '#F5A623', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                         >
-                          @{listing.sellerName}
+                          @{listing.seller_name}
                         </span>
-                        {(listing.sellerKycStatus === 'verified' || listing.sellerKycStatus === 'approved') && (
+                        {(listing.seller_kyc_status === 'verified' || listing.seller_kyc_status === 'approved') && (
                           <span style={{ 
                             background: 'rgba(0,200,150,0.12)', 
                             color: '#00C896', 
@@ -958,7 +958,7 @@ const P2PListings = () => {
                   <div>
                     <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AD VOLUME</div>
                     <div style={{ fontSize: '24px', marginTop: '2px', color: '#F5A623', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                      ${(listing.amountEth ?? 0).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>USD</span>
+                      ${(listing.amount_eth ?? 0).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>USD</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -972,13 +972,13 @@ const P2PListings = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#e0e0e0', padding: '0 2px' }}>
                   <span style={{ color: 'var(--muted)' }}>Limits:</span>
                   <strong style={{ color: '#00C896', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                    {listing.minLimitEtb.toLocaleString()} – {listing.maxLimitEtb.toLocaleString()} ETB
+                    {listing.min_limit_etb.toLocaleString()} – {listing.max_limit_etb.toLocaleString()} ETB
                   </strong>
                 </div>
 
                 {/* Payment method chips */}
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '2px 0' }}>
-                  {listing.paymentMethods.map(p => {
+                  {listing.payment_methods.map(p => {
                     const meta = ALL_PAYMENT_METHODS.find(m => m.id === p);
                     const styles = getPaymentMethodStyles(p);
                     return (
@@ -1021,7 +1021,7 @@ const P2PListings = () => {
                         alert('Please verify your identity first. Go to Profile to start KYC verification.');
                         return;
                       }
-                      setSelectedListing(listing); setShowBuyModal(true); setTradeamountEth(''); setTradeError('');
+                      setSelectedListing(listing); setShowBuyModal(true); setTradeamount_eth(''); setTradeError('');
                     }}
                     disabled={!kycApproved}
                     className={isBuyType ? "teal-glow-btn" : "gold-glow-btn"}
@@ -1128,12 +1128,12 @@ const P2PListings = () => {
                   type="number" step="0.01" required
                   className="input"
                   placeholder={`Available: $${wallet ? ((wallet.eth_balance ?? 0) - (wallet.eth_locked ?? 0)).toFixed(2) : '0.00'} USD`}
-                  value={amountEth}
-                  onChange={e => setamountEth(e.target.value)}
+                  value={amount_eth}
+                  onChange={e => setamount_eth(e.target.value)}
                 />
-                {amountEth && (
+                {amount_eth && (
                   <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
-                    ≈ {Math.round(parseFloat(amountEth) * rate).toLocaleString()} ETB at admin rate
+                    ≈ {Math.round(parseFloat(amount_eth) * rate).toLocaleString()} ETB at admin rate
                   </div>
                 )}
               </div>
@@ -1277,7 +1277,7 @@ const P2PListings = () => {
             <div style={handleStyle} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>
-                {selectedListing.type === 'buy' ? `Sell USD to @${selectedListing.sellerName}` : `Buy from @${selectedListing.sellerName}`}
+                {selectedListing.type === 'buy' ? `Sell USD to @${selectedListing.seller_name}` : `Buy from @${selectedListing.seller_name}`}
               </h3>
               <button onClick={() => { setShowBuyModal(false); setSelectedListing(null); }} style={{
                 width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)',
@@ -1294,10 +1294,10 @@ const P2PListings = () => {
             }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setShowBuyModal(false); setViewingTraderId(selectedListing.sellerId); }}>
-                    @{selectedListing.sellerName}
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setShowBuyModal(false); setViewingTraderId(selectedListing.seller_id); }}>
+                    @{selectedListing.seller_name}
                   </span>
-                  {(selectedListing.sellerKycStatus === 'verified' || selectedListing.sellerKycStatus === 'approved') && (
+                  {(selectedListing.seller_kyc_status === 'verified' || selectedListing.seller_kyc_status === 'approved') && (
                     <span style={{ background: 'rgba(0,200,150,0.12)', color: '#00C896', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
                       ✅ Verified
                     </span>
@@ -1312,10 +1312,10 @@ const P2PListings = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.customRateEtb || rate} ETB / $1
+                  {selectedListing.custom_rate_etb || rate} ETB / $1
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                  Limits: {selectedListing.minLimitEtb.toLocaleString()} – {selectedListing.maxLimitEtb.toLocaleString()} ETB
+                  Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
                 </div>
               </div>
             </div>
@@ -1351,23 +1351,23 @@ const P2PListings = () => {
                 <input
                   type="number" step="0.01" required
                   className="input"
-                  placeholder={`Max: $${(selectedListing.amountEth ?? 0).toFixed(2)} USD`}
-                  value={tradeamountEth}
-                  onChange={e => setTradeamountEth(e.target.value)}
+                  placeholder={`Max: $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD`}
+                  value={tradeamount_eth}
+                  onChange={e => setTradeamount_eth(e.target.value)}
                 />
               </div>
 
-              {tradeamountEth && !isNaN(parseFloat(tradeamountEth)) && (
+              {tradeamount_eth && !isNaN(parseFloat(tradeamount_eth)) && (
                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-3)' }}>Rate</span>
-                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{selectedListing.customRateEtb || rate} ETB/$1</span>
+                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{selectedListing.custom_rate_etb || rate} ETB/$1</span>
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
                     <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeamountEth) * (selectedListing.customRateEtb || rate)).toLocaleString()} ETB
+                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || rate)).toLocaleString()} ETB
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
@@ -1432,11 +1432,11 @@ const P2PListings = () => {
                 </div>
               ) : (
                 /* Taker is buyer: Taker chooses one of the Maker's bank accounts to pay to */
-                selectedListing.paymentAccounts && selectedListing.paymentAccounts.length > 0 && (
+                selectedListing.payment_accounts && selectedListing.payment_accounts.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label className="input-label" style={{ marginBottom: '2px' }}>Send Payout To (Seller Bank/Wallet)</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {selectedListing.paymentAccounts.map(acc => {
+                      {selectedListing.payment_accounts.map(acc => {
                         const sel = chosenPaymentAccount?.id === acc.id;
                         const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
                         return (

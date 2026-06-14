@@ -31,7 +31,7 @@ const NotificationsPage = ({ setPage }) => {
     } catch (e) { console.error(e); }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const formatTime = (iso) => {
     if (!iso) return '';
@@ -70,19 +70,19 @@ const NotificationsPage = ({ setPage }) => {
             const isReceived = n.type === 'deposit' || n.type === 'transfer' || n.type === 'trade_completed';
             return (
               <div
-                key={n._id}
-                onClick={() => { markOneRead(n._id); setPage('transactions'); }}
+                key={n.id}
+                onClick={() => { markOneRead(n.id); setPage('transactions'); }}
                 style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderLeft: n.isRead ? '3px solid transparent' : '3px solid var(--teal)',
+                  borderLeft: n.is_read ? '3px solid transparent' : '3px solid var(--teal)',
                   borderRadius: '16px',
                   padding: '16px',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--surface2)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = n.isRead ? '1px solid var(--border)' : '1px solid var(--border)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = n.is_read ? '1px solid var(--border)' : '1px solid var(--border)'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isReceived ? 'rgba(0,200,150,0.12)' : 'rgba(255,77,77,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
@@ -92,7 +92,7 @@ const NotificationsPage = ({ setPage }) => {
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{n.title || 'Notification'}</div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Account ID: {user?.id || 'ES-XXXXXXX'}</div>
                   </div>
-                  <span style={{ fontSize: '12px', color: 'var(--muted)', flexShrink: 0 }}>{formatTime(n.createdAt)}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)', flexShrink: 0 }}>{formatTime(n.created_at)}</span>
                 </div>
                 <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5, marginBottom: '8px' }}>{n.message}</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

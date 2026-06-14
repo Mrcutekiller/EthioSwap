@@ -350,9 +350,9 @@ const AdminPanel = ({ user }) => {
         distribution: { completed: (allDepositReqs || []).filter(r => r.status === 'approved').length, cancelled: (allDepositReqs || []).filter(r => r.status === 'rejected').length, disputed: disputes.length },
       },
       flaggedAccounts,
-      topTraders: topTraders.map(t => ({ username: t.username, trades: t.trade_count || t.total_trades || 0, volume: t.total_volume || 0 })),
+      topTraders: topTraders.map(t => ({ id: t.id, username: t.username, trades: t.trade_count || t.total_trades || 0, volume: t.total_volume || 0 })),
       highlyDisputedUsers: [],
-      recentTrades: (allDepositReqs || []).slice(0, 10).map(r => ({ buyer: r.username, amount: r.amount_usd, status: r.status, created_at: r.created_at })),
+      recentTrades: (trades || []).slice(0, 10).map(r => ({ id: r.id, buyer_name: r.buyer_name, seller_name: r.seller_name, amount_eth: r.amount_eth, amount_etb: r.amount_etb, status: r.status, created_at: r.created_at })),
     });
   }, [allUsersList, allDepositReqs, disputes, kycQueue]);
 
@@ -776,10 +776,10 @@ const AdminPanel = ({ user }) => {
     const rows = (allDepositReqs || []).map((req, idx) => [
       idx + 1,
       `@${req.username}`,
-      (req.amount_usd ?? req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
-      Math.round(req.amount_usd ?? req.amountUSD ?? 0),
-      req.wallet_type || req.walletType,
-      new Date(req.created_at || req.createdAt).toLocaleString(),
+      (req.amount_usd ?? req.amount_usd ?? req.amount_usd ?? 0).toFixed(2),
+      Math.round(req.amount_usd ?? req.amount_usd ?? 0),
+      req.wallet_type || req.wallet_type,
+      new Date(req.created_at || req.created_at).toLocaleString(),
       req.status
     ]);
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -798,10 +798,10 @@ const AdminPanel = ({ user }) => {
     const rows = (allWithdrawalReqs || []).map((req, idx) => [
       idx + 1,
       `@${req.username}`,
-      (req.amountUSD ?? req.amountUsd ?? 0).toFixed(2),
-      Math.round(req.amountUSD * rate),
-      req.destinationAddress || 'N/A',
-      new Date(req.createdAt).toLocaleString(),
+      (req.amount_usd ?? req.amount_usd ?? 0).toFixed(2),
+      Math.round(req.amount_usd * rate),
+      req.destination_address || 'N/A',
+      new Date(req.created_at).toLocaleString(),
       req.status
     ]);
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -1656,7 +1656,7 @@ const AdminPanel = ({ user }) => {
                               </tr>
                             ) : (
                               adminAnalytics.topTraders.map((trader, i) => (
-                                <tr key={i} style={{ cursor: 'pointer' }} onClick={() => { setSelectedUserDetailId(trader._id || trader.user_id); setUserDrawerTab('profile'); }}>
+                                <tr key={i} style={{ cursor: 'pointer' }} onClick={() => { setSelectedUserDetailId(trader.id); setUserDrawerTab('profile'); }}>
                                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</td>
                                   <td style={{ fontWeight: 600 }}>@{trader.username}</td>
                                   <td>{trader.count}</td>
@@ -1766,19 +1766,19 @@ const AdminPanel = ({ user }) => {
                                 <td style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8b92a8' }}>
                                   {String(t.id).substring(0, 10)}…
                                 </td>
-                                <td>@{t.buyerName}</td>
-                                <td>@{t.sellerName}</td>
+                                <td>@{t.buyer_name}</td>
+                                <td>@{t.seller_name}</td>
                                 <td style={{ fontWeight: 700, color: '#f0f2f8' }}>
-                                  ${t.amountEth.toFixed(2)}
+                                  ${(t.amount_eth || 0).toFixed(2)}
                                 </td>
                                 <td style={{ fontWeight: 600, color: '#8b92a8' }}>
-                                  {Math.round(t.amountEtb).toLocaleString()} ETB
+                                  {Math.round(t.amount_etb || 0).toLocaleString()} ETB
                                 </td>
                                 <td>
                                   <StatusBadge status={t.status} />
                                 </td>
                                 <td style={{ fontSize: '11px', color: '#4e5567' }}>
-                                  {new Date(t.createdAt).toLocaleString()}
+                                  {new Date(t.created_at).toLocaleString()}
                                 </td>
                               </tr>
                             ))
@@ -2036,8 +2036,8 @@ const AdminPanel = ({ user }) => {
             const filteredDeposits = (allDepositReqs || []).filter(req => {
               const matchesSearch = !depositSearchQuery || 
                 req.username?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
-                req.senderReference?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
-                req._id?.toString().toLowerCase().includes(depositSearchQuery.toLowerCase());
+                req.sender_reference?.toLowerCase().includes(depositSearchQuery.toLowerCase()) ||
+                req.id?.toString().toLowerCase().includes(depositSearchQuery.toLowerCase());
               
               const statusMap = {
                 completed: 'approved',
@@ -2140,8 +2140,8 @@ const AdminPanel = ({ user }) => {
                         const globalIndex = (depositCurrentPage - 1) * pageSize + idx + 1;
                         return (
                           <tr
-                            key={req._id}
-                            onClick={() => setSelectedDepositDetailId(req._id)}
+                            key={req.id}
+                            onClick={() => setSelectedDepositDetailId(req.id)}
                             className="table-row-clickable"
                           >
                             <td style={{ fontWeight: 600 }}>{globalIndex}</td>
@@ -2156,15 +2156,15 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
-                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
+                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amount_usd ?? req.amount_usd ?? 0).toFixed(2)}</td>
+                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amount_usd * rate).toLocaleString()} ETB</td>
                             <td>
                               <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                {req.walletType?.toUpperCase() || 'USDT'}
+                                {req.wallet_type?.toUpperCase() || 'USDT'}
                               </span>
                             </td>
                             <td style={{ color: '#8b92a8', fontSize: '13px' }}>
-                              {new Date(req.createdAt).toLocaleString()}
+                              {new Date(req.created_at).toLocaleString()}
                             </td>
                             <td>
                               <StatusBadge status={req.status} />
@@ -2172,15 +2172,15 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleApproveDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req._id ? 0.6 : 1 }}>
-                                    {processingDepositId === req._id ? '⏳ Processing...' : '✓ Approve'}
+                                  <button onClick={() => handleApproveDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req.id ? 0.6 : 1 }}>
+                                    {processingDepositId === req.id ? '⏳ Processing...' : '✓ Approve'}
                                   </button>
-                                  <button onClick={() => handleRejectDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req._id ? 0.6 : 1 }}>
+                                  <button onClick={() => handleRejectDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req.id ? 0.6 : 1 }}>
                                     Reject
                                   </button>
                                 </div>
                               ) : (
-                                <button onClick={() => setSelectedDepositDetailId(req._id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                <button onClick={() => setSelectedDepositDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
                                   View Details
                                 </button>
                               )}
@@ -2226,8 +2226,8 @@ const AdminPanel = ({ user }) => {
             const filteredWithdrawals = (allWithdrawalReqs || []).filter(req => {
               const matchesSearch = !withdrawSearchQuery || 
                 req.username?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
-                req.destinationAddress?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
-                req._id?.toString().toLowerCase().includes(withdrawSearchQuery.toLowerCase());
+                req.destination_address?.toLowerCase().includes(withdrawSearchQuery.toLowerCase()) ||
+                req.id?.toString().toLowerCase().includes(withdrawSearchQuery.toLowerCase());
               
               const statusMap = {
                 completed: 'approved',
@@ -2327,8 +2327,8 @@ const AdminPanel = ({ user }) => {
                         const globalIndex = (withdrawCurrentPage - 1) * pageSize + idx + 1;
                         return (
                           <tr
-                            key={req._id}
-                            onClick={() => setSelectedWithdrawDetailId(req._id)}
+                            key={req.id}
+                            onClick={() => setSelectedWithdrawDetailId(req.id)}
                             className="table-row-clickable"
                           >
                             <td style={{ fontWeight: 600 }}>{globalIndex}</td>
@@ -2343,15 +2343,15 @@ const AdminPanel = ({ user }) => {
                                 <span style={{ fontWeight: 600 }}>@{req.username}</span>
                               </div>
                             </td>
-                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)}</td>
-                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</td>
+                            <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amount_usd ?? req.amount_usd ?? 0).toFixed(2)}</td>
+                            <td style={{ color: '#8b92a8' }}>{Math.round(req.amount_usd * rate).toLocaleString()} ETB</td>
                             <td>
                               <span style={{ fontSize: '11px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px', color: '#00C896' }}>
-                                {req.destinationAddress ? `${req.destinationAddress.substring(0, 8)}...${req.destinationAddress.substring(req.destinationAddress.length - 8)}` : 'N/A'}
+                                {req.destination_address ? `${req.destination_address.substring(0, 8)}...${req.destination_address.substring(req.destination_address.length - 8)}` : 'N/A'}
                               </span>
                             </td>
                             <td style={{ color: '#8b92a8', fontSize: '13px' }}>
-                              {new Date(req.createdAt).toLocaleString()}
+                              {new Date(req.created_at).toLocaleString()}
                             </td>
                             <td>
                               <StatusBadge status={req.status} />
@@ -2359,15 +2359,15 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleWithdrawal(req._id, true)} disabled={processingWithdrawalId === req._id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
-                                    {processingWithdrawalId === req._id ? '⏳ Processing...' : '✓ Approve'}
+                                  <button onClick={() => handleWithdrawal(req.id, true)} disabled={processingWithdrawalId === req.id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req.id ? 0.6 : 1 }}>
+                                    {processingWithdrawalId === req.id ? '⏳ Processing...' : '✓ Approve'}
                                   </button>
-                                  <button onClick={() => handleWithdrawal(req._id, false)} disabled={processingWithdrawalId === req._id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
+                                  <button onClick={() => handleWithdrawal(req.id, false)} disabled={processingWithdrawalId === req.id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req.id ? 0.6 : 1 }}>
                                     Reject
                                   </button>
                                 </div>
                               ) : (
-                                <button onClick={() => setSelectedWithdrawDetailId(req._id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
+                                <button onClick={() => setSelectedWithdrawDetailId(req.id)} className="btn-premium-ghost" style={{ padding: '6px 10px', fontSize: '11px' }}>
                                   View Details
                                 </button>
                               )}
@@ -2536,8 +2536,8 @@ const AdminPanel = ({ user }) => {
                     ⚖️ All disputes cleared. Excellent platform compliance!
                   </div>
                 ) : disputes.map(dispute => {
-                  const tradeId = dispute.tradeId;
-                  const disputeId = dispute._id;
+                  const tradeId = dispute.trade_id;
+                  const disputeId = dispute.id;
                   const resolution = resolutionActions[disputeId] || 'release_to_buyer';
                   const notes = mediationNotes[disputeId] || '';
                   const split = splitPercent[disputeId] || 50;
@@ -2548,7 +2548,7 @@ const AdminPanel = ({ user }) => {
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 700, color: '#f43f5e' }}>⚖️ Dispute on Trade #{tradeId.substring(0, 8).toUpperCase()}</div>
                           <div style={{ fontSize: '12px', color: '#8b92a8', marginTop: '2px' }}>
-                            Seller: <strong>@{dispute.sellerUsername}</strong> | Buyer: <strong>@{dispute.buyerUsername}</strong>
+                            Seller: <strong>@{dispute.seller_username}</strong> | Buyer: <strong>@{dispute.buyer_username}</strong>
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
@@ -2564,7 +2564,7 @@ const AdminPanel = ({ user }) => {
                         </div>
                         <div>
                           <span style={{ color: '#8b92a8' }}>Opened By:</span>
-                          <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>@{dispute.openerUsername} ({new Date(dispute.createdAt).toLocaleString()})</div>
+                          <div style={{ fontWeight: 600, color: '#f0f2f8', marginTop: '2px' }}>@{dispute.opener_username} ({new Date(dispute.createdAt).toLocaleString()})</div>
                         </div>
                         <div style={{ gridColumn: 'span 2' }}>
                           <span style={{ color: '#8b92a8' }}>Dispute Reason:</span>
@@ -2575,25 +2575,25 @@ const AdminPanel = ({ user }) => {
                       {/* Evidence Files Row */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px' }}>
-                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Buyer Evidence ({dispute.buyerEvidence?.length || 0})</div>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Buyer Evidence ({dispute.buyer_evidence?.length || 0})</div>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {dispute.buyerEvidence?.map((src, i) => (
+                            {dispute.buyer_evidence?.map((src, i) => (
                               <div key={i} onClick={() => setActiveLightboxImage(src)} style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
                                 <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                               </div>
                             ))}
-                            {(!dispute.buyerEvidence || dispute.buyerEvidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
+                            {(!dispute.buyer_evidence || dispute.buyer_evidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
                           </div>
                         </div>
                         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px' }}>
-                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Seller Evidence ({dispute.sellerEvidence?.length || 0})</div>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, marginBottom: '6px' }}>Seller Evidence ({dispute.seller_evidence?.length || 0})</div>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {dispute.sellerEvidence?.map((src, i) => (
+                            {dispute.seller_evidence?.map((src, i) => (
                               <div key={i} onClick={() => setActiveLightboxImage(src)} style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
                                 <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                               </div>
                             ))}
-                            {(!dispute.sellerEvidence || dispute.sellerEvidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
+                            {(!dispute.seller_evidence || dispute.seller_evidence.length === 0) && <span style={{ fontSize: '11px', color: '#4e5567' }}>None uploaded</span>}
                           </div>
                         </div>
                       </div>
@@ -2608,8 +2608,8 @@ const AdminPanel = ({ user }) => {
                             className="input"
                             style={{ flex: 1, marginBottom: 0, padding: '6px 10px', fontSize: '12px' }}
                           >
-                            <option value="release_to_buyer">Release escrow to Buyer (@{dispute.buyerUsername})</option>
-                            <option value="refund_to_seller">Refund escrow to Seller (@{dispute.sellerUsername})</option>
+                            <option value="release_to_buyer">Release escrow to Buyer (@{dispute.buyer_username})</option>
+                            <option value="refund_to_seller">Refund escrow to Seller (@{dispute.seller_username})</option>
                             <option value="split">Split escrow (Custom Ratio)</option>
                           </select>
                         </div>
@@ -2882,7 +2882,7 @@ const AdminPanel = ({ user }) => {
                           </td>
                         </tr>
                       ) : filteredUsers.map(u => {
-                        const isMe = u.id === user?._id;
+                        const isMe = u.id === user?.id;
                         return (
                           <tr
                             key={u.id}
@@ -2973,9 +2973,9 @@ const AdminPanel = ({ user }) => {
             const filteredLogs = auditLogs.filter(log => {
               const query = logsSearchQuery.toLowerCase().trim();
               return !query || 
-                log.adminUsername?.toLowerCase().includes(query) ||
+                log.admin_username?.toLowerCase().includes(query) ||
                 log.action?.toLowerCase().includes(query) ||
-                log.targetName?.toLowerCase().includes(query) ||
+                log.target_name?.toLowerCase().includes(query) ||
                 log.details?.toLowerCase().includes(query);
             });
 
@@ -3032,11 +3032,11 @@ const AdminPanel = ({ user }) => {
                         }
 
                         return (
-                          <tr key={log._id}>
+                          <tr key={log.id}>
                             <td style={{ color: '#8b92a8', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                              {new Date(log.createdAt).toLocaleString()}
+                              {new Date(log.created_at).toLocaleString()}
                             </td>
-                            <td style={{ fontWeight: 600 }}>@{log.adminUsername}</td>
+                            <td style={{ fontWeight: 600 }}>@{log.admin_username}</td>
                             <td>
                               <span style={{
                                 padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700,
@@ -3045,7 +3045,7 @@ const AdminPanel = ({ user }) => {
                                 {log.action?.replace('_', ' ')}
                               </span>
                             </td>
-                            <td style={{ fontWeight: 600, color: '#00C896' }}>@{log.targetName}</td>
+                            <td style={{ fontWeight: 600, color: '#00C896' }}>@{log.target_name}</td>
                             <td style={{ color: '#8b92a8', minWidth: '200px' }}>{log.details}</td>
                           </tr>
                         );
@@ -3211,7 +3211,7 @@ const AdminPanel = ({ user }) => {
                                       onClick={() => {
                                         const reason = prompt("Enter reason for flagging this rating:");
                                         if (reason) {
-                                          flagFakeRatingMutation({ adminId: user._id, ratingId: rating.id, flaggedReason: reason })
+                                          flagFakeRatingMutation({ adminId: user.id, ratingId: rating.id, flaggedReason: reason })
                                             .then(() => alert("Rating flagged successfully."))
                                             .catch(err => alert("Error: " + err.message));
                                         }
@@ -3225,7 +3225,7 @@ const AdminPanel = ({ user }) => {
                                   <button 
                                     onClick={() => {
                                       if (window.confirm("Are you sure you want to permanently delete this rating?")) {
-                                        deleteTradeRatingMutation({ adminId: user._id, ratingId: rating.id })
+                                        deleteTradeRatingMutation({ adminId: user.id, ratingId: rating.id })
                                           .then(() => alert("Rating deleted successfully."))
                                           .catch(err => alert("Error: " + err.message));
                                       }
@@ -3288,7 +3288,7 @@ const AdminPanel = ({ user }) => {
                               <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#4e5567' }}>No reviews found</td>
                             </tr>
                           ) : testimonialsReviews.map((rev, idx) => (
-                            <tr key={rev._id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.userId)}>
+                            <tr key={rev.id} className="table-row-clickable" onClick={() => setSelectedUserDetailId(rev.user_id)}>
                               <td style={{ fontWeight: 600 }}>{idx + 1}</td>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -3312,7 +3312,7 @@ const AdminPanel = ({ user }) => {
                               </td>
                               <td style={{ fontSize: '12px', color: 'var(--text-3)' }}>
                                 {(() => {
-                                  const dateVal = rev.createdAt || rev.created_at || rev._creationTime;
+                                  const dateVal = rev.created_at || rev.created_at || rev._creationTime;
                                   if (!dateVal) return 'N/A';
                                   const d = new Date(dateVal);
                                   return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
@@ -3325,7 +3325,7 @@ const AdminPanel = ({ user }) => {
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   {!rev.is_approved && (
                                     <button 
-                                      onClick={() => handleApproveReview(rev._id)} 
+                                      onClick={() => handleApproveReview(rev.id)} 
                                       className="btn-premium-primary" 
                                       style={{ padding: '6px 12px', fontSize: '11px', background: '#00C896', color: '#000' }}
                                     >
@@ -3333,7 +3333,7 @@ const AdminPanel = ({ user }) => {
                                     </button>
                                   )}
                                   <button 
-                                    onClick={() => handleRejectReview(rev._id)} 
+                                    onClick={() => handleRejectReview(rev.id)} 
                                     className="btn-premium-danger" 
                                     style={{ padding: '6px 12px', fontSize: '11px' }}
                                   >
@@ -3704,14 +3704,14 @@ const user = await ctx.db
               if (!settings) return;
               try {
                 await updateSettingsMutation({
-                  id: settings._id,
+                  id: settings.id,
                   updates: {
                     [channelField]: !currentVal
                   }
                 });
                 
                 await addAuditLog({
-                  adminId: user._id,
+                  adminId: user.id,
                   adminUsername: user.username,
                   action: 'update_comms_settings',
                   details: `Toggled global setting ${channelField} to ${!currentVal}`
@@ -3907,7 +3907,7 @@ const user = await ctx.db
                             </tr>
                           ) : (
                             filteredNotifs.map(log => (
-                              <tr key={log._id}>
+                              <tr key={log.id}>
                                 <td style={{ color: '#8b92a8', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                   {new Date(log.sentAt).toLocaleString()}
                                 </td>
@@ -3938,12 +3938,12 @@ const user = await ctx.db
                                 </td>
                                 <td>
                                   <button
-                                    onClick={() => handleResendNotif(log._id)}
-                                    disabled={resendingLogId === log._id}
+                                    onClick={() => handleResendNotif(log.id)}
+                                    disabled={resendingLogId === log.id}
                                     className="btn-premium-secondary"
                                     style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', cursor: 'pointer' }}
                                   >
-                                    {resendingLogId === log._id ? '⏳' : '🔄 Resend'}
+                                    {resendingLogId === log.id ? '⏳' : '🔄 Resend'}
                                   </button>
                                 </td>
                               </tr>
@@ -4000,9 +4000,9 @@ const user = await ctx.db
                                 badgeBg = 'rgba(244,63,94,0.1)'; badgeColor = '#f43f5e';
                               }
                               return (
-                                <tr key={log._id}>
+                                <tr key={log.id}>
                                   <td style={{ color: '#8b92a8', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                    {new Date(log.createdAt).toLocaleString()}
+                                    {new Date(log.created_at).toLocaleString()}
                                   </td>
                                   <td style={{ fontWeight: 600 }}>@{log.username}</td>
                                   <td style={{ textTransform: 'capitalize', fontSize: '12px', color: '#cbd5e1' }}>
@@ -4049,7 +4049,7 @@ const user = await ctx.db
 
       {/* ── 1. DEPOSIT REQUEST DETAILS DRAWER ── */}
       {selectedDepositDetailId && (() => {
-        const req = allDepositReqs?.find(r => r._id === selectedDepositDetailId);
+        const req = allDepositReqs?.find(r => r.id === selectedDepositDetailId);
         if (!req) return null;
         return (
           <>
@@ -4059,7 +4059,7 @@ const user = await ctx.db
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📥 Deposit Request Details</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req._id}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
                 </div>
                 <button onClick={() => setSelectedDepositDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -4082,23 +4082,23 @@ const user = await ctx.db
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
-                    <strong style={{ color: '#00C896' }}>${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
+                    <strong style={{ color: '#00C896' }}>${(req.amount_usd ?? req.amount_usd ?? 0).toFixed(2)} USD</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
-                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amount_usd * rate).toLocaleString()} ETB</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Deposit Method:</span>
-                    <strong style={{ color: '#f0f2f8' }}>{req.walletType?.toUpperCase()}</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{req.wallet_type?.toUpperCase()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>TxID / Reference:</span>
-                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{req.senderReference || 'No hash reference'}</strong>
+                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{req.sender_reference || 'No hash reference'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Submitted at:</span>
-                    <span style={{ color: '#8b92a8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(req.created_at).toLocaleString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Transaction Status:</span>
@@ -4110,7 +4110,7 @@ const user = await ctx.db
                 {req.hasScreenshot && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Uploaded Receipt Proof Image:</div>
-                    <DepositScreenshot requestId={req._id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
+                    <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
                   </div>
                 )}
               </div>
@@ -4118,10 +4118,10 @@ const user = await ctx.db
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleApproveDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-primary" style={{ flex: 1, opacity: processingDepositId === req._id ? 0.6 : 1 }}>
-                    {processingDepositId === req._id ? '⏳ Processing Deposit & Crediting...' : '✓ Approve & Credit Funds'}
+                  <button onClick={() => handleApproveDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ flex: 1, opacity: processingDepositId === req.id ? 0.6 : 1 }}>
+                    {processingDepositId === req.id ? '⏳ Processing Deposit & Crediting...' : '✓ Approve & Credit Funds'}
                   </button>
-                  <button onClick={() => handleRejectDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-danger" style={{ flex: 1, opacity: processingDepositId === req._id ? 0.6 : 1 }}>
+                  <button onClick={() => handleRejectDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-danger" style={{ flex: 1, opacity: processingDepositId === req.id ? 0.6 : 1 }}>
                     Reject
                   </button>
                 </div>
@@ -4133,7 +4133,7 @@ const user = await ctx.db
 
       {/* ── 2. WITHDRAWAL REQUEST DETAILS DRAWER ── */}
       {selectedWithdrawDetailId && (() => {
-        const req = allWithdrawalReqs?.find(r => r._id === selectedWithdrawDetailId);
+        const req = allWithdrawalReqs?.find(r => r.id === selectedWithdrawDetailId);
         if (!req) return null;
         return (
           <>
@@ -4143,7 +4143,7 @@ const user = await ctx.db
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>📤 Withdrawal Request Details</h3>
-                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req._id}</span>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>ID: {req.id}</span>
                 </div>
                 <button onClick={() => setSelectedWithdrawDetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
               </div>
@@ -4166,25 +4166,25 @@ const user = await ctx.db
                 <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (USD):</span>
-                    <strong style={{ color: '#f43f5e' }}>-${(req.amountUSD ?? req.amountUsd ?? 0).toFixed(2)} USD</strong>
+                    <strong style={{ color: '#f43f5e' }}>-${(req.amount_usd ?? req.amount_usd ?? 0).toFixed(2)} USD</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Amount (ETB value):</span>
-                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amountUSD * rate).toLocaleString()} ETB</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{Math.round(req.amount_usd * rate).toLocaleString()} ETB</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Withdraw Network:</span>
-                    <strong style={{ color: '#f0f2f8' }}>{req.walletType?.toUpperCase() || 'USDT'}</strong>
+                    <strong style={{ color: '#f0f2f8' }}>{req.wallet_type?.toUpperCase() || 'USDT'}</strong>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Destination Address:</span>
                     <span style={{ color: '#00C896', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', wordBreak: 'break-all', display: 'block', marginTop: '4px' }}>
-                      {req.destinationAddress || 'N/A'}
+                      {req.destination_address || 'N/A'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Submitted at:</span>
-                    <span style={{ color: '#8b92a8' }}>{new Date(req.createdAt).toLocaleString()}</span>
+                    <span style={{ color: '#8b92a8' }}>{new Date(req.created_at).toLocaleString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Transaction Status:</span>
@@ -4196,10 +4196,10 @@ const user = await ctx.db
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleWithdrawal(req._id, true)} disabled={processingWithdrawalId === req._id} className="btn-premium-primary" style={{ flex: 1, opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
-                    {processingWithdrawalId === req._id ? '⏳ Processing Withdrawal...' : '✓ Approve & Process'}
+                  <button onClick={() => handleWithdrawal(req.id, true)} disabled={processingWithdrawalId === req.id} className="btn-premium-primary" style={{ flex: 1, opacity: processingWithdrawalId === req.id ? 0.6 : 1 }}>
+                    {processingWithdrawalId === req.id ? '⏳ Processing Withdrawal...' : '✓ Approve & Process'}
                   </button>
-                  <button onClick={() => handleWithdrawal(req._id, false)} disabled={processingWithdrawalId === req._id} className="btn-premium-danger" style={{ flex: 1, opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
+                  <button onClick={() => handleWithdrawal(req.id, false)} disabled={processingWithdrawalId === req.id} className="btn-premium-danger" style={{ flex: 1, opacity: processingWithdrawalId === req.id ? 0.6 : 1 }}>
                     Reject
                   </button>
                 </div>
@@ -4362,7 +4362,7 @@ const user = await ctx.db
         const u = allUsersList?.find(userRecord => userRecord.id === selectedUserDetailId);
         if (!u) return null;
 
-        const isMe = u.id === user?._id;
+        const isMe = u.id === user?.id;
         const totalBal = (u.eth_balance || 0) + (u.eth_locked || 0);
         const etbVal = totalBal * rate;
 
@@ -4616,7 +4616,7 @@ const user = await ctx.db
                                     onClick={() => {
                                       const reason = prompt("Enter flag reason:");
                                       if (reason) {
-                                        flagFakeRatingMutation({ adminId: user._id, ratingId: rating.id, flaggedReason: reason })
+                                        flagFakeRatingMutation({ adminId: user.id, ratingId: rating.id, flaggedReason: reason })
                                           .then(() => alert("Rating flagged."))
                                           .catch(err => alert(err.message));
                                       }
@@ -4629,7 +4629,7 @@ const user = await ctx.db
                                 <button 
                                   onClick={() => {
                                     if (window.confirm("Delete this rating permanently?")) {
-                                      deleteTradeRatingMutation({ adminId: user._id, ratingId: rating.id })
+                                      deleteTradeRatingMutation({ adminId: user.id, ratingId: rating.id })
                                         .then(() => alert("Rating deleted."))
                                         .catch(err => alert(err.message));
                                     }

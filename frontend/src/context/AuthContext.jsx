@@ -226,6 +226,22 @@ export const AuthProvider = ({ children }) => {
     loadListings();
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const pollInterval = setInterval(() => {
+      loadTrades(user.id);
+      loadListings();
+    }, 10000);
+    return () => clearInterval(pollInterval);
+  }, [user?.id]);
+
+  useEffect(() => {
+    const settingsInterval = setInterval(() => {
+      loadSystemSettings();
+    }, 60000);
+    return () => clearInterval(settingsInterval);
+  }, []);
+
   const setError = (message) => {
     const cleaned = cleanConvexError(message);
     setErrorState(cleaned);
@@ -370,7 +386,7 @@ export const AuthProvider = ({ children }) => {
       const listing = listings.find(l => l.id === listingId);
       if (!listing) throw new Error('Listing not found');
 
-      const { error } = await supabase.from('trades').insert({
+      const { data: newTrade, error } = await supabase.from('trades').insert({
         buyer_id: user.id,
         seller_id: listing.seller_id,
         listing_id: listingId,
@@ -378,8 +394,9 @@ export const AuthProvider = ({ children }) => {
         amount_etb: Math.round(amountEth * (listing.custom_rate_etb || systemSettings.etbRatePerDollar)),
         fee_eth: 0,
         status: 'payment_pending',
-      });
+      }).select().single();
       if (error) throw error;
+      createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${(amountEth * ETH_USD_PRICE).toFixed(2)} USD.`);
       setSuccess('Trade initiated!');
     } catch (err) {
       setError(err.message);
@@ -688,11 +705,15 @@ export const AuthProvider = ({ children }) => {
 
   const markTradeAsPaid = async (tradeId) => {
     try {
+      const { data: trade } = await supabase.from('trades').select('seller_id, buyer_id').eq('id', tradeId).single();
       const { error } = await supabase
         .from('trades')
         .update({ status: 'paid' })
         .eq('id', tradeId);
       if (error) throw error;
+      if (trade?.seller_id && trade.seller_id !== user.id) {
+        createNotification(trade.seller_id, 'trade_paid', 'Payment Confirmed', 'Buyer has marked the payment as sent. Please verify and release funds.');
+      }
       setSuccess('Trade marked as paid!');
     } catch (err) {
       setError(err.message);
@@ -701,11 +722,15 @@ export const AuthProvider = ({ children }) => {
 
   const releaseEscrow = async (tradeId) => {
     try {
+      const { data: trade } = await supabase.from('trades').select('buyer_id').eq('id', tradeId).single();
       const { error } = await supabase
         .from('trades')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', tradeId);
       if (error) throw error;
+      if (trade?.buyer_id && trade.buyer_id !== user.id) {
+        createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.');
+      }
       setSuccess('ETH released to buyer!');
     } catch (err) {
       setError(err.message);
@@ -714,11 +739,16 @@ export const AuthProvider = ({ children }) => {
 
   const cancelTrade = async (tradeId) => {
     try {
+      const { data: trade } = await supabase.from('trades').select('buyer_id, seller_id').eq('id', tradeId).single();
       const { error } = await supabase
         .from('trades')
         .update({ status: 'cancelled' })
         .eq('id', tradeId);
       if (error) throw error;
+      const otherPartyId = trade?.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+      if (otherPartyId) {
+        createNotification(otherPartyId, 'trade_cancelled', 'Trade Cancelled', 'The trade has been cancelled by the other party. Funds have been unlocked.');
+      }
       setSuccess('Trade cancelled and ETH unlocked.');
     } catch (err) {
       setError(err.message);
@@ -749,6 +779,7 @@ export const AuthProvider = ({ children }) => {
 
   const openDispute = async (tradeId, reason) => {
     try {
+      const { data: trade } = await supabase.from('trades').select('buyer_id, seller_id').eq('id', tradeId).single();
       const { error } = await supabase.from('disputes').insert({
         trade_id: tradeId,
         opened_by: user.id,
@@ -762,6 +793,18 @@ export const AuthProvider = ({ children }) => {
         .update({ status: 'disputed' })
         .eq('id', tradeId);
 
+      const otherPartyId = trade?.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+      if (otherPartyId) {
+        createNotification(otherPartyId, 'dispute_opened', 'Dispute Opened', 'A dispute has been opened on your trade. Support will review shortly.');
+      }
+
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          createNotification(admin.id, 'dispute_opened', 'New Dispute', `A dispute has been opened on trade #${tradeId.slice(0, 8)}. Reason: ${reason}`);
+        }
+      }
+
       setSuccess('Dispute opened successfully. Escrow has been frozen.');
     } catch (err) {
       setError(err.message);
@@ -770,6 +813,11 @@ export const AuthProvider = ({ children }) => {
 
   const resolveDispute = async (disputeId, resolution, splitBuyerPercent, adminNote) => {
     try {
+      const { data: dispute } = await supabase.from('disputes').select('trade_id').eq('id', disputeId).single();
+      const { data: trade } = dispute?.trade_id
+        ? await supabase.from('trades').select('buyer_id, seller_id').eq('id', dispute.trade_id).single()
+        : { data: null };
+
       const { error } = await supabase
         .from('disputes')
         .update({
@@ -782,6 +830,12 @@ export const AuthProvider = ({ children }) => {
         })
         .eq('id', disputeId);
       if (error) throw error;
+
+      if (trade) {
+        createNotification(trade.buyer_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`);
+        createNotification(trade.seller_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`);
+      }
+
       setSuccess('Dispute resolved successfully.');
     } catch (err) {
       setError(err.message);

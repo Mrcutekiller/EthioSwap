@@ -225,39 +225,39 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
 
   const completedTrades = useMemo(() => (trades || []).filter(t => t.status === 'completed'), [trades]);
   const pendingTrades = useMemo(() => (trades || []).filter(t => t.status === 'pending' || t.status === 'active'), [trades]);
-  const totalVolume = useMemo(() => completedTrades.reduce((sum, t) => sum + (t.amountEth || 0), 0), [completedTrades]);
+  const totalVolume = useMemo(() => completedTrades.reduce((sum, t) => sum + (t.amount_eth || 0), 0), [completedTrades]);
   const totalDeposited = useMemo(() =>
-    (myDepositReqs || []).filter(r => r.status === 'approved').reduce((s, r) => s + (r.amountUsd || r.amountUSD || 0), 0),
+    (myDepositReqs || []).filter(r => r.status === 'approved').reduce((s, r) => s + (r.amount_usd || 0), 0),
     [myDepositReqs]
   );
 
   const recentActivity = useMemo(() => {
     const deps = (myDepositReqs || []).slice(0, 4).map(r => ({
       type: 'deposit',
-      amount: r.amountUsd || r.amountUSD || 0,
+      amount: r.amount_usd || 0,
       status: r.status,
-      date: r.createdAt || r.created_at,
+      date: r.created_at,
     }));
     const wds = (myWithdrawalReqs || []).slice(0, 2).map(r => ({
       type: 'withdrawal',
-      amount: r.amountUSD || 0,
+      amount: r.amount_usd || 0,
       status: r.status,
-      date: r.createdAt || r.created_at,
+      date: r.created_at,
     }));
     const p2p = (trades || []).slice(0, 3).map(t => {
-      const isBuyer = user?._id === t.buyerId;
+      const isBuyer = user?.id === t.buyer_id;
       return {
         type: isBuyer ? 'buy' : 'sell',
-        amount: t.amountEth || 0,
+        amount: t.amount_eth || 0,
         status: t.status,
-        date: t.createdAt,
-        counterparty: isBuyer ? t.sellerName : t.buyerName,
+        date: t.created_at,
+        counterparty: isBuyer ? t.seller_name : t.buyer_name,
       };
     });
     return [...deps, ...wds, ...p2p]
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 6);
-  }, [myDepositReqs, myWithdrawalReqs, trades, user?._id]);
+  }, [myDepositReqs, myWithdrawalReqs, trades, user?.id]);
 
   const volumeData = useMemo(() => {
     const days = [];
@@ -268,14 +268,14 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
       days.push({ date: d, vol: 0 });
     }
     (completedTrades || []).forEach(t => {
-      const td = new Date(t.createdAt);
+      const td = new Date(t.created_at);
       const match = days.find(d => d.date.toDateString() === td.toDateString());
-      if (match) match.vol += (t.amountEth || 0);
+      if (match) match.vol += (t.amount_eth || 0);
     });
     return days.map(d => d.vol);
   }, [completedTrades]);
 
-  const kycBannerVisible = !user?.kycStatus || user?.kycStatus === 'none';
+  const kycBannerVisible = !user?.kyc_status || user?.kyc_status === 'none';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px', opacity: animIn ? 1 : 0, transform: animIn ? 'translateY(0)' : 'translateY(16px)', transition: 'all 0.4s ease' }}>
@@ -308,7 +308,7 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>{greeting},</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>@{user?.username || 'Trader'}</div>
-            {user?.kycStatus === 'approved' && (
+            {user?.kyc_status === 'approved' && (
               <span style={{ fontSize: '11px', fontWeight: 600, background: 'rgba(0,200,150,0.12)', color: 'var(--teal)', border: '1px solid rgba(0,200,150,0.25)', padding: '2px 8px', borderRadius: '99px', display: 'inline-block', marginTop: '4px' }}>
                 ✓ Verified
               </span>
