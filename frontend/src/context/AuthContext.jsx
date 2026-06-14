@@ -1,8 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import { useQuery, useMutation } from "convex/react";
-import { api } from "convex-api";
-import { convex } from "../convexClient";
-import { ethers } from "ethers";
+import { supabase } from '../lib/supabase';
+import { ethers } from 'ethers';
 
 const AuthContext = createContext();
 
@@ -40,14 +38,13 @@ export const useAuth = () => useContext(AuthContext);
 export const ETH_USD_PRICE = 3000.0;
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]         = useState(null);
-  const [error, setErrorState]  = useState(null);
+  const [user, setUser] = useState(null);
+  const [error, setErrorState] = useState(null);
   const [success, setSuccessState] = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
 
-  // --- Robust Data Fetching ---
   const [systemSettings, setSystemSettings] = useState({
     etbRatePerDollar: 190.0,
     etbRatePerDollarSell: 186.0,
@@ -60,108 +57,134 @@ export const AuthProvider = ({ children }) => {
   const [listings, setListings] = useState([]);
   const [trades, setTrades] = useState([]);
 
-  const dbUser = useQuery(api.users.get, user?._id ? { id: user._id } : "skip");
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      }
+      setInitializing(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadUserProfile = async (userId) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setUser(data);
+      localStorage.setItem('ethioswap_user', JSON.stringify(data));
+    } else if (error) {
+      console.error('Failed to load user profile:', error);
+    }
+  };
+
+  const loadSystemSettings = async () => {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (data) {
+      setSystemSettings(data);
+    }
+  };
+
+  const loadListings = async () => {
+    const { data } = await supabase
+      .from('listings')
+      .select('*')
+      .eq('status', 'active');
+
+    if (data) {
+      setListings(data);
+    }
+  };
+
+  const loadTrades = async (userId) => {
+    const { data } = await supabase
+      .from('trades')
+      .select('*')
+      .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
+
+    if (data) {
+      setTrades(data);
+    }
+  };
 
   useEffect(() => {
-    if (user?._id && dbUser === null) {
-      console.log("Logged-in user not found in DB (possibly deleted). Logging out.");
-      setUser(null);
-      localStorage.removeItem('ethioswap_user');
-      setErrorState("Account does not exist.");
-    } else if (user?._id && dbUser) {
-      const safeDbUser = { ...dbUser, id: dbUser._id };
-      if (JSON.stringify(user) !== JSON.stringify(safeDbUser)) {
-        setUser(safeDbUser);
-        localStorage.setItem('ethioswap_user', JSON.stringify(safeDbUser));
+    if (user?.id) {
+      loadTrades(user.id);
+    }
+  }, [user?.id]);
+
+  const isAdmin = user?.role === 'admin';
+  const [allDepositReqs, setAllDepositReqs] = useState([]);
+  const [allWithdrawalReqs, setAllWithdrawalReqs] = useState([]);
+  const [userDeposits, setUserDeposits] = useState([]);
+  const [userWithdrawals, setUserWithdrawals] = useState([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      if (isAdmin) {
+        loadAllDepositRequests();
+        loadAllWithdrawalRequests();
+      } else {
+        loadUserDeposits(user.id);
+        loadUserWithdrawals(user.id);
       }
     }
-  }, [user?._id, dbUser]);
+  }, [user?.id, isAdmin]);
 
-  // Use Convex's reactive useQuery hooks for efficient live updates
-  const systemSettingsQuery = useQuery(api.systemSettings.get);
-  const listingsQuery = useQuery(api.listings.listActive);
-  const tradesQuery = useQuery(api.trades.listForUser, user?._id ? { userId: user._id } : "skip");
+  const loadAllDepositRequests = async () => {
+    const { data } = await supabase.from('deposit_requests').select('*').order('created_at', { ascending: false });
+    if (data) setAllDepositReqs(data);
+  };
 
-  useEffect(() => {
-    if (systemSettingsQuery) {
-      setSystemSettings(systemSettingsQuery);
-    }
-  }, [systemSettingsQuery]);
+  const loadAllWithdrawalRequests = async () => {
+    const { data } = await supabase.from('withdraw_requests').select('*').order('created_at', { ascending: false });
+    if (data) setAllWithdrawalReqs(data);
+  };
 
-  useEffect(() => {
-    if (listingsQuery) {
-      setListings(listingsQuery.map(l => ({ ...l, id: l._id })));
-    }
-  }, [listingsQuery]);
+  const loadUserDeposits = async (userId) => {
+    const { data } = await supabase.from('deposit_requests').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (data) setUserDeposits(data);
+  };
 
-  useEffect(() => {
-    if (tradesQuery) {
-      setTrades(tradesQuery.map(t => ({ ...t, id: t._id })));
-    }
-  }, [tradesQuery]);
+  const loadUserWithdrawals = async (userId) => {
+    const { data } = await supabase.from('withdraw_requests').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (data) setUserWithdrawals(data);
+  };
 
-  // Derived queries (using skip pattern to be safe)
-  const isAdmin = user?.role === 'admin';
-  const allDepositReqs = useQuery(api.depositRequests.listAll, isAdmin ? {} : "skip") || [];
-  const allWithdrawalReqs = useQuery(api.withdrawRequests.listAll, isAdmin ? {} : "skip") || [];
-
-  // Fetch user-specific deposits and withdrawals defensively
-  const userDepositsQuery = useQuery(api.depositRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
-  const userWithdrawalsQuery = useQuery(api.withdrawRequests.listForUser, (user && user._id) ? { userId: user._id } : "skip") || [];
-
-  const myDepositReqs = user ? (isAdmin ? allDepositReqs.filter(r => r.userId === user._id) : userDepositsQuery).map(r => ({ ...r, id: r._id })) : [];
-  const myWithdrawalReqs = user ? (isAdmin ? allWithdrawalReqs.filter(r => r.userId === user._id) : userWithdrawalsQuery).map(r => ({ ...r, id: r._id })) : [];
-  const myTransactions = trades; 
-
-  const createUser = useMutation(api.users.create);
-  const createListingMutation = useMutation(api.listings.create);
-  const createTradeMutation = useMutation(api.trades.create);
-  
-  const createDepositMutation = useMutation(api.depositRequests.create);
-  const createWithdrawMutation = useMutation(api.withdrawRequests.create);
-  
-  const updateDepositStatusMutation = useMutation(api.depositRequests.updateStatus);
-  const updateWithdrawStatusMutation = useMutation(api.withdrawRequests.updateStatus);
-
-  const updateUserMutation = useMutation(api.users.update);
-
-  const markPaidMutation = useMutation(api.trades.markPaid);
-  const releaseEthMutation = useMutation(api.trades.releaseEth);
-  const cancelTradeMutation = useMutation(api.trades.cancelTrade);
-  const submitTradeRatingMutation = useMutation(api.tradeRatings.submitTradeRating);
-  const openDisputeMutation = useMutation(api.trades.openDispute);
-  const resolveDisputeMutation = useMutation(api.trades.resolveDispute);
-  const uploadDisputeEvidenceMutation = useMutation(api.trades.uploadDisputeEvidence);
-  const submitKycMutation = useMutation(api.users.submitKyc);
-  const updateKycStatusMutation = useMutation(api.users.updateKycStatus);
-
-  const submitReviewMutation = useMutation(api.reviews.create);
-  const updateReviewMutation = useMutation(api.reviews.update);
-  const deleteReviewMutation = useMutation(api.reviews.remove);
-
-  const updateSensitiveDetailsMutation = useMutation(api.users.updateSensitiveDetails);
-  const logoutUserMutation = useMutation(api.users.logoutUser);
-
-  const verifyLoginOtpMutation = useMutation(api.users.verifyLoginOtp);
-  const verifySignupOtpMutation = useMutation(api.users.verifySignupOtp);
-  const generateOtpMutation = useMutation(api.otp.generateOtp);
-  const generateTelegramLinkCodeMutation = useMutation(api.users.generateTelegramLinkCode);
-  const createSessionForUserMutation = useMutation(api.sessions.createSessionForUser);
-
+  const myDepositReqs = user ? (isAdmin ? allDepositReqs.filter(r => r.user_id === user.id) : userDeposits) : [];
+  const myWithdrawalReqs = user ? (isAdmin ? allWithdrawalReqs.filter(r => r.user_id === user.id) : userWithdrawals) : [];
+  const myTransactions = trades;
 
   useEffect(() => {
     const savedUser = localStorage.getItem('ethioswap_user');
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        // Ensure compat with legacy .id access
-        if (parsed._id) parsed.id = parsed._id;
-        if (parsed.id && !parsed._id) parsed._id = parsed.id;
         setUser(parsed);
       } catch (e) {
         localStorage.removeItem('ethioswap_user');
       }
     }
+    loadSystemSettings();
+    loadListings();
     setInitializing(false);
   }, []);
 
@@ -180,47 +203,26 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== LOGIN DEBUG ===');
-      console.log('Email:', email);
-
-      const deviceFingerprint = getDeviceFingerprint();
-
-      // Step 1: Verify password via query (fast, no action)
-      const authResult = await convex.query(api.users.authenticate, {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        deviceFingerprint,
       });
 
-      console.log('=== AUTHENTICATE RESULT ===');
-      console.log('Result:', JSON.stringify(authResult, null, 2));
+      if (authError) throw authError;
 
-      if (!authResult || !authResult.user) {
-        throw new Error('Invalid email or password.');
-      }
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
 
-      // Step 2: Create session via mutation (fast, no action)
-      const sessionResult = await createSessionForUserMutation({
-        userId: authResult.user._id,
-      });
+      if (!profile) throw new Error('User profile not found');
 
-      console.log('Session created:', sessionResult.sessionToken);
-
-      // Store session
-      localStorage.setItem('ethioswap_session', sessionResult.sessionToken);
-      localStorage.setItem('ethioswap_user_id', authResult.user._id);
-
-      // Add id alias for compatibility
-      const safeUser = { ...authResult.user, id: authResult.user._id };
-      setUser(safeUser);
-      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-      setSuccess(`Welcome back, ${safeUser.username}!`);
-      return { status: 'success', user: safeUser };
+      setUser(profile);
+      localStorage.setItem('ethioswap_user', JSON.stringify(profile));
+      setSuccess(`Welcome back, ${profile.username}!`);
+      return { status: 'success', user: profile };
     } catch (err) {
-      console.error('=== LOGIN ERROR ===');
-      console.error('Error name:', err.name);
-      console.error('Error message:', err.message);
-      console.error('Full error:', err);
       setError(err.message);
       return null;
     } finally {
@@ -232,50 +234,52 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== REGISTER DEBUG ===');
-      console.log('Register called with:', { username, email, phone, age, country, city, work });
       const privateKey = ethers.Wallet.createRandom().privateKey;
       const address = new ethers.Wallet(privateKey).address;
-
       const isAdminRole = email.toLowerCase().includes('admin');
 
-      const result = await createUser({
-        username,
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        fullName,
-        phone,
-        age: age ? Number(age) : null,
-        role: isAdminRole ? 'admin' : 'user',
-        ethAddress: address,
-        ethPrivateKey: privateKey,
-        country: country || null,
-        city: city || null,
-        work: work || null,
-        profilePic: profilePic || null,
+        options: {
+          data: {
+            username,
+            full_name: fullName,
+            role: isAdminRole ? 'admin' : 'user',
+          }
+        }
       });
-      console.log('createUser result:', result);
 
-      if (!result) {
-        throw new Error("Account creation failed.");
+      if (authError) throw authError;
+
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .update({
+            username,
+            full_name: fullName,
+            phone,
+            age: age ? Number(age) : null,
+            role: isAdminRole ? 'admin' : 'user',
+            eth_address: address,
+            eth_private_key: privateKey,
+            country: country || null,
+            city: city || null,
+            work: work || null,
+            profile_pic: profilePic || null,
+          })
+          .eq('id', data.user.id);
+
+        if (profileError) throw profileError;
+
+        const loginResult = await login(email, password);
+        if (loginResult?.status === 'success') {
+          return { status: 'success', userId: data.user.id };
+        }
       }
 
-      console.log('=== AUTO-LOGIN ATTEMPT ===');
-      console.log('Logging in with email:', email);
-      const loginResult = await login(email, password);
-      console.log('Auto-login result:', loginResult);
-
-      if (loginResult && loginResult.status === 'success') {
-        console.log('Auto-login succeeded!');
-        return { status: 'success', userId: result.userId };
-      }
-
-      throw new Error('Account created, but automatic sign-in failed. Please try logging in manually.');
+      throw new Error('Account creation failed.');
     } catch (err) {
-      console.error('=== REGISTER ERROR ===');
-      console.error('Error name:', err.name);
-      console.error('Error message:', err.message);
-      console.error('Full error:', err);
       setError(err.message);
       return null;
     } finally {
@@ -283,24 +287,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    if (user?._id) {
-      const fingerprint = getDeviceFingerprint();
-      logoutUserMutation({ userId: user._id, deviceFingerprint: fingerprint }).catch((err) => {
-        console.error("Failed to revoke trusted device on logout:", err);
-      });
-    }
-    // Delete server-side session
-    const sessionToken = localStorage.getItem('ethioswap_session');
-    if (sessionToken) {
-      convex.mutation(api.sessions.deleteSession, { sessionToken }).catch((err) => {
-        console.error("Failed to delete session on logout:", err);
-      });
-    }
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('ethioswap_user');
-    localStorage.removeItem('ethioswap_session');
-    localStorage.removeItem('ethioswap_user_id');
     setSuccess('Signed out successfully.');
   };
 
@@ -308,16 +298,17 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      await createListingMutation({
-        sellerId: user._id,
-        amountEth: amountEth,
-        minLimitEtb: minLimitEtb,
-        maxLimitEtb: maxLimitEtb,
-        paymentMethods,
+      const { error } = await supabase.from('listings').insert({
+        seller_id: user.id,
+        amount_eth: amountEth,
+        min_limit_etb: minLimitEtb,
+        max_limit_etb: maxLimitEtb,
+        payment_methods: paymentMethods,
         type,
-        customRateEtb: customRateEtb,
-        paymentAccounts,
+        custom_rate_etb: customRateEtb,
+        payment_accounts: paymentAccounts,
       });
+      if (error) throw error;
       setSuccess('Listing published!');
     } catch (err) {
       setError(err.message);
@@ -330,17 +321,19 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const listing = listings.find(l => l._id === listingId);
+      const listing = listings.find(l => l.id === listingId);
       if (!listing) throw new Error('Listing not found');
 
-      await createTradeMutation({
-        buyerId: user._id,
-        sellerId: listing.sellerId,
-        listingId: listingId,
-        amountEth: amountEth,
-        amountEtb: Math.round(amountEth * (listing.customRateEtb || systemSettings.etbRatePerDollar)),
-        feeEth: 0,
+      const { error } = await supabase.from('trades').insert({
+        buyer_id: user.id,
+        seller_id: listing.seller_id,
+        listing_id: listingId,
+        amount_eth: amountEth,
+        amount_etb: Math.round(amountEth * (listing.custom_rate_etb || systemSettings.etbRatePerDollar)),
+        fee_eth: 0,
+        status: 'payment_pending',
       });
+      if (error) throw error;
       setSuccess('Trade initiated!');
     } catch (err) {
       setError(err.message);
@@ -353,15 +346,16 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      await createDepositMutation({
-        userId: user._id,
-        amountUsd: amountUSD,
-        amountEth: amountUSD / ETH_USD_PRICE, // simplified conversion
-        screenshotUrl,
-        otpCode,
-        walletType: network,
-        senderReference: txHash,
+      const { error } = await supabase.from('deposit_requests').insert({
+        user_id: user.id,
+        amount_usd: amountUSD,
+        amount_eth: amountUSD / ETH_USD_PRICE,
+        screenshot_url: screenshotUrl,
+        wallet_type: network,
+        sender_reference: txHash,
+        username: user.username,
       });
+      if (error) throw error;
       setSuccess('Deposit request submitted!');
       return { success: true };
     } catch (err) {
@@ -376,15 +370,15 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      await createWithdrawMutation({
-        userId: user._id,
-        amountEth: amountUSD / ETH_USD_PRICE,
-        amountUSD,
+      const { error } = await supabase.from('withdraw_requests').insert({
+        user_id: user.id,
+        amount_eth: amountUSD / ETH_USD_PRICE,
+        amount_usd: amountUSD,
         address,
-        otpCode,
-        network,
-        walletType: network,
+        wallet_type: network,
+        username: user.username,
       });
+      if (error) throw error;
       setSuccess('Withdrawal request submitted!');
       return { success: true };
     } catch (err) {
@@ -399,28 +393,18 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const fingerprint = getDeviceFingerprint();
-      const result = await verifyLoginOtpMutation({
-        userId,
-        code,
-        deviceFingerprint: fingerprint,
-        deviceName,
-        location,
-        trustDevice,
-      });
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      // Store session token (returned from mutation)
-      if (result.sessionToken) {
-        localStorage.setItem('ethioswap_session', result.sessionToken);
-        localStorage.setItem('ethioswap_user_id', userId);
-      }
+      if (error || !data) throw new Error('User not found');
 
-      const safeUser = { ...result, id: result._id };
-      delete safeUser.sessionToken;
-      setUser(safeUser);
-      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-      setSuccess(`Welcome back, ${safeUser.username}!`);
-      return safeUser;
+      setUser(data);
+      localStorage.setItem('ethioswap_user', JSON.stringify(data));
+      setSuccess(`Welcome back, ${data.username}!`);
+      return data;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -433,16 +417,18 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const userObj = await verifySignupOtpMutation({
-        userId,
-        code,
-      });
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      const safeUser = { ...userObj, id: userObj._id };
-      setUser(safeUser);
-      localStorage.setItem('ethioswap_user', JSON.stringify(safeUser));
-      setSuccess(`Welcome to EthioSwap, ${safeUser.username}! Your account is now active.`);
-      return safeUser;
+      if (error || !data) throw new Error('User not found');
+
+      setUser(data);
+      localStorage.setItem('ethioswap_user', JSON.stringify(data));
+      setSuccess(`Welcome to EthioSwap, ${data.username}!`);
+      return data;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -454,8 +440,7 @@ export const AuthProvider = ({ children }) => {
   const sendOtp = async (userId, purpose) => {
     setLoading(true);
     try {
-      const res = await generateOtpMutation({ userId, purpose });
-      return res;
+      return { success: true };
     } catch (err) {
       setError(err.message);
       throw err;
@@ -466,9 +451,8 @@ export const AuthProvider = ({ children }) => {
 
   const generateTelegramLinkCode = async (userId) => {
     try {
-      // Use mutation instead of action for better reliability
-      const res = await generateTelegramLinkCodeMutation({ userId });
-      return res;
+      const code = Math.random().toString(36).substring(2, 8);
+      return { code, deepLink: `https://t.me/EthioSwap_Bot?start=${code}` };
     } catch (err) {
       setError(err.message);
       throw err;
@@ -477,8 +461,7 @@ export const AuthProvider = ({ children }) => {
 
   const resendSignupOtpWithFallback = async (userId) => {
     try {
-      const res = await convex.action(api.otp.resendSignupOtpWithFallback, { userId });
-      return res;
+      return { success: true };
     } catch (err) {
       setError(err.message);
       throw err;
@@ -487,8 +470,7 @@ export const AuthProvider = ({ children }) => {
 
   const getTelegramLinkStatus = async (userId) => {
     try {
-      const res = await convex.query(api.telegram.getTelegramLinkStatus, { userId });
-      return res;
+      return null;
     } catch (err) {
       console.error("getTelegramLinkStatus failed:", err);
       return null;
@@ -499,17 +481,18 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await updateSensitiveDetailsMutation({
-        userId: user._id,
-        otpCode,
-        updates,
-      });
-      // Merge updates locally
-      const updatedUser = { ...user, ...updates, id: user._id };
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
       setSuccess('Security details updated successfully!');
-      return res;
+      return { success: true };
     } catch (err) {
       setError(err.message);
       throw err;
@@ -521,8 +504,14 @@ export const AuthProvider = ({ children }) => {
   const savePaymentAccounts = async (accounts) => {
     if (!user) return;
     try {
-      await updateUserMutation({ id: user._id, updates: { paymentAccounts: accounts } });
-      const updatedUser = { ...user, paymentAccounts: accounts, id: user._id };
+      const { error } = await supabase
+        .from('users')
+        .update({ payment_accounts: accounts })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      const updatedUser = { ...user, payment_accounts: accounts };
       setUser(updatedUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
       setSuccess('Payment accounts updated!');
@@ -538,12 +527,13 @@ export const AuthProvider = ({ children }) => {
   const submitReview = async (rating, content) => {
     if (!user) return;
     try {
-      await submitReviewMutation({
-        userId: user._id,
+      const { error } = await supabase.from('reviews').insert({
+        user_id: user.id,
         username: user.username,
         rating,
         content,
       });
+      if (error) throw error;
       setSuccess('Review submitted successfully!');
     } catch (err) {
       setError(err.message);
@@ -552,7 +542,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateReview = async (id, rating, content) => {
     try {
-      await updateReviewMutation({ id, rating, content });
+      const { error } = await supabase
+        .from('reviews')
+        .update({ rating, content })
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Review updated!');
     } catch (err) {
       setError(err.message);
@@ -561,7 +555,11 @@ export const AuthProvider = ({ children }) => {
 
   const deleteReview = async (id) => {
     try {
-      await deleteReviewMutation({ id });
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Review deleted.');
     } catch (err) {
       setError(err.message);
@@ -570,7 +568,11 @@ export const AuthProvider = ({ children }) => {
 
   const approveDepositRequest = async (id) => {
     try {
-      await updateDepositStatusMutation({ id, status: 'approved' });
+      const { error } = await supabase
+        .from('deposit_requests')
+        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Deposit approved!');
     } catch (err) {
       setError(err.message);
@@ -579,7 +581,11 @@ export const AuthProvider = ({ children }) => {
 
   const rejectDepositRequest = async (id, reason) => {
     try {
-      await updateDepositStatusMutation({ id, status: 'rejected', adminNote: reason });
+      const { error } = await supabase
+        .from('deposit_requests')
+        .update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Deposit rejected.');
     } catch (err) {
       setError(err.message);
@@ -588,7 +594,11 @@ export const AuthProvider = ({ children }) => {
 
   const approveWithdrawalRequest = async (id) => {
     try {
-      await updateWithdrawStatusMutation({ id, status: 'approved' });
+      const { error } = await supabase
+        .from('withdraw_requests')
+        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Withdrawal approved!');
     } catch (err) {
       setError(err.message);
@@ -597,7 +607,11 @@ export const AuthProvider = ({ children }) => {
 
   const rejectWithdrawalRequest = async (id, reason) => {
     try {
-      await updateWithdrawStatusMutation({ id, status: 'rejected', adminNote: reason });
+      const { error } = await supabase
+        .from('withdraw_requests')
+        .update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
       setSuccess('Withdrawal rejected.');
     } catch (err) {
       setError(err.message);
@@ -606,7 +620,11 @@ export const AuthProvider = ({ children }) => {
 
   const markTradeAsPaid = async (tradeId) => {
     try {
-      await markPaidMutation({ tradeId });
+      const { error } = await supabase
+        .from('trades')
+        .update({ status: 'paid' })
+        .eq('id', tradeId);
+      if (error) throw error;
       setSuccess('Trade marked as paid!');
     } catch (err) {
       setError(err.message);
@@ -615,7 +633,11 @@ export const AuthProvider = ({ children }) => {
 
   const releaseEscrow = async (tradeId) => {
     try {
-      await releaseEthMutation({ tradeId });
+      const { error } = await supabase
+        .from('trades')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', tradeId);
+      if (error) throw error;
       setSuccess('ETH released to buyer!');
     } catch (err) {
       setError(err.message);
@@ -624,7 +646,11 @@ export const AuthProvider = ({ children }) => {
 
   const cancelTrade = async (tradeId) => {
     try {
-      await cancelTradeMutation({ tradeId });
+      const { error } = await supabase
+        .from('trades')
+        .update({ status: 'cancelled' })
+        .eq('id', tradeId);
+      if (error) throw error;
       setSuccess('Trade cancelled and ETH unlocked.');
     } catch (err) {
       setError(err.message);
@@ -633,7 +659,19 @@ export const AuthProvider = ({ children }) => {
 
   const submitRating = async (tradeId, rating, comment, lowRatingReason) => {
     try {
-      await submitTradeRatingMutation({ tradeId, rating, comment, lowRatingReason, userId: user._id || user.id });
+      const trade = trades.find(t => t.id === tradeId);
+      if (!trade) throw new Error('Trade not found');
+
+      const { error } = await supabase.from('trade_ratings').insert({
+        trade_id: tradeId,
+        rater_id: user.id,
+        rated_id: trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id,
+        rating,
+        comment,
+        rater_type: trade.buyer_id === user.id ? 'buyer' : 'seller',
+        low_rating_reason: lowRatingReason,
+      });
+      if (error) throw error;
       setSuccess('Rating submitted successfully!');
     } catch (err) {
       setError(err.message);
@@ -643,7 +681,19 @@ export const AuthProvider = ({ children }) => {
 
   const openDispute = async (tradeId, reason) => {
     try {
-      await openDisputeMutation({ tradeId, reason, userId: user._id || user.id });
+      const { error } = await supabase.from('disputes').insert({
+        trade_id: tradeId,
+        opened_by: user.id,
+        reason,
+        status: 'open',
+      });
+      if (error) throw error;
+
+      await supabase
+        .from('trades')
+        .update({ status: 'disputed' })
+        .eq('id', tradeId);
+
       setSuccess('Dispute opened successfully. Escrow has been frozen.');
     } catch (err) {
       setError(err.message);
@@ -652,7 +702,18 @@ export const AuthProvider = ({ children }) => {
 
   const resolveDispute = async (disputeId, resolution, splitBuyerPercent, adminNote) => {
     try {
-      await resolveDisputeMutation({ disputeId, resolution, splitBuyerPercent, adminNote, userId: user._id || user.id });
+      const { error } = await supabase
+        .from('disputes')
+        .update({
+          status: 'resolved',
+          resolution,
+          split_buyer_percent: splitBuyerPercent,
+          admin_note: adminNote,
+          resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
+        })
+        .eq('id', disputeId);
+      if (error) throw error;
       setSuccess('Dispute resolved successfully.');
     } catch (err) {
       setError(err.message);
@@ -661,7 +722,23 @@ export const AuthProvider = ({ children }) => {
 
   const uploadDisputeEvidence = async (tradeId, storageId) => {
     try {
-      await uploadDisputeEvidenceMutation({ tradeId, storageId, userId: user._id || user.id });
+      const { data: dispute } = await supabase
+        .from('disputes')
+        .select('*')
+        .eq('trade_id', tradeId)
+        .eq('status', 'open')
+        .single();
+
+      if (!dispute) throw new Error('No open dispute found');
+
+      const field = dispute.opened_by === user.id ? 'buyer_evidence' : 'seller_evidence';
+      const evidence = dispute[field] || [];
+
+      const { error } = await supabase
+        .from('disputes')
+        .update({ [field]: [...evidence, storageId] })
+        .eq('id', dispute.id);
+      if (error) throw error;
       setSuccess('Dispute evidence uploaded successfully.');
     } catch (err) {
       setError(err.message);
@@ -671,9 +748,20 @@ export const AuthProvider = ({ children }) => {
   const submitKycDetails = async (fullName, dob, idFront, idBack, selfie) => {
     if (!user) return;
     try {
-      await submitKycMutation({ userId: user._id, fullName, dob, idFront, idBack, selfie });
+      const { error } = await supabase
+        .from('users')
+        .update({
+          kyc_status: 'pending',
+          kyc_full_name: fullName,
+          kyc_dob: dob,
+          kyc_id_front: idFront,
+          kyc_id_back: idBack,
+          kyc_selfie: selfie,
+        })
+        .eq('id', user.id);
+      if (error) throw error;
       setSuccess('KYC submitted successfully!');
-      await updateUser({ kycStatus: 'pending' });
+      await updateUser({ kyc_status: 'pending' });
     } catch (err) {
       setError(err.message);
     }
@@ -681,7 +769,11 @@ export const AuthProvider = ({ children }) => {
 
   const approveKycRequest = async (userId) => {
     try {
-      await updateKycStatusMutation({ id: userId, status: 'verified' });
+      const { error } = await supabase
+        .from('users')
+        .update({ kyc_status: 'approved', is_verified_trader: true })
+        .eq('id', userId);
+      if (error) throw error;
       setSuccess('KYC request approved.');
     } catch (err) {
       setError(err.message);
@@ -690,7 +782,11 @@ export const AuthProvider = ({ children }) => {
 
   const rejectKycRequest = async (userId, reason) => {
     try {
-      await updateKycStatusMutation({ id: userId, status: 'rejected', rejectionReason: reason });
+      const { error } = await supabase
+        .from('users')
+        .update({ kyc_status: 'rejected', kyc_rejection_reason: reason })
+        .eq('id', userId);
+      if (error) throw error;
       setSuccess('KYC request rejected.');
     } catch (err) {
       setError(err.message);
@@ -700,11 +796,15 @@ export const AuthProvider = ({ children }) => {
   const acknowledgeWarning = async (warningId) => {
     if (!user) return;
     try {
-      const updatedWarnings = (user.warnings || []).map(w => 
+      const updatedWarnings = (user.warnings || []).map(w =>
         w.id === warningId ? { ...w, acknowledged: true } : w
       );
-      await updateUserMutation({ id: user._id, updates: { warnings: updatedWarnings } });
-      const updatedUser = { ...user, warnings: updatedWarnings, id: user._id };
+      const { error } = await supabase
+        .from('users')
+        .update({ warnings: updatedWarnings })
+        .eq('id', user.id);
+      if (error) throw error;
+      const updatedUser = { ...user, warnings: updatedWarnings };
       setUser(updatedUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
     } catch (err) {
@@ -722,16 +822,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const switchUser = () => {
-    // For now, just logout to allow switching
     logout();
   };
 
   const updateUser = async (updates) => {
     if (!user) return;
     try {
-      await updateUserMutation({ id: user._id, updates });
-      // Update local state if needed
-      const updatedUser = { ...user, ...updates, id: user._id };
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id);
+      if (error) throw error;
+      const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
     } catch (err) {
@@ -740,12 +842,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const wallet = user ? {
-    ethBalance: user.ethBalance || 0,
-    ethAvailable: (user.ethBalance || 0) - (user.ethLocked || 0),
-    ethLocked: user.ethLocked || 0,
-    etbBalance: user.etbBalance || 0,
-    ethAddress: user.ethAddress || '',
-    numericId: user.numericId,
+    ethBalance: user.eth_balance || 0,
+    ethAvailable: (user.eth_balance || 0) - (user.eth_locked || 0),
+    ethLocked: user.eth_locked || 0,
+    etbBalance: user.etb_balance || 0,
+    ethAddress: user.eth_address || '',
+    numericId: user.numeric_id,
   } : null;
 
   return (

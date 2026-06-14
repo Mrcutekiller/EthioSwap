@@ -4,7 +4,8 @@
   "installCommand": "npm --prefix frontend install",
   "framework": null,
   "env": {
-    "VITE_CONVEX_URL": "https://tangible-nightingale-795.convex.cloud"
+    "VITE_SUPABASE_URL": "https://gsiyofpzydlkgwpuxmbh.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzaXlvZnB6eWRsa2d3cHV4bWJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQ2MzMsImV4cCI6MjA5NjAwMDYzM30.iIveuTPYl1ZBUxBz1SRdTvGTG25VkcmOwVL6FebWs_0"
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
