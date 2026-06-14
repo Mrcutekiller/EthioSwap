@@ -600,7 +600,7 @@ export const AuthProvider = ({ children }) => {
         .eq('id', id);
       if (updateErr) throw updateErr;
 
-      setSuccess(`Withdrawal approved! $${totalDeduction.toFixed(2)} deducted (incl. $${platformFee.toFixed(2)} fee).`);
+      setSuccess(`Success! $${withdrawAmount.toFixed(2)} sent to ${req.address || 'wallet'} ($${platformFee.toFixed(2)} fee deducted).`);
     } catch (err) {
       setError(err.message);
     }

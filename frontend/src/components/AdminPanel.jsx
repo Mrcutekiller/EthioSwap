@@ -202,6 +202,8 @@ const AdminPanel = ({ user }) => {
   const [resubmitUserId, setResubmitUserId] = useState(null);
   const [resubmitReason, setResubmitReason] = useState('');
   const [submittingResubmit, setSubmittingResubmit] = useState(false);
+  const [processingWithdrawalId, setProcessingWithdrawalId] = useState(null);
+  const [processingDepositId, setProcessingDepositId] = useState(null);
 
   // Search, Filters & Sorting states for tables
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -433,19 +435,24 @@ const AdminPanel = ({ user }) => {
     }
   };
   const handleWithdrawal = async (requestId, approve) => {
-    try {
-      if (approve) {
+    if (approve) {
+      setProcessingWithdrawalId(requestId);
+      showAlert('Processing withdrawal...');
+      try {
         await approveWithdrawalRequest(requestId);
-        showAlert('✓ Withdrawal approved and processed!');
-      } else {
-        const note = prompt('Please specify a rejection reason:');
-        if (note === null) return;
-        if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
+        showAlert('✓ Withdrawal approved! Funds sent to user wallet.');
+      } catch (e) { showAlert(e.message, 'error'); }
+      finally { setProcessingWithdrawalId(null); setSelectedWithdrawDetailId(null); }
+    } else {
+      const note = prompt('Please specify a rejection reason:');
+      if (note === null) return;
+      if (!note.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
+      try {
         await rejectWithdrawalRequest(requestId, note);
         showAlert('Withdrawal rejected and refunded.');
-      }
+      } catch (e) { showAlert(e.message, 'error'); }
       setSelectedWithdrawDetailId(null);
-    } catch (e) { showAlert(e.message, 'error'); }
+    }
   };
 
   const handleKYC = async (userId, approve) => {
@@ -592,11 +599,13 @@ const AdminPanel = ({ user }) => {
   };
   const handleApproveDeposit = async (id) => {
     if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
+    setProcessingDepositId(id);
+    showAlert('Processing deposit...');
     try {
       await approveDepositRequest(id);
-      showAlert('✓ Deposit approved and wallet credited!');
-      setSelectedDepositDetailId(null);
+      showAlert('✓ Deposit approved! Balance credited to user wallet.');
     } catch (err) { showAlert(err.message, 'error'); }
+    finally { setProcessingDepositId(null); setSelectedDepositDetailId(null); }
   };
 
   const handleRejectDeposit = async (id) => {
@@ -1995,10 +2004,10 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleApproveDeposit(req._id)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
-                                    ✓ Approve
+                                  <button onClick={() => handleApproveDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req._id ? 0.6 : 1 }}>
+                                    {processingDepositId === req._id ? '⏳ Processing...' : '✓ Approve'}
                                   </button>
-                                  <button onClick={() => handleRejectDeposit(req._id)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleRejectDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req._id ? 0.6 : 1 }}>
                                     Reject
                                   </button>
                                 </div>
@@ -2182,10 +2191,10 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleWithdrawal(req._id, true)} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px' }}>
-                                    ✓ Approve
+                                  <button onClick={() => handleWithdrawal(req._id, true)} disabled={processingWithdrawalId === req._id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
+                                    {processingWithdrawalId === req._id ? '⏳ Processing...' : '✓ Approve'}
                                   </button>
-                                  <button onClick={() => handleWithdrawal(req._id, false)} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px' }}>
+                                  <button onClick={() => handleWithdrawal(req._id, false)} disabled={processingWithdrawalId === req._id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
                                     Reject
                                   </button>
                                 </div>
@@ -3943,10 +3952,10 @@ const user = await ctx.db
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleApproveDeposit(req._id)} className="btn-premium-primary" style={{ flex: 1 }}>
-                    ✓ Approve & Credit Funds
+                  <button onClick={() => handleApproveDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-primary" style={{ flex: 1, opacity: processingDepositId === req._id ? 0.6 : 1 }}>
+                    {processingDepositId === req._id ? '⏳ Processing Deposit & Crediting...' : '✓ Approve & Credit Funds'}
                   </button>
-                  <button onClick={() => handleRejectDeposit(req._id)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleRejectDeposit(req._id)} disabled={processingDepositId === req._id} className="btn-premium-danger" style={{ flex: 1, opacity: processingDepositId === req._id ? 0.6 : 1 }}>
                     Reject
                   </button>
                 </div>
@@ -4021,10 +4030,10 @@ const user = await ctx.db
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleWithdrawal(req._id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
-                    ✓ Approve & Process
+                  <button onClick={() => handleWithdrawal(req._id, true)} disabled={processingWithdrawalId === req._id} className="btn-premium-primary" style={{ flex: 1, opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
+                    {processingWithdrawalId === req._id ? '⏳ Processing Withdrawal...' : '✓ Approve & Process'}
                   </button>
-                  <button onClick={() => handleWithdrawal(req._id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                  <button onClick={() => handleWithdrawal(req._id, false)} disabled={processingWithdrawalId === req._id} className="btn-premium-danger" style={{ flex: 1, opacity: processingWithdrawalId === req._id ? 0.6 : 1 }}>
                     Reject
                   </button>
                 </div>
