@@ -510,12 +510,39 @@ export const AuthProvider = ({ children }) => {
 
   const approveDepositRequest = async (id) => {
     try {
-      const { error } = await supabase
+      const { data: req, error: fetchErr } = await supabase
+        .from('deposit_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
+      const depositAmount = req.amount_usd || 0;
+      const platformFee = depositAmount * platformFeePercent / 100;
+      const netCredit = Math.max(0, depositAmount - platformFee);
+
+      const { error: updateErr } = await supabase
         .from('deposit_requests')
         .update({ status: 'approved', reviewed_at: new Date().toISOString() })
         .eq('id', id);
-      if (error) throw error;
-      setSuccess('Deposit approved!');
+      if (updateErr) throw updateErr;
+
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', req.user_id)
+        .single();
+      if (userErr) throw userErr;
+
+      const newBalance = (userData?.eth_balance || 0) + netCredit;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', req.user_id);
+      if (balanceErr) throw balanceErr;
+
+      setSuccess(`Deposit approved! $${netCredit.toFixed(2)} credited (${platformFeePercent}% fee deducted).`);
     } catch (err) {
       setError(err.message);
     }
@@ -536,12 +563,44 @@ export const AuthProvider = ({ children }) => {
 
   const approveWithdrawalRequest = async (id) => {
     try {
-      const { error } = await supabase
+      const { data: req, error: fetchErr } = await supabase
+        .from('withdraw_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const platformFeePercent = systemSettings?.withdrawal_fee_percent ?? 5.0;
+      const withdrawAmount = req.amount_usd || 0;
+      const platformFee = withdrawAmount * platformFeePercent / 100;
+      const totalDeduction = withdrawAmount + platformFee;
+
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', req.user_id)
+        .single();
+      if (userErr) throw userErr;
+
+      const currentBalance = userData?.eth_balance || 0;
+      if (currentBalance < totalDeduction) {
+        throw new Error(`Insufficient balance. Required: $${totalDeduction.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`);
+      }
+
+      const newBalance = currentBalance - totalDeduction;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', req.user_id);
+      if (balanceErr) throw balanceErr;
+
+      const { error: updateErr } = await supabase
         .from('withdraw_requests')
         .update({ status: 'approved', reviewed_at: new Date().toISOString() })
         .eq('id', id);
-      if (error) throw error;
-      setSuccess('Withdrawal approved!');
+      if (updateErr) throw updateErr;
+
+      setSuccess(`Withdrawal approved! $${totalDeduction.toFixed(2)} deducted (incl. $${platformFee.toFixed(2)} fee).`);
     } catch (err) {
       setError(err.message);
     }
