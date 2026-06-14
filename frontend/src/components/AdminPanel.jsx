@@ -264,7 +264,7 @@ const AdminPanel = ({ user }) => {
     if (!user || user.role !== 'admin') return;
     const load = async () => {
       const [sett, users, kyc, logs, disp, tickets, revs] = await Promise.all([
-        supabase.from('system_settings').select('*').eq('id', 1).single(),
+        supabase.from('system_settings').select('*').limit(1).single(),
         supabase.from('users').select('*'),
         supabase.from('users').select('*').in('kyc_status', ['pending', 'resubmit']),
         supabase.from('admin_audit_logs').select('*').order('created_at', { ascending: false }),
@@ -549,13 +549,9 @@ const AdminPanel = ({ user }) => {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    if (!settings?.id) {
-      showAlert('Error: Settings document not found.', 'error');
-      return;
-    }
     setSavingSettings(true);
     try {
-      await supabase.from('system_settings').update({
+      const updates = {
         etb_rate_per_dollar: parseFloat(etbRate) || 190.0,
         etb_rate_per_dollar_sell: parseFloat(etbRateSell) || 186.0,
         commission_value: parseFloat(commissionValue) || 1.0,
@@ -566,8 +562,17 @@ const AdminPanel = ({ user }) => {
         min_p2p_listing_usd: parseFloat(minP2pListing) || 1.0,
         max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw) || 1000,
         is_p2p_free_period: isP2pFreePeriod,
-        updated_at: new Date().toISOString()
-      }).eq('id', settings.id);
+      };
+      if (settings?.id) {
+        await supabase.from('system_settings').update(updates).eq('id', settings.id);
+      } else {
+        const { data } = await supabase.from('system_settings').select('*').limit(1).single();
+        if (data) {
+          await supabase.from('system_settings').update(updates).eq('id', data.id);
+        } else {
+          await supabase.from('system_settings').insert(updates);
+        }
+      }
       showAlert('Settings saved successfully!');
     } catch (e) { showAlert(e.message, 'error'); }
     finally { setSavingSettings(false); }

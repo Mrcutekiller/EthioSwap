@@ -425,28 +425,28 @@ const DesktopSidebar = ({ page, setPage, user, logout }) => {
   if (user?.role === 'admin') navItems.push({ id: 'admin', icon: 'ti ti-shield-star', label: 'Admin' });
 
   return (
-    <aside style={{ position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
+    <aside style={{ position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh', background: '#0D1117', borderRight: '1px solid #1E2640', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
       <div style={{ padding: '24px 20px 32px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setPage('home')}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px' }}>E</div>
-        <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)' }}>EthioSwap</span>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px' }}>E</div>
+        <span style={{ fontSize: '18px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
       </div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 8px' }}>
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setPage(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: page === item.id ? 'var(--teal)' : 'var(--muted)', background: page === item.id ? 'rgba(0,200,150,0.08)' : 'transparent', borderLeft: page === item.id ? '3px solid var(--teal)' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer' }}>
+          <button key={item.id} onClick={() => setPage(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: page === item.id ? '#F5A623' : '#8A9BB8', background: page === item.id ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: page === item.id ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
             <i className={item.icon} style={{ fontSize: '20px' }}></i>
-            <span>{item.label}</span>
+            <span style={{ fontWeight: page === item.id ? 700 : 500 }}>{item.label}</span>
           </button>
         ))}
       </nav>
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px 20px', borderTop: '1px solid #1E2640', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '13px' }}>{user?.username?.[0]?.toUpperCase() || 'U'}</div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '13px' }}>{user?.username?.[0]?.toUpperCase() || 'U'}</div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{user?.full_name || user?.username || 'User'}</div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{user?.id?.substring(0, 8) || 'ES-XXX'}</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#E5E7EB' }}>{user?.full_name || user?.username || 'User'}</div>
+            <div style={{ fontSize: '11px', color: '#8A9BB8' }}>{user?.role === 'admin' ? 'Admin' : 'User'}</div>
           </div>
         </div>
-        <button onClick={logout} style={{ padding: '8px', borderRadius: '8px', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button onClick={logout} style={{ padding: '8px', borderRadius: '8px', color: '#8A9BB8', background: 'none', border: 'none', cursor: 'pointer' }}>
           <i className="ti ti-logout" style={{ fontSize: '18px' }}></i>
         </button>
       </div>
@@ -464,16 +464,16 @@ const MobileBottomNav = ({ page, setPage }) => {
   ];
 
   return (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'var(--bottom-nav-h)', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px', zIndex: 100 }}>
+    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'var(--bottom-nav-h)', background: '#0D1117', borderTop: '1px solid #1E2640', display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px', zIndex: 100 }}>
       {tabs.map(tab => (
         tab.center ? (
           <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 0, position: 'relative', background: 'none', border: 'none' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '-20px', boxShadow: '0 4px 16px rgba(0,200,150,0.3)' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '-20px', boxShadow: '0 4px 16px rgba(245,166,35,0.3)' }}>
               <i className={tab.icon} style={{ fontSize: '24px' }}></i>
             </div>
           </button>
         ) : (
-          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 12px', color: page === tab.id ? 'var(--teal)' : 'var(--muted)', background: 'none', border: 'none', fontSize: '10px' }}>
+          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 12px', color: page === tab.id ? '#F5A623' : '#8A9BB8', background: 'none', border: 'none', fontSize: '10px' }}>
             <i className={tab.icon} style={{ fontSize: '22px' }}></i>
             <span>{tab.label}</span>
           </button>
@@ -499,6 +499,12 @@ const AppContent = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (user && user.role === 'admin' && page === 'home') {
+      setPage('admin');
+    }
+  }, [user]);
+
   const navigateToSeller = (id) => { setSellerId(id); setPage('sellerProfile'); };
 
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
@@ -515,17 +521,17 @@ const AppContent = () => {
   const pageTitle = PAGE_TITLES[page] || 'EthioSwap';
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', background: '#0B0E1A' }}>
       {isDesktop && <DesktopSidebar page={page} setPage={setPage} user={user} logout={logout} />}
       {!isDesktop && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 90, background: 'rgba(11,14,26,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 90, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1E2640', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--teal)', color: '#04342C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>EthioSwap</span>
+            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
           </div>
-          <button onClick={() => setPage('notifications')} style={{ padding: '8px', position: 'relative', color: 'var(--text)', background: 'none', border: 'none' }}>
+          <button onClick={() => setPage('notifications')} style={{ padding: '8px', position: 'relative', color: '#E5E7EB', background: 'none', border: 'none' }}>
             <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
-            {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--danger)', border: '2px solid var(--bg)' }}></div>}
+            {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', border: '2px solid #0D1117' }}></div>}
           </button>
         </div>
       )}
@@ -536,7 +542,7 @@ const AppContent = () => {
           {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
           {page === 'wallet' && <WalletCard />}
           {page === 'profile' && <ProfilePage />}
-          {page === 'settings' && <SettingsPage />}
+          {page === 'settings' && <SettingsPage user={user} onLogout={logout} />}
           {page === 'transactions' && <TransactionHistory />}
           {page === 'admin' && user.role === 'admin' && <AdminPanel user={user} />}
           {page === 'notifications' && <NotificationsPage setPage={setPage} />}
