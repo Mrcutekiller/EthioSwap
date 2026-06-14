@@ -1,5 +1,5 @@
 import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { sha256Sync } from "./utils";
 import { verifyAndInvalidateOtp } from "./otp";
@@ -103,73 +103,65 @@ export const create = mutation({
     profilePic: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    try {
-      const normalizedUsername = args.username.trim().toLowerCase();
-      const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
-      
-      if (normalizedEmail) {
-        const existing = await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-          .first();
-        if (existing) {
-          throw new Error("Email already registered");
-        }
-      }
+    const normalizedUsername = args.username.trim().toLowerCase();
+    const normalizedEmail = args.email ? args.email.trim().toLowerCase() : null;
 
-      const existingUser = await ctx.db
+    if (normalizedEmail) {
+      const existing = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
         .first();
-      if (existingUser) {
-        throw new Error("Username already taken");
+      if (existing) {
+        throw new ConvexError("Email already registered");
       }
+    }
 
-      let normalizedPhone = args.phone || null;
-      if (args.phone) {
-        try {
-          const result = normalizeEthiopianPhone(args.phone);
-          normalizedPhone = result.e164 || args.phone;
-        } catch {
-          normalizedPhone = args.phone;
-        }
-      }
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+      .first();
+    if (existingUser) {
+      throw new ConvexError("Username already taken");
+    }
 
-      const passwordHash = sha256Sync(args.password);
-      const status = "active";
-      const kycStatus = args.role === "admin" ? "approved" : "none";
+    let passwordHash: string;
+    try {
+      passwordHash = sha256Sync(args.password);
+    } catch (e: any) {
+      throw new ConvexError("Password hashing failed: " + (e?.message || "unknown"));
+    }
 
+    try {
       const userId = await ctx.db.insert("users", {
         username: normalizedUsername,
         email: normalizedEmail,
-        fullName: args.fullName || null,
+        passwordHash,
         role: args.role,
-        phone: normalizedPhone,
         ethAddress: args.ethAddress,
         ethPrivateKey: args.ethPrivateKey,
+        fullName: args.fullName ?? null,
+        phone: args.phone ?? null,
         age: args.age ?? null,
-        country: args.country || null,
-        city: args.city || null,
-        work: args.work || null,
-        profilePic: args.profilePic || null,
-        passwordHash,
+        country: args.country ?? null,
+        city: args.city ?? null,
+        work: args.work ?? null,
+        profilePic: args.profilePic ?? null,
         etbBalance: 0,
         ethBalance: 0,
         ethLocked: 0,
         reputation: 100,
         totalTrades: 0,
         joinedAt: new Date().toISOString(),
-        kycStatus,
+        kycStatus: args.role === "admin" ? "approved" : "none",
         paymentAccounts: [],
         isSuspended: false,
-        status,
+        status: "active",
         smsEnabled: false,
       });
 
       return { userId };
-    } catch (err: any) {
-      console.error("CREATE USER ERROR:", err);
-      throw new Error(err?.message || "Failed to create user");
+    } catch (e: any) {
+      throw new ConvexError("Database insert failed: " + (e?.message || "unknown"));
     }
   },
 });
