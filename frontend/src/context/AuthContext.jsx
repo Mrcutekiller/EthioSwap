@@ -376,7 +376,11 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('deposit_requests').insert({
+      const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
+      const platformFee = amountUSD * platformFeePercent / 100;
+      const netCredit = Math.max(0, amountUSD - platformFee);
+
+      const { error: insertErr } = await supabase.from('deposit_requests').insert({
         user_id: user.id,
         amount_usd: amountUSD,
         amount_eth: amountUSD / ETH_USD_PRICE,
@@ -384,9 +388,27 @@ export const AuthProvider = ({ children }) => {
         wallet_type: network,
         sender_reference: txHash,
         username: user.username,
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
       });
-      if (error) throw error;
-      setSuccess('Deposit request submitted!');
+      if (insertErr) throw insertErr;
+
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', user.id)
+        .single();
+      if (userErr) throw userErr;
+
+      const newBalance = (userData?.eth_balance || 0) + netCredit;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', user.id);
+      if (balanceErr) throw balanceErr;
+
+      setUser(prev => ({ ...prev, eth_balance: newBalance }));
+      setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee).`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -400,16 +422,43 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('withdraw_requests').insert({
+      const platformFeePercent = systemSettings?.withdrawal_fee_percent ?? 5.0;
+      const platformFee = amountUSD * platformFeePercent / 100;
+      const totalDeduction = amountUSD + platformFee;
+
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', user.id)
+        .single();
+      if (userErr) throw userErr;
+
+      const currentBalance = userData?.eth_balance || 0;
+      if (currentBalance < totalDeduction) {
+        throw new Error(`Insufficient balance. Required: $${totalDeduction.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`);
+      }
+
+      const newBalance = currentBalance - totalDeduction;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', user.id);
+      if (balanceErr) throw balanceErr;
+
+      const { error: insertErr } = await supabase.from('withdraw_requests').insert({
         user_id: user.id,
         amount_eth: amountUSD / ETH_USD_PRICE,
         amount_usd: amountUSD,
         address,
         wallet_type: network,
         username: user.username,
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
       });
-      if (error) throw error;
-      setSuccess('Withdrawal request submitted!');
+      if (insertErr) throw insertErr;
+
+      setUser(prev => ({ ...prev, eth_balance: newBalance }));
+      setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address} (${platformFeePercent}% fee).`);
       return { success: true };
     } catch (err) {
       setError(err.message);

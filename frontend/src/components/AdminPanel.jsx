@@ -364,8 +364,6 @@ const AdminPanel = ({ user }) => {
     { id: 'users',     icon: 'ti-users',            title: 'Users',        badge: 0 },
     { id: 'kyc',       icon: 'ti-id-badge',         title: 'KYC',          badge: kycQueue.length },
     { id: 'trades',    icon: 'ti-arrows-right-left',title: 'Trades',       badge: 0 },
-    { id: 'deposits',  icon: 'ti-credit-card',      title: 'Deposits',     badge: pendingDeposits.length },
-    { id: 'withdrawals',icon: 'ti-wallet',           title: 'Withdrawals',  badge: pendingWithdrawals.length },
     { id: 'listings',  icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
     { id: 'reviews',   icon: 'ti-star',             title: 'Reviews',      badge: 0 },
     { id: 'disputes',  icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
