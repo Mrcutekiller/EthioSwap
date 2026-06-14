@@ -155,7 +155,8 @@ const AdminPanel = ({ user }) => {
     resolveDispute,
     logout,
     loadSystemSettings,
-    createListing
+    createListing,
+    trades
   } = useAuth();
 
   const [width, setWidth] = useState(window.innerWidth);
@@ -272,6 +273,7 @@ const AdminPanel = ({ user }) => {
   const [selectedUserTxs, setSelectedUserTxs] = useState([]);
   const [p2pRatingsData, setP2pRatingsData] = useState([]);
   const [userRatingsHistory, setUserRatingsHistory] = useState([]);
+  const [allTrades, setAllTrades] = useState([]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -300,6 +302,7 @@ const AdminPanel = ({ user }) => {
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     supabase.from('listings').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllListings(data || []));
+    supabase.from('trades').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllTrades(data || []));
   }, [user]);
 
   useEffect(() => {
@@ -352,9 +355,9 @@ const AdminPanel = ({ user }) => {
       flaggedAccounts,
       topTraders: topTraders.map(t => ({ id: t.id, username: t.username, trades: t.trade_count || t.total_trades || 0, volume: t.total_volume || 0 })),
       highlyDisputedUsers: [],
-      recentTrades: (trades || []).slice(0, 10).map(r => ({ id: r.id, buyer_name: r.buyer_name, seller_name: r.seller_name, amount_eth: r.amount_eth, amount_etb: r.amount_etb, status: r.status, created_at: r.created_at })),
+      recentTrades: (allTrades || []).slice(0, 10).map(r => ({ id: r.id, buyer_name: r.buyer_name, seller_name: r.seller_name, amount_eth: r.amount_eth, amount_etb: r.amount_etb, status: r.status, created_at: r.created_at })),
     });
-  }, [allUsersList, allDepositReqs, disputes, kycQueue]);
+  }, [allUsersList, allDepositReqs, disputes, kycQueue, allTrades]);
 
   useEffect(() => {
     if (!selectedUserDetailId) return;
