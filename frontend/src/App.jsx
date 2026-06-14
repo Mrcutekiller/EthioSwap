@@ -518,12 +518,13 @@ const AppContent = () => {
   }
 
   const isDesktop = width >= 768;
+  const is_admin_page = page === 'admin' && user?.role === 'admin';
   const pageTitle = PAGE_TITLES[page] || 'EthioSwap';
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0E1A' }}>
-      {isDesktop && <DesktopSidebar page={page} setPage={setPage} user={user} logout={logout} />}
-      {!isDesktop && (
+      {isDesktop && !is_admin_page && <DesktopSidebar page={page} setPage={setPage} user={user} logout={logout} />}
+      {!isDesktop && !is_admin_page && (
         <div style={{ position: 'sticky', top: 0, zIndex: 90, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1E2640', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
@@ -536,7 +537,7 @@ const AppContent = () => {
         </div>
       )}
 
-      <main style={{ marginLeft: isDesktop ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
+      <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
           {page === 'home' && <UserDashboard onNavigate={setPage} onNavigateToSeller={navigateToSeller} />}
           {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
@@ -554,7 +555,7 @@ const AppContent = () => {
       <TradeRoom />
       <SupportWidget />
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
-      {!isDesktop && <MobileBottomNav page={page} setPage={setPage} />}
+      {!isDesktop && !is_admin_page && <MobileBottomNav page={page} setPage={setPage} />}
     </div>
   );
 };
