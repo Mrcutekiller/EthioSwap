@@ -569,6 +569,11 @@ ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES
 -- ============================================
 
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND raw_user_meta_data->>'role' = 'admin')
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 CREATE POLICY "Users can view own profile" ON users
   FOR SELECT USING (auth.uid() = id);
 
@@ -576,14 +581,10 @@ CREATE POLICY "Users can update own profile" ON users
   FOR UPDATE USING (auth.uid() = id);
 
 CREATE POLICY "Admins can view all users" ON users
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR SELECT USING (is_admin());
 
 CREATE POLICY "Admins can update all users" ON users
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR UPDATE USING (is_admin());
 
 CREATE POLICY "Anyone can view active listings" ON listings
   FOR SELECT USING (status = 'active');
@@ -598,9 +599,7 @@ CREATE POLICY "Sellers can update own listings" ON listings
   FOR UPDATE USING (auth.uid() = seller_id);
 
 CREATE POLICY "Admins can manage all listings" ON listings
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 CREATE POLICY "Users can view own trades" ON trades
   FOR SELECT USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
@@ -612,9 +611,7 @@ CREATE POLICY "Users can update own trades" ON trades
   FOR UPDATE USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
 
 CREATE POLICY "Admins can manage all trades" ON trades
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR ALL USING (is_admin());
 
 CREATE POLICY "Users can view own transactions" ON transactions
   FOR SELECT USING (auth.uid() = user_id);
@@ -639,7 +636,7 @@ CREATE POLICY "Users can create reviews" ON reviews
 
 CREATE POLICY "Admins can manage all reviews" ON reviews
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Users can view own disputes" ON disputes
@@ -656,7 +653,7 @@ CREATE POLICY "Users can create disputes" ON disputes
 
 CREATE POLICY "Admins can manage all disputes" ON disputes
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Users can view own tickets" ON support_tickets
@@ -670,7 +667,7 @@ CREATE POLICY "Users can update own tickets" ON support_tickets
 
 CREATE POLICY "Admins can manage all tickets" ON support_tickets
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Users can view own deposits" ON deposit_requests
@@ -681,7 +678,7 @@ CREATE POLICY "Users can create deposits" ON deposit_requests
 
 CREATE POLICY "Admins can manage all deposits" ON deposit_requests
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Users can view own withdrawals" ON withdraw_requests
@@ -692,7 +689,7 @@ CREATE POLICY "Users can create withdrawals" ON withdraw_requests
 
 CREATE POLICY "Admins can manage all withdrawals" ON withdraw_requests
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Users can view trade messages" ON messages
@@ -731,7 +728,7 @@ CREATE POLICY "Anyone can view system settings" ON system_settings
 
 CREATE POLICY "Admins can update system settings" ON system_settings
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Anyone can view exchange rates" ON exchange_rates
@@ -739,7 +736,7 @@ CREATE POLICY "Anyone can view exchange rates" ON exchange_rates
 
 CREATE POLICY "Admins can update exchange rates" ON exchange_rates
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "Anyone can view rate history" ON rate_history
@@ -765,7 +762,7 @@ CREATE POLICY "System can manage login OTPs" ON login_otps
 
 CREATE POLICY "Admins can view audit logs" ON admin_audit_logs
   FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    is_admin()
   );
 
 CREATE POLICY "System can create audit logs" ON admin_audit_logs
