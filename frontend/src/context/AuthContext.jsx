@@ -60,17 +60,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserProfile(session.user.id).then(() => setInitializing(false));
+        loadUserProfile(session.user.id).finally(() => setInitializing(false));
       } else {
+        setUser(null);
         setInitializing(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
+        localStorage.removeItem('ethioswap_user');
+        return;
+      }
+      if (session?.user) {
+        await loadUserProfile(session.user.id);
       }
     });
 
@@ -87,9 +91,30 @@ export const AuthProvider = ({ children }) => {
     if (data) {
       setUser(data);
       localStorage.setItem('ethioswap_user', JSON.stringify(data));
-    } else if (error) {
-      console.error('Failed to load user profile:', error);
+      return data;
     }
+
+    if (error) {
+      console.error('Failed to load user profile:', error);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const newProfile = {
+          id: authUser.id,
+          username: authUser.user_metadata?.username || authUser.email?.split('@')[0],
+          email: authUser.email,
+          full_name: authUser.user_metadata?.full_name || '',
+          role: authUser.user_metadata?.role || 'user',
+          status: 'active',
+        };
+        const { error: insertError } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
+        if (!insertError) {
+          setUser(newProfile);
+          localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
+          return newProfile;
+        }
+      }
+    }
+    return null;
   };
 
   const loadSystemSettings = async () => {
@@ -201,16 +226,10 @@ export const AuthProvider = ({ children }) => {
 
       if (authError) throw authError;
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      const profile = await loadUserProfile(data.user.id);
 
       if (!profile) throw new Error('User profile not found');
 
-      setUser(profile);
-      localStorage.setItem('ethioswap_user', JSON.stringify(profile));
       setSuccess(`Welcome back, ${profile.username}!`);
       return { status: 'success', user: profile };
     } catch (err) {
@@ -264,6 +283,14 @@ export const AuthProvider = ({ children }) => {
 
         if (profileError) throw profileError;
 
+        if (data.session) {
+          const profile = await loadUserProfile(data.user.id);
+          if (profile) {
+            setSuccess(`Welcome to EthioSwap, ${profile.username}!`);
+            return { status: 'success', userId: data.user.id };
+          }
+        }
+
         const loginResult = await login(email, password);
         if (loginResult?.status === 'success') {
           return { status: 'success', userId: data.user.id };
@@ -280,10 +307,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    localStorage.removeItem('ethioswap_user');
-    setSuccess('Signed out successfully.');
+    try {
+      setUser(null);
+      localStorage.removeItem('ethioswap_user');
+      await supabase.auth.signOut();
+      setSuccess('Signed out successfully.');
+    } catch (err) {
+      setUser(null);
+      localStorage.removeItem('ethioswap_user');
+    }
   };
 
   const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type) => {
