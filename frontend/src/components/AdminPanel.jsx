@@ -447,19 +447,21 @@ const AdminPanel = ({ user }) => {
   const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
 
   const navTabs = [
-    { id: 'overview',  icon: 'ti-layout-dashboard', title: 'Dashboard',    badge: 0 },
-    { id: 'users',     icon: 'ti-users',            title: 'Users',        badge: 0 },
-    { id: 'kyc',       icon: 'ti-id-badge',         title: 'KYC',          badge: kycQueue.length },
-    { id: 'trades',    icon: 'ti-arrows-right-left',title: 'Trades',       badge: 0 },
-    { id: 'listings',  icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
-    { id: 'reviews',   icon: 'ti-star',             title: 'Reviews',      badge: 0 },
-    { id: 'disputes',  icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
-    { id: 'support',   icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].sender_id !== user?.id && t.messages[t.messages.length - 1].sender_id !== 'usr_admin').length },
-    { id: 'earnings',  icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
-    { id: 'comms',     icon: 'ti-message-share',    title: 'Comms & OTP Logs', badge: 0 },
-    { id: 'settings',  icon: 'ti-settings',         title: 'System Settings', badge: 0 },
-    { id: 'logs',      icon: 'ti-history',           title: 'Audit Logs',    badge: 0 },
-    { id: 'security',  icon: 'ti-shield-lock',       title: 'Security Center',badge: 0 },
+    { id: 'overview',   icon: 'ti-layout-dashboard', title: 'Dashboard',    badge: 0 },
+    { id: 'deposits',   icon: 'ti-download',         title: 'Deposits',     badge: pendingDeposits.length },
+    { id: 'withdrawals',icon: 'ti-upload',           title: 'Withdrawals',  badge: pendingWithdrawals.length },
+    { id: 'users',      icon: 'ti-users',            title: 'Users',        badge: 0 },
+    { id: 'kyc',        icon: 'ti-id-badge',         title: 'KYC',          badge: kycQueue.length },
+    { id: 'trades',     icon: 'ti-arrows-right-left',title: 'Trades',       badge: 0 },
+    { id: 'listings',   icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
+    { id: 'reviews',    icon: 'ti-star',             title: 'Reviews',      badge: 0 },
+    { id: 'disputes',   icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
+    { id: 'support',    icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].sender_id !== user?.id && t.messages[t.messages.length - 1].sender_id !== 'usr_admin').length },
+    { id: 'earnings',   icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
+    { id: 'comms',      icon: 'ti-message-share',    title: 'Comms & OTP Logs', badge: 0 },
+    { id: 'settings',   icon: 'ti-settings',         title: 'System Settings', badge: 0 },
+    { id: 'logs',       icon: 'ti-history',           title: 'Audit Logs',    badge: 0 },
+    { id: 'security',   icon: 'ti-shield-lock',       title: 'Security Center',badge: 0 },
   ];
 
   // ── Admin User Handlers ─────────────────────────────────────
@@ -1364,6 +1366,166 @@ const AdminPanel = ({ user }) => {
             width: 100%;
           }
         }
+
+        /* ══ PREMIUM INPUTS, SELECTS & TABLES ══ */
+        .input-premium {
+          width: 100%; padding: 10px 14px;
+          background: rgba(8,10,16,0.75);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px; color: #e0e4f0; font-size: 13px;
+          outline: none; transition: all 0.18s ease;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .input-premium:focus {
+          border-color: rgba(245,166,35,0.35);
+          background: rgba(245,166,35,0.02);
+          box-shadow: 0 0 0 3px rgba(245,166,35,0.08);
+        }
+        .input-premium::placeholder { color: #4e5567; }
+        .input-premium:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .select-premium {
+          padding: 10px 14px;
+          background: rgba(8,10,16,0.75);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px; color: #8b92a8; font-size: 13px; font-weight: 600;
+          outline: none; cursor: pointer; font-family: inherit;
+          transition: all 0.18s ease;
+          box-sizing: border-box;
+        }
+        .select-premium:focus {
+          border-color: rgba(245,166,35,0.35);
+          color: #e8eaf0;
+        }
+        .select-premium option {
+          background: #0d1117;
+          color: #e8eaf0;
+        }
+
+        .table-premium { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-premium thead tr {
+          background: rgba(8,10,16,0.85);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .table-premium th {
+          padding: 12px 16px; text-align: left;
+          font-size: 10.5px; font-weight: 800;
+          text-transform: uppercase; letter-spacing: 0.09em; color: #5a6280;
+          white-space: nowrap;
+        }
+        .table-premium td {
+          padding: 14px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          color: #b0b8d0; vertical-align: middle;
+        }
+        .table-premium tbody tr { transition: background 0.15s ease; }
+        .table-premium tbody tr:hover { background: rgba(255,255,255,0.025); }
+        .table-premium tbody tr:last-child td { border-bottom: none; }
+
+        .table-row-clickable { cursor: pointer; }
+        .table-row-clickable:hover { background: rgba(245,166,35,0.03) !important; }
+
+        /* ══ BUTTON STYLES ══ */
+        .btn-premium-ghost {
+          padding: 8px 16px; border-radius: 9px;
+          background: transparent; border: 1px solid rgba(255,255,255,0.1);
+          color: #8b92a8; font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;
+          font-family: inherit;
+        }
+        .btn-premium-ghost:hover {
+          background: rgba(255,255,255,0.05); color: #e0e4f0; border-color: rgba(255,255,255,0.2);
+        }
+
+        .btn-premium-danger {
+          padding: 8px 16px; border-radius: 9px;
+          background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.2);
+          color: #f43f5e; font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;
+          font-family: inherit;
+        }
+        .btn-premium-danger:hover {
+          background: rgba(244,63,94,0.16); color: #ff6b8b; border-color: rgba(244,63,94,0.35);
+        }
+
+        /* === FLOATING BOTTOM BAR === */
+        .floating-bottom-bar {
+          position: fixed;
+          bottom: 24px;
+          left: 276px;
+          right: 28px;
+          background: rgba(17, 19, 24, 0.85);
+          border: 1px solid rgba(0, 200, 150, 0.25);
+          border-radius: 50px;
+          padding: 12px 28px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          z-index: 499;
+          transition: all 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+          .floating-bottom-bar {
+            left: 20px;
+            right: 20px;
+            bottom: 80px; /* offset above mobile bottom nav */
+            padding: 10px 20px;
+            border-radius: 20px;
+          }
+        }
+        @media (max-width: 640px) {
+          .floating-bottom-bar {
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+            text-align: center;
+            border-radius: 16px;
+            bottom: 80px;
+          }
+          .floating-bottom-bar button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+
+        /* === MODALS === */
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .modal-content {
+          background: #0d1117;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 18px;
+          width: 100%;
+          max-width: 500px;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+          position: relative;
+          box-sizing: border-box;
+          animation: modalScale 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalScale {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
       `}</style>
 
       {/* Toast Alert — Premium Slide-In */}
@@ -1463,7 +1625,7 @@ const AdminPanel = ({ user }) => {
         <nav className="flex-1 overflow-y-auto sidebar-nav custom-scrollbar" style={{ padding: '4px 0 12px' }}>
           {/* Management Group */}
           <div className="admin-nav-section-label">Management</div>
-          {navTabs.slice(0, 7).map(t => {
+          {navTabs.slice(0, 9).map(t => {
             const isActive = activeTab === t.id;
             return (
               <button
@@ -1497,7 +1659,7 @@ const AdminPanel = ({ user }) => {
 
           {/* Analytics Group */}
           <div className="admin-nav-section-label" style={{ marginTop: '4px' }}>Analytics & Tools</div>
-          {navTabs.slice(7).map(t => {
+          {navTabs.slice(9).map(t => {
             const isActive = activeTab === t.id;
             return (
               <button
@@ -2222,22 +2384,7 @@ const AdminPanel = ({ user }) => {
               )}
 
               {/* Floating Bottom Sticky Bar */}
-              <div className="floating-bottom-bar" style={{
-                position: 'fixed',
-                bottom: '24px',
-                left: '268px',
-                right: '28px',
-                background: 'rgba(17, 19, 24, 0.85)',
-                border: '1px solid rgba(0, 200, 150, 0.25)',
-                borderRadius: '50px',
-                padding: '12px 28px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                backdropFilter: 'blur(16px)',
-                zIndex: 499
-              }}>
+              <div className="floating-bottom-bar">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <span style={{ fontSize: '18px' }}>💰</span>
                   <div style={{ fontSize: '14px' }}>
