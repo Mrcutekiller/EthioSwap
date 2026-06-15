@@ -166,19 +166,29 @@ export const AuthProvider = ({ children }) => {
       .eq('status', 'active');
 
     if (data) {
-      const listingsWithoutPic = data.filter(l => !l.seller_profile_pic && l.seller_id);
-      if (listingsWithoutPic.length > 0) {
-        const sellerIds = [...new Set(listingsWithoutPic.map(l => l.seller_id))];
+      const sellerIds = [...new Set(data.map(l => l.seller_id).filter(Boolean))];
+      if (sellerIds.length > 0) {
         const { data: sellers } = await supabase
           .from('users')
-          .select('id, profile_pic')
+          .select('id, profile_pic, is_verified_trader, reputation, kyc_status, total_trades')
           .in('id', sellerIds);
         if (sellers) {
-          const picMap = {};
-          sellers.forEach(s => { if (s.profile_pic) picMap[s.id] = s.profile_pic; });
+          const sellerMap = {};
+          sellers.forEach(s => {
+            sellerMap[s.id] = s;
+          });
           data.forEach(l => {
-            if (!l.seller_profile_pic && picMap[l.seller_id]) {
-              l.seller_profile_pic = picMap[l.seller_id];
+            const s = sellerMap[l.seller_id];
+            if (s) {
+              l.isSellerVerifiedTrader = s.is_verified_trader || s.kyc_status === 'approved';
+              l.seller_kyc_status = s.kyc_status;
+              l.sellerReputation = s.reputation ?? 100;
+              l.sellerTotalTrades = s.total_trades ?? 0;
+              l.sellerAverageRating = 5.0;
+              l.sellerPositivePercentage = s.reputation ?? 100;
+              if (!l.seller_profile_pic && s.profile_pic) {
+                l.seller_profile_pic = s.profile_pic;
+              }
             }
           });
         }
@@ -575,14 +585,32 @@ export const AuthProvider = ({ children }) => {
         wallet_type: network,
         sender_reference: txHash,
         username: user.username,
-        status: 'pending',
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
       });
       if (insertErr) throw insertErr;
 
-      // Reload user deposits so the UI updates immediately
-      await loadUserDeposits(user.id);
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', user.id)
+        .single();
+      if (userErr) throw userErr;
 
-      setSuccess(`Deposit request submitted! Once verified, $${netCredit.toFixed(2)} will be credited to your wallet (after a ${platformFeePercent}% platform fee).`);
+      const newBalance = (userData?.eth_balance || 0) + netCredit;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', user.id);
+      if (balanceErr) throw balanceErr;
+
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+      }
+
+      setUser(prev => ({ ...prev, eth_balance: newBalance }));
+      setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee deducted).`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -626,12 +654,18 @@ export const AuthProvider = ({ children }) => {
         address,
         wallet_type: network,
         username: user.username,
-        status: 'pending',
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
       });
       if (insertErr) throw insertErr;
 
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+      }
+
       setUser(prev => ({ ...prev, eth_balance: newBalance }));
-      setSuccess(`Withdrawal request submitted! $${amountUSD.toFixed(2)} is pending admin approval.`);
+      setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address.substring(0, 10)}... (${platformFeePercent}% fee deducted).`);
       return { success: true };
     } catch (err) {
       setError(err.message);

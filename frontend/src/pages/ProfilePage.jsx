@@ -523,6 +523,10 @@ const ProfilePage = () => {
                       <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Volume</span>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>${(user.total_volume || 0).toLocaleString()}</span>
                     </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '8px', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>Reputation</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#00C896' }}>{user.reputation ?? 100}%</span>
+                    </div>
                   </div>
 
                   <div style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 700, marginTop: '4px' }}>MEMBER SINCE {joinDate.split(' ')[1]?.toUpperCase() || '2026'}</div>
@@ -565,6 +569,23 @@ const ProfilePage = () => {
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>ETB Balance</span>
           <div style={{ fontSize: '20px', fontWeight: 600, color: '#F5A623' }}>ETB {(user.etb_balance ?? 0).toFixed(2)}</div>
           <span style={{ fontSize: '10px', color: 'var(--muted)' }}>Ethiopian Birr</span>
+        </div>
+      </div>
+
+      <div className="stat-card" style={{ marginTop: '12px', background: 'linear-gradient(135deg, rgba(245,166,35,0.04) 0%, rgba(255,255,255,0.01) 100%)', border: '1px solid rgba(245,166,35,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Trust Score & Reputation</span>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#00C896', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span>⭐ {user.reputation ?? 100}%</span>
+              {(user.is_verified_trader || user.kyc_status === 'approved') && (
+                <span style={{ background: 'rgba(245,166,35,0.15)', color: '#F5A623', fontSize: '9px', fontWeight: 800, padding: '2px 8px', borderRadius: '99px', border: '1px solid rgba(245,166,35,0.3)', letterSpacing: '0.05em' }}>
+                  ★ VERIFIED TRADER
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: '24px' }}>🛡️</div>
         </div>
       </div>
 

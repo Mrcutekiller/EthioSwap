@@ -182,7 +182,6 @@ const WalletCard = () => {
     try {
       const res = await withdrawETH(wdAmtNum, wdAddr, '', wdNet.toUpperCase());
       if (res && res.success) {
-        setSuccess(`Success! $${wdAmtNum.toFixed(2)} is pending admin approval.`);
         setWdAmt(''); setWdAddr(''); setWdStep(1);
         setWdType(null); // Back to choice
       }
