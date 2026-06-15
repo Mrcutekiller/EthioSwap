@@ -567,13 +567,12 @@ export const AuthProvider = ({ children }) => {
         address,
         wallet_type: network,
         username: user.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
+        status: 'pending',
       });
       if (insertErr) throw insertErr;
 
       setUser(prev => ({ ...prev, eth_balance: newBalance }));
-      setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address} (${platformFeePercent}% fee).`);
+      setSuccess(`Withdrawal request submitted! $${amountUSD.toFixed(2)} is pending admin approval.`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -741,30 +740,19 @@ export const AuthProvider = ({ children }) => {
         .single();
       if (fetchErr) throw fetchErr;
 
+      if (req.status === 'approved') {
+        throw new Error('This withdrawal request is already approved.');
+      }
+      if (req.status === 'rejected') {
+        throw new Error('Rejected withdrawal requests cannot be approved.');
+      }
+
       const platformFeePercent = systemSettings?.withdrawal_fee_percent ?? 5.0;
       const withdrawAmount = req.amount_usd || 0;
       const platformFee = withdrawAmount * platformFeePercent / 100;
-      const totalDeduction = withdrawAmount + platformFee;
 
-      const { data: userData, error: userErr } = await supabase
-        .from('users')
-        .select('eth_balance')
-        .eq('id', req.user_id)
-        .single();
-      if (userErr) throw userErr;
-
-      const currentBalance = userData?.eth_balance || 0;
-      if (currentBalance < totalDeduction) {
-        throw new Error(`Insufficient balance. Required: $${totalDeduction.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`);
-      }
-
-      const newBalance = currentBalance - totalDeduction;
-      const { error: balanceErr } = await supabase
-        .from('users')
-        .update({ eth_balance: newBalance })
-        .eq('id', req.user_id);
-      if (balanceErr) throw balanceErr;
-
+      // Note: Balance was already deducted when withdrawal request was created in withdrawETH.
+      // So we just update the status to approved and record fees.
       const { error: updateErr } = await supabase
         .from('withdraw_requests')
         .update({ status: 'approved', reviewed_at: new Date().toISOString() })
@@ -776,7 +764,14 @@ export const AuthProvider = ({ children }) => {
         await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
       }
 
-      setSuccess(`Success! $${withdrawAmount.toFixed(2)} sent to ${req.address || 'wallet'} ($${platformFee.toFixed(2)} fee deducted).`);
+      await createNotification(
+        req.user_id,
+        'withdrawal_approved',
+        'Withdrawal Approved',
+        `Your withdrawal of $${withdrawAmount.toFixed(2)} USD to ${req.address.substring(0, 10)}... has been approved and sent.`
+      );
+
+      setSuccess(`Success! $${withdrawAmount.toFixed(2)} sent to ${req.address || 'wallet'} ($${platformFee.toFixed(2)} fee recorded).`);
     } catch (err) {
       setError(err.message);
     }
@@ -784,12 +779,59 @@ export const AuthProvider = ({ children }) => {
 
   const rejectWithdrawalRequest = async (id, reason) => {
     try {
-      const { error } = await supabase
+      const { data: req, error: fetchErr } = await supabase
+        .from('withdraw_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      if (req.status === 'rejected') {
+        throw new Error('This withdrawal request is already rejected.');
+      }
+      if (req.status === 'approved') {
+        throw new Error('Approved withdrawal requests cannot be rejected.');
+      }
+
+      const platformFeePercent = systemSettings?.withdrawal_fee_percent ?? 5.0;
+      const withdrawAmount = req.amount_usd || 0;
+      const platformFee = withdrawAmount * platformFeePercent / 100;
+      const totalRefund = withdrawAmount + platformFee;
+
+      // Refund the user's balance since it was deducted when they submitted the request
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', req.user_id)
+        .single();
+      if (userErr) throw userErr;
+
+      const newBalance = (userData?.eth_balance || 0) + totalRefund;
+      const { error: balanceErr } = await supabase
+        .from('users')
+        .update({ eth_balance: newBalance })
+        .eq('id', req.user_id);
+      if (balanceErr) throw balanceErr;
+
+      const { error: updateErr } = await supabase
         .from('withdraw_requests')
         .update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() })
         .eq('id', id);
-      if (error) throw error;
-      setSuccess('Withdrawal rejected.');
+      if (updateErr) throw updateErr;
+
+      // Update user state if the logged-in user is the one whose withdrawal was rejected
+      if (user && user.id === req.user_id) {
+        setUser(prev => ({ ...prev, eth_balance: newBalance }));
+      }
+
+      await createNotification(
+        req.user_id,
+        'withdrawal_rejected',
+        'Withdrawal Rejected',
+        `Your withdrawal of $${withdrawAmount.toFixed(2)} USD was rejected. Reason: ${reason}. Refunded to your wallet.`
+      );
+
+      setSuccess('Withdrawal rejected and refunded.');
     } catch (err) {
       setError(err.message);
     }

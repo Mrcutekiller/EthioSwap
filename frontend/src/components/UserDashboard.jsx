@@ -199,6 +199,13 @@ const ActivityItem = ({ type, amount, status, date, counterparty, counterpartyPi
   );
 };
 
+const NETWORKS = [
+  { id: 'aptos', label: 'Aptos',  coin: 'USDT', color: '#4EEAA6', icon: '🟣' },
+  { id: 'bep20', label: 'BSC',    coin: 'USDT', color: '#F0B90B', icon: '🟡' },
+  { id: 'trc20', label: 'TRC-20', coin: 'USDT', color: '#E83564', icon: '🔴' },
+  { id: 'erc20', label: 'ERC-20', coin: 'USDT', color: '#627EEA', icon: '🔵' },
+];
+
 const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
   const {
     user, wallet,
@@ -211,6 +218,7 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
   const [showBalance, setShowBalance] = useState(true);
   const [greeting, setGreeting] = useState('');
   const [animIn, setAnimIn] = useState(false);
+  const [selectedNet, setSelectedNet] = useState('trc20');
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -225,7 +233,7 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
   const available = Math.max(0, balance - locked);
   const rate = systemSettings?.etbRatePerDollar ?? 190;
   const address = wallet?.ethAddress ?? wallet?.eth_address ?? '';
-  const trcAddress = useMemo(() => getNetworkAddress('trc20', address, systemSettings), [address, systemSettings]);
+  const activeAddress = useMemo(() => getNetworkAddress(selectedNet, address, systemSettings), [selectedNet, address, systemSettings]);
 
   const completedTrades = useMemo(() => (trades || []).filter(t => t.status === 'completed'), [trades]);
   const pendingTrades = useMemo(() => (trades || []).filter(t => t.status === 'pending' || t.status === 'active'), [trades]);
@@ -320,12 +328,27 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'var(--surface2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>TRC20:</span>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap', width: '100%' }}>
+          {NETWORKS.map(n => (
+            <button key={n.id} onClick={() => setSelectedNet(n.id)} style={{
+              padding: '6px 12px', borderRadius: '8px',
+              border: `1.5px solid ${selectedNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
+              background: selectedNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
+              color: selectedNet === n.id ? '#fff' : '#8b92a8',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.color }} />
+              {n.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'var(--surface2)', borderRadius: '10px', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
+          <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{selectedNet.toUpperCase()}:</span>
           <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {trcAddress || 'No address assigned'}
+            {activeAddress || 'No address assigned'}
           </span>
-          <button onClick={() => navigator.clipboard?.writeText(trcAddress)} style={{ padding: '4px', color: 'var(--teal)', transition: 'opacity 0.15s' }}
+          <button onClick={() => navigator.clipboard?.writeText(activeAddress)} style={{ padding: '4px', color: 'var(--teal)', transition: 'opacity 0.15s', background: 'none', border: 'none', cursor: 'pointer' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
@@ -405,12 +428,12 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
       {showQR && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }} onClick={() => setShowQR(false)}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--teal)', marginBottom: '20px' }}>Scan to Deposit</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--teal)', marginBottom: '20px' }}>Scan to Deposit ({selectedNet.toUpperCase()})</div>
             <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', display: 'inline-block', marginBottom: '20px' }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180&data=${trcAddress || 'ethioswap'}`} alt="QR Code" style={{ width: 180, height: 180, display: 'block' }} />
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180&data=${activeAddress || 'ethioswap'}`} alt="QR Code" style={{ width: 180, height: 180, display: 'block' }} />
             </div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)', padding: '10px 14px', background: 'var(--surface2)', borderRadius: '10px', marginBottom: '20px' }}>
-              {trcAddress || 'No address assigned'}
+              {activeAddress || 'No address assigned'}
             </div>
             <button onClick={() => setShowQR(false)} style={{ width: '100%', padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
               Close
