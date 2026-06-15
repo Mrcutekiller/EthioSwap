@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getNetworkAddress } from '../utils/crypto.js';
 
 const fmt = (n, d = 2) => (+(n ?? 0)).toFixed(d);
 const fmtEtb = (n) => Math.round(n ?? 0).toLocaleString();
@@ -224,6 +225,7 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
   const available = Math.max(0, balance - locked);
   const rate = systemSettings?.etbRatePerDollar ?? 190;
   const address = wallet?.ethAddress ?? wallet?.eth_address ?? '';
+  const trcAddress = useMemo(() => getNetworkAddress('trc20', address, systemSettings), [address, systemSettings]);
 
   const completedTrades = useMemo(() => (trades || []).filter(t => t.status === 'completed'), [trades]);
   const pendingTrades = useMemo(() => (trades || []).filter(t => t.status === 'pending' || t.status === 'active'), [trades]);
@@ -321,9 +323,9 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'var(--surface2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <span style={{ fontSize: '12px', color: 'var(--muted)' }}>TRC20:</span>
           <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {address || 'No address assigned'}
+            {trcAddress || 'No address assigned'}
           </span>
-          <button onClick={() => navigator.clipboard?.writeText(address)} style={{ padding: '4px', color: 'var(--teal)', transition: 'opacity 0.15s' }}
+          <button onClick={() => navigator.clipboard?.writeText(trcAddress)} style={{ padding: '4px', color: 'var(--teal)', transition: 'opacity 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
@@ -405,10 +407,10 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', maxWidth: '320px', width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--teal)', marginBottom: '20px' }}>Scan to Deposit</div>
             <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', display: 'inline-block', marginBottom: '20px' }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180&data=${address || 'ethioswap'}`} alt="QR Code" style={{ width: 180, height: 180, display: 'block' }} />
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180&data=${trcAddress || 'ethioswap'}`} alt="QR Code" style={{ width: 180, height: 180, display: 'block' }} />
             </div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)', padding: '10px 14px', background: 'var(--surface2)', borderRadius: '10px', marginBottom: '20px' }}>
-              {address || 'No address assigned'}
+              {trcAddress || 'No address assigned'}
             </div>
             <button onClick={() => setShowQR(false)} style={{ width: '100%', padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
               Close

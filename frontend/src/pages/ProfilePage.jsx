@@ -18,10 +18,12 @@ import {
   ExternalLink,
   Info,
   RefreshCw,
-  Plus,
-  Trash2,
-  Lock
+  Plus, 
+  Trash2, 
+  Lock,
+  LogOut
 } from 'lucide-react';
+import { getTronAddress } from '../utils/crypto.js';
 
 // Default premium inline SVG avatar template
 const DEFAULT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -190,10 +192,7 @@ const ProfilePage = () => {
     setReviewRating(5);
   };
 
-  const getTronAddress = (ethAddr) => {
-    if (!ethAddr) return '';
-    return 'T' + ethAddr.replace('0x', '').substring(0, 33);
-  };
+  // Cryptographic getTronAddress is now imported from utils/crypto.js
 
   const getImageUrl = (src) => {
     if (!src) return '';
@@ -873,6 +872,16 @@ const ProfilePage = () => {
           </div>
         )}
       </div>
+
+      {/* ─── LOGOUT SECTION ─────────────────────────────────────── */}
+      <button 
+        onClick={logout} 
+        style={{ width: '100%', padding: '14px', borderRadius: '16px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#FF9E9E', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 77, 77, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255, 77, 77, 0.3)'; e.currentTarget.style.color = '#FF4D4D'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = '#FF9E9E'; }}
+      >
+        <LogOut size={18} /> Log Out
+      </button>
 
       {/* ─── DANGER ZONE: DELETE ACCOUNT ──────────────────────── */}
       <div className="card" style={{ padding: '20px', border: '1px solid rgba(255, 77, 77, 0.2)', background: 'rgba(255, 77, 77, 0.02)' }}>

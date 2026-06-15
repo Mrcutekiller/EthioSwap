@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserProfile(session.user.id).finally(() => setInitializing(false));
+        loadUserProfile(session.user.id, session.user).finally(() => setInitializing(false));
       } else {
         setUser(null);
         setInitializing(false);
@@ -74,15 +74,23 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       if (session?.user) {
-        await loadUserProfile(session.user.id);
+        await loadUserProfile(session.user.id, session.user);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserProfile = async (userId) => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+  const loadUserProfile = async (userId, passedAuthUser = null) => {
+    let authUser = passedAuthUser;
+    if (!authUser) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        authUser = data?.user;
+      } catch (err) {
+        console.error('Failed to get auth user:', err);
+      }
+    }
     const authRole = authUser?.user_metadata?.role || 'user';
 
     const { data, error } = await supabase
@@ -302,7 +310,7 @@ export const AuthProvider = ({ children }) => {
 
       if (authError) throw authError;
 
-      const profile = await loadUserProfile(data.user.id);
+      const profile = await loadUserProfile(data.user.id, data.user);
 
       if (!profile) throw new Error('User profile not found');
 
@@ -360,7 +368,7 @@ export const AuthProvider = ({ children }) => {
         if (profileError) throw profileError;
 
         if (data.session) {
-          const profile = await loadUserProfile(data.user.id);
+          const profile = await loadUserProfile(data.user.id, data.user);
           if (profile) {
             setSuccess(`Welcome to EthioSwap, ${profile.username}!`);
             return { status: 'success', userId: data.user.id };

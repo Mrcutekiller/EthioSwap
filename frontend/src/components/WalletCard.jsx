@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getNetworkAddress } from '../utils/crypto.js';
 
 const fmt = (n, d = 2) => (+(n ?? 0)).toFixed(d);
 const fmtEtb = (n) => Math.round(n ?? 0).toLocaleString();
@@ -84,6 +85,8 @@ const WalletCard = () => {
   const locked = wallet?.eth_locked ?? 0;
   const available = Math.max(0, balance - locked);
   const address = wallet?.eth_address ?? '';
+  const qrAddress = useMemo(() => getNetworkAddress(qrNet, wallet?.eth_address, systemSettings), [qrNet, wallet?.eth_address, systemSettings]);
+  const depAddress = useMemo(() => getNetworkAddress(depNet, wallet?.eth_address, systemSettings), [depNet, wallet?.eth_address, systemSettings]);
   const numId = wallet?.numeric_id;
   const rate = systemSettings?.etb_rate_per_dollar ?? 190;
   const minDep = systemSettings?.min_deposit_usd ?? 1;
@@ -243,14 +246,14 @@ const WalletCard = () => {
             </div>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${address}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${qrAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
               </div>
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
                 <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
-                  {address || 'No address assigned'}
+                  {qrAddress || 'No address assigned'}
                 </div>
-                <button onClick={() => handleCopy(address)} style={{
+                <button onClick={() => handleCopy(qrAddress)} style={{
                   padding: '7px 16px', borderRadius: '8px', width: '100%',
                   background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
                   color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
@@ -408,16 +411,16 @@ const WalletCard = () => {
               {/* QR + Address */}
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
                 <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${address}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${depAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>
                     {depNetData?.icon} {depNetData?.label} USDT Address
                   </div>
                   <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
-                    {address || 'No address assigned'}
+                    {depAddress || 'No address assigned'}
                   </div>
-                  <button onClick={() => handleCopy(address)} style={{
+                  <button onClick={() => handleCopy(depAddress)} style={{
                     padding: '7px 16px', borderRadius: '8px', width: '100%',
                     background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
                     color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',

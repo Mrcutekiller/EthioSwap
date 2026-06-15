@@ -392,6 +392,11 @@ const AdminPanel = ({ user }) => {
   const [minP2pListing,    setMinP2pListing]    = useState('1');
   const [maxDailyWithdraw, setMaxDailyWithdraw] = useState('1000');
   const [isP2pFreePeriod,  setIsP2pFreePeriod]  = useState(false);
+  
+  const [adminAptosAddress, setAdminAptosAddress] = useState('');
+  const [adminBep20Address, setAdminBep20Address] = useState('');
+  const [adminTrc20Address, setAdminTrc20Address] = useState('');
+  const [adminErc20Address, setAdminErc20Address] = useState('');
 
   useEffect(() => {
     if (settings) {
@@ -405,6 +410,25 @@ const AdminPanel = ({ user }) => {
       setMinP2pListing(settings.min_p2p_listing_usd?.toString() || '1');
       setMaxDailyWithdraw(settings.max_daily_withdrawal_usd?.toString() || '1000');
       setIsP2pFreePeriod(settings.is_p2p_free_period ?? false);
+
+      const master = settings.master_wallet_address || '';
+      try {
+        if (master.trim().startsWith('{')) {
+          const parsed = JSON.parse(master);
+          setAdminAptosAddress(parsed.aptos || '');
+          setAdminBep20Address(parsed.bep20 || '');
+          setAdminTrc20Address(parsed.trc20 || '');
+          setAdminErc20Address(parsed.erc20 || '');
+        } else {
+          setAdminBep20Address(master);
+          setAdminErc20Address(master);
+          setAdminAptosAddress('');
+          setAdminTrc20Address('');
+        }
+      } catch (e) {
+        setAdminBep20Address(master);
+        setAdminErc20Address(master);
+      }
     }
   }, [settings]);
 
@@ -623,6 +647,13 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     setSavingSettings(true);
     try {
+      const packagedAddresses = JSON.stringify({
+        aptos: adminAptosAddress.trim(),
+        bep20: adminBep20Address.trim(),
+        trc20: adminTrc20Address.trim(),
+        erc20: adminErc20Address.trim()
+      });
+
       const updates = {
         etb_rate_per_dollar: parseFloat(etbRate) || 190.0,
         etb_rate_per_dollar_sell: parseFloat(etbRateSell) || 186.0,
@@ -634,6 +665,7 @@ const AdminPanel = ({ user }) => {
         min_p2p_listing_usd: parseFloat(minP2pListing) || 1.0,
         max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw) || 1000,
         is_p2p_free_period: isP2pFreePeriod,
+        master_wallet_address: packagedAddresses,
       };
       if (settings?.id) {
         await supabase.from('system_settings').update(updates).eq('id', settings.id);
@@ -3464,6 +3496,24 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Max Daily Withdraw ($)</label>
                     <input type="number" className="input-premium" value={maxDailyWithdraw} onChange={e => setMaxDailyWithdraw(e.target.value)} required />
+                  </div>
+
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', marginTop: '12px' }}>🪙 USDT Deposit Wallets (Admin)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Aptos USDT Address</label>
+                    <input type="text" className="input-premium" value={adminAptosAddress} onChange={e => setAdminAptosAddress(e.target.value)} placeholder="0x... Aptos address" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>TRC-20 USDT Address</label>
+                    <input type="text" className="input-premium" value={adminTrc20Address} onChange={e => setAdminTrc20Address(e.target.value)} placeholder="T... TRON address" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>BSC (BEP-20) USDT Address</label>
+                    <input type="text" className="input-premium" value={adminBep20Address} onChange={e => setAdminBep20Address(e.target.value)} placeholder="0x... BSC address" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>ERC-20 USDT Address</label>
+                    <input type="text" className="input-premium" value={adminErc20Address} onChange={e => setAdminErc20Address(e.target.value)} placeholder="0x... Ethereum address" />
                   </div>
                 </div>
 
