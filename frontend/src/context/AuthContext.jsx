@@ -270,6 +270,40 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     loadSystemSettings();
     loadListings();
+
+    const channel = supabase
+      .channel('system_settings_changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'system_settings' },
+        (payload) => {
+          if (payload.new) {
+            const data = payload.new;
+            setSystemSettings({
+              etbRatePerDollar: data.etb_rate_per_dollar ?? 190.0,
+              etbRatePerDollarSell: data.etb_rate_per_dollar_sell ?? 186.0,
+              flatFeePercent: data.flat_fee_percent ?? 1.0,
+              maxFeeUSD: data.max_fee_usd ?? 0.5,
+              commissionType: data.commission_type ?? 'percentage',
+              commissionValue: data.commission_value ?? 5.0,
+              isP2pFreePeriod: data.is_p2p_free_period ?? false,
+              depositFeePercent: data.deposit_fee_percent ?? 5.0,
+              withdrawalFeePercent: data.withdrawal_fee_percent ?? 5.0,
+              minDepositUsd: data.min_deposit_usd ?? 1.0,
+              minWithdrawalUsd: data.min_withdrawal_usd ?? 10.0,
+              minP2pListingUsd: data.min_p2p_listing_usd ?? 1.0,
+              maxDailyWithdrawalUsd: data.max_daily_withdrawal_usd ?? 1000,
+              collectedFeesETH: data.collected_fees_eth ?? 0,
+              master_wallet_address: data.master_wallet_address,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {

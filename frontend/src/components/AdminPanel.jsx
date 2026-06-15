@@ -677,6 +677,14 @@ const AdminPanel = ({ user }) => {
           await supabase.from('system_settings').insert(updates);
         }
       }
+
+      // Log to rate_history
+      await supabase.from('rate_history').insert({
+        buy_rate: parseFloat(etbRate) || 190.0,
+        sell_rate: parseFloat(etbRateSell) || 186.0,
+        average_rate: ((parseFloat(etbRate) || 190.0) + (parseFloat(etbRateSell) || 186.0)) / 2
+      });
+
       showAlert('Settings saved successfully!');
       await loadSystemSettings();
     } catch (e) { showAlert(e.message, 'error'); }
