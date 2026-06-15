@@ -308,6 +308,63 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (!user?.id) return;
+
+    // 1. Subscribe to changes on user's own profile to update balance in real time
+    const userChannel = supabase
+      .channel(`user_profile_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+        (payload) => {
+          if (payload.new) {
+            setUser(payload.new);
+            localStorage.setItem('ethioswap_user', JSON.stringify(payload.new));
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Subscribe to changes in deposit requests to refresh the lists in real time
+    const depositsChannel = supabase
+      .channel('deposit_requests_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'deposit_requests' },
+        () => {
+          if (isAdmin) {
+            loadAllDepositRequests();
+          } else {
+            loadUserDeposits(user.id);
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Subscribe to changes in withdrawal requests to refresh the lists in real time
+    const withdrawalsChannel = supabase
+      .channel('withdraw_requests_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'withdraw_requests' },
+        () => {
+          if (isAdmin) {
+            loadAllWithdrawalRequests();
+          } else {
+            loadUserWithdrawals(user.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userChannel);
+      supabase.removeChannel(depositsChannel);
+      supabase.removeChannel(withdrawalsChannel);
+    };
+  }, [user?.id, isAdmin]);
+
+  useEffect(() => {
+    if (!user?.id) return;
     const pollInterval = setInterval(() => {
       loadTrades(user.id);
       loadListings();
@@ -495,6 +552,21 @@ export const AuthProvider = ({ children }) => {
       const platformFee = amountUSD * platformFeePercent / 100;
       const netCredit = Math.max(0, amountUSD - platformFee);
 
+      // Check for duplicate TxID/Reference to prevent double-spending
+      if (network !== 'INTERNAL' && txHash) {
+        const { data: existingTx, error: txCheckErr } = await supabase
+          .from('deposit_requests')
+          .select('id')
+          .eq('sender_reference', txHash)
+          .not('wallet_type', 'eq', 'INTERNAL')
+          .limit(1);
+
+        if (txCheckErr) throw txCheckErr;
+        if (existingTx && existingTx.length > 0) {
+          throw new Error('This Transaction ID/Reference has already been submitted or processed.');
+        }
+      }
+
       const { error: insertErr } = await supabase.from('deposit_requests').insert({
         user_id: user.id,
         amount_usd: amountUSD,
@@ -503,27 +575,14 @@ export const AuthProvider = ({ children }) => {
         wallet_type: network,
         sender_reference: txHash,
         username: user.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
+        status: 'pending',
       });
       if (insertErr) throw insertErr;
 
-      const { data: userData, error: userErr } = await supabase
-        .from('users')
-        .select('eth_balance')
-        .eq('id', user.id)
-        .single();
-      if (userErr) throw userErr;
+      // Reload user deposits so the UI updates immediately
+      await loadUserDeposits(user.id);
 
-      const newBalance = (userData?.eth_balance || 0) + netCredit;
-      const { error: balanceErr } = await supabase
-        .from('users')
-        .update({ eth_balance: newBalance })
-        .eq('id', user.id);
-      if (balanceErr) throw balanceErr;
-
-      setUser(prev => ({ ...prev, eth_balance: newBalance }));
-      setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee).`);
+      setSuccess(`Deposit request submitted! Once verified, $${netCredit.toFixed(2)} will be credited to your wallet (after a ${platformFeePercent}% platform fee).`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -772,6 +831,13 @@ export const AuthProvider = ({ children }) => {
         .single();
       if (fetchErr) throw fetchErr;
 
+      if (req.status === 'approved') {
+        throw new Error('This deposit request is already approved.');
+      }
+      if (req.status === 'rejected') {
+        throw new Error('Rejected deposit requests cannot be approved.');
+      }
+
       const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
       const depositAmount = req.amount_usd || 0;
       const platformFee = depositAmount * platformFeePercent / 100;
@@ -802,6 +868,14 @@ export const AuthProvider = ({ children }) => {
         await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
       }
 
+      await createNotification(
+        req.user_id,
+        'deposit_approved',
+        'Deposit Approved',
+        `Your deposit of $${depositAmount.toFixed(2)} USD has been approved and credited to your wallet.`
+      );
+
+      await loadAllDepositRequests();
       setSuccess(`Deposit approved! $${netCredit.toFixed(2)} credited (${platformFeePercent}% fee deducted).`);
     } catch (err) {
       setError(err.message);
@@ -810,11 +884,34 @@ export const AuthProvider = ({ children }) => {
 
   const rejectDepositRequest = async (id, reason) => {
     try {
+      const { data: req, error: fetchErr } = await supabase
+        .from('deposit_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      if (req.status === 'rejected') {
+        throw new Error('This deposit request is already rejected.');
+      }
+      if (req.status === 'approved') {
+        throw new Error('Approved deposit requests cannot be rejected.');
+      }
+
       const { error } = await supabase
         .from('deposit_requests')
         .update({ status: 'rejected', admin_note: reason, reviewed_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
+
+      await createNotification(
+        req.user_id,
+        'deposit_rejected',
+        'Deposit Rejected',
+        `Your deposit of $${(req.amount_usd || 0).toFixed(2)} USD was rejected. Reason: ${reason}`
+      );
+
+      await loadAllDepositRequests();
       setSuccess('Deposit rejected.');
     } catch (err) {
       setError(err.message);

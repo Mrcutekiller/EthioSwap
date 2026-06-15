@@ -164,10 +164,11 @@ const WalletCard = () => {
     setDepLoading(true);
     setSuccess('Processing deposit...');
     try {
-      await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
-      setSuccess(`Success! $${depYouReceive.toFixed(2)} added to your wallet (${platformFeePercent}% fee deducted).`);
-      setDepAmt(''); setDepTxId(''); setDepStep(1);
-      setReceiveType(null); // Back to choice
+      const res = await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
+      if (res && res.success) {
+        setDepAmt(''); setDepTxId(''); setDepStep(1);
+        setReceiveType(null); // Back to choice
+      }
     } catch (err) { setError(err.message); }
     finally { setDepLoading(false); }
   };
