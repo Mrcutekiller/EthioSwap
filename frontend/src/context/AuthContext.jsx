@@ -726,6 +726,7 @@ export const AuthProvider = ({ children }) => {
         username: user.username,
         rating,
         content,
+        is_approved: true,
       });
       if (error) throw error;
       setSuccess('Review submitted successfully!');

@@ -436,7 +436,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       const [usersRes, depositsRes, reviewsRes] = await Promise.all([
         supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('deposit_requests').select('amount_usd').eq('status', 'approved'),
-        supabase.from('reviews').select('*').eq('status', 'approved'),
+        supabase.from('reviews').select('*').eq('is_approved', true),
       ]);
       const totalVolume = (depositsRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
       setStats({ traders: usersRes.count || 0, volume: totalVolume, avg: '4.8', scams: 0 });
@@ -609,14 +609,17 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     }
     setSubmitLoading(true);
     try {
-      await supabase.from('reviews').insert({
+      const newReview = {
         user_id: user.id,
         username: user.username,
         rating: reviewRating,
         content: reviewContent.trim(),
-        status: 'pending',
+        is_approved: true,
         created_at: new Date().toISOString()
-      });
+      };
+      const { error } = await supabase.from('reviews').insert(newReview);
+      if (error) throw error;
+      setReviews(prev => [newReview, ...prev]);
       setReviewSuccess(true);
       setReviewContent('');
       setReviewRating(5);
