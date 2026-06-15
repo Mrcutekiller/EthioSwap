@@ -902,7 +902,7 @@ const AdminPanel = ({ user }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-[var(--font-body)]">
       
-      {/* ── STYLE INJECTIONS ── */}
+      {/* ── PREMIUM DESIGN SYSTEM ── */}
       <style>{`
         @keyframes pulse-gold {
           0% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
@@ -912,40 +912,26 @@ const AdminPanel = ({ user }) => {
         .pulse-badge { animation: pulse-gold 2s infinite; }
         .sidebar-nav::-webkit-scrollbar { width: 4px; }
         .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        .nav-item-active {
-          color: var(--bg-page) !important;
-          background: linear-gradient(90deg, var(--gold), #f0b800);
-          font-weight: 700;
-        }
-        .nav-item-active i { color: var(--bg-page) !important; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideInRight { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .bento-card { position: relative; overflow: hidden; }
         .bento-card::before {
           content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background-image: url('https://images.unsplash.com/photo-1777886290011-324d49520e93?auto=format&w=600&q=80&fit=crop');
-          background-size: cover;
-          opacity: 0.05;
-          z-index: 0;
+          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          background: none; z-index: 0;
         }
 
         /* === MOBILE BOTTOM NAV === */
         .admin-mobile-nav {
-          position: fixed;
-          bottom: 0; left: 0; right: 0;
-          height: 64px;
-          background: #0a0c12;
-          border-top: 1px solid rgba(255,255,255,0.07);
-          display: none;
-          align-items: center;
-          justify-content: space-around;
-          padding: 0 4px;
-          z-index: 200;
-          box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+          position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+          background: rgba(8,10,16,0.97);
+          border-top: 1px solid rgba(255,255,255,0.08);
+          display: none; align-items: center; justify-content: space-around;
+          padding: 0 4px; z-index: 200;
+          box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+          backdrop-filter: blur(12px);
         }
         .admin-mobile-nav-btn {
           display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -953,9 +939,9 @@ const AdminPanel = ({ user }) => {
           border-radius: 10px; flex: 1; transition: all 0.15s ease; position: relative;
         }
         .admin-mobile-nav-btn.active { background: rgba(245,166,35,0.1); }
-        .admin-mobile-nav-btn i { font-size: 20px; color: #6b7694; transition: color 0.15s ease; }
+        .admin-mobile-nav-btn i { font-size: 20px; color: #5a6280; transition: color 0.15s ease; }
         .admin-mobile-nav-btn.active i { color: #F5A623; }
-        .admin-mobile-nav-btn span { font-size: 9px; font-weight: 600; color: #6b7694; white-space: nowrap; }
+        .admin-mobile-nav-btn span { font-size: 9px; font-weight: 600; color: #5a6280; white-space: nowrap; }
         .admin-mobile-nav-btn.active span { color: #F5A623; }
         .admin-mobile-nav-badge {
           position: absolute; top: 4px; right: 6px;
@@ -972,14 +958,11 @@ const AdminPanel = ({ user }) => {
         /* === TABLET / SMALL LAPTOP (max-width 1024px) === */
         @media (max-width: 1024px) {
           .admin-sidebar {
-            position: fixed !important;
-            left: -280px !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            height: 100vh !important;
+            position: fixed !important; left: -280px !important;
+            top: 0 !important; bottom: 0 !important; height: 100vh !important;
             z-index: 1000 !important;
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            box-shadow: 6px 0 40px rgba(0,0,0,0.6);
+            box-shadow: 8px 0 48px rgba(0,0,0,0.7);
           }
           .admin-sidebar.open { left: 0 !important; }
           .mobile-only { display: flex !important; }
@@ -988,40 +971,26 @@ const AdminPanel = ({ user }) => {
           .admin-content-area { padding: 1rem !important; padding-bottom: 84px !important; }
           .admin-header-wrap { padding-left: 1rem !important; padding-right: 1rem !important; }
         }
-
         /* === PHONE (max-width 640px) === */
         @media (max-width: 640px) {
           .admin-content-area { padding: 0.75rem !important; padding-bottom: 84px !important; }
           .admin-header-wrap { padding-left: 0.75rem !important; padding-right: 0.75rem !important; height: 56px !important; }
           .drawer-content { width: 100% !important; }
+          .admin-stat-grid { grid-template-columns: 1fr 1fr !important; }
         }
 
-        /* Tailwind-Compat Utilities for AdminPanel */
-        .flex { display: flex; }
-        .flex-col { flex-direction: column; }
-        .flex-1 { flex: 1 1 0%; }
-        .flex-shrink-0 { flex-shrink: 0; }
-        .h-screen { height: 100vh; }
-        .overflow-hidden { overflow: hidden; }
-        .overflow-y-auto { overflow-y: auto; }
-        .min-w-0 { min-width: 0; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .w-full { width: 100%; }
-        .text-left { text-align: left; }
-        .text-center { text-align: center; }
-        .text-white { color: #ffffff; }
-        .ml-auto { margin-left: auto; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mt-auto { margin-top: auto; }
-        .p-2 { padding: 0.5rem; }
-        .p-3 { padding: 0.75rem; }
-        .p-4 { padding: 1rem; }
-        .p-5 { padding: 1.25rem; }
-        .p-6 { padding: 1.5rem; }
-        .p-8 { padding: 2rem; }
+        /* Tailwind-Compat Utilities */
+        .flex { display: flex; } .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1 1 0%; } .flex-shrink-0 { flex-shrink: 0; }
+        .h-screen { height: 100vh; } .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; } .min-w-0 { min-width: 0; }
+        .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+        .w-full { width: 100%; } .text-left { text-align: left; } .text-center { text-align: center; }
+        .text-white { color: #ffffff; } .ml-auto { margin-left: auto; }
+        .mb-2 { margin-bottom: 0.5rem; } .mb-4 { margin-bottom: 1rem; }
+        .mt-2 { margin-top: 0.5rem; } .mt-auto { margin-top: auto; }
+        .p-2 { padding: 0.5rem; } .p-3 { padding: 0.75rem; } .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; } .p-6 { padding: 1.5rem; } .p-8 { padding: 2rem; }
         .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
         .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
         .px-8 { padding-left: 2rem; padding-right: 2rem; }
@@ -1029,56 +998,341 @@ const AdminPanel = ({ user }) => {
         .py-2\\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
         .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
         .pb-4 { padding-bottom: 1rem; }
-        .border-b { border-bottom: 1px solid var(--border); }
-        .border { border: 1px solid var(--border); }
-        .border-2 { border: 2px solid var(--border); }
-        .rounded-lg { border-radius: var(--radius-md); }
-        .rounded-2xl { border-radius: var(--radius-lg); }
-        .rounded-3xl { border-radius: var(--radius-xl); }
-        .rounded-full { border-radius: 9999px; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-3 { gap: 0.75rem; }
-        .gap-4 { gap: 1rem; }
-        .gap-5 { gap: 1.25rem; }
-        .gap-6 { gap: 1.5rem; }
+        .border-b { border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .border { border: 1px solid rgba(255,255,255,0.07); }
+        .border-2 { border: 2px solid rgba(255,255,255,0.07); }
+        .rounded-lg { border-radius: 8px; } .rounded-2xl { border-radius: 16px; }
+        .rounded-3xl { border-radius: 20px; } .rounded-full { border-radius: 9999px; }
+        .gap-2 { gap: 0.5rem; } .gap-3 { gap: 0.75rem; } .gap-4 { gap: 1rem; }
+        .gap-5 { gap: 1.25rem; } .gap-6 { gap: 1.5rem; }
         .space-y-0\\.5 > * + * { margin-top: 0.125rem; }
-
-        /* Grids */
-        .grid { display: grid; }
-        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-        @media (min-width: 768px) {
-          .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        @media (min-width: 1024px) {
-          .lg\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        }
-
-        /* Dimension helpers */
-        .w-6 { width: 24px; height: 24px; }
-        .w-9 { width: 36px; height: 36px; }
+        .grid { display: grid; } .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        @media (min-width: 768px) { .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .lg\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .w-6 { width: 24px; height: 24px; } .w-9 { width: 36px; height: 36px; }
         .w-12 { width: 48px; height: 48px; }
-        .h-6 { height: 24px; }
-        .h-9 { height: 36px; }
-        .h-12 { height: 48px; }
+        .h-6 { height: 24px; } .h-9 { height: 36px; } .h-12 { height: 48px; }
         .h-\\[72px\\] { height: 72px; }
-
-        /* Backgrounds, borders, text color with variable names */
-        .bg-white\\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .hover\\:bg-white\\/5:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .bg-white\\/5:hover { background-color: rgba(255,255,255,0.05); }
+        .hover\\:bg-white\\/5:hover { background-color: rgba(255,255,255,0.05); }
         .bg-\\[var\\(--bg-surface-hover\\)\\] { background-color: var(--bg-surface-hover); }
         .border-\\[var\\(--border-hover\\)\\] { border-color: var(--border-hover); }
         .text-\\[var\\(--text-secondary\\)\\] { color: var(--text-secondary); }
         .text-\\[var\\(--text-primary\\)\\] { color: var(--text-primary); }
-        .bg-\\[var\\(--gold\\)\\]\\/10 { background-color: rgba(245, 166, 35, 0.1); }
+        .bg-\\[var\\(--gold\\)\\]\\/10 { background-color: rgba(245,166,35,0.1); }
         .text-\\[var\\(--gold\\)\\] { color: var(--gold); }
-        .bg-\\[var\\(--teal\\)\\]\\/10 { background-color: rgba(0, 200, 150, 0.1); }
+        .bg-\\[var\\(--teal\\)\\]\\/10 { background-color: rgba(0,200,150,0.1); }
         .text-\\[var\\(--teal\\)\\] { color: var(--teal); }
-        .bg-orange-500\\/10 { background-color: rgba(249, 115, 22, 0.1); }
+        .bg-orange-500\\/10 { background-color: rgba(249,115,22,0.1); }
         .text-orange-400 { color: #fb923c; }
-        .bg-red-500\\/5 { background-color: rgba(239, 68, 68, 0.05); }
+        .bg-red-500\\/5 { background-color: rgba(239,68,68,0.05); }
         .border-2.border-\\[var\\(--gold\\)\\] { border: 2px solid var(--gold); }
         .text-[var(--text-muted)] { color: var(--text-muted); }
+        .bg-blue-500\\/10 { background: rgba(59,130,246,0.1); }
+        .text-blue-400 { color: #60a5fa; }
+        .bg-red-500\\/10 { background: rgba(239,68,68,0.1); }
+        .text-red-400 { color: #f87171; }
+        .font-bold { font-weight: 700; } .font-extrabold { font-weight: 800; }
+        .font-medium { font-weight: 500; } .font-semibold { font-weight: 600; }
+        .tracking-tight { letter-spacing: -0.01em; } .uppercase { text-transform: uppercase; }
+        .leading-none { line-height: 1; }
 
+        /* ══ SIDEBAR NAV REDESIGN ══ */
+        .nav-item-active {
+          color: #F5A623 !important;
+          background: linear-gradient(135deg, rgba(245,166,35,0.15) 0%, rgba(240,184,0,0.06) 100%);
+          font-weight: 700;
+          border: 1px solid rgba(245,166,35,0.18);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+          position: relative;
+        }
+        .nav-item-active i { color: #F5A623 !important; }
+        .nav-item-active::after {
+          content: '';
+          position: absolute; left: 0; top: 50%;
+          transform: translateY(-50%);
+          width: 3px; height: 55%;
+          background: linear-gradient(180deg, #F5A623, #f0b800);
+          border-radius: 0 3px 3px 0;
+        }
+
+        /* ══ ADMIN PROFILE CARD IN SIDEBAR ══ */
+        .admin-profile-card {
+          margin: 10px 12px 4px;
+          background: rgba(245,166,35,0.05);
+          border: 1px solid rgba(245,166,35,0.14);
+          border-radius: 12px; padding: 11px 13px;
+          display: flex; align-items: center; gap: 10px;
+        }
+        .admin-profile-avatar {
+          width: 36px; height: 36px; border-radius: 10px;
+          background: linear-gradient(135deg, rgba(245,166,35,0.25), rgba(245,166,35,0.08));
+          border: 1.5px solid rgba(245,166,35,0.35);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 15px; font-weight: 800; color: #F5A623; flex-shrink: 0;
+        }
+        .admin-profile-name { font-size: 13px; font-weight: 700; color: #e8eaf0; line-height: 1.2; }
+        .admin-profile-role {
+          font-size: 10px; font-weight: 700; color: #F5A623;
+          background: rgba(245,166,35,0.1); padding: 2px 6px;
+          border-radius: 4px; display: inline-block; margin-top: 3px;
+          letter-spacing: 0.04em;
+        }
+        .admin-nav-section-label {
+          font-size: 9px; font-weight: 800; text-transform: uppercase;
+          letter-spacing: 0.12em; color: rgba(90,98,128,0.7);
+          padding: 12px 20px 4px;
+        }
+
+        /* ══ STAT CARDS ══ */
+        .admin-stat-card {
+          background: linear-gradient(145deg, rgba(22,27,45,0.95) 0%, rgba(16,20,33,0.98) 100%);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px; padding: 20px 18px;
+          position: relative; overflow: hidden;
+          transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        .admin-stat-card:hover {
+          transform: translateY(-3px);
+          border-color: rgba(245,166,35,0.15);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.04) inset;
+        }
+        .admin-stat-card::after {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          border-radius: 16px 16px 0 0; background: var(--ac, rgba(255,255,255,0.06));
+        }
+        .admin-stat-icon {
+          width: 44px; height: 44px; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px; margin-bottom: 16px;
+        }
+        .admin-stat-label {
+          font-size: 10.5px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.08em;
+          color: #5a6280; margin-bottom: 5px;
+        }
+        .admin-stat-value {
+          font-size: 27px; font-weight: 800; color: #f0f2f8;
+          line-height: 1; letter-spacing: -0.04em;
+        }
+        .admin-stat-sub { font-size: 11px; color: #404761; margin-top: 7px; }
+        .admin-stat-badge {
+          position: absolute; top: 14px; right: 14px;
+          font-size: 9px; font-weight: 800;
+          padding: 3px 7px; border-radius: 99px;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .admin-stat-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 14px;
+        }
+        @media (max-width: 1280px) { .admin-stat-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 900px)  { .admin-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px)  { .admin-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        /* ══ SECTION TITLE BAR ══ */
+        .admin-section-title-bar {
+          display: flex; align-items: center; gap: 8px;
+          font-size: 15px; font-weight: 700; color: #e8eaf0;
+          margin-bottom: 14px;
+        }
+        .admin-section-title-bar::before {
+          content: ''; display: inline-block; width: 3px; height: 18px;
+          background: linear-gradient(180deg, #F5A623, rgba(240,184,0,0.3));
+          border-radius: 2px; flex-shrink: 0;
+        }
+
+        /* ══ CHART CARDS ══ */
+        .admin-chart-card {
+          background: linear-gradient(145deg, rgba(20,24,39,0.95), rgba(14,18,30,0.98));
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px; padding: 22px;
+          position: relative; overflow: hidden;
+        }
+        .admin-chart-card::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+        }
+
+        /* ══ PREMIUM CARDS ══ */
+        .card-premium {
+          background: linear-gradient(145deg, rgba(20,24,39,0.95), rgba(14,18,30,0.98));
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 16px; padding: 22px;
+          position: relative; overflow: hidden;
+        }
+        .card-premium::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0;
+          height: 3px; border-radius: 16px 16px 0 0;
+        }
+
+        /* ══ HEADER CHIPS ══ */
+        .admin-live-chip {
+          display: flex; align-items: center; gap: 6px;
+          background: rgba(0,200,150,0.08); border: 1px solid rgba(0,200,150,0.2);
+          padding: 5px 11px; border-radius: 8px;
+          font-size: 11px; font-weight: 700; color: #00C896;
+        }
+        .admin-live-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #00C896;
+          animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(1.4); }
+        }
+        .admin-hdr-btn {
+          width: 36px; height: 36px;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 9px; color: #6b7694; cursor: pointer;
+          transition: all 0.15s ease; position: relative;
+        }
+        .admin-hdr-btn:hover { background: rgba(255,255,255,0.09); color: #e8eaf0; }
+        .admin-hdr-notif-dot {
+          position: absolute; top: 7px; right: 8px; width: 6px; height: 6px;
+          border-radius: 50%; background: #f43f5e; border: 1.5px solid #080a10;
+        }
+        .admin-user-chip {
+          display: flex; align-items: center; gap: 8px;
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+          padding: 5px 12px 5px 7px; border-radius: 9px;
+        }
+        .admin-user-chip-avatar {
+          width: 26px; height: 26px; border-radius: 7px;
+          background: linear-gradient(135deg, rgba(245,166,35,0.2), rgba(245,166,35,0.05));
+          border: 1.5px solid rgba(245,166,35,0.35);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 800; color: #F5A623;
+        }
+
+        /* ══ TABLE STYLES ══ */
+        .admin-table-container {
+          border-radius: 14px; border: 1px solid rgba(255,255,255,0.07);
+          overflow: hidden; background: rgba(14,18,30,0.8);
+        }
+        .admin-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .admin-tbl thead tr {
+          background: rgba(8,10,16,0.7);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .admin-tbl th {
+          padding: 11px 14px; text-align: left;
+          font-size: 10px; font-weight: 800;
+          text-transform: uppercase; letter-spacing: 0.09em; color: #404761;
+          white-space: nowrap;
+        }
+        .admin-tbl td {
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          color: #b0b8d0; vertical-align: middle;
+        }
+        .admin-tbl tbody tr { transition: background 0.12s ease; }
+        .admin-tbl tbody tr:hover { background: rgba(255,255,255,0.025); }
+        .admin-tbl tbody tr:last-child td { border-bottom: none; }
+
+        /* ══ ACTION BUTTONS ══ */
+        .abt { /* Admin Button Template */
+          padding: 6px 12px; border-radius: 7px;
+          font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid;
+          transition: all 0.14s ease; display: inline-flex; align-items: center; gap: 4px;
+        }
+        .abt-approve { background: rgba(0,200,150,0.1); color: #00C896; border-color: rgba(0,200,150,0.22); }
+        .abt-approve:hover { background: rgba(0,200,150,0.18); transform: translateY(-1px); }
+        .abt-reject { background: rgba(244,63,94,0.08); color: #f43f5e; border-color: rgba(244,63,94,0.18); }
+        .abt-reject:hover { background: rgba(244,63,94,0.15); transform: translateY(-1px); }
+        .abt-view { background: rgba(255,255,255,0.04); color: #6b7694; border-color: rgba(255,255,255,0.08); }
+        .abt-view:hover { background: rgba(255,255,255,0.09); color: #e0e4f0; }
+        .abt-warning { background: rgba(245,166,35,0.08); color: #F5A623; border-color: rgba(245,166,35,0.2); }
+        .abt-warning:hover { background: rgba(245,166,35,0.15); transform: translateY(-1px); }
+
+        /* ══ SEARCH + FILTER ══ */
+        .admin-toolbar {
+          display: flex; align-items: center; gap: 10px;
+          flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .admin-search-wrap { position: relative; flex: 1; min-width: 180px; }
+        .admin-search-wrap i {
+          position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+          font-size: 14px; color: #404761; pointer-events: none;
+        }
+        .admin-search-inp {
+          width: 100%; padding: 9px 12px 9px 34px;
+          background: rgba(8,10,16,0.7);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px; color: #e0e4f0; font-size: 13px;
+          outline: none; transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .admin-search-inp::placeholder { color: #3a4060; }
+        .admin-search-inp:focus {
+          border-color: rgba(245,166,35,0.28);
+          background: rgba(245,166,35,0.02);
+          box-shadow: 0 0 0 3px rgba(245,166,35,0.06);
+        }
+        .admin-filter-sel {
+          padding: 9px 12px;
+          background: rgba(8,10,16,0.7);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px; color: #6b7694; font-size: 12px; font-weight: 600;
+          outline: none; cursor: pointer; font-family: inherit;
+          transition: border-color 0.15s ease;
+        }
+        .admin-filter-sel:focus { border-color: rgba(245,166,35,0.28); }
+
+        /* ══ BUTTON STYLES ══ */
+        .btn-premium-secondary {
+          padding: 8px 16px; border-radius: 9px;
+          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+          color: #6b7694; font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;
+          font-family: inherit;
+        }
+        .btn-premium-secondary:hover { background: rgba(255,255,255,0.09); color: #e0e4f0; }
+        .btn-premium-primary {
+          padding: 9px 18px; border-radius: 9px;
+          background: linear-gradient(135deg, #F5A623, #f0b800);
+          border: none; color: #0a0c12; font-size: 13px; font-weight: 800;
+          cursor: pointer; transition: all 0.2s ease;
+          display: inline-flex; align-items: center; gap: 6px;
+          box-shadow: 0 4px 16px rgba(245,166,35,0.25); font-family: inherit;
+        }
+        .btn-premium-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .btn-premium-primary:active { transform: translateY(0); }
+
+        /* ══ PAGINATION ══ */
+        .admin-pagination {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.05);
+          font-size: 12px; color: #404761;
+        }
+        .admin-pg-btn {
+          padding: 5px 11px; border-radius: 7px;
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+          color: #6b7694; font-size: 12px; font-weight: 600;
+          cursor: pointer; transition: all 0.14s ease; font-family: inherit;
+        }
+        .admin-pg-btn:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: #e0e4f0; }
+        .admin-pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .admin-pg-btn.active { background: rgba(245,166,35,0.1); border-color: rgba(245,166,35,0.22); color: #F5A623; }
+
+        /* ══ RATE BANNER ══ */
+        .admin-rate-banner {
+          background: linear-gradient(135deg, rgba(0,200,150,0.09) 0%, rgba(0,200,150,0.02) 60%, rgba(245,166,35,0.03) 100%);
+          border: 1px solid rgba(0,200,150,0.18);
+          border-radius: 14px; padding: 18px 22px;
+          display: flex; align-items: center; justify-content: space-between;
+          position: relative; overflow: hidden; gap: 12px;
+        }
+        .admin-rate-banner::before {
+          content: ''; position: absolute; top: -50px; right: -50px;
+          width: 180px; height: 180px;
+          background: radial-gradient(circle, rgba(0,200,150,0.1) 0%, transparent 70%);
+          pointer-events: none;
+        }
+
+        /* ══ DRAWERS ══ */
         .drawer-backdrop {
           position: fixed;
           inset: 0;
@@ -1161,66 +1415,136 @@ const AdminPanel = ({ user }) => {
       <aside 
         className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}
         style={{
-          width: '240px',
-          flexShrink: 0,
-          background: '#0a0c12',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100
+          width: '248px', flexShrink: 0,
+          background: 'linear-gradient(180deg, #080a14 0%, #06080f 100%)',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', flexDirection: 'column',
+          height: '100vh', position: 'sticky', top: 0, zIndex: 100
         }}
       >
         {/* Logo area */}
-        <div className="p-5 pb-4 border-b border-[var(--border)] flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 font-[var(--font-heading)] text-lg font-bold text-[var(--gold)]">
-              <i className="ti ti-shield-check text-xl"></i>
-              EthioSwap Admin
-            </div>
-            <div className="mt-1 inline-block text-[10px] font-bold text-[var(--teal)] bg-[var(--teal)]/10 border border-[var(--teal)]/30 px-1.5 py-0.5 rounded">
-              COMMAND CENTER
+        <div style={{
+          padding: '18px 16px 14px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(245,166,35,0.02)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(245,166,35,0.22), rgba(245,166,35,0.06))',
+              border: '1px solid rgba(245,166,35,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '18px', flexShrink: 0
+            }}>🛡️</div>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#F5A623', lineHeight: 1.2 }}>EthioSwap</div>
+              <div style={{ fontSize: '9px', fontWeight: 800, color: '#00C896', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: '2px' }}>Admin Center</div>
             </div>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="mobile-only text-[var(--text-secondary)] text-xl">✕</button>
+          <button onClick={() => setIsSidebarOpen(false)} className="mobile-only" style={{
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '8px', color: '#8b92a8', padding: '5px 8px', fontSize: '15px', cursor: 'pointer'
+          }}>✕</button>
         </div>
 
-        <div className="p-4 flex items-center gap-3 border-b border-[var(--border)]">
-          <img src="https://i.pravatar.cc/36?u=admin_ethioswap" className="w-9 h-9 rounded-full border-2 border-[var(--gold)]" alt="Admin" />
-          <div className="min-w-0">
-            <div className="text-[13px] font-bold truncate">@admin_ethioswap</div>
-            <div className="text-[11px] text-[var(--gold)]">Super Admin</div>
+        {/* Admin Profile Card */}
+        <div className="admin-profile-card">
+          <div className="admin-profile-avatar">A</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="admin-profile-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.username ? `@${user.username}` : '@admin'}
+            </div>
+            <div className="admin-profile-role">SUPER ADMIN</div>
           </div>
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 overflow-y-auto py-3 sidebar-nav custom-scrollbar">
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--text-muted)] px-5 mb-2">Management</div>
-          <div className="space-y-0.5">
-            {navTabs.map(t => {
-              const isActive = activeTab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setActiveTab(t.id); if (t.id !== 'logs') setLogsSearchQuery(''); setIsSidebarOpen(false); }}
-                  className={`flex items-center gap-3 px-5 py-2.5 text-[13px] w-full text-left transition-all group ${isActive ? 'nav-item-active rounded-r-lg mr-4' : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]'}`}
-                >
-                  <i className={`ti ${t.icon} text-[17px] ${isActive ? '' : 'group-hover:text-[var(--text-primary)]'}`}></i>
-                  <span className={isActive ? 'font-bold' : 'font-medium'}>{t.title}</span>
-                  {t.badge > 0 && (
-                    <span className="ml-auto bg-[var(--error)] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{t.badge}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <nav className="flex-1 overflow-y-auto sidebar-nav custom-scrollbar" style={{ padding: '4px 0 12px' }}>
+          {/* Management Group */}
+          <div className="admin-nav-section-label">Management</div>
+          {navTabs.slice(0, 7).map(t => {
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => { setActiveTab(t.id); if (t.id !== 'logs') setLogsSearchQuery(''); setIsSidebarOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 14px 9px 16px', margin: '1px 8px',
+                  borderRadius: '10px', fontSize: '13px', fontWeight: isActive ? 700 : 500,
+                  color: isActive ? '#F5A623' : '#8b92a8',
+                  cursor: 'pointer', border: isActive ? '1px solid rgba(245,166,35,0.18)' : '1px solid transparent',
+                  background: isActive
+                    ? 'linear-gradient(135deg, rgba(245,166,35,0.14) 0%, rgba(240,184,0,0.05) 100%)'
+                    : 'transparent',
+                  width: 'calc(100% - 16px)', textAlign: 'left',
+                  transition: 'all 0.18s ease', position: 'relative',
+                  boxShadow: isActive ? '0 2px 10px rgba(245,166,35,0.06)' : 'none'
+                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e8eaf0'; }}}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8b92a8'; }}}
+              >
+                {isActive && <span style={{ position: 'absolute', left: '-8px', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '55%', background: '#F5A623', borderRadius: '0 3px 3px 0' }} />}
+                <i className={`ti ${t.icon}`} style={{ fontSize: '16px', flexShrink: 0, color: isActive ? '#F5A623' : 'inherit' }}></i>
+                <span style={{ flex: 1 }}>{t.title}</span>
+                {t.badge > 0 && (
+                  <span style={{ background: '#f43f5e', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '99px', minWidth: '16px', textAlign: 'center', lineHeight: 1.4 }}>{t.badge}</span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Analytics Group */}
+          <div className="admin-nav-section-label" style={{ marginTop: '4px' }}>Analytics & Tools</div>
+          {navTabs.slice(7).map(t => {
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => { setActiveTab(t.id); if (t.id !== 'logs') setLogsSearchQuery(''); setIsSidebarOpen(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 14px 9px 16px', margin: '1px 8px',
+                  borderRadius: '10px', fontSize: '13px', fontWeight: isActive ? 700 : 500,
+                  color: isActive ? '#F5A623' : '#8b92a8',
+                  cursor: 'pointer', border: isActive ? '1px solid rgba(245,166,35,0.18)' : '1px solid transparent',
+                  background: isActive
+                    ? 'linear-gradient(135deg, rgba(245,166,35,0.14) 0%, rgba(240,184,0,0.05) 100%)'
+                    : 'transparent',
+                  width: 'calc(100% - 16px)', textAlign: 'left',
+                  transition: 'all 0.18s ease', position: 'relative',
+                  boxShadow: isActive ? '0 2px 10px rgba(245,166,35,0.06)' : 'none'
+                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e8eaf0'; }}}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8b92a8'; }}}
+              >
+                {isActive && <span style={{ position: 'absolute', left: '-8px', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '55%', background: '#F5A623', borderRadius: '0 3px 3px 0' }} />}
+                <i className={`ti ${t.icon}`} style={{ fontSize: '16px', flexShrink: 0, color: isActive ? '#F5A623' : 'inherit' }}></i>
+                <span style={{ flex: 1 }}>{t.title}</span>
+                {t.badge > 0 && (
+                  <span style={{ background: '#f43f5e', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '99px', minWidth: '16px', textAlign: 'center', lineHeight: 1.4 }}>{t.badge}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="mt-auto border-t border-[var(--border)] p-2">
-          <button onClick={() => { if(window.confirm('Sign out of admin?')) logout(); }} className="flex items-center gap-3 px-5 py-3 text-[13px] font-bold text-[var(--error)] hover:bg-red-500/5 transition-all w-full text-left">
-            <i className="ti ti-logout text-[17px]"></i>
+        {/* Sign out footer */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px' }}>
+          <button
+            onClick={() => { if(window.confirm('Sign out of admin panel?')) logout(); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 16px', borderRadius: '10px',
+              background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.12)',
+              color: '#f43f5e', fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', width: '100%', transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(244,63,94,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(244,63,94,0.06)'; }}
+          >
+            <i className="ti ti-logout" style={{ fontSize: '16px' }}></i>
             Sign Out
           </button>
         </div>
@@ -1231,35 +1555,52 @@ const AdminPanel = ({ user }) => {
       {/* ── MAIN CONTENT ── */}
       <main className="flex-1 flex flex-col min-w-0">
         
-        <header className="admin-header-wrap flex-shrink-0 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-page)]" style={{ paddingLeft: '2rem', paddingRight: '2rem', height: '64px' }}>
-          <div className="flex items-center gap-3">
+        <header className="admin-header-wrap flex-shrink-0 flex items-center justify-between" style={{
+          paddingLeft: '2rem', paddingRight: '2rem', height: '64px',
+          background: 'rgba(8,10,16,0.95)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(12px)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button 
               onClick={() => setIsSidebarOpen(true)} 
               className="mobile-only"
-              style={{ background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: '9px', color: '#F5A623', padding: '7px 10px', fontSize: '17px', cursor: 'pointer', lineHeight: 1 }}
+              style={{ background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.22)', borderRadius: '9px', color: '#F5A623', padding: '7px 10px', fontSize: '18px', cursor: 'pointer', lineHeight: 1 }}
             >☰</button>
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
-                {navTabs.find(t => t.id === activeTab)?.title || 'Admin'} <span style={{ color: '#F5A623' }}>Center</span>
+              <h2 style={{ fontSize: '17px', fontWeight: 800, margin: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ color: '#e8eaf0' }}>{navTabs.find(t => t.id === activeTab)?.title || 'Admin'}</span>
+                <span style={{ color: '#F5A623' }}>·</span>
+                <span style={{ color: '#F5A623', fontSize: '14px', fontWeight: 700 }}>Control Panel</span>
               </h2>
-              <div style={{ fontSize: '11px', color: '#6b7694', fontWeight: 500, marginTop: '2px' }}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} · Platform Health: Optimal
+              <div style={{ fontSize: '10.5px', color: '#404761', fontWeight: 500, marginTop: '3px' }}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3 desktop-only">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', padding: '5px 10px', borderRadius: '8px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896' }}></div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#00C896' }}>Live</span>
+            {/* Live Status */}
+            <div className="admin-live-chip">
+              <div className="admin-live-dot"></div>
+              Live
             </div>
-            <div style={{ position: 'relative', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer' }}>
-              <i className="ti ti-bell" style={{ color: '#8b92a8', fontSize: '17px' }}></i>
-              <span style={{ position: 'absolute', top: '8px', right: '9px', width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e', border: '1px solid #0a0c12' }}></span>
+            {/* Deposits quick badge */}
+            {pendingDeposits.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.18)', padding: '5px 11px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('overview')}>
+                <i className="ti ti-arrow-down-circle" style={{ color: '#F5A623', fontSize: '14px' }}></i>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#F5A623' }}>{pendingDeposits.length} Pending</span>
+              </div>
+            )}
+            {/* Bell */}
+            <div className="admin-hdr-btn">
+              <i className="ti ti-bell" style={{ fontSize: '17px' }}></i>
+              <span className="admin-hdr-notif-dot"></span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 10px', borderRadius: '8px' }}>
-              <img src="https://i.pravatar.cc/24?u=admin_ethioswap" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #F5A623' }} alt="Admin" />
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Admin</span>
+            {/* User chip */}
+            <div className="admin-user-chip">
+              <div className="admin-user-chip-avatar">A</div>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#e8eaf0' }}>{user?.username ? user.username : 'Admin'}</span>
             </div>
           </div>
         </header>
@@ -1271,22 +1612,21 @@ const AdminPanel = ({ user }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
               
               {/* Rate hero banner */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(0,200,150,0.12) 0%, rgba(0,200,150,0.02) 100%)',
-                border: '1px solid rgba(0,200,150,0.25)', borderRadius: '14px', padding: '20px 24px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(0,200,150,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                <div>
-                  <div style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>💱 Live Platform Exchange Rates</div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div className="admin-rate-banner">
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-arrows-exchange-2" style={{ fontSize: '13px' }}></i>
+                    Live Platform Exchange Rates
+                  </div>
+                  <div style={{ fontSize: '19px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                     <span>Buy: <strong style={{ color: '#00C896' }}>$1 = {settings?.etb_rate_per_dollar ?? '—'} ETB</strong></span>
-                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
-                    <span>Sell: <strong style={{ color: '#00C896' }}>$1 = {settings?.etb_rate_per_dollar_sell ?? settings?.etb_rate_per_dollar ?? '—'} ETB</strong></span>
+                    <span style={{ color: 'rgba(255,255,255,0.12)' }}>|</span>
+                    <span>Sell: <strong style={{ color: '#F5A623' }}>$1 = {settings?.etb_rate_per_dollar_sell ?? settings?.etb_rate_per_dollar ?? '—'} ETB</strong></span>
                   </div>
                 </div>
-                <button onClick={() => setActiveTab('settings')} className="btn-premium-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
-                  Edit in Config →
+                <button onClick={() => setActiveTab('settings')} className="btn-premium-secondary" style={{ flexShrink: 0, position: 'relative', zIndex: 1 }}>
+                  <i className="ti ti-settings" style={{ fontSize: '13px' }}></i>
+                  Edit in Config
                 </button>
               </div>
 
@@ -1307,86 +1647,61 @@ const AdminPanel = ({ user }) => {
               ) : (
                 // REAL ANALYTICS DASHBOARD
                 <>
-                  {/* Bento Grid Metrics */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                  {/* Premium Stat Grid */}
+                  <div className="admin-stat-grid">
                     {/* Today's Completed Trades */}
-                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="p-2.5 rounded-2xl bg-[var(--teal)]/10 text-[var(--teal)]">
-                            <i className="ti ti-arrows-right-left text-xl"></i>
-                          </div>
-                          <span className="text-[10px] font-bold text-[var(--teal)] uppercase px-2 py-0.5 rounded-full bg-[var(--teal)]/10">Today</span>
-                        </div>
-                        <div>
-                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Completed Trades</p>
-                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.completedTrades}</h3>
-                        </div>
+                    <div className="admin-stat-card" style={{ '--ac': 'linear-gradient(90deg, #00C896, rgba(0,200,150,0.3))' }}>
+                      <div className="admin-stat-badge" style={{ background: 'rgba(0,200,150,0.1)', color: '#00C896' }}>Today</div>
+                      <div className="admin-stat-icon" style={{ background: 'rgba(0,200,150,0.1)' }}>
+                        <i className="ti ti-arrows-right-left" style={{ color: '#00C896' }}></i>
                       </div>
+                      <div className="admin-stat-label">Completed Trades</div>
+                      <div className="admin-stat-value">{adminAnalytics.today.completedTrades}</div>
+                      <div className="admin-stat-sub">Deposits approved today</div>
                     </div>
 
                     {/* Today's Volume */}
-                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="p-2.5 rounded-2xl bg-[var(--gold)]/10 text-[var(--gold)]">
-                            <i className="ti ti-coins text-xl"></i>
-                          </div>
-                          <span className="text-[10px] font-bold text-[var(--gold)] uppercase px-2 py-0.5 rounded-full bg-[var(--gold)]/10">USDT</span>
-                        </div>
-                        <div>
-                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Today's Volume</p>
-                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">${adminAnalytics.today.volume.toFixed(2)}</h3>
-                        </div>
+                    <div className="admin-stat-card" style={{ '--ac': 'linear-gradient(90deg, #F5A623, rgba(245,166,35,0.3))' }}>
+                      <div className="admin-stat-badge" style={{ background: 'rgba(245,166,35,0.1)', color: '#F5A623' }}>USDT</div>
+                      <div className="admin-stat-icon" style={{ background: 'rgba(245,166,35,0.1)' }}>
+                        <i className="ti ti-coins" style={{ color: '#F5A623' }}></i>
                       </div>
+                      <div className="admin-stat-label">Today's Volume</div>
+                      <div className="admin-stat-value">${adminAnalytics.today.volume.toFixed(0)}</div>
+                      <div className="admin-stat-sub">Processed in USDT</div>
                     </div>
 
-                    {/* Today's Signups */}
-                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-400">
-                            <i className="ti ti-user-plus text-xl"></i>
-                          </div>
-                          <span className="text-[10px] font-bold text-blue-400 uppercase px-2 py-0.5 rounded-full bg-blue-500/10">Users</span>
-                        </div>
-                        <div>
-                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">New Signups</p>
-                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.newSignups}</h3>
-                        </div>
+                    {/* Total Users */}
+                    <div className="admin-stat-card" style={{ '--ac': 'linear-gradient(90deg, #60a5fa, rgba(96,165,250,0.3))' }}>
+                      <div className="admin-stat-badge" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>Users</div>
+                      <div className="admin-stat-icon" style={{ background: 'rgba(59,130,246,0.1)' }}>
+                        <i className="ti ti-users" style={{ color: '#60a5fa' }}></i>
                       </div>
+                      <div className="admin-stat-label">Total Users</div>
+                      <div className="admin-stat-value">{liveTotalUsers}</div>
+                      <div className="admin-stat-sub">{adminAnalytics.today.newSignups} new today</div>
                     </div>
 
                     {/* Open Disputes */}
-                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="p-2.5 rounded-2xl bg-red-500/10 text-red-400">
-                            <i className="ti ti-alert-triangle text-xl"></i>
-                          </div>
-                          <span className="text-[10px] font-bold text-red-400 uppercase px-2 py-0.5 rounded-full bg-red-500/10">Disputes</span>
-                        </div>
-                        <div>
-                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Open Disputes</p>
-                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.openDisputes}</h3>
-                        </div>
+                    <div className="admin-stat-card" style={{ '--ac': 'linear-gradient(90deg, #f87171, rgba(248,113,113,0.3))' }}>
+                      <div className="admin-stat-badge" style={{ background: 'rgba(244,63,94,0.1)', color: '#f87171' }}>Disputes</div>
+                      <div className="admin-stat-icon" style={{ background: 'rgba(244,63,94,0.1)' }}>
+                        <i className="ti ti-alert-triangle" style={{ color: '#f87171' }}></i>
                       </div>
+                      <div className="admin-stat-label">Open Disputes</div>
+                      <div className="admin-stat-value">{adminAnalytics.today.openDisputes}</div>
+                      <div className="admin-stat-sub">Requires attention</div>
                     </div>
 
                     {/* Pending KYC Submissions */}
-                    <div className="bento-card p-5 rounded-3xl bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] group hover:border-[var(--gold)]/30 transition-all duration-500">
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="p-2.5 rounded-2xl bg-orange-500/10 text-orange-400">
-                            <i className="ti ti-id-badge text-xl"></i>
-                          </div>
-                          <span className="text-[10px] font-bold text-orange-400 uppercase px-2 py-0.5 rounded-full bg-orange-500/10">KYC</span>
-                        </div>
-                        <div>
-                          <p className="text-[var(--text-secondary)] text-[12px] font-semibold mb-1 uppercase tracking-tight">Pending KYC</p>
-                          <h3 className="text-2xl font-extrabold font-[var(--font-heading)] leading-none">{adminAnalytics.today.pendingKyc}</h3>
-                        </div>
+                    <div className="admin-stat-card" style={{ '--ac': 'linear-gradient(90deg, #fb923c, rgba(251,146,60,0.3))' }}>
+                      <div className="admin-stat-badge" style={{ background: 'rgba(249,115,22,0.1)', color: '#fb923c' }}>KYC</div>
+                      <div className="admin-stat-icon" style={{ background: 'rgba(249,115,22,0.1)' }}>
+                        <i className="ti ti-id-badge" style={{ color: '#fb923c' }}></i>
                       </div>
+                      <div className="admin-stat-label">Pending KYC</div>
+                      <div className="admin-stat-value">{adminAnalytics.today.pendingKyc}</div>
+                      <div className="admin-stat-sub">Awaiting review</div>
                     </div>
                   </div>
 
