@@ -919,6 +919,9 @@ const AdminPanel = ({ user }) => {
           font-weight: 700;
         }
         .nav-item-active i { color: var(--bg-page) !important; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .bento-card { position: relative; overflow: hidden; }
         .bento-card::before {
           content: '';
@@ -929,19 +932,69 @@ const AdminPanel = ({ user }) => {
           opacity: 0.05;
           z-index: 0;
         }
+
+        /* === MOBILE BOTTOM NAV === */
+        .admin-mobile-nav {
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          height: 64px;
+          background: #0a0c12;
+          border-top: 1px solid rgba(255,255,255,0.07);
+          display: none;
+          align-items: center;
+          justify-content: space-around;
+          padding: 0 4px;
+          z-index: 200;
+          box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+        }
+        .admin-mobile-nav-btn {
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+          padding: 6px 8px; border: none; background: transparent; cursor: pointer;
+          border-radius: 10px; flex: 1; transition: all 0.15s ease; position: relative;
+        }
+        .admin-mobile-nav-btn.active { background: rgba(245,166,35,0.1); }
+        .admin-mobile-nav-btn i { font-size: 20px; color: #6b7694; transition: color 0.15s ease; }
+        .admin-mobile-nav-btn.active i { color: #F5A623; }
+        .admin-mobile-nav-btn span { font-size: 9px; font-weight: 600; color: #6b7694; white-space: nowrap; }
+        .admin-mobile-nav-btn.active span { color: #F5A623; }
+        .admin-mobile-nav-badge {
+          position: absolute; top: 4px; right: 6px;
+          background: #f43f5e; color: #fff; font-size: 9px; font-weight: 700;
+          padding: 1px 4px; border-radius: 99px; min-width: 14px; text-align: center; line-height: 1.4;
+        }
+
+        /* === DEFAULT: DESKTOP === */
+        .mobile-only { display: none !important; }
+        .desktop-only { display: flex !important; }
+        .admin-content-area { padding: 2rem; }
+        .admin-header-wrap { padding-left: 2rem; padding-right: 2rem; height: 64px; }
+
+        /* === TABLET / SMALL LAPTOP (max-width 1024px) === */
         @media (max-width: 1024px) {
           .admin-sidebar {
             position: fixed !important;
-            left: -240px;
-            top: 0; bottom: 0;
+            left: -280px !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
             z-index: 1000 !important;
-            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            box-shadow: 6px 0 40px rgba(0,0,0,0.6);
           }
           .admin-sidebar.open { left: 0 !important; }
           .mobile-only { display: flex !important; }
           .desktop-only { display: none !important; }
+          .admin-mobile-nav { display: flex !important; }
+          .admin-content-area { padding: 1rem !important; padding-bottom: 84px !important; }
+          .admin-header-wrap { padding-left: 1rem !important; padding-right: 1rem !important; }
         }
-        .mobile-only { display: none; }
+
+        /* === PHONE (max-width 640px) === */
+        @media (max-width: 640px) {
+          .admin-content-area { padding: 0.75rem !important; padding-bottom: 84px !important; }
+          .admin-header-wrap { padding-left: 0.75rem !important; padding-right: 0.75rem !important; height: 56px !important; }
+          .drawer-content { width: 100% !important; }
+        }
 
         /* Tailwind-Compat Utilities for AdminPanel */
         .flex { display: flex; }
@@ -1093,15 +1146,15 @@ const AdminPanel = ({ user }) => {
       {/* ── FIXED LEFT SIDEBAR ── */}
       {isSidebarOpen && (
         <div 
-          className="sidebar-backdrop"
           onClick={() => setIsSidebarOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 999,
-            display: 'none'
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            zIndex: 998,
+            animation: 'fadeIn 0.2s ease'
           }} 
         />
       )}
@@ -1173,41 +1226,45 @@ const AdminPanel = ({ user }) => {
         </div>
       </aside>
 
-      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 z-[1000] lg:hidden backdrop-blur-sm" />}
+
 
       {/* ── MAIN CONTENT ── */}
       <main className="flex-1 flex flex-col min-w-0">
         
-        <header className="h-[72px] flex-shrink-0 flex items-center justify-between px-8 border-b border-[var(--border)] bg-[var(--bg-page)]">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="mobile-only text-[var(--teal)] text-2xl">☰</button>
+        <header className="admin-header-wrap flex-shrink-0 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-page)]" style={{ paddingLeft: '2rem', paddingRight: '2rem', height: '64px' }}>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(true)} 
+              className="mobile-only"
+              style={{ background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: '9px', color: '#F5A623', padding: '7px 10px', fontSize: '17px', cursor: 'pointer', lineHeight: 1 }}
+            >☰</button>
             <div>
-              <h2 className="text-xl font-bold font-[var(--font-heading)]">
-                {navTabs.find(t => t.id === activeTab)?.title || 'Admin'} <span className="text-[var(--gold)]">Center</span>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+                {navTabs.find(t => t.id === activeTab)?.title || 'Admin'} <span style={{ color: '#F5A623' }}>Center</span>
               </h2>
-              <div className="text-xs text-[var(--text-muted)] font-medium mt-0.5">
+              <div style={{ fontSize: '11px', color: '#6b7694', fontWeight: 500, marginTop: '2px' }}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} · Platform Health: Optimal
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-5 desktop-only">
-            <div className="flex items-center gap-2 bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] px-3 py-1.5 rounded-lg">
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--teal)] notif-pulse"></div>
-              <span className="text-xs font-bold text-[var(--teal)]">Live</span>
+          <div className="flex items-center gap-3 desktop-only">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', padding: '5px 10px', borderRadius: '8px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896' }}></div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#00C896' }}>Live</span>
             </div>
-            <div className="relative w-9 h-9 flex items-center justify-center bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] rounded-lg cursor-pointer hover:border-[var(--gold)]/40 transition-all">
-              <i className="ti ti-bell text-[var(--text-secondary)] text-lg"></i>
-              <span className="absolute top-2 right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--error)] border border-[var(--bg-page)]"></span>
+            <div style={{ position: 'relative', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', cursor: 'pointer' }}>
+              <i className="ti ti-bell" style={{ color: '#8b92a8', fontSize: '17px' }}></i>
+              <span style={{ position: 'absolute', top: '8px', right: '9px', width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e', border: '1px solid #0a0c12' }}></span>
             </div>
-            <div className="flex items-center gap-2.5 bg-[var(--bg-surface-hover)] border border-[var(--border-hover)] px-3 py-1.5 rounded-lg">
-              <img src="https://i.pravatar.cc/24?u=admin_ethioswap" className="w-6 h-6 rounded-full border border-[var(--gold)]" alt="Admin" />
-              <span className="text-[13px] font-bold">Admin</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 10px', borderRadius: '8px' }}>
+              <img src="https://i.pravatar.cc/24?u=admin_ethioswap" style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #F5A623' }} alt="Admin" />
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Admin</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar admin-content-area" style={{ padding: '2rem' }}>
 
           {/* ════ OVERVIEW / STATS DASHBOARD PAGE ════ */}
           {activeTab === 'overview' && (
@@ -5002,6 +5059,33 @@ const user = await ctx.db
       )}
 
       </main>
+
+      {/* ── MOBILE BOTTOM NAVIGATION ── */}
+      <nav className="admin-mobile-nav">
+        {[
+          { id: 'overview',   icon: 'ti-layout-dashboard', label: 'Dashboard', badge: 0 },
+          { id: 'deposits',   icon: 'ti-download',         label: 'Deposits',  badge: pendingDeposits.length },
+          { id: 'withdrawals',icon: 'ti-upload',           label: 'Withdraw',  badge: pendingWithdrawals.length },
+          { id: 'kyc',        icon: 'ti-id-badge',         label: 'KYC',       badge: kycQueue.length },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            className={`admin-mobile-nav-btn${activeTab === tab.id ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.badge > 0 && <span className="admin-mobile-nav-badge">{tab.badge}</span>}
+            <i className={`ti ${tab.icon}`}></i>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+        <button
+          className={`admin-mobile-nav-btn${isSidebarOpen ? ' active' : ''}`}
+          onClick={() => setIsSidebarOpen(true)}
+        >
+          <i className="ti ti-menu-2"></i>
+          <span>More</span>
+        </button>
+      </nav>
     </div>
   );
 };
