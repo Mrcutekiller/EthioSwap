@@ -56,28 +56,65 @@ const NetworkCard = ({ network, selected, onSelect, compact }) => {
   );
 };
 
+const ChoiceSelector = ({ title, desc, options, onSelect }) => (
+  <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px', textAlign: 'center' }}>
+    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{title}</h3>
+    <p style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '20px' }}>{desc || 'Choose how you want to proceed'}</p>
+    <div style={{ display: 'flex', gap: '12px' }}>
+      {options.map(opt => (
+        <button key={opt.id} onClick={() => onSelect(opt.id)} style={{
+          flex: 1, padding: '24px 16px', borderRadius: '14px', border: '1px solid #1E2640',
+          background: '#1A1F32', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: '12px', transition: 'all 0.2s ease',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1E2640'; e.currentTarget.style.transform = 'translateY(0)'; }}
+        >
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245,166,35,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+            {opt.icon}
+          </div>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{opt.label}</span>
+          <span style={{ fontSize: '11px', color: '#8A9BB8', lineHeight: 1.3 }}>{opt.desc}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
 const WalletCard = () => {
   const {
     user, wallet, systemSettings,
     withdrawETH, myDepositReqs, myWithdrawalReqs,
     createDepositRequest, setError, setSuccess,
+    transferToUser,
   } = useAuth();
 
   const [tab, setTab] = useState('balance');
   const [copied, setCopied] = useState(false);
   const [qrNet, setQrNet] = useState('trc20');
 
+  // Deposit/Receive Chain flow
   const [depStep, setDepStep] = useState(1);
   const [depNet, setDepNet] = useState('trc20');
   const [depAmt, setDepAmt] = useState('');
   const [depTxId, setDepTxId] = useState('');
   const [depLoading, setDepLoading] = useState(false);
 
+  // Withdrawal/Send Chain flow
   const [wdStep, setWdStep] = useState(1);
   const [wdNet, setWdNet] = useState('trc20');
   const [wdAmt, setWdAmt] = useState('');
   const [wdAddr, setWdAddr] = useState('');
   const [wdLoading, setWdLoading] = useState(false);
+
+  // Send & Receive Choice States
+  const [sendType, setSendType] = useState('user'); // 'user' | 'address' | null
+  const [sendUsername, setSendUsername] = useState('');
+  const [sendAmt, setSendAmt] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);
+
+  const [receiveType, setReceiveType] = useState(null); // 'user' | 'chain' | null
+  const [wdType, setWdType] = useState(null); // 'user' | 'address' | null
 
   const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
 
@@ -117,7 +154,7 @@ const WalletCard = () => {
   const handleCopy = useCallback((text) => {
     navigator.clipboard.writeText(text).catch(() => {});
     setCopied(true);
-    setSuccess('Address copied!');
+    setSuccess('Copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   }, [setSuccess]);
 
@@ -130,6 +167,7 @@ const WalletCard = () => {
       await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
       setSuccess(`Success! $${depYouReceive.toFixed(2)} added to your wallet (${platformFeePercent}% fee deducted).`);
       setDepAmt(''); setDepTxId(''); setDepStep(1);
+      setReceiveType(null); // Back to choice
     } catch (err) { setError(err.message); }
     finally { setDepLoading(false); }
   };
@@ -143,11 +181,30 @@ const WalletCard = () => {
     try {
       const res = await withdrawETH(wdAmtNum, wdAddr, '', wdNet.toUpperCase());
       if (res && res.success) {
-        setSuccess(`Success! $${wdAmtNum.toFixed(2)} sent to ${wdAddr.substring(0, 10)}...`);
+        setSuccess(`Success! $${wdAmtNum.toFixed(2)} is pending admin approval.`);
         setWdAmt(''); setWdAddr(''); setWdStep(1);
+        setWdType(null); // Back to choice
       }
     } catch (err) { setError(err.message); }
     finally { setWdLoading(false); }
+  };
+
+  const handleInternalSendSubmit = async () => {
+    if (!sendUsername.trim()) { setError('Please enter a username'); return; }
+    const amt = parseFloat(sendAmt) || 0;
+    if (amt <= 0) { setError('Enter a valid amount'); return; }
+    if (amt > available) { setError(`Max available: $${fmt(available)}`); return; }
+    
+    setSendLoading(true);
+    setSuccess('Processing transfer...');
+    try {
+      await transferToUser(sendUsername, amt);
+      setSendUsername('');
+      setSendAmt('');
+      setSendType(null);
+      setWdType(null);
+    } catch (err) { setError(err.message); }
+    finally { setSendLoading(false); }
   };
 
   if (!wallet) return (
@@ -161,9 +218,22 @@ const WalletCard = () => {
 
   const TABS = [
     { id: 'balance',  icon: 'ti ti-wallet',      label: 'Balance' },
-    { id: 'deposit',  icon: 'ti ti-arrow-down',   label: 'Deposit' },
+    { id: 'send',     icon: 'ti ti-send',        label: 'Send' },
+    { id: 'receive',  icon: 'ti ti-arrow-down',   label: 'Receive' },
     { id: 'withdraw', icon: 'ti ti-arrow-up',     label: 'Withdraw' },
   ];
+
+  const handleWdTypeSelect = (type) => {
+    if (type === 'user') {
+      setTab('send');
+      setSendType('user');
+    } else {
+      setWdType('address');
+      setWdStep(1);
+    }
+  };
+
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -205,7 +275,7 @@ const WalletCard = () => {
       {/* TABS */}
       <div style={{ display: 'flex', background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', padding: '4px', gap: '4px' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); if (t.id === 'deposit') setDepStep(1); if (t.id === 'withdraw') setWdStep(1); }}
+          <button key={t.id} onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
             style={{
               flex: 1, padding: '10px 4px', borderRadius: '12px', border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
@@ -281,8 +351,12 @@ const WalletCard = () => {
                           <i className={isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up'} style={{ color: isDep ? '#F5A623' : '#FF4D4D' }}></i>
                         </div>
                         <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{isDep ? 'Deposit' : 'Withdrawal'}</div>
-                          <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>{date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}</div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                            {isDep ? (item.wallet_type === 'INTERNAL' ? 'Received (Internal)' : 'Deposit') : (item.wallet_type === 'INTERNAL' ? 'Sent (Internal)' : 'Withdrawal')}
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>
+                            {isDep ? `From ${item.sender_reference || 'Chain'}` : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                          </div>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -311,321 +385,451 @@ const WalletCard = () => {
         </div>
       )}
 
-      {/* ══════ DEPOSIT 3-STEP FLOW ══════ */}
-      {tab === 'deposit' && (
+      {/* SEND TAB */}
+      {tab === 'send' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <StepIndicator current={depStep} total={3} />
-
-          {/* STEP 1: Pick Network */}
-          {depStep === 1 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>Pick Network</div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>Select the network you'll send USDT on</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-                {NETWORKS.map(n => <NetworkCard key={n.id} network={n} selected={depNet} onSelect={setDepNet} />)}
-              </div>
-              <button onClick={() => setDepStep(2)} style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
-                fontSize: '15px', fontWeight: 800, cursor: 'pointer',
-              }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+          <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send to User</div>
             </div>
-          )}
 
-          {/* STEP 2: Enter Amount */}
-          {depStep === 2 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <button onClick={() => setDepStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left"></i>
-                </button>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Enter Amount</div>
-              </div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
-                Deposit via <span style={{ color: depNetData?.color, fontWeight: 600 }}>{depNetData?.label}</span> · min ${minDep}
-              </div>
-
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>RECIPIENT USERNAME</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 700, color: '#8A9BB8' }}>@</span>
                 <input
-                  type="number" step="0.01" min={minDep}
-                  value={depAmt} onChange={e => setDepAmt(e.target.value)}
-                  placeholder="0.00"
+                  type="text"
+                  value={sendUsername}
+                  onChange={e => setSendUsername(e.target.value)}
+                  placeholder="username"
                   style={{
-                    width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
-                    background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
-                    color: '#fff', fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                    outline: 'none',
+                    width: '100%', boxSizing: 'border-box', padding: '13px 16px 13px 32px',
+                    borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
+                    color: '#fff', fontSize: '13px', outline: 'none',
                   }}
                 />
               </div>
+            </div>
 
-              {depAmtNum > 0 && (
-                <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                    <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
+              <span style={{ position: 'absolute', left: '16px', top: '42px', transform: 'translateY(-50%)', fontSize: '18px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={sendAmt}
+                onChange={e => setSendAmt(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
+                  background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
+                  color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none',
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleInternalSendSubmit}
+              disabled={sendLoading || !sendUsername.trim() || !sendAmt}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                background: sendLoading || !sendUsername.trim() || !sendAmt ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+                color: sendLoading || !sendUsername.trim() || !sendAmt ? '#8A9BB8' : '#0A0C12',
+                fontSize: '15px', fontWeight: 800, cursor: sendLoading || !sendUsername.trim() || !sendAmt ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {sendLoading ? '⏳ Processing...' : '✓ Send Instantly'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* RECEIVE TAB */}
+      {tab === 'receive' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {receiveType === null ? (
+            <ChoiceSelector
+              title="Receive USDT"
+              desc="Select how you want to receive your USDT"
+              options={[
+                { id: 'user', icon: '👤', label: 'From User', desc: 'Share your username / Account ID for internal transfer' },
+                { id: 'chain', icon: '🔗', label: 'From Chain', desc: 'Deposit from an external blockchain network' },
+              ]}
+              onSelect={setReceiveType}
+            />
+          ) : receiveType === 'user' ? (
+            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px', textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                  <i className="ti ti-arrow-left"></i>
+                </button>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Receive from User</div>
+              </div>
+
+              <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Your Username</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#F5A623', fontFamily: 'var(--font-mono)' }}>@{user?.username}</div>
+                </div>
+                <div style={{ height: '1px', background: '#1E2640' }} />
+                <div>
+                  <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Your Account ID</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>#{numId}</div>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '12px', color: '#8A9BB8', marginBottom: '20px', lineHeight: 1.5 }}>
+                Share your username or Account ID with another EthioSwap user. They can transfer funds instantly to you with zero network fees.
+              </p>
+
+              <button onClick={() => handleCopy(`@${user?.username}`)} style={{
+                width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+                background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
+                color: '#F5A623', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+              }}>
+                {copied ? '✓ Copied Username!' : '📋 Copy Username'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <StepIndicator current={depStep} total={3} />
+
+              {/* STEP 1: Pick Network */}
+              {depStep === 1 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Pick Network</div>
                   </div>
-                  <FeePill label="Deposit Amount" value={`$${fmt(depAmtNum)} USDT`} color="#fff" />
-                  <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(depPlatFee)} USDT`} color="#FF4D4D" />
-                  <FeePill label={`Network Fee (${depNetData?.label})`} value={`+$${fmt(depChainFee)} USDT`} color="#F5A623" />
-                  <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
-                  <FeePill label="You Send (incl. network fee)" value={`$${fmt(depTotalCost)} USDT`} color="#F5A623" />
-                  <FeePill label="💰 You Receive in Wallet" value={`$${fmt(depYouReceive)} USDT`} color="#00C896" />
-                  <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(depYouReceive * rate)} ETB</div>
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>Select the network you'll send USDT on</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                    {NETWORKS.map(n => <NetworkCard key={n.id} network={n} selected={depNet} onSelect={setDepNet} />)}
+                  </div>
+                  <button onClick={() => setDepStep(2)} style={{
+                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
+                    fontSize: '15px', fontWeight: 800, cursor: 'pointer',
+                  }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setDepStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
-                </button>
-                <button onClick={() => { if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; } setDepStep(3); }} style={{
-                  flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                  background: depAmtNum >= minDep ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
-                  color: depAmtNum >= minDep ? '#0A0C12' : '#8A9BB8',
-                  fontSize: '15px', fontWeight: 800, cursor: depAmtNum >= minDep ? 'pointer' : 'not-allowed',
-                }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Deposit Address + TxID */}
-          {depStep === 3 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <button onClick={() => setDepStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left"></i>
-                </button>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send USDT</div>
-              </div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
-                Send exactly <span style={{ color: '#F5A623', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${fmt(depTotalCost)} USDT</span> to the address below
-              </div>
-
-              {/* Network warning */}
-              <div style={{ background: 'rgba(255, 77, 77, 0.06)', border: '1px solid rgba(255, 77, 77, 0.2)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <i className="ti ti-alert-triangle" style={{ color: '#FF4D4D', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}></i>
-                <span style={{ fontSize: '12px', color: '#FF4D4D', lineHeight: 1.5 }}>{depNetData?.warning}</span>
-              </div>
-
-              {/* QR + Address */}
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${depAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
-                </div>
-                <div style={{ flex: 1, minWidth: '200px' }}>
-                  <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>
-                    {depNetData?.icon} {depNetData?.label} USDT Address
+              {/* STEP 2: Enter Amount */}
+              {depStep === 2 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setDepStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Enter Amount</div>
                   </div>
-                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
-                    {depAddress || 'No address assigned'}
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
+                    Deposit via <span style={{ color: depNetData?.color, fontWeight: 600 }}>{depNetData?.label}</span> · min ${minDep}
                   </div>
-                  <button onClick={() => handleCopy(depAddress)} style={{
-                    padding: '7px 16px', borderRadius: '8px', width: '100%',
-                    background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
-                    color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                  }}>
-                    {copied ? '✓ Copied!' : '📋 Copy Address'}
-                  </button>
+
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                    <input
+                      type="number" step="0.01" min={minDep}
+                      value={depAmt} onChange={e => setDepAmt(e.target.value)}
+                      placeholder="0.00"
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
+                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
+                        color: '#fff', fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-mono)',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {depAmtNum > 0 && (
+                    <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                        <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+                      </div>
+                      <FeePill label="Deposit Amount" value={`$${fmt(depAmtNum)} USDT`} color="#fff" />
+                      <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(depPlatFee)} USDT`} color="#FF4D4D" />
+                      <FeePill label={`Network Fee (${depNetData?.label})`} value={`+$${fmt(depChainFee)} USDT`} color="#F5A623" />
+                      <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
+                      <FeePill label="You Send (incl. network fee)" value={`$${fmt(depTotalCost)} USDT`} color="#F5A623" />
+                      <FeePill label="💰 You Receive in Wallet" value={`$${fmt(depYouReceive)} USDT`} color="#00C896" />
+                      <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(depYouReceive * rate)} ETB</div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setDepStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
+                    </button>
+                    <button onClick={() => { if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; } setDepStep(3); }} style={{
+                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
+                      background: depAmtNum >= minDep ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
+                      color: depAmtNum >= minDep ? '#0A0C12' : '#8A9BB8',
+                      fontSize: '15px', fontWeight: 800, cursor: depAmtNum >= minDep ? 'pointer' : 'not-allowed',
+                    }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Fee summary */}
-              <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                <FeePill label="You Send" value={`$${fmt(depTotalCost)} USDT`} color="#fff" />
-                <FeePill label="Platform Fee" value={`-$${fmt(depPlatFee)} USDT`} color="#FF4D4D" />
-                <FeePill label="💰 You Receive" value={`$${fmt(depYouReceive)} USDT`} color="#00C896" />
-              </div>
+              {/* STEP 3: Deposit Address + TxID */}
+              {depStep === 3 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setDepStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send USDT</div>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
+                    Send exactly <span style={{ color: '#F5A623', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${fmt(depTotalCost)} USDT</span> to the address below
+                  </div>
 
-              {/* TxID input */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>TRANSACTION ID / REFERENCE</label>
-                <input
-                  type="text" required
-                  value={depTxId} onChange={e => setDepTxId(e.target.value)}
-                  placeholder="Paste your TxID after sending"
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '13px 16px',
-                    borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
-                    color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
-                  }}
-                />
-              </div>
+                  {/* Network warning */}
+                  <div style={{ background: 'rgba(255, 77, 77, 0.06)', border: '1px solid rgba(255, 77, 77, 0.2)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <i className="ti ti-alert-triangle" style={{ color: '#FF4D4D', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}></i>
+                    <span style={{ fontSize: '12px', color: '#FF4D4D', lineHeight: 1.5 }}>{depNetData?.warning}</span>
+                  </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setDepStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
-                </button>
-                <button onClick={handleDepositSubmit} disabled={depLoading || !depTxId.trim()} style={{
-                  flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                  background: depLoading || !depTxId.trim() ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                  color: depLoading || !depTxId.trim() ? '#8A9BB8' : '#0A0C12',
-                  fontSize: '15px', fontWeight: 800, cursor: depLoading || !depTxId.trim() ? 'not-allowed' : 'pointer',
-                }}>
-                  {depLoading ? '⏳ Submitting…' : '✓ Submit Deposit'}
-                </button>
-              </div>
+                  {/* QR + Address */}
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${depAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>
+                        {depNetData?.icon} {depNetData?.label} USDT Address
+                      </div>
+                      <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
+                        {depAddress || 'No address assigned'}
+                      </div>
+                      <button onClick={() => handleCopy(depAddress)} style={{
+                        padding: '7px 16px', borderRadius: '8px', width: '100%',
+                        background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
+                        color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                      }}>
+                        {copied ? '✓ Copied!' : '📋 Copy Address'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fee summary */}
+                  <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                    <FeePill label="You Send" value={`$${fmt(depTotalCost)} USDT`} color="#fff" />
+                    <FeePill label="Platform Fee" value={`-$${fmt(depPlatFee)} USDT`} color="#FF4D4D" />
+                    <FeePill label="💰 You Receive" value={`$${fmt(depYouReceive)} USDT`} color="#00C896" />
+                  </div>
+
+                  {/* TxID input */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>TRANSACTION ID / REFERENCE</label>
+                    <input
+                      type="text" required
+                      value={depTxId} onChange={e => setDepTxId(e.target.value)}
+                      placeholder="Paste your TxID after sending"
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '13px 16px',
+                        borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
+                        color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setDepStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
+                    </button>
+                    <button onClick={handleDepositSubmit} disabled={depLoading || !depTxId.trim()} style={{
+                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
+                      background: depLoading || !depTxId.trim() ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+                      color: depLoading || !depTxId.trim() ? '#8A9BB8' : '#0A0C12',
+                      fontSize: '15px', fontWeight: 800, cursor: depLoading || !depTxId.trim() ? 'not-allowed' : 'pointer',
+                    }}>
+                      {depLoading ? '⏳ Submitting…' : '✓ Submit Deposit'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* ══════ WITHDRAW 3-STEP FLOW ══════ */}
+      {/* WITHDRAW TAB */}
       {tab === 'withdraw' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <StepIndicator current={wdStep} total={3} />
+          {wdType === null ? (
+            <ChoiceSelector
+              title="Withdraw USDT"
+              desc="Select where you want to withdraw your USDT"
+              options={[
+                { id: 'user', icon: '👤', label: 'To User', desc: 'Transfer internally to another username for $0 fees' },
+                { id: 'address', icon: '🔗', label: 'To Address', desc: 'Withdraw to an external blockchain network address' },
+              ]}
+              onSelect={handleWdTypeSelect}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <StepIndicator current={wdStep} total={3} />
 
-          {/* STEP 1: Pick Network */}
-          {wdStep === 1 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>Pick Network</div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>Select the network for your withdrawal</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-                {NETWORKS.map(n => <NetworkCard key={n.id} network={n} selected={wdNet} onSelect={setWdNet} />)}
-              </div>
-              <div style={{ fontSize: '12px', color: '#8A9BB8', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="ti ti-wallet" style={{ color: '#F5A623' }}></i>
-                Available: <span style={{ color: '#F5A623', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${fmt(available)}</span>
-              </div>
-              <button onClick={() => setWdStep(2)} style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
-                fontSize: '15px', fontWeight: 800, cursor: 'pointer',
-              }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
-            </div>
-          )}
-
-          {/* STEP 2: Amount + Address */}
-          {wdStep === 2 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <button onClick={() => setWdStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left"></i>
-                </button>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Withdraw</div>
-              </div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
-                Withdraw via <span style={{ color: wdNetData?.color, fontWeight: 600 }}>{wdNetData?.label}</span> · available ${fmt(available)}
-              </div>
-
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>WALLET ADDRESS</label>
-                <input
-                  type="text" required value={wdAddr} onChange={e => setWdAddr(e.target.value)}
-                  placeholder={wdNetData?.addrPlaceholder}
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '13px 16px',
-                    borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
-                    color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
-                  }}
-                />
-              </div>
-
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
-                <span style={{ position: 'absolute', left: '16px', top: '42px', transform: 'translateY(-50%)', fontSize: '18px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
-                <input
-                  type="number" step="0.01" min={minWd}
-                  value={wdAmt} onChange={e => setWdAmt(e.target.value)}
-                  placeholder="0.00"
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
-                    background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
-                    color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none',
-                  }}
-                />
-              </div>
-
-              {wdAmtNum > 0 && (
-                <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                    <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+              {/* STEP 1: Pick Network */}
+              {wdStep === 1 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setWdType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Pick Network</div>
                   </div>
-                  <FeePill label="Withdraw Amount" value={`$${fmt(wdAmtNum)} USDT`} color="#fff" />
-                  <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(wdPlatFee)} USDT`} color="#FF4D4D" />
-                  <FeePill label={`Network Fee (${wdNetData?.label})`} value={`-$${fmt(wdChainFee)} USDT`} color="#FF4D4D" />
-                  <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
-                  <FeePill label="💰 You Receive" value={wdYouReceive > 0 ? `$${fmt(wdYouReceive)} USDT` : '⚠️ Amount too low'} color={wdYouReceive > 0 ? '#00C896' : '#FF4D4D'} />
-                  {wdYouReceive > 0 && <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(wdYouReceive * rate)} ETB</div>}
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>Select the network for your withdrawal</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                    {NETWORKS.map(n => <NetworkCard key={n.id} network={n} selected={wdNet} onSelect={setWdNet} />)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#8A9BB8', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-wallet" style={{ color: '#F5A623' }}></i>
+                    Available: <span style={{ color: '#F5A623', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${fmt(available)}</span>
+                  </div>
+                  <button onClick={() => setWdStep(2)} style={{
+                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                    background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
+                    fontSize: '15px', fontWeight: 800, cursor: 'pointer',
+                  }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setWdStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
-                </button>
-                <button onClick={() => {
-                  if (wdAmtNum < minWd) { setError(`Minimum withdrawal is $${minWd}`); return; }
-                  if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
-                  if (!wdAddr.trim()) { setError('Enter a wallet address'); return; }
-                  setWdStep(3);
-                }} style={{
-                  flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                  background: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
-                  color: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? '#0A0C12' : '#8A9BB8',
-                  fontSize: '15px', fontWeight: 800, cursor: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'pointer' : 'not-allowed',
-                }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
-              </div>
-            </div>
-          )}
+              {/* STEP 2: Amount + Address */}
+              {wdStep === 2 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setWdStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Withdraw</div>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '16px' }}>
+                    Withdraw via <span style={{ color: wdNetData?.color, fontWeight: 600 }}>{wdNetData?.label}</span> · available ${fmt(available)}
+                  </div>
 
-          {/* STEP 3: Confirmation */}
-          {wdStep === 3 && (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <button onClick={() => setWdStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left"></i>
-                </button>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Confirm Withdrawal</div>
-              </div>
-              <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '20px' }}>Review your withdrawal details carefully</div>
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>WALLET ADDRESS</label>
+                    <input
+                      type="text" required value={wdAddr} onChange={e => setWdAddr(e.target.value)}
+                      placeholder={wdNetData?.addrPlaceholder}
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '13px 16px',
+                        borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
+                        color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
+                      }}
+                    />
+                  </div>
 
-              <div style={{ background: '#0B0E1A', borderRadius: '14px', border: '1px solid #1E2640', padding: '16px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Network</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: wdNetData?.color }}>{wdNetData?.icon} {wdNetData?.label}</span>
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
+                    <span style={{ position: 'absolute', left: '16px', top: '42px', transform: 'translateY(-50%)', fontSize: '18px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                    <input
+                      type="number" step="0.01" min={minWd}
+                      value={wdAmt} onChange={e => setWdAmt(e.target.value)}
+                      placeholder="0.00"
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
+                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
+                        color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none',
+                      }}
+                    />
                   </div>
-                  <div style={{ height: '1px', background: '#1E2640' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: '#8A9BB8' }}>To Address</span>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#F5A623', fontFamily: 'var(--font-mono)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wdAddr}</span>
-                  </div>
-                  <div style={{ height: '1px', background: '#1E2640' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Withdraw Amount</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>${fmt(wdAmtNum)} USDT</span>
-                  </div>
-                  <div style={{ height: '1px', background: '#1E2640' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Platform Fee ({platformFeePercent}%)</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF4D4D', fontFamily: 'var(--font-mono)' }}>-${fmt(wdPlatFee)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Network Fee</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF4D4D', fontFamily: 'var(--font-mono)' }}>-${fmt(wdChainFee)}</span>
-                  </div>
-                  <div style={{ height: '2px', background: '#F5A623', margin: '2px 0', borderRadius: '1px' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#F5A623' }}>💰 You Receive</span>
-                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>${fmt(wdYouReceive)} USDT</span>
+
+                  {wdAmtNum > 0 && (
+                    <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                        <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+                      </div>
+                      <FeePill label="Withdraw Amount" value={`$${fmt(wdAmtNum)} USDT`} color="#fff" />
+                      <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(wdPlatFee)} USDT`} color="#FF4D4D" />
+                      <FeePill label={`Network Fee (${wdNetData?.label})`} value={`-$${fmt(wdChainFee)} USDT`} color="#FF4D4D" />
+                      <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
+                      <FeePill label="💰 You Receive" value={wdYouReceive > 0 ? `$${fmt(wdYouReceive)} USDT` : '⚠️ Amount too low'} color={wdYouReceive > 0 ? '#00C896' : '#FF4D4D'} />
+                      {wdYouReceive > 0 && <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(wdYouReceive * rate)} ETB</div>}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setWdStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
+                    </button>
+                    <button onClick={() => {
+                      if (wdAmtNum < minWd) { setError(`Minimum withdrawal is $${minWd}`); return; }
+                      if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
+                      if (!wdAddr.trim()) { setError('Enter a wallet address'); return; }
+                      setWdStep(3);
+                    }} style={{
+                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
+                      background: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
+                      color: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? '#0A0C12' : '#8A9BB8',
+                      fontSize: '15px', fontWeight: 800, cursor: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'pointer' : 'not-allowed',
+                    }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setWdStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                  <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
-                </button>
-                <button onClick={handleWithdrawSubmit} disabled={wdLoading} style={{
-                  flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                  background: wdLoading ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                  color: wdLoading ? '#8A9BB8' : '#0A0C12',
-                  fontSize: '15px', fontWeight: 800, cursor: wdLoading ? 'not-allowed' : 'pointer',
-                }}>
-                  {wdLoading ? '⏳ Processing…' : '✓ Confirm Withdrawal'}
-                </button>
-              </div>
+              {/* STEP 3: Confirmation */}
+              {wdStep === 3 && (
+                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <button onClick={() => setWdStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left"></i>
+                    </button>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Confirm Withdrawal</div>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#8A9BB8', marginBottom: '20px' }}>Review your withdrawal details carefully</div>
+
+                  <div style={{ background: '#0B0E1A', borderRadius: '14px', border: '1px solid #1E2640', padding: '16px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Network</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: wdNetData?.color }}>{wdNetData?.icon} {wdNetData?.label}</span>
+                      </div>
+                      <div style={{ height: '1px', background: '#1E2640' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: '#8A9BB8' }}>To Address</span>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: '#F5A623', fontFamily: 'var(--font-mono)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wdAddr}</span>
+                      </div>
+                      <div style={{ height: '1px', background: '#1E2640' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Withdraw Amount</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>${fmt(wdAmtNum)} USDT</span>
+                      </div>
+                      <div style={{ height: '1px', background: '#1E2640' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Platform Fee ({platformFeePercent}%)</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF4D4D', fontFamily: 'var(--font-mono)' }}>-${fmt(wdPlatFee)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: '#8A9BB8' }}>Network Fee</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#FF4D4D', fontFamily: 'var(--font-mono)' }}>-${fmt(wdChainFee)}</span>
+                      </div>
+                      <div style={{ height: '2px', background: '#F5A623', margin: '2px 0', borderRadius: '1px' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#F5A623' }}>💰 You Receive</span>
+                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>${fmt(wdYouReceive)} USDT</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={() => setWdStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                      <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
+                    </button>
+                    <button onClick={handleWithdrawSubmit} disabled={wdLoading} style={{
+                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
+                      background: wdLoading ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+                      color: wdLoading ? '#8A9BB8' : '#0A0C12',
+                      fontSize: '15px', fontWeight: 800, cursor: wdLoading ? 'not-allowed' : 'pointer',
+                    }}>
+                      {wdLoading ? '⏳ Processing…' : '✓ Confirm Withdrawal'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
