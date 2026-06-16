@@ -311,8 +311,20 @@ export const AuthProvider = ({ children }) => {
       )
       .subscribe();
 
+    const listingsChannel = supabase
+      .channel('listings_realtime_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'listings' },
+        () => {
+          loadListings();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(listingsChannel);
     };
   }, []);
 
@@ -516,7 +528,7 @@ export const AuthProvider = ({ children }) => {
         max_limit_etb: maxLimitEtb,
         payment_methods: paymentMethods,
         type,
-        custom_rate_etb: customRateEtb,
+        custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
         payment_accounts: paymentAccounts,
         description: description || null,
         payment_window: paymentWindow ? Number(paymentWindow) : 15,
@@ -538,12 +550,18 @@ export const AuthProvider = ({ children }) => {
       const listing = listings.find(l => l.id === listingId);
       if (!listing) throw new Error('Listing not found');
 
+      const standardRate = listing.type === 'buy'
+        ? (systemSettings.etbRatePerDollarSell ?? systemSettings.etbRatePerDollar)
+        : systemSettings.etbRatePerDollar;
+      const rateToUse = listing.custom_rate_etb || standardRate;
+
       const { data: newTrade, error } = await supabase.from('trades').insert({
         buyer_id: user.id,
         seller_id: listing.seller_id,
         listing_id: listingId,
         amount_eth: amountEth,
-        amount_etb: Math.round(amountEth * (listing.custom_rate_etb || systemSettings.etbRatePerDollar)),
+        amount_etb: Math.round(amountEth * rateToUse),
+        rate: rateToUse,
         fee_eth: 0,
         status: 'payment_pending',
       }).select().single();
@@ -556,6 +574,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
 
   const createDepositRequest = async (amountUSD, network, txHash, screenshotUrl, otpCode) => {
     if (!user) return;

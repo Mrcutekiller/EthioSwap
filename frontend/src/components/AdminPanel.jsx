@@ -267,6 +267,8 @@ const AdminPanel = ({ user }) => {
   const [adminListingMaxEtb, setAdminListingMaxEtb] = useState('50000');
   const [adminListingType, setAdminListingType] = useState('sell');
   const [adminListingLoading, setAdminListingLoading] = useState(false);
+  const [adminUseCustomRate, setAdminUseCustomRate] = useState(false);
+  const [adminCustomRate, setAdminCustomRate] = useState('');
   const [allListings, setAllListings] = useState([]);
   const [otpAttemptsLogs, setOtpAttemptsLogs] = useState([]);
   const [notificationLogs, setNotificationLogs] = useState([]);
@@ -2566,17 +2568,50 @@ const AdminPanel = ({ user }) => {
                     <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>MAX ETB</label>
                     <input type="number" value={adminListingMaxEtb} onChange={e => setAdminListingMaxEtb(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} />
                   </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>RATE TYPE</label>
+                    <select 
+                      value={adminUseCustomRate ? 'custom' : 'standard'} 
+                      onChange={e => setAdminUseCustomRate(e.target.value === 'custom')} 
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }}
+                    >
+                      <option value="standard">Standard (Auto-update)</option>
+                      <option value="custom">Custom Rate</option>
+                    </select>
+                  </div>
+                  {adminUseCustomRate && (
+                    <div>
+                      <label style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>CUSTOM RATE (ETB)</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={adminCustomRate} 
+                        onChange={e => setAdminCustomRate(e.target.value)} 
+                        placeholder={`e.g. ${adminListingType === 'buy' ? (settings?.etb_rate_per_dollar_sell ?? rate) : rate}`} 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} 
+                      />
+                    </div>
+                  )}
                 </div>
                 <button onClick={async () => {
                   if (!adminListingAmount || parseFloat(adminListingAmount) <= 0) { showAlert('Enter a valid amount', 'error'); return; }
                   setAdminListingLoading(true);
                   try {
-                    const listRate = parseFloat(etbRate) || 190;
-                    await createListing(parseFloat(adminListingAmount), parseFloat(adminListingMinEtb) || 500, parseFloat(adminListingMaxEtb) || 50000, ['bank_transfer'], listRate, [], adminListingType);
+                    const customRateVal = adminUseCustomRate && adminCustomRate ? parseFloat(adminCustomRate) : undefined;
+                    await createListing(
+                      parseFloat(adminListingAmount), 
+                      parseFloat(adminListingMinEtb) || 500, 
+                      parseFloat(adminListingMaxEtb) || 50000, 
+                      ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'], 
+                      customRateVal, 
+                      [], 
+                      adminListingType
+                    );
                     showAlert('Listing created!');
                     const { data } = await supabase.from('listings').select('*').order('created_at', { ascending: false });
                     setAllListings(data || []);
                     setAdminListingAmount('');
+                    setAdminCustomRate('');
                   } catch (e) { showAlert(e.message, 'error'); }
                   finally { setAdminListingLoading(false); }
                 }} disabled={adminListingLoading || !adminListingAmount} style={{ padding: '12px 24px', borderRadius: '12px', border: 'none', background: adminListingLoading || !adminListingAmount ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)', color: adminListingLoading || !adminListingAmount ? '#8b92a8' : '#0A0C12', fontWeight: 700, fontSize: '14px', cursor: adminListingLoading || !adminListingAmount ? 'not-allowed' : 'pointer' }}>
@@ -2607,7 +2642,10 @@ const AdminPanel = ({ user }) => {
                               <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: listing.type === 'sell' ? 'rgba(0,200,150,0.1)' : 'rgba(245,166,35,0.1)', color: listing.type === 'sell' ? '#00C896' : '#F5A623', textTransform: 'uppercase' }}>{listing.type}</span>
                             </td>
                             <td style={{ padding: '10px 16px', fontSize: '12px', color: '#F5A623', fontFamily: 'monospace' }}>{listing.amount_eth} USDT</td>
-                            <td style={{ padding: '10px 16px', fontSize: '12px', color: '#fff' }}>{listing.custom_rate_etb} ETB</td>
+                            <td style={{ padding: '10px 16px', fontSize: '12px', color: '#fff' }}>
+                              {listing.custom_rate_etb || (listing.type === 'buy' ? (settings?.etb_rate_per_dollar_sell ?? rate) : rate)} ETB
+                              {!listing.custom_rate_etb && <span style={{ color: '#8b92a8', fontSize: '10px', marginLeft: '4px' }}>(Auto)</span>}
+                            </td>
                             <td style={{ padding: '10px 16px', fontSize: '11px', color: '#8b92a8' }}>{listing.min_limit_etb} - {listing.max_limit_etb}</td>
                             <td style={{ padding: '10px 16px' }}>
                               <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: listing.status === 'active' ? 'rgba(0,200,150,0.1)' : 'rgba(139,146,168,0.1)', color: listing.status === 'active' ? '#00C896' : '#8b92a8', textTransform: 'uppercase' }}>{listing.status}</span>

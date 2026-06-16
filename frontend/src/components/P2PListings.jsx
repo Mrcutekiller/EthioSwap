@@ -223,7 +223,10 @@ const P2PListings = () => {
         if (calcUnit === 'ETB') {
           matchesCalc = l.min_limit_etb <= amtVal && l.max_limit_etb >= amtVal;
         } else {
-          const effRate = l.custom_rate_etb || rate;
+          const standardRate = l.type === 'buy'
+            ? (systemSettings?.etbRatePerDollarSell ?? rate)
+            : rate;
+          const effRate = l.custom_rate_etb || standardRate;
           const etbEquiv = amtVal * effRate;
           matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
         }
@@ -232,8 +235,10 @@ const P2PListings = () => {
       return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc;
     })
     .sort((a, b) => {
-      const rateA = a.custom_rate_etb || rate;
-      const rateB = b.custom_rate_etb || rate;
+      const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate;
+      const standardRateB = b.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate;
+      const rateA = a.custom_rate_etb || standardRateA;
+      const rateB = b.custom_rate_etb || standardRateB;
       
       if (sortBy === 'rate_asc') {
         return rateA - rateB;
@@ -976,7 +981,10 @@ const P2PListings = () => {
       ) : (
         <div className="p2p-listings-grid">
           {filtered.map((listing, index) => {
-            const effectiveRate = listing.custom_rate_etb || rate;
+            const standardRate = listing.type === 'buy'
+              ? (systemSettings?.etbRatePerDollarSell ?? rate)
+              : rate;
+            const effectiveRate = listing.custom_rate_etb || standardRate;
             const isOwnListing = listing.seller_id === user?.id || listing.seller_id === user?.id;
             const isBuyType = listing.type === 'buy';
             return (
@@ -1595,7 +1603,7 @@ const P2PListings = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.custom_rate_etb || rate} ETB / $1
+                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate)} ETB / $1
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
                   Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
@@ -1680,13 +1688,15 @@ const P2PListings = () => {
                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-3)' }}>Rate</span>
-                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{selectedListing.custom_rate_etb || rate} ETB/$1</span>
+                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
+                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate)} ETB/$1
+                    </span>
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
                     <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || rate)).toLocaleString()} ETB
+                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate))).toLocaleString()} ETB
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
