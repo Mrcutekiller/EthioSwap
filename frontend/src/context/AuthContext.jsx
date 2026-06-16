@@ -556,6 +556,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Returns true if the user signed in via Google but hasn't filled required profile fields
+  const isProfileIncomplete = user &&
+    user.role !== 'admin' &&
+    (!user.age || !user.phone || !user.city || !user.full_name);
+
+  const completeGoogleProfile = async ({ fullName, age, phone, country, city, work, profilePic }) => {
+    if (!user) return null;
+    setLoading(true);
+    setError(null);
+    try {
+      const updates = {
+        full_name: fullName || user.full_name || '',
+        age: age ? Number(age) : null,
+        phone: phone || null,
+        country: country || null,
+        city: city || null,
+        work: work || null,
+        profile_pic: profilePic || user.profile_pic || null,
+      };
+      const { error: updateError } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id);
+      if (updateError) throw updateError;
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+      setSuccess(`Welcome to EthioSwap, ${updatedUser.username || updatedUser.full_name}! 🎉`);
+      return updatedUser;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendPasswordResetEmail = async (email) => {
     setLoading(true);
     setError(null);
@@ -1577,6 +1614,7 @@ export const AuthProvider = ({ children }) => {
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails, updateListing, cancelListing,
       signInWithGoogle, sendPasswordResetEmail, updatePassword,
+      isProfileIncomplete, completeGoogleProfile,
       isRecoveringPassword, setIsRecoveringPassword,
       setError, setSuccess, setIsLocked,
       loadSystemSettings, createNotification, withdrawAdminEarnings

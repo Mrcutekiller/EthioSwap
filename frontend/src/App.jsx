@@ -639,6 +639,221 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
   );
 };
 
+// ── Google Profile Completion Wizard ─────────────────────────────────────────
+const GoogleProfileCompletion = () => {
+  const { user, completeGoogleProfile, loading, error } = useAuth();
+  const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState('next');
+  const [localError, setLocalError] = useState('');
+
+  const [fullName, setFullName] = useState(user?.full_name || '');
+  const [age, setAge] = useState('');
+  const [work, setWork] = useState(user?.work || '');
+  const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState('Ethiopia');
+  const [city, setCity] = useState('');
+  const [profilePic, setProfilePic] = useState(user?.profile_pic || '');
+  const [profilePicPreview, setProfilePicPreview] = useState(user?.profile_pic || '');
+
+  const slideStyle = { animation: direction === 'next' ? 'slideInRight 0.3s ease' : 'slideInLeft 0.3s ease' };
+  const cityOptions = country === 'Ethiopia' ? ETHIOPIAN_CITIES : [];
+  const displayError = localError || error;
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setLocalError('File must be less than 5MB'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => { setProfilePicPreview(reader.result); setProfilePic(reader.result); };
+    reader.readAsDataURL(file);
+  };
+
+  const goNext = () => {
+    setLocalError('');
+    if (step === 1) {
+      if (!fullName.trim()) { setLocalError('Full name is required'); return; }
+      if (!age || parseInt(age) < 18) { setLocalError('You must be at least 18 years old'); return; }
+      if (!work.trim()) { setLocalError('Occupation is required'); return; }
+    }
+    if (step === 2) {
+      if (!phone.trim()) { setLocalError('Phone number is required'); return; }
+      if (!city.trim()) { setLocalError('City is required'); return; }
+    }
+    setDirection('next');
+    setStep(s => Math.min(s + 1, 3));
+  };
+  const goBack = () => { setDirection('back'); setLocalError(''); setStep(s => Math.max(s - 1, 1)); };
+
+  const handleSubmit = async () => {
+    setLocalError('');
+    const result = await completeGoogleProfile({ fullName, age, phone, country, city, work, profilePic });
+    // On success the user state updates and isProfileIncomplete becomes false → auto-redirects
+  };
+
+  const STEP_TITLES = ['Personal Info', 'Location & Contact', 'Profile Photo'];
+  const STEP_ICONS = ['ti ti-user', 'ti ti-map-pin', 'ti ti-camera'];
+
+  return (
+    <div style={{ minHeight: '100vh', width: '100%', background: '#0A0E1A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
+      <style>{`
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes floatUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(66,133,244,0.08) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+
+      <div style={{ width: '100%', maxWidth: '460px', zIndex: 1, animation: 'floatUp 0.5s ease' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '18px' }}>E</div>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>EthioSwap</div>
+            <div style={{ fontSize: '12px', color: '#8B8FA3' }}>Complete Your Profile</div>
+          </div>
+        </div>
+
+        {/* Google user welcome banner */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'rgba(66,133,244,0.08)', border: '1px solid rgba(66,133,244,0.2)', borderRadius: '12px', marginBottom: '20px' }}>
+          {user?.profile_pic ? (
+            <img src={user.profile_pic} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(66,133,244,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Welcome, {user?.full_name || user?.username}! 👋</div>
+            <div style={{ fontSize: '12px', color: '#8B8FA3' }}>Signed in with Google · Fill in a few more details to get started</div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+          {[1,2,3].map(s => (
+            <div key={s} style={{ flex: 1, height: '3px', borderRadius: '2px', background: s <= step ? '#F5A623' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s ease' }} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <span style={{ fontSize: '13px', color: '#F5A623', fontWeight: 600 }}>Step {step} of 3</span>
+          <span style={{ fontSize: '12px', color: '#8B8FA3' }}>{STEP_TITLES[step - 1]}</span>
+        </div>
+
+        {/* Form card */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '28px 24px', ...slideStyle }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className={STEP_ICONS[step - 1]} style={{ color: '#F5A623', fontSize: '20px' }}></i>
+            {STEP_TITLES[step - 1]}
+          </h2>
+          <p style={{ fontSize: '13px', color: '#8B8FA3', marginBottom: '20px' }}>
+            {step === 1 && 'Tell us a bit about yourself'}
+            {step === 2 && 'Where can we reach you?'}
+            {step === 3 && 'Add a profile photo (optional)'}
+          </p>
+
+          {step === 1 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ position: 'relative' }}>
+                <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-id-badge" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input type="number" min="18" placeholder="Age (must be 18+)" value={age} onChange={e => setAge(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-calendar-event" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input type="text" placeholder="Work / Occupation" value={work} onChange={e => setWork(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-briefcase" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ position: 'relative' }}>
+                <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-phone" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+              <p style={{ fontSize: '11px', color: '#8B8FA3', marginTop: '-8px' }}>Used for account recovery only</p>
+              <div style={{ position: 'relative' }}>
+                <select value={country} onChange={e => { setCountry(e.target.value); setCity(''); }} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', appearance: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>
+                  {COUNTRIES.map(c => <option key={c} value={c} style={{ background: '#141827', color: '#fff' }}>{c}</option>)}
+                </select>
+                <i className="ti ti-world" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px', pointerEvents: 'none' }}></i>
+                <i className="ti ti-chevron-down" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '16px', pointerEvents: 'none' }}></i>
+              </div>
+              {country === 'Ethiopia' ? (
+                <div style={{ position: 'relative' }}>
+                  <select value={city} onChange={e => setCity(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', appearance: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>
+                    <option value="" style={{ background: '#141827', color: '#8B8FA3' }}>Select City</option>
+                    {ETHIOPIAN_CITIES.map(c => <option key={c} value={c} style={{ background: '#141827', color: '#fff' }}>{c}</option>)}
+                  </select>
+                  <i className="ti ti-map-pin" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px', pointerEvents: 'none' }}></i>
+                  <i className="ti ti-chevron-down" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '16px', pointerEvents: 'none' }}></i>
+                </div>
+              ) : (
+                <div style={{ position: 'relative' }}>
+                  <input type="text" placeholder="City" value={city} onChange={e => setCity(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  <i className="ti ti-map-pin" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div onClick={() => document.getElementById('gpc-profile-upload').click()} style={{ width: '100%', minHeight: '150px', border: '2px dashed rgba(255,255,255,0.12)', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', overflow: 'hidden', transition: 'border-color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(245,166,35,0.4)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
+              >
+                {profilePicPreview ? (
+                  <img src={profilePicPreview} alt="Preview" style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '10px' }} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '24px' }}>
+                    <i className="ti ti-camera" style={{ fontSize: '36px', color: '#F5A623' }}></i>
+                    <span style={{ fontSize: '13px', color: '#8B8FA3' }}>Tap to upload profile photo</span>
+                    <span style={{ fontSize: '11px', color: '#5A6275' }}>Optional · Max 5MB</span>
+                  </div>
+                )}
+              </div>
+              <input id="gpc-profile-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)', borderRadius: '10px' }}>
+                <i className="ti ti-shield-check" style={{ fontSize: '18px', color: '#00C896' }}></i>
+                <span style={{ fontSize: '12px', color: '#8B8FA3' }}>You can always update your profile photo later</span>
+              </div>
+            </div>
+          )}
+
+          {displayError && (
+            <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
+              <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
+              <span>{displayError}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+          {step > 1 ? (
+            <button onClick={goBack} style={{ padding: '12px 24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="ti ti-arrow-left" style={{ fontSize: '14px' }}></i> Back
+            </button>
+          ) : <div />}
+          {step < 3 ? (
+            <button onClick={goNext} style={{ padding: '12px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', fontSize: '14px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Next <i className="ti ti-arrow-right" style={{ fontSize: '14px' }}></i>
+            </button>
+          ) : (
+            <button onClick={handleSubmit} disabled={loading} style={{ padding: '12px 28px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', fontSize: '14px', fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {loading ? 'Saving...' : <><i className="ti ti-check" style={{ fontSize: '16px' }}></i> Finish Setup</>}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RecoveryForm = () => {
   const { updatePassword, logout, setIsRecoveringPassword, loading, error } = useAuth();
   const [password, setPassword] = useState('');
@@ -838,7 +1053,7 @@ const MobileBottomNav = ({ page, setPage }) => {
 };
 
 const AppContent = () => {
-  const { user, logout, isLocked, setIsLocked, systemSettings, isRecoveringPassword } = useAuth();
+  const { user, logout, isLocked, setIsLocked, systemSettings, isRecoveringPassword, isProfileIncomplete } = useAuth();
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
@@ -874,6 +1089,8 @@ const AppContent = () => {
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
 
   if (isRecoveringPassword) return <RecoveryForm />;
+
+  if (user && isProfileIncomplete) return <GoogleProfileCompletion />;
 
   if (!user) {
     return showAuth ? (
