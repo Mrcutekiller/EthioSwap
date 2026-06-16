@@ -455,10 +455,27 @@ export const AuthProvider = ({ children }) => {
         data.user.user_metadata?.username ||
         userEmail.split('@')[0];
 
-      // Step 2: Sign them back out — they must verify OTP first
+      // Step 2: Check role from DB — admins skip OTP entirely
+      const { data: profileRow } = await supabase
+        .from('users')
+        .select('role, username')
+        .eq('id', userId)
+        .single();
+
+      const isAdmin = profileRow?.role === 'admin';
+
+      if (isAdmin) {
+        // Admin: load profile and log in immediately — no OTP
+        const profile = await loadUserProfile(userId, data.user);
+        if (!profile) throw new Error('Admin profile not found');
+        setSuccess(`Welcome back, ${profile.username || 'Admin'}!`);
+        return { status: 'success', user: profile };
+      }
+
+      // Step 3: Regular user — sign them back out, they must verify OTP first
       await supabase.auth.signOut();
 
-      // Step 3: Call Edge Function to generate & email the OTP
+      // Step 4: Call Edge Function to generate & email the OTP
       const { error: fnError } = await supabase.functions.invoke('send-login-otp', {
         body: { userId, email: userEmail, name: userName },
       });
@@ -474,7 +491,7 @@ export const AuthProvider = ({ children }) => {
         return { status: 'success', user: profile };
       }
 
-      // Step 4: Return OTP_REQUIRED status — UI shows OTP input
+      // Step 5: Return OTP_REQUIRED status — UI shows OTP input
       return {
         status: 'otp_required',
         userId,
