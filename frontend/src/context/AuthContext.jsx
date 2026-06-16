@@ -543,6 +543,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateListing = async (listingId, amountEth, minLimitEtb, maxLimitEtb, customRateEtb, description, paymentWindow, allowThirdParty) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({
+          amount_eth: amountEth,
+          min_limit_etb: minLimitEtb,
+          max_limit_etb: maxLimitEtb,
+          custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
+          description: description || null,
+          payment_window: paymentWindow ? Number(paymentWindow) : 15,
+          allow_third_party: !!allowThirdParty,
+        })
+        .eq('id', listingId)
+        .eq('seller_id', user.id);
+      if (error) throw error;
+      setSuccess('Listing updated successfully!');
+      await loadListings();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelListing = async (listingId) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ status: 'cancelled' })
+        .eq('id', listingId)
+        .eq('seller_id', user.id);
+      if (error) throw error;
+      setSuccess('Listing cancelled!');
+      await loadListings();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const initiateTrade = async (listingId, amountEth, selectedPaymentAccount) => {
     if (!user) return;
     setLoading(true);
@@ -1454,7 +1500,7 @@ export const AuthProvider = ({ children }) => {
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
-      updateSensitiveDetails,
+      updateSensitiveDetails, updateListing, cancelListing,
       setError, setSuccess, setIsLocked,
       loadSystemSettings, createNotification, withdrawAdminEarnings
     }}>

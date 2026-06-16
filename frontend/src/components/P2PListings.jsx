@@ -22,7 +22,7 @@ const ALL_PAYMENT_METHODS = [
 const repColor = (rep) => rep >= 95 ? '#10B981' : rep >= 80 ? '#E8B84B' : '#EF4444';
 
 const P2PListings = () => {
-  const { user, listings, wallet, createListing, initiateTrade, systemSettings } = useAuth();
+  const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
 
   const [viewingTraderId, setViewingTraderId] = useState(null);
   const [p2pTab, setP2pTabState] = useState(() => {
@@ -48,6 +48,7 @@ const P2PListings = () => {
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [onlyKyc, setOnlyKyc] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [editingListingId, setEditingListingId] = useState(null);
 
   // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
   React.useEffect(() => {
@@ -71,6 +72,21 @@ const P2PListings = () => {
       setChosenPaymentAccount(null);
     }
   }, [selectedListing, user]);
+
+  React.useEffect(() => {
+    if (!showCreateModal) {
+      setEditingListingId(null);
+      setamount_eth('');
+      setMinLimit('');
+      setMaxLimit('');
+      setLinkedAccounts([]);
+      setUseCustomRate(false);
+      setCustomRate('');
+      setDescription('');
+      setPaymentWindow('15');
+      setAllowThirdParty(false);
+    }
+  }, [showCreateModal]);
 
   // Create form state
   const [createType,      setCreateType]      = useState('sell'); // 'sell' | 'buy'
@@ -135,18 +151,32 @@ const P2PListings = () => {
       selectedPayments = ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
     }
       
-    await createListing(
-      parseFloat(amount_eth), 
-      parseFloat(minLimit), 
-      parseFloat(maxLimit), 
-      selectedPayments, 
-      useCustomRate && customRate ? parseFloat(customRate) : undefined, 
-      createType === 'sell' ? linkedAccounts : [], 
-      createType,
-      description,
-      parseInt(paymentWindow),
-      allowThirdParty
-    );
+    if (editingListingId) {
+      await updateListing(
+        editingListingId,
+        parseFloat(amount_eth), 
+        parseFloat(minLimit), 
+        parseFloat(maxLimit), 
+        useCustomRate && customRate ? parseFloat(customRate) : undefined, 
+        description,
+        parseInt(paymentWindow),
+        allowThirdParty
+      );
+      setEditingListingId(null);
+    } else {
+      await createListing(
+        parseFloat(amount_eth), 
+        parseFloat(minLimit), 
+        parseFloat(maxLimit), 
+        selectedPayments, 
+        useCustomRate && customRate ? parseFloat(customRate) : undefined, 
+        createType === 'sell' ? linkedAccounts : [], 
+        createType,
+        description,
+        parseInt(paymentWindow),
+        allowThirdParty
+      );
+    }
     
     setamount_eth(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
@@ -1163,17 +1193,65 @@ const P2PListings = () => {
 
                 {/* Bottom Row CTA Button */}
                 {isOwnListing ? (
-                  <div style={{
-                    textAlign: 'center', 
-                    padding: '12px', 
-                    fontSize: '13px', 
-                    fontWeight: 600,
-                    color: '#F5A623', 
-                    background: 'rgba(245,166,35,0.05)',
-                    border: '1px solid rgba(245,166,35,0.15)', 
-                    borderRadius: '12px',
-                  }}>
-                    ✓ Your active P2P listing
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button
+                      onClick={() => {
+                        setEditingListingId(listing.id);
+                        setamount_eth(listing.amount_eth.toString());
+                        setMinLimit(listing.min_limit_etb.toString());
+                        setMaxLimit(listing.max_limit_etb.toString());
+                        setUseCustomRate(!!listing.custom_rate_etb);
+                        setCustomRate(listing.custom_rate_etb ? listing.custom_rate_etb.toString() : '');
+                        setDescription(listing.description || '');
+                        setPaymentWindow(listing.payment_window ? listing.payment_window.toString() : '15');
+                        setAllowThirdParty(!!listing.allow_third_party);
+                        setCreateType(listing.type || 'sell');
+                        setShowCreateModal(true);
+                      }}
+                      className="btn"
+                      style={{ 
+                        flex: 1, 
+                        height: '48px', 
+                        borderRadius: '12px', 
+                        fontSize: '14.5px', 
+                        fontWeight: 600, 
+                        background: 'rgba(245,166,35,0.08)',
+                        border: '1px solid rgba(245,166,35,0.25)',
+                        color: '#F5A623',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      ✏️ Edit Ad
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Are you sure you want to cancel this listing?')) {
+                          await cancelListing(listing.id);
+                        }
+                      }}
+                      className="btn"
+                      style={{ 
+                        flex: 1, 
+                        height: '48px', 
+                        borderRadius: '12px', 
+                        fontSize: '14.5px', 
+                        fontWeight: 600, 
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        color: '#EF4444',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      🚫 Cancel
+                    </button>
                   </div>
                 ) : (
                   <button
@@ -1217,7 +1295,9 @@ const P2PListings = () => {
             <div style={handleStyle} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>
-                {createType === 'buy' ? 'Post Buy USD Ad' : 'Post Sell USD Ad'}
+                {editingListingId 
+                  ? (createType === 'buy' ? 'Edit Buy USD Ad' : 'Edit Sell USD Ad')
+                  : (createType === 'buy' ? 'Post Buy USD Ad' : 'Post Sell USD Ad')}
               </h3>
               <button onClick={() => setShowCreateModal(false)} style={{
                 width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)',
@@ -1227,7 +1307,17 @@ const P2PListings = () => {
             </div>
 
             {/* Offer type selector */}
-            <div style={{ display: 'flex', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '12px', padding: '3px', gap: '2px', marginBottom: '16px' }}>
+            <div style={{ 
+              display: 'flex', 
+              background: 'var(--bg-base)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '12px', 
+              padding: '3px', 
+              gap: '2px', 
+              marginBottom: '16px',
+              opacity: editingListingId ? 0.6 : 1,
+              pointerEvents: editingListingId ? 'none' : 'auto'
+            }}>
               <button
                 type="button"
                 onClick={() => setCreateType('sell')}
@@ -1554,7 +1644,9 @@ const P2PListings = () => {
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-outline" style={{ flex: 1, height: '46px', borderRadius: '12px' }}>Cancel</button>
-                <button type="submit" disabled={createType === 'sell' && (!user.payment_accounts || user.payment_accounts.length === 0)} className="btn btn-gold" style={{ flex: 2, height: '46px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>Post Advertisement</button>
+                <button type="submit" disabled={createType === 'sell' && (!user.payment_accounts || user.payment_accounts.length === 0)} className="btn btn-gold" style={{ flex: 2, height: '46px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  {editingListingId ? 'Save Changes' : 'Post Advertisement'}
+                </button>
               </div>
             </form>
           </div>

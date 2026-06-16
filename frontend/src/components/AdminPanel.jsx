@@ -671,6 +671,10 @@ const AdminPanel = ({ user }) => {
         is_p2p_free_period: isP2pFreePeriod,
         master_wallet_address: packagedAddresses,
       };
+
+      const oldBuyRate = settings?.etb_rate_per_dollar;
+      const oldSellRate = settings?.etb_rate_per_dollar_sell;
+
       if (settings?.id) {
         await supabase.from('system_settings').update(updates).eq('id', settings.id);
       } else {
@@ -688,6 +692,31 @@ const AdminPanel = ({ user }) => {
         sell_rate: parseFloat(etbRateSell) || 186.0,
         average_rate: ((parseFloat(etbRate) || 190.0) + (parseFloat(etbRateSell) || 186.0)) / 2
       });
+
+      // Send notifications to users with active standard-rate listings if standard rates changed
+      const buyRateChanged = oldBuyRate !== undefined && oldBuyRate !== updates.etb_rate_per_dollar;
+      const sellRateChanged = oldSellRate !== undefined && oldSellRate !== updates.etb_rate_per_dollar_sell;
+
+      if (buyRateChanged || sellRateChanged) {
+        const { data: activeStandardListings } = await supabase
+          .from('listings')
+          .select('seller_id')
+          .eq('status', 'active')
+          .is('custom_rate_etb', null);
+
+        if (activeStandardListings && activeStandardListings.length > 0) {
+          const uniqueSellerIds = [...new Set(activeStandardListings.map(l => l.seller_id))];
+          const newNotifs = uniqueSellerIds.map(sellerId => ({
+            user_id: sellerId,
+            type: 'rate_update',
+            title: 'Exchange Rate Updated',
+            message: `The standard USD/ETB rates have been updated. Buy: ${updates.etb_rate_per_dollar} ETB, Sell: ${updates.etb_rate_per_dollar_sell} ETB. Your active standard listings have auto-updated to reflect this. You can edit them at any time.`,
+            is_read: false
+          }));
+
+          await supabase.from('notifications').insert(newNotifs);
+        }
+      }
 
       showAlert('Settings saved successfully!');
       await loadSystemSettings();
