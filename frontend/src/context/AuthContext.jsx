@@ -503,7 +503,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type) => {
+  const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -518,6 +518,9 @@ export const AuthProvider = ({ children }) => {
         type,
         custom_rate_etb: customRateEtb,
         payment_accounts: paymentAccounts,
+        description: description || null,
+        payment_window: paymentWindow ? Number(paymentWindow) : 15,
+        allow_third_party: !!allowThirdParty,
       });
       if (error) throw error;
       setSuccess('Listing published!');

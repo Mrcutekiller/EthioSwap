@@ -80,6 +80,9 @@ const P2PListings = () => {
   const [linkedAccounts,  setLinkedAccounts]  = useState([]);
   const [useCustomRate,   setUseCustomRate]   = useState(false);
   const [customRate,      setCustomRate]      = useState('');
+  const [description,     setDescription]     = useState('');
+  const [paymentWindow,   setPaymentWindow]   = useState('15');
+  const [allowThirdParty, setAllowThirdParty] = useState(false);
 
   const toggleLinkedAccount = (acc) => {
     setLinkedAccounts(prev =>
@@ -137,11 +140,15 @@ const P2PListings = () => {
       selectedPayments, 
       useCustomRate && customRate ? parseFloat(customRate) : undefined, 
       createType === 'sell' ? linkedAccounts : [], 
-      createType
+      createType,
+      description,
+      parseInt(paymentWindow),
+      allowThirdParty
     );
     
     setamount_eth(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
+    setDescription(''); setPaymentWindow('15'); setAllowThirdParty(false);
     setShowCreateModal(false);
   };
 
@@ -1032,6 +1039,17 @@ const P2PListings = () => {
                   })}
                 </div>
 
+                {/* Time Window & Third Party Rules */}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '11px', color: 'var(--muted)', padding: '2px 2px 4px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    ⏳ {listing.payment_window || 15} Mins
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+                  <span style={{ color: listing.allow_third_party ? '#00C896' : '#EF4444', fontWeight: 500 }}>
+                    {listing.allow_third_party ? '✅ Third Party OK' : '🚫 No Third Party'}
+                  </span>
+                </div>
+
                 {/* Bottom Row CTA Button */}
                 {isOwnListing ? (
                   <div style={{
@@ -1224,6 +1242,48 @@ const P2PListings = () => {
                 )}
               </div>
 
+              {/* Description & Terms */}
+              <div className="input-group" style={{ marginBottom: 0 }}>
+                <label className="input-label">Description / Trade Terms</label>
+                <textarea
+                  className="input"
+                  style={{ minHeight: '60px', resize: 'vertical', paddingTop: '10px' }}
+                  placeholder="Enter your trade rules, e.g. CBE only, no third party payment, call me after transfer..."
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                />
+              </div>
+
+              {/* Payment Time Limit & Third Party Settings */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label className="input-label">Time Limit (Mins)</label>
+                  <select
+                    className="input select-premium"
+                    value={paymentWindow}
+                    onChange={e => setPaymentWindow(e.target.value)}
+                    style={{ height: '44px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', color: '#fff', padding: '0 10px' }}
+                  >
+                    <option value="15">15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="45">45 Minutes</option>
+                    <option value="60">60 Minutes</option>
+                  </select>
+                </div>
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label className="input-label">Third-Party Payments</label>
+                  <select
+                    className="input select-premium"
+                    value={allowThirdParty ? 'true' : 'false'}
+                    onChange={e => setAllowThirdParty(e.target.value === 'true')}
+                    style={{ height: '44px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', color: '#fff', padding: '0 10px' }}
+                  >
+                    <option value="false">🚫 No Third Party</option>
+                    <option value="true">✅ Third Party Ok</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Personal payment accounts selector */}
               <div>
                 {createType === 'buy' ? (
@@ -1374,6 +1434,42 @@ const P2PListings = () => {
                 </ol>
               </div>
             )}
+
+            {/* Trade Terms & Conditions */}
+            <div style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              padding: '14px',
+              marginBottom: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
+                  ⏱️ Payment Window: <span style={{ color: 'var(--gold-light)' }}>{selectedListing.payment_window || 15} mins</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
+                  👤 Third-Party: <span style={{ color: selectedListing.allow_third_party ? '#00C896' : '#EF4444' }}>
+                    {selectedListing.allow_third_party ? 'Allowed' : 'Not Allowed'}
+                  </span>
+                </div>
+              </div>
+              {selectedListing.description && (
+                <>
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                  <div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 600 }}>
+                      {selectedListing.type === 'buy' ? "Buyer's Terms & Instructions" : "Seller's Terms & Instructions"}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#e0e0e0', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                      {selectedListing.description}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <form onSubmit={handleOpenTrade} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="input-group" style={{ marginBottom: 0 }}>
