@@ -83,6 +83,8 @@ const P2PListings = () => {
   const [description,     setDescription]     = useState('');
   const [paymentWindow,   setPaymentWindow]   = useState('15');
   const [allowThirdParty, setAllowThirdParty] = useState(false);
+  const [calcAmount,      setCalcAmount]      = useState('');
+  const [calcUnit,        setCalcUnit]        = useState('ETB');
 
   const toggleLinkedAccount = (acc) => {
     setLinkedAccounts(prev =>
@@ -214,7 +216,20 @@ const P2PListings = () => {
       const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
       const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified';
 
-      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc;
+      // Quick amount filter calculator logic
+      let matchesCalc = true;
+      if (calcAmount && !isNaN(parseFloat(calcAmount))) {
+        const amtVal = parseFloat(calcAmount);
+        if (calcUnit === 'ETB') {
+          matchesCalc = l.min_limit_etb <= amtVal && l.max_limit_etb >= amtVal;
+        } else {
+          const effRate = l.custom_rate_etb || rate;
+          const etbEquiv = amtVal * effRate;
+          matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
+        }
+      }
+
+      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc;
     })
     .sort((a, b) => {
       const rateA = a.custom_rate_etb || rate;
@@ -615,6 +630,85 @@ const P2PListings = () => {
         >
           +
         </button>
+      </div>
+
+      {/* ── Quick-Filter Calculator Input ── */}
+      <div className="premium-dashboard-card fade-in-1" style={{ 
+        padding: '16px', 
+        borderRadius: '14px', 
+        background: 'rgba(255, 255, 255, 0.01)', 
+        border: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          🧮 Quick Amount Filter Calculator
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <span style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--muted)', fontSize: '14px' }}>
+              {calcUnit === 'ETB' ? 'Br' : '$'}
+            </span>
+            <input
+              type="number"
+              placeholder={calcUnit === 'ETB' ? "Enter ETB amount to spend/receive..." : "Enter USD amount to buy/sell..."}
+              value={calcAmount}
+              onChange={e => setCalcAmount(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '11px 12px 11px 40px',
+                background: '#141827',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '13px',
+                outline: 'none',
+                fontFamily: 'var(--font)',
+                transition: 'all 0.2s ease',
+              }}
+            />
+            {calcAmount && (
+              <button 
+                onClick={() => setCalcAmount('')}
+                style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '14px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <select
+            value={calcUnit}
+            onChange={e => setCalcUnit(e.target.value)}
+            style={{
+              padding: '11px 28px 11px 12px',
+              background: '#141827',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none',
+              fontFamily: 'var(--font)',
+              cursor: 'pointer',
+              backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23a0aec0\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M6 9l6 6 6-6\'/%3E%3C/svg%3E")',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '12px',
+              WebkitAppearance: 'none',
+              appearance: 'none',
+              minWidth: '90px'
+            }}
+          >
+            <option value="ETB">ETB</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        {calcAmount && !isNaN(parseFloat(calcAmount)) && (
+          <div style={{ fontSize: '11.5px', color: '#00C896', display: 'flex', alignItems: 'center', gap: '4px', padding: '0 2px' }}>
+            <span>⚡ Filtering listings that accept exactly </span>
+            <strong>{parseFloat(calcAmount).toLocaleString()} {calcUnit}</strong>
+          </div>
+        )}
       </div>
 
       {/* ── Search & Sorting Control Panel ── */}

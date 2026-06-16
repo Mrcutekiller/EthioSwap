@@ -1120,12 +1120,23 @@ export const AuthProvider = ({ children }) => {
 
   const releaseEscrow = async (tradeId) => {
     try {
-      const { data: trade } = await supabase.from('trades').select('buyer_id').eq('id', tradeId).single();
+      const { data: trade } = await supabase.from('trades').select('buyer_id, seller_id').eq('id', tradeId).single();
       const { error } = await supabase
         .from('trades')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', tradeId);
       if (error) throw error;
+
+      if (trade) {
+        // Increment buyer's total trades
+        const { data: buyerUser } = await supabase.from('users').select('total_trades').eq('id', trade.buyer_id).single();
+        await supabase.from('users').update({ total_trades: (buyerUser?.total_trades || 0) + 1 }).eq('id', trade.buyer_id);
+
+        // Increment seller's total trades
+        const { data: sellerUser } = await supabase.from('users').select('total_trades').eq('id', trade.seller_id).single();
+        await supabase.from('users').update({ total_trades: (sellerUser?.total_trades || 0) + 1 }).eq('id', trade.seller_id);
+      }
+
       if (trade?.buyer_id && trade.buyer_id !== user.id) {
         createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.');
       }
@@ -1158,16 +1169,35 @@ export const AuthProvider = ({ children }) => {
       const trade = trades.find(t => t.id === tradeId);
       if (!trade) throw new Error('Trade not found');
 
+      const ratedUserId = trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
+
       const { error } = await supabase.from('trade_ratings').insert({
         trade_id: tradeId,
         rater_id: user.id,
-        rated_id: trade.buyer_id === user.id ? trade.seller_id : trade.buyer_id,
+        rated_id: ratedUserId,
         rating,
         comment,
         rater_type: trade.buyer_id === user.id ? 'buyer' : 'seller',
         low_rating_reason: lowRatingReason,
       });
       if (error) throw error;
+
+      // Fetch all ratings for this user to recalculate reputation percentage
+      const { data: allRatings } = await supabase
+        .from('trade_ratings')
+        .select('rating')
+        .eq('rated_id', ratedUserId);
+
+      if (allRatings && allRatings.length > 0) {
+        const sum = allRatings.reduce((acc, r) => acc + r.rating, 0);
+        const avg = sum / allRatings.length;
+        const reputationPercent = Math.min(100, Math.max(0, Math.round((avg / 5) * 100)));
+        await supabase
+          .from('users')
+          .update({ reputation: reputationPercent })
+          .eq('id', ratedUserId);
+      }
+
       setSuccess('Rating submitted successfully!');
     } catch (err) {
       setError(err.message);

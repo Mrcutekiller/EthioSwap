@@ -394,7 +394,7 @@ const TradeRoom = () => {
 
           {/* Chat Component */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <TradeChat tradeId={activeTrade.id} sellerId={activeTrade.seller_id} buyerId={activeTrade.buyer_id} />
+            <TradeChat tradeId={activeTrade.id} sellerId={activeTrade.seller_id} buyerId={activeTrade.buyer_id} tradeStatus={activeTrade.status} />
           </div>
 
           {showRating && (
