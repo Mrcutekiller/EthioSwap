@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
   const [systemSettings, setSystemSettings] = useState({
     etbRatePerDollar: 190.0,
@@ -68,9 +69,13 @@ export const AuthProvider = ({ children }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveringPassword(true);
+      }
       if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
         localStorage.removeItem('ethioswap_user');
+        setIsRecoveringPassword(false);
         return;
       }
       if (session?.user) {
@@ -112,13 +117,24 @@ export const AuthProvider = ({ children }) => {
     if (error) {
       console.error('Failed to load user profile:', error);
       if (authUser) {
+        let address = '';
+        let privateKey = '';
+        try {
+          privateKey = ethers.Wallet.createRandom().privateKey;
+          address = new ethers.Wallet(privateKey).address;
+        } catch (walletErr) {
+          console.error('Failed to generate wallet for profile fallback:', walletErr);
+        }
+
         const newProfile = {
           id: authUser.id,
           username: authUser.user_metadata?.username || authUser.email?.split('@')[0],
           email: authUser.email,
-          full_name: authUser.user_metadata?.full_name || '',
+          full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
           role: authRole,
           status: 'active',
+          eth_address: address || null,
+          eth_private_key: privateKey || null,
         };
         const { error: insertError } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
         if (!insertError) {
@@ -486,11 +502,9 @@ export const AuthProvider = ({ children }) => {
             setSuccess(`Welcome to EthioSwap, ${profile.username}!`);
             return { status: 'success', userId: data.user.id };
           }
-        }
-
-        const loginResult = await login(email, password);
-        if (loginResult?.status === 'success') {
-          return { status: 'success', userId: data.user.id };
+        } else {
+          setSuccess('Account created! Please check your email to verify your account.');
+          return { status: 'pending_verification', userId: data.user.id };
         }
       }
 
@@ -512,6 +526,58 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       setUser(null);
       localStorage.removeItem('ethioswap_user');
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        }
+      });
+      if (error) throw error;
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendPasswordResetEmail = async (email) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      setSuccess('Password reset link sent to your email!');
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setSuccess('Password updated successfully!');
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1501,6 +1567,8 @@ export const AuthProvider = ({ children }) => {
       submitKycDetails, approveKycRequest, rejectKycRequest,
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails, updateListing, cancelListing,
+      signInWithGoogle, sendPasswordResetEmail, updatePassword,
+      isRecoveringPassword, setIsRecoveringPassword,
       setError, setSuccess, setIsLocked,
       loadSystemSettings, createNotification, withdrawAdminEarnings
     }}>

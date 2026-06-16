@@ -51,10 +51,12 @@ const AuthForm = ({ mode, onToggle, onBackToHome, externalError }) => {
 };
 
 const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, signInWithGoogle, sendPasswordResetEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isForgotMode, setIsForgotMode] = useState(false);
+  const [resetLinkSent, setResetLinkSent] = useState(false);
   const [localError, setLocalError] = useState('');
   const displayError = localError || externalError || error;
 
@@ -65,50 +67,183 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
     await login(email, password);
   };
 
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    if (!email) { setLocalError('Please enter your email address.'); return; }
+    const success = await sendPasswordResetEmail(email);
+    if (success) {
+      setResetLinkSent(true);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#0A0E1A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
       <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
       <div style={{ width: '100%', maxWidth: '420px', zIndex: 1 }}>
         {onBackToHome && (
-          <button type="button" onClick={onBackToHome} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50px', color: '#fff', padding: '8px 18px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '28px' }}>
+          <button type="button" onClick={isForgotMode ? () => setIsForgotMode(false) : onBackToHome} style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50px', color: '#fff', padding: '8px 18px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '28px' }}>
             <i className="ti ti-arrow-left" style={{ fontSize: '13px' }}></i> Back
           </button>
         )}
-        <h2 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '6px', textAlign: 'center', color: '#fff' }}>Welcome Back</h2>
-        <p style={{ fontSize: '14px', color: '#8B8FA3', marginBottom: '28px', textAlign: 'center' }}>Sign in to your EthioSwap wallet</p>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ position: 'relative' }}>
-            <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-            <i className="ti ti-mail" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '14px 44px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-            <i className="ti ti-lock" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
-            <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#8B8FA3', cursor: 'pointer', padding: '4px' }}>
-              <i className={showPassword ? 'ti ti-eye-off' : 'ti ti-eye'} style={{ fontSize: '18px' }}></i>
-            </button>
-          </div>
-          {displayError && (
-            <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
-              <span>{displayError}</span>
+        
+        {isForgotMode ? (
+          resetLinkSent ? (
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '32px 24px', textAlign: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(245,166,35,0.1)', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '32px' }}>
+                <i className="ti ti-mail"></i>
+              </div>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Check Your Email</h2>
+              <p style={{ fontSize: '14px', color: '#8B8FA3', lineHeight: '1.6', marginBottom: '24px' }}>
+                We've sent a password reset link to <strong style={{ color: '#fff' }}>{email}</strong>. Please click the link to reset your password.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotMode(false);
+                  setResetLinkSent(false);
+                  setEmail('');
+                }}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)',
+                  color: '#0A0C12',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Back to Sign In
+              </button>
             </div>
-          )}
-          <button type="submit" disabled={loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <span style={{ fontSize: '14px', color: '#8B8FA3' }}>Don't have an account? </span>
-          <button type="button" onClick={onToggle} style={{ fontSize: '14px', fontWeight: 700, color: '#F5A623', background: 'none', border: 'none', cursor: 'pointer' }}>Sign Up</button>
-        </div>
+          ) : (
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '32px 24px' }}>
+              <h2 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '6px', textAlign: 'center', color: '#fff' }}>Reset Password</h2>
+              <p style={{ fontSize: '14px', color: '#8B8FA3', marginBottom: '28px', textAlign: 'center' }}>Enter your email to receive a recovery link</p>
+              <form onSubmit={handleResetSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ position: 'relative' }}>
+                  <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} required />
+                  <i className="ti ti-mail" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+                </div>
+                {displayError && (
+                  <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
+                    <span>{displayError}</span>
+                  </div>
+                )}
+                <button type="submit" disabled={loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                  {loading ? 'Sending link...' : 'Send Reset Link'}
+                </button>
+              </form>
+              <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                <button type="button" onClick={() => setIsForgotMode(false)} style={{ fontSize: '14px', fontWeight: 700, color: '#F5A623', background: 'none', border: 'none', cursor: 'pointer' }}>Back to Sign In</button>
+              </div>
+            </div>
+          )
+        ) : (
+          <>
+            <h2 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '6px', textAlign: 'center', color: '#fff' }}>Welcome Back</h2>
+            <p style={{ fontSize: '14px', color: '#8B8FA3', marginBottom: '28px', textAlign: 'center' }}>Sign in to your EthioSwap wallet</p>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-mail" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '14px 44px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <i className="ti ti-lock" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#8B8FA3', cursor: 'pointer', padding: '4px' }}>
+                  <i className={showPassword ? 'ti ti-eye-off' : 'ti ti-eye'} style={{ fontSize: '18px' }}></i>
+                </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-4px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotMode(true);
+                    setLocalError('');
+                    setResetLinkSent(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#F5A623',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '4px 0',
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              {displayError && (
+                <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
+                  <span>{displayError}</span>
+                </div>
+              )}
+              <button type="submit" disabled={loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: '12px', color: '#8B8FA3', fontWeight: 600 }}>OR</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              disabled={loading}
+              style={{
+                width: '100%',
+                height: '52px',
+                fontSize: '14px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '14px',
+                color: '#fff',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s, border-color 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" style={{ marginRight: '10px' }}>
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" />
+              </svg>
+              Continue with Google
+            </button>
+            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+              <span style={{ fontSize: '14px', color: '#8B8FA3' }}>Don't have an account? </span>
+              <button type="button" onClick={onToggle} style={{ fontSize: '14px', fontWeight: 700, color: '#F5A623', background: 'none', border: 'none', cursor: 'pointer' }}>Sign Up</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
 const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
-  const { register, loading, error } = useAuth();
+  const { register, loading, error, signInWithGoogle } = useAuth();
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState('next');
   const [localError, setLocalError] = useState('');
@@ -134,6 +269,7 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
   const [emailError, setEmailError] = useState('');
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [isPendingVerification, setIsPendingVerification] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -211,6 +347,9 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
     if (usernameError || emailError) { setLocalError('Please fix the errors above'); return; }
     const result = await register(username, password, phone, email, fullName, age, country, city, work, profilePic);
     if (!result) return;
+    if (result.status === 'pending_verification') {
+      setIsPendingVerification(true);
+    }
   };
 
   const displayError = localError || externalError || error;
@@ -218,6 +357,54 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
 
   const STEP_TITLES = ['Personal Info', 'Account Credentials', 'Location & Contact', 'Identity Verification'];
   const STEP_ICONS = ['ti ti-user', 'ti ti-key', 'ti ti-map-pin', 'ti ti-id'];
+
+  if (isPendingVerification) {
+    return (
+      <div style={{ minHeight: '100vh', width: '100%', background: '#0A0E1A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
+        <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+        <div style={{ width: '100%', maxWidth: '460px', zIndex: 1 }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '40px 32px', textAlign: 'center' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(245,166,35,0.1)', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '40px', animation: 'pulse 2s infinite' }}>
+              <i className="ti ti-mail"></i>
+            </div>
+            <style>{`
+              @keyframes pulse {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
+                70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(245, 166, 35, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+              }
+            `}</style>
+            <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '16px' }}>Verify Your Email</h2>
+            <p style={{ fontSize: '15px', color: '#8B8FA3', lineHeight: '1.6', marginBottom: '32px' }}>
+              A confirmation email has been sent to <strong style={{ color: '#fff' }}>{email}</strong>.<br />
+              Please check your inbox (and spam folder) and click the verification link to activate your account.
+            </p>
+            <button
+              type="button"
+              onClick={onToggle}
+              style={{
+                width: '100%',
+                height: '52px',
+                background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)',
+                color: '#0A0C12',
+                border: 'none',
+                borderRadius: '14px',
+                fontSize: '15px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="ti ti-login" style={{ fontSize: '18px' }}></i> Go to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#0A0E1A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
@@ -265,6 +452,48 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
 
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  height: '52px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '14px',
+                  color: '#fff',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'background 0.2s, border-color 0.2s',
+                  marginBottom: '8px',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" style={{ marginRight: '10px' }}>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Sign Up with Google
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                <span style={{ fontSize: '11px', color: '#8B8FA3', fontWeight: 600, letterSpacing: '0.5px' }}>OR SIGN UP MANUALLY</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              </div>
               <div style={{ position: 'relative' }}>
                 <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 <i className="ti ti-id-badge" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
@@ -410,6 +639,131 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
   );
 };
 
+const RecoveryForm = () => {
+  const { updatePassword, logout, setIsRecoveringPassword, loading, error } = useAuth();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState('');
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  
+  const displayError = localError || error;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    if (!password) {
+      setLocalError('Please enter a password.');
+      return;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match.');
+      return;
+    }
+    const success = await updatePassword(password);
+    if (success) {
+      setPasswordUpdated(true);
+    }
+  };
+
+  const handleFinish = async () => {
+    await logout();
+    setIsRecoveringPassword(false);
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', width: '100%', background: '#0A0E1A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflowY: 'auto' }}>
+      <div style={{ position: 'absolute', top: '10%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <div style={{ width: '100%', maxWidth: '420px', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', justifyContent: 'center' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px' }}>E</div>
+          <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>EthioSwap</span>
+        </div>
+
+        {passwordUpdated ? (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '32px 24px', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34,197,94,0.1)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '32px' }}>
+              <i className="ti ti-checkbox"></i>
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Password Reset Done</h2>
+            <p style={{ fontSize: '14px', color: '#8B8FA3', lineHeight: '1.6', marginBottom: '24px' }}>
+              Your password has been successfully updated. You can now log in with your new password.
+            </p>
+            <button
+              type="button"
+              onClick={handleFinish}
+              style={{
+                width: '100%',
+                height: '48px',
+                background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)',
+                color: '#0A0C12',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Sign In Now
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '32px 24px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '6px', textAlign: 'center', color: '#fff' }}>Reset Your Password</h2>
+            <p style={{ fontSize: '14px', color: '#8B8FA3', marginBottom: '24px', textAlign: 'center' }}>Enter your new strong password below</p>
+            
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="New Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  style={{ width: '100%', padding: '14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  required
+                />
+                <i className="ti ti-lock" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#8B8FA3', cursor: 'pointer', padding: '4px' }}>
+                  <i className={showPassword ? 'ti ti-eye-off' : 'ti ti-eye'} style={{ fontSize: '18px' }}></i>
+                </button>
+              </div>
+              <PasswordStrength password={password} />
+              
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${confirmPassword && password !== confirmPassword ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.12)'}`, borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  required
+                />
+                <i className="ti ti-shield-lock" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+              </div>
+              {confirmPassword && password !== confirmPassword && <div style={{ fontSize: '11px', color: '#EF4444' }}>Passwords do not match</div>}
+
+              {displayError && (
+                <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
+                  <span>{displayError}</span>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Updating password...' : 'Update Password'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PAGE_TITLES = { home: 'Home', p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile' };
 
 const DesktopSidebar = ({ page, setPage, user, logout }) => {
@@ -484,7 +838,7 @@ const MobileBottomNav = ({ page, setPage }) => {
 };
 
 const AppContent = () => {
-  const { user, logout, isLocked, setIsLocked, systemSettings } = useAuth();
+  const { user, logout, isLocked, setIsLocked, systemSettings, isRecoveringPassword } = useAuth();
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
@@ -508,6 +862,8 @@ const AppContent = () => {
   const navigateToSeller = (id) => { setSellerId(id); setPage('sellerProfile'); };
 
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
+
+  if (isRecoveringPassword) return <RecoveryForm />;
 
   if (!user) {
     return showAuth ? (
