@@ -1,6 +1,9 @@
+-- Drop the auto-confirm trigger and function since it conflicts with email verification and causes locking issues on auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created_confirm ON auth.users;
+DROP FUNCTION IF EXISTS handle_new_user_auto_confirm();
+
 -- Robust handle_new_user trigger function
 -- Handles OAuth signups, cleans usernames, and automatically resolves duplicate username conflicts
-
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -23,13 +26,13 @@ BEGIN
 
   final_username := base_username;
 
-  -- 2. Loop until a unique username is found in the users table
+  -- 2. Loop until a unique username is found in the users table to avoid duplicate conflicts
   WHILE EXISTS (SELECT 1 FROM public.users WHERE username = final_username) LOOP
     final_username := base_username || suffix_counter::text;
     suffix_counter := suffix_counter + 1;
   END LOOP;
 
-  -- 3. Insert user profile into public.users table
+  -- 3. Insert user profile into public.users table (updates existing if id conflicts)
   INSERT INTO public.users (id, username, email, full_name, role, status, created_at)
   VALUES (
     NEW.id,
