@@ -2616,7 +2616,7 @@ const AdminPanel = ({ user }) => {
                         step="0.01" 
                         value={adminCustomRate} 
                         onChange={e => setAdminCustomRate(e.target.value)} 
-                        placeholder={`e.g. ${adminListingType === 'buy' ? (settings?.etb_rate_per_dollar_sell ?? rate) : rate}`} 
+                        placeholder={`e.g. ${adminListingType === 'buy' ? rate : (settings?.etb_rate_per_dollar_sell ?? rate)}`} 
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', background: '#0B0E1A', border: '1px solid #1E2640', color: '#fff', fontSize: '13px' }} 
                       />
                     </div>
@@ -2672,7 +2672,7 @@ const AdminPanel = ({ user }) => {
                             </td>
                             <td style={{ padding: '10px 16px', fontSize: '12px', color: '#F5A623', fontFamily: 'monospace' }}>{listing.amount_eth} USDT</td>
                             <td style={{ padding: '10px 16px', fontSize: '12px', color: '#fff' }}>
-                              {listing.custom_rate_etb || (listing.type === 'buy' ? (settings?.etb_rate_per_dollar_sell ?? rate) : rate)} ETB
+                              {listing.custom_rate_etb || (listing.type === 'buy' ? rate : (settings?.etb_rate_per_dollar_sell ?? rate))} ETB
                               {!listing.custom_rate_etb && <span style={{ color: '#8b92a8', fontSize: '10px', marginLeft: '4px' }}>(Auto)</span>}
                             </td>
                             <td style={{ padding: '10px 16px', fontSize: '11px', color: '#8b92a8' }}>{listing.min_limit_etb} - {listing.max_limit_etb}</td>

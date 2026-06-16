@@ -130,12 +130,13 @@ const P2PListings = () => {
       alert('Please fill in all fields.');
       return;
     }
-    const minP2pListing = systemSettings?.minP2pListingUSD ?? 1.0;
+    const minP2pListing = systemSettings?.minP2pListingUsd ?? 1.0;
     if (parseFloat(amount_eth) < minP2pListing) {
       alert(`Minimum ad amount is $${minP2pListing.toFixed(2)} USD.`);
       return;
     }
-    const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : rate;
+    const currentStandardRate = createType === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
+    const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : currentStandardRate;
     const minUSD = parseFloat(minLimit) / effectiveRate;
     if (minUSD < (minP2pListing - 0.01)) {
       alert(`Minimum transaction limit must be at least $${minP2pListing.toFixed(2)} USD equivalent (≈ ${Math.round(minP2pListing * effectiveRate)} ETB).`);
@@ -193,13 +194,16 @@ const P2PListings = () => {
     }
     setTradeError('');
     const amt = parseFloat(tradeamount_eth);
-    const minP2pListingVal = systemSettings?.minP2pListingUSD ?? 1.0;
+    const minP2pListingVal = systemSettings?.minP2pListingUsd ?? 1.0;
     if (isNaN(amt) || amt < minP2pListingVal) { setTradeError(`Minimum transaction amount is $${minP2pListingVal.toFixed(2)} USD.`); return; }
     if (amt > selectedListing.amount_eth) {
       setTradeError(`Maximum available is $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD.`);
       return;
     }
-    const effectiveRate = selectedListing.custom_rate_etb || rate;
+    const standardRate = selectedListing.type === 'buy'
+      ? (systemSettings?.etbRatePerDollar ?? rate)
+      : (systemSettings?.etbRatePerDollarSell ?? rate);
+    const effectiveRate = selectedListing.custom_rate_etb || standardRate;
     const totalEtb = amt * effectiveRate;
     if (totalEtb < selectedListing.min_limit_etb || totalEtb > selectedListing.max_limit_etb) {
       setTradeError(`Total (${Math.round(totalEtb).toLocaleString()} ETB) must be between ${selectedListing.min_limit_etb.toLocaleString()} – ${selectedListing.max_limit_etb.toLocaleString()} ETB.`);
@@ -254,8 +258,8 @@ const P2PListings = () => {
           matchesCalc = l.min_limit_etb <= amtVal && l.max_limit_etb >= amtVal;
         } else {
           const standardRate = l.type === 'buy'
-            ? (systemSettings?.etbRatePerDollarSell ?? rate)
-            : rate;
+            ? (systemSettings?.etbRatePerDollar ?? rate)
+            : (systemSettings?.etbRatePerDollarSell ?? rate);
           const effRate = l.custom_rate_etb || standardRate;
           const etbEquiv = amtVal * effRate;
           matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
@@ -265,8 +269,8 @@ const P2PListings = () => {
       return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc;
     })
     .sort((a, b) => {
-      const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate;
-      const standardRateB = b.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate;
+      const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
+      const standardRateB = b.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
       const rateA = a.custom_rate_etb || standardRateA;
       const rateB = b.custom_rate_etb || standardRateB;
       
@@ -400,6 +404,66 @@ const P2PListings = () => {
           0% { left: -100%; }
           50% { left: 100%; }
           100% { left: 100%; }
+        }
+
+        .premium-p2p-card {
+          position: relative;
+          background: linear-gradient(135deg, rgba(22, 28, 41, 0.65) 0%, rgba(10, 12, 18, 0.8) 100%);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 20px;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .premium-p2p-card:hover {
+          transform: translateY(-4px) scale(1.005);
+          border-color: rgba(245, 166, 35, 0.4);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(245, 166, 35, 0.04);
+        }
+        .premium-p2p-card.buying:hover {
+          border-color: rgba(0, 200, 150, 0.4);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 200, 150, 0.04);
+        }
+
+        .premium-p2p-badge-buy {
+          background: linear-gradient(135deg, rgba(0, 200, 150, 0.15), rgba(0, 200, 150, 0.05));
+          border: 1px solid rgba(0, 200, 150, 0.3);
+          color: #00FFC2;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 8px;
+          text-shadow: 0 0 8px rgba(0, 200, 150, 0.2);
+          letter-spacing: 0.05em;
+        }
+        
+        .premium-p2p-badge-sell {
+          background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(245, 166, 35, 0.05));
+          border: 1px solid rgba(245, 166, 35, 0.3);
+          color: #FFB800;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 4px 10px;
+          border-radius: 8px;
+          text-shadow: 0 0 8px rgba(245, 166, 35, 0.2);
+          letter-spacing: 0.05em;
+        }
+        
+        .premium-card-stat-block {
+          background: rgba(0, 0, 0, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          padding: 14px 18px;
+          border-radius: 14px;
+          transition: all 0.3s ease;
+        }
+        .premium-p2p-card:hover .premium-card-stat-block {
+          background: rgba(0, 0, 0, 0.35);
+          border-color: rgba(255, 255, 255, 0.08);
         }
 
         .custom-scrollbar::-webkit-scrollbar {
@@ -1012,46 +1076,39 @@ const P2PListings = () => {
         <div className="p2p-listings-grid">
           {filtered.map((listing, index) => {
             const standardRate = listing.type === 'buy'
-              ? (systemSettings?.etbRatePerDollarSell ?? rate)
-              : rate;
+              ? (systemSettings?.etbRatePerDollar ?? rate)
+              : (systemSettings?.etbRatePerDollarSell ?? rate);
             const effectiveRate = listing.custom_rate_etb || standardRate;
-            const isOwnListing = listing.seller_id === user?.id || listing.seller_id === user?.id;
+            const isOwnListing = listing.seller_id === user?.id;
             const isBuyType = listing.type === 'buy';
             return (
               <div 
                 key={listing.id} 
-                className="premium-dashboard-card"
+                className={`premium-p2p-card ${isBuyType ? 'buying' : ''}`}
                 style={{
-                  background: 'rgba(17, 19, 24, 0.8)', 
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: '16px', 
-                  padding: '20px',
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '14px',
-                  backdropFilter: 'blur(12px)',
                   animation: 'fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
                   animationDelay: `${index * 50}ms`
                 }}
               >
-                {/* Top Row: User Avatar and Info (grouped vertically for mobile) */}
+                {/* Top Row: User Avatar and Info */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
                     <div style={{
-                      width: '36px', 
-                      height: '36px', 
+                      width: '40px', 
+                      height: '40px', 
                       borderRadius: '50%',
                       background: isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)',
-                      border: `1.5px solid ${isBuyType ? '#00C896' : '#F5A623'}`,
+                      border: `2px solid ${isBuyType ? '#00C896' : '#F5A623'}`,
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      fontWeight: 600, 
-                      fontSize: '13px', 
+                      fontWeight: 700, 
+                      fontSize: '14px', 
                       color: isBuyType ? '#00C896' : '#F5A623',
-                      boxShadow: `0 0 8px ${isBuyType ? 'rgba(0, 200, 150, 0.1)' : 'rgba(245, 166, 35, 0.1)'}`,
+                      boxShadow: `0 0 10px ${isBuyType ? 'rgba(0, 200, 150, 0.2)' : 'rgba(245, 166, 35, 0.2)'}`,
                       flexShrink: 0,
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease'
                     }}>
                       {listing.seller_profile_pic ? (
                         <img src={listing.seller_profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1064,7 +1121,18 @@ const P2PListings = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span 
                           onClick={(e) => { e.stopPropagation(); setViewingTraderId(listing.seller_id); }}
-                          style={{ fontWeight: 600, fontSize: '14px', color: '#F5A623', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          style={{ 
+                            fontWeight: 700, 
+                            fontSize: '14px', 
+                            color: '#fff', 
+                            cursor: 'pointer', 
+                            whiteSpace: 'nowrap', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            transition: 'color 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => e.target.style.color = '#F5A623'}
+                          onMouseLeave={(e) => e.target.style.color = '#fff'}
                         >
                           @{listing.seller_name}
                         </span>
@@ -1072,25 +1140,25 @@ const P2PListings = () => {
                           <span style={{ 
                             background: 'rgba(0,200,150,0.12)', 
                             color: '#00C896', 
-                            fontSize: '8.5px', 
+                            fontSize: '9px', 
                             fontWeight: 600, 
-                            padding: '2px 6px', 
+                            padding: '2px 8px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             whiteSpace: 'nowrap',
                             border: '1px solid rgba(0,200,150,0.2)'
                           }}>
-                            ✅ Verified
+                            ✓ Verified
                           </span>
                         )}
                         {listing.isSellerVerifiedTrader && (
                           <span style={{ 
                             background: 'rgba(245,166,35,0.12)', 
                             color: '#F5A623', 
-                            fontSize: '8.5px', 
+                            fontSize: '9px', 
                             fontWeight: 600, 
-                            padding: '2px 6px', 
+                            padding: '2px 8px', 
                             borderRadius: '99px',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1105,59 +1173,48 @@ const P2PListings = () => {
                         <span style={{ color: '#F5A623', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
                           ⭐ {(listing.sellerAverageRating || 5.0).toFixed(1)}
                         </span>
-                        <span style={{ color: 'var(--muted)' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
                           ({listing.sellerTotalTrades || 0} trades)
                         </span>
-                        <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>|</span>
                         <span style={{ color: '#00C896', fontWeight: 600 }}>
-                          👍 {listing.sellerPositivePercentage || 100}% positive
+                          👍 {listing.sellerPositivePercentage || 100}%
                         </span>
-
                       </div>
                     </div>
                   </div>
 
-                  <span style={{
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    color: isBuyType ? '#00C896' : '#F5A623',
-                    background: isBuyType ? 'rgba(0, 200, 150, 0.12)' : 'rgba(245, 166, 35, 0.12)',
-                    border: `1px solid ${isBuyType ? 'rgba(0, 200, 150, 0.2)' : 'rgba(245, 166, 35, 0.2)'}`,
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    flexShrink: 0
-                  }}>
-                    {isBuyType ? 'BUYING' : 'SELLING'}
+                  <span className={isBuyType ? "premium-p2p-badge-buy" : "premium-p2p-badge-sell"}>
+                    {isBuyType ? 'BUYING USD' : 'SELLING USD'}
                   </span>
                 </div>
 
-                {/* Middle Row: Big USD volume, rate, limits */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '14px 18px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                {/* Middle Row: Big USD volume & Rate block */}
+                <div className="premium-card-stat-block" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AD VOLUME</div>
-                    <div style={{ fontSize: '24px', marginTop: '2px', color: '#F5A623', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                      ${(listing.amount_eth ?? 0).toFixed(2)} <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>USD</span>
+                    <div style={{ fontSize: '9px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>AD VOLUME</div>
+                    <div style={{ fontSize: '24px', marginTop: '4px', color: '#fff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                      ${(listing.amount_eth ?? 0).toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500, fontFamily: 'var(--font)' }}>USD</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RATE</div>
-                    <div style={{ fontSize: '18px', marginTop: '2px', color: '#00C896', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                      {effectiveRate} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>ETB/$</span>
+                    <div style={{ fontSize: '9px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>EXCHANGE RATE</div>
+                    <div style={{ fontSize: '20px', marginTop: '4px', color: isBuyType ? '#00FFC2' : '#FFB800', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+                      {effectiveRate.toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500, fontFamily: 'var(--font)' }}>ETB/$</span>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#e0e0e0', padding: '0 2px' }}>
-                  <span style={{ color: 'var(--muted)' }}>Limits:</span>
-                  <strong style={{ color: '#00C896', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-                    {listing.min_limit_etb.toLocaleString()} – {listing.max_limit_etb.toLocaleString()} ETB
-                  </strong>
+                {/* Limits Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '0 4px', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--muted)', fontWeight: 500 }}>Limits</span>
+                  <span style={{ color: '#fff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+                    {listing.min_limit_etb.toLocaleString()} – {listing.max_limit_etb.toLocaleString()} <span style={{ fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--font)' }}>ETB</span>
+                  </span>
                 </div>
 
                 {/* Payment method chips */}
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '2px 0' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '2px 0' }}>
                   {listing.payment_methods.map(p => {
                     const meta = ALL_PAYMENT_METHODS.find(m => m.id === p);
                     const styles = getPaymentMethodStyles(p);
@@ -1165,35 +1222,37 @@ const P2PListings = () => {
                       <span key={p} style={{
                         display: 'inline-flex', 
                         alignItems: 'center', 
-                        gap: '5px',
-                        padding: '5px 10px', 
-                        borderRadius: '8px', 
+                        gap: '6px',
+                        padding: '6px 12px', 
+                        borderRadius: '10px', 
                         fontSize: '11px', 
                         fontWeight: 700,
                         background: styles.bg, 
                         border: `1px solid ${styles.border}`,
                         color: styles.text,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        transition: 'all 0.2s ease',
                       }}>
-                        {meta?.icon || '🏦'} {meta?.label || p}
+                        <span>{meta?.icon || '🏦'}</span>
+                        <span>{meta?.label || p}</span>
                       </span>
                     );
                   })}
                 </div>
 
                 {/* Time Window & Third Party Rules */}
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '11px', color: 'var(--muted)', padding: '2px 2px 4px' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    ⏳ {listing.payment_window || 15} Mins
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--muted)', padding: '4px 4px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
+                    ⏱️ {listing.payment_window || 15} Min Window
                   </span>
-                  <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
-                  <span style={{ color: listing.allow_third_party ? '#00C896' : '#EF4444', fontWeight: 500 }}>
-                    {listing.allow_third_party ? '✅ Third Party OK' : '🚫 No Third Party'}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: listing.allow_third_party ? '#00C896' : '#EF4444', fontWeight: 600 }}>
+                    {listing.allow_third_party ? '✓ Third Party OK' : '✕ No Third Party'}
                   </span>
                 </div>
 
                 {/* Bottom Row CTA Button */}
                 {isOwnListing ? (
-                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '4px' }}>
                     <button
                       onClick={() => {
                         setEditingListingId(listing.id);
@@ -1211,18 +1270,27 @@ const P2PListings = () => {
                       className="btn"
                       style={{ 
                         flex: 1, 
-                        height: '48px', 
+                        height: '44px', 
                         borderRadius: '12px', 
-                        fontSize: '14.5px', 
-                        fontWeight: 600, 
-                        background: 'rgba(245,166,35,0.08)',
+                        fontSize: '13.5px', 
+                        fontWeight: 700, 
+                        background: 'rgba(245,166,35,0.06)',
                         border: '1px solid rgba(245,166,35,0.25)',
                         color: '#F5A623',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'rgba(245,166,35,0.12)';
+                        e.target.style.borderColor = 'rgba(245,166,35,0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'rgba(245,166,35,0.06)';
+                        e.target.style.borderColor = 'rgba(245,166,35,0.25)';
                       }}
                     >
                       ✏️ Edit Ad
@@ -1236,18 +1304,27 @@ const P2PListings = () => {
                       className="btn"
                       style={{ 
                         flex: 1, 
-                        height: '48px', 
+                        height: '44px', 
                         borderRadius: '12px', 
-                        fontSize: '14.5px', 
-                        fontWeight: 600, 
-                        background: 'rgba(239, 68, 68, 0.08)',
+                        fontSize: '13.5px', 
+                        fontWeight: 700, 
+                        background: 'rgba(239, 68, 68, 0.06)',
                         border: '1px solid rgba(239, 68, 68, 0.25)',
                         color: '#EF4444',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'rgba(239, 68, 68, 0.12)';
+                        e.target.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'rgba(239, 68, 68, 0.06)';
+                        e.target.style.borderColor = 'rgba(239, 68, 68, 0.25)';
                       }}
                     >
                       🚫 Cancel
@@ -1266,17 +1343,18 @@ const P2PListings = () => {
                     className={isBuyType ? "teal-glow-btn" : "gold-glow-btn"}
                     style={{ 
                       width: '100%',
-                      height: '48px',
+                      height: '46px',
                       border: 'none',
                       borderRadius: '12px',
-                      fontSize: '14.5px', 
-                      fontWeight: 600,
+                      fontSize: '14px', 
+                      fontWeight: 700,
                       cursor: kycApproved ? 'pointer' : 'not-allowed',
-                      color: '#04342C',
+                      color: isBuyType ? '#023026' : '#1e1302',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
+                      marginTop: '4px',
                     }}
                   >
                     {kycApproved ? (!isBuyType ? 'Buy USD Now ➔' : 'Sell USD Now ➔') : '🛡️ Complete KYC to Trade'}
@@ -1394,7 +1472,7 @@ const P2PListings = () => {
                       type="number" step="0.01" required
                       className="input"
                       style={{ paddingRight: '64px', height: '44px', borderRadius: '10px' }}
-                      placeholder={`Min: $${systemSettings?.minP2pListingUSD ?? '1.00'}`}
+                      placeholder={`Min: $${systemSettings?.minP2pListingUsd ?? '1.00'}`}
                       value={amount_eth}
                       onChange={e => setamount_eth(e.target.value)}
                     />
@@ -1695,7 +1773,7 @@ const P2PListings = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate)} ETB / $1
+                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate))} ETB / $1
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
                   Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
@@ -1781,14 +1859,14 @@ const P2PListings = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-3)' }}>Rate</span>
                     <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate)} ETB/$1
+                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate))} ETB/$1
                     </span>
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
                     <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : rate))).toLocaleString()} ETB
+                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate)))).toLocaleString()} ETB
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>

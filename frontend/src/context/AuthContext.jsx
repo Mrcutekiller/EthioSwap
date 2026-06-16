@@ -815,8 +815,8 @@ export const AuthProvider = ({ children }) => {
       if (!listing) throw new Error('Listing not found');
 
       const standardRate = listing.type === 'buy'
-        ? (systemSettings.etbRatePerDollarSell ?? systemSettings.etbRatePerDollar)
-        : systemSettings.etbRatePerDollar;
+        ? systemSettings.etbRatePerDollar
+        : (systemSettings.etbRatePerDollarSell ?? systemSettings.etbRatePerDollar);
       const rateToUse = listing.custom_rate_etb || standardRate;
 
       const { data: newTrade, error } = await supabase.from('trades').insert({
