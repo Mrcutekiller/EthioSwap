@@ -250,15 +250,16 @@ const P2PListings = () => {
   // ── Shared styles ─────────────────────────────────────────
   const overlayStyle = {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-    backdropFilter: 'blur(4px)', zIndex: 200,
+    backdropFilter: 'blur(6px)', zIndex: 200,
     display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    animation: 'fadeIn 0.2s ease-out',
   };
   const sheetStyle = {
     background: 'var(--bg-surface)', borderRadius: '24px 24px 0 0',
     border: '1px solid var(--border)', borderBottom: 'none',
     width: '100%', maxWidth: '480px', maxHeight: '92dvh',
     overflowY: 'auto', padding: '24px 20px 32px',
-    animation: 'slideUp 0.3s ease',
+    animation: 'slideUp 0.32s cubic-bezier(0.32, 0.94, 0.6, 1)',
   };
   const handleStyle = {
     width: '36px', height: '4px', background: 'var(--border-hover)',
@@ -297,6 +298,14 @@ const P2PListings = () => {
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         
         .premium-dashboard-card {
@@ -1263,193 +1272,281 @@ const P2PListings = () => {
               )}
             </div>
 
-            <form onSubmit={handleCreateListing} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-              {/* USD Amount */}
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Amount to Sell (USD)</label>
-                <input
-                  type="number" step="0.01" required
-                  className="input"
-                  placeholder={`Available: $${wallet ? ((wallet.eth_balance ?? 0) - (wallet.eth_locked ?? 0)).toFixed(2) : '0.00'} USD`}
-                  value={amount_eth}
-                  onChange={e => setamount_eth(e.target.value)}
-                />
-                {amount_eth && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '2px' }}>
-                    ≈ {Math.round(parseFloat(amount_eth) * rate).toLocaleString()} ETB at admin rate
-                  </div>
-                )}
-              </div>
-
-              {/* Min / Max limits */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label className="input-label">Min (ETB)</label>
-                  <input type="number" required className="input" placeholder="e.g. 500" value={minLimit} onChange={e => setMinLimit(e.target.value)} />
+            <form onSubmit={handleCreateListing} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* SECTION 1: AD VOLUME & EXCHANGE RATE */}
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid rgba(255,255,255,0.04)',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}>
+                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>💰</span> 1. Ad Volume & Rate
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label className="input-label">Max (ETB)</label>
-                  <input type="number" required className="input" placeholder="e.g. 20000" value={maxLimit} onChange={e => setMaxLimit(e.target.value)} />
-                </div>
-              </div>
 
-              {/* Custom rate toggle */}
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--text-2)' }}>
-                  <div
-                    onClick={() => setUseCustomRate(!useCustomRate)}
-                    style={{
-                      width: '36px', height: '20px', borderRadius: '99px', position: 'relative',
-                      background: useCustomRate ? 'var(--gold)' : 'var(--bg-elevated)',
-                      border: `1px solid ${useCustomRate ? 'var(--gold)' : 'var(--border)'}`,
-                      transition: 'all 0.2s ease', cursor: 'pointer', flexShrink: 0,
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute', top: '2px', transition: 'left 0.2s ease',
-                      left: useCustomRate ? '17px' : '2px',
-                      width: '14px', height: '14px', borderRadius: '50%',
-                      background: useCustomRate ? '#0A0C12' : 'var(--text-3)',
-                    }} />
+                {/* USD Amount */}
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Amount to {createType === 'sell' ? 'Sell' : 'Buy'} (USD)</label>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      type="number" step="0.01" required
+                      className="input"
+                      style={{ paddingRight: '64px', height: '44px', borderRadius: '10px' }}
+                      placeholder={`Min: $${systemSettings?.minP2pListingUSD ?? '1.00'}`}
+                      value={amount_eth}
+                      onChange={e => setamount_eth(e.target.value)}
+                    />
+                    {createType === 'sell' && wallet && (
+                      <button
+                        type="button"
+                        onClick={() => setamount_eth(((wallet.eth_balance ?? 0) - (wallet.eth_locked ?? 0)).toFixed(2))}
+                        style={{
+                          position: 'absolute', right: '8px', top: '8px',
+                          background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)',
+                          color: 'var(--gold-light)', borderRadius: '6px', fontSize: '10px',
+                          padding: '4px 8px', fontWeight: 800, cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.12)'}
+                      >
+                        MAX
+                      </button>
+                    )}
                   </div>
-                  Set my own ETB rate (custom)
-                </label>
-                {useCustomRate && (
-                  <div style={{ marginTop: '10px' }}>
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <label className="input-label">My Rate (ETB per $1 USD)</label>
-                      <input
-                        type="number" step="0.01"
-                        className="input"
-                        placeholder={`Admin rate: ${rate}`}
-                        value={customRate}
-                        onChange={e => setCustomRate(e.target.value)}
-                      />
+                  {amount_eth && (
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', paddingLeft: '2px' }}>
+                      ≈ {Math.round(parseFloat(amount_eth) * (useCustomRate && customRate ? parseFloat(customRate) : rate)).toLocaleString()} ETB total volume
                     </div>
-                    {customRate && parseFloat(customRate) > rate && (
-                      <div style={{ fontSize: '11px', color: 'var(--status-warning-text)', marginTop: '4px' }}>
-                        ⚠️ Your rate is above admin rate ({rate}). Buyers may prefer lower rates.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Description & Terms */}
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">Description / Trade Terms</label>
-                <textarea
-                  className="input"
-                  style={{ minHeight: '60px', resize: 'vertical', paddingTop: '10px' }}
-                  placeholder="Enter your trade rules, e.g. CBE only, no third party payment, call me after transfer..."
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                />
-              </div>
-
-              {/* Payment Time Limit & Third Party Settings */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label className="input-label">Time Limit (Mins)</label>
-                  <select
-                    className="input select-premium"
-                    value={paymentWindow}
-                    onChange={e => setPaymentWindow(e.target.value)}
-                    style={{ height: '44px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', color: '#fff', padding: '0 10px' }}
-                  >
-                    <option value="15">15 Minutes</option>
-                    <option value="30">30 Minutes</option>
-                    <option value="45">45 Minutes</option>
-                    <option value="60">60 Minutes</option>
-                  </select>
+                  )}
                 </div>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                  <label className="input-label">Third-Party Payments</label>
-                  <select
-                    className="input select-premium"
-                    value={allowThirdParty ? 'true' : 'false'}
-                    onChange={e => setAllowThirdParty(e.target.value === 'true')}
-                    style={{ height: '44px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', color: '#fff', padding: '0 10px' }}
-                  >
-                    <option value="false">🚫 No Third Party</option>
-                    <option value="true">✅ Third Party Ok</option>
-                  </select>
+
+                {/* Custom rate toggle card */}
+                <div style={{
+                  background: 'rgba(0,0,0,0.15)',
+                  border: '1px solid rgba(255,255,255,0.04)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Custom ETB Rate</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Set your own Birr exchange rate per $1</span>
+                    </div>
+                    <div
+                      onClick={() => setUseCustomRate(!useCustomRate)}
+                      style={{
+                        width: '40px', height: '22px', borderRadius: '99px', position: 'relative',
+                        background: useCustomRate ? '#F5A623' : 'rgba(255,255,255,0.06)',
+                        border: `1px solid ${useCustomRate ? '#F5A623' : 'rgba(255,255,255,0.15)'}`,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '2px', transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        left: useCustomRate ? '20px' : '2px',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: '#0A0C12',
+                      }} />
+                    </div>
+                  </div>
+                  
+                  {useCustomRate && (
+                    <div style={{ animation: 'fadeInUp 0.2s ease-out' }}>
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <input
+                          type="number" step="0.01" required={useCustomRate}
+                          className="input"
+                          placeholder={`Standard: ${rate} ETB`}
+                          value={customRate}
+                          onChange={e => setCustomRate(e.target.value)}
+                          style={{ height: '40px', borderRadius: '8px' }}
+                        />
+                      </div>
+                      {customRate && parseFloat(customRate) > rate && (
+                        <div style={{ fontSize: '10.5px', color: '#EF4444', marginTop: '4px', paddingLeft: '2px' }}>
+                          ⚠️ Your rate is higher than standard ({rate} ETB). Users usually prefer lower rates.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Personal payment accounts selector */}
-              <div>
-                {createType === 'buy' ? (
-                  <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>🛡️</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)' }}>No Payout Account Required Upfront</div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 0', lineHeight: 1.5 }}>
-                      Since you are the buyer, you do not need to link a bank account to receive ETB. Takers (sellers) will provide their own payout details when they sell USD to you.
-                    </p>
+              {/* SECTION 2: LIMITS & PAYOUTS */}
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid rgba(255,255,255,0.04)',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}>
+                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>💳</span> 2. Transaction Limits & Payouts
+                </div>
+
+                {/* Min / Max limits */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Min limit (ETB)</label>
+                    <input type="number" required className="input" style={{ height: '42px', borderRadius: '10px' }} placeholder="e.g. 500" value={minLimit} onChange={e => setMinLimit(e.target.value)} />
                   </div>
-                ) : (
-                  <>
-                    <label className="input-label" style={{ marginBottom: '6px', display: 'block' }}>Select My Payment Accounts to Receive Birr</label>
-                    <p style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '10px' }}>
-                      Check which bank or wallet accounts you want to accept ETB transfers into for this listing:
-                    </p>
-                    
-                    {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
-                      <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
-                          You must add at least one bank account or mobile wallet in your Profile before listing USD.
-                        </p>
-                        <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
-                          Go to Profile page & add account →
-                        </a>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {user.payment_accounts.map(acc => {
-                          const sel = linkedAccounts.some(la => la.id === acc.id);
-                          const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
-                          return (
-                            <label key={acc.id} style={{
-                              display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
-                              background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
-                              border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                              borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
-                              transition: 'all 0.15s ease',
-                            }}>
-                              <input type="checkbox" checked={sel} onChange={() => toggleLinkedAccount(acc)} style={{ display: 'none' }} />
-                              <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
-                                  {matched?.label || acc.bankName}
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Max limit (ETB)</label>
+                    <input type="number" required className="input" style={{ height: '42px', borderRadius: '10px' }} placeholder="e.g. 20000" value={maxLimit} onChange={e => setMaxLimit(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Personal payment accounts selector */}
+                <div style={{ marginTop: '4px' }}>
+                  {createType === 'buy' ? (
+                    <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '18px', marginBottom: '2px' }}>🛡️</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)' }}>No Payout Account Required</div>
+                      <p style={{ fontSize: '10.5px', color: 'var(--muted)', margin: '4px 0 0', lineHeight: 1.5 }}>
+                        Since you are buying USD, sellers will transfer Birr directly into your payout accounts upon trade completion. You will configure this when taking sell orders.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="input-label" style={{ marginBottom: '4px', display: 'block', fontSize: '12px', color: 'var(--text-secondary)' }}>Select Receiving Bank/Wallet</label>
+                      <p style={{ fontSize: '10.5px', color: 'var(--muted)', marginBottom: '8px', lineHeight: 1.4 }}>
+                        Select the saved accounts where you accept ETB local transfers:
+                      </p>
+                      
+                      {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
+                        <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', marginBottom: '2px' }}>⚠️</div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
+                          <p style={{ fontSize: '10.5px', color: 'var(--text-3)', margin: '4px 0 8px', lineHeight: 1.4 }}>
+                            You must add at least one bank account in your Profile first to list USD.
+                          </p>
+                          <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
+                            Go to Profile & Add Account →
+                          </a>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {user.payment_accounts.map(acc => {
+                            const sel = linkedAccounts.some(la => la.id === acc.id);
+                            const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                            return (
+                              <div 
+                                key={acc.id} 
+                                onClick={() => toggleLinkedAccount(acc)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                                  background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
+                                  border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
+                                  borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <span style={{ fontSize: '16px' }}>{matched?.icon || '🏦'}</span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
+                                    {matched?.label || acc.bankName}
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 400 }}>
+                                    Acc: {acc.accountNumber} · Holder: {acc.holderName}
+                                  </div>
                                 </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400 }}>
-                                  Acc: {acc.accountNumber} · Holder: {acc.holderName}
-                                </div>
+                                <span style={{
+                                  width: '16px', height: '16px', borderRadius: '50%',
+                                  border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  background: sel ? 'var(--gold)' : 'transparent',
+                                  color: '#0A0C12', fontSize: '9px', fontWeight: 900
+                                }}>
+                                  {sel && '✓'}
+                                </span>
                               </div>
-                              {sel && <span style={{ color: 'var(--gold-light)', fontSize: '16px' }}>✓</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION 3: TERMS & RULES */}
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid rgba(255,255,255,0.04)',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}>
+                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🛡️</span> 3. Trade Terms & Rules
+                </div>
+
+                {/* Description & Terms */}
+                <div className="input-group" style={{ marginBottom: 0 }}>
+                  <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Description / Trade Terms</label>
+                  <textarea
+                    className="input"
+                    style={{ minHeight: '60px', resize: 'vertical', paddingTop: '10px', borderRadius: '10px', fontSize: '13px' }}
+                    placeholder="Enter custom requirements, e.g. Call me after payment, CBE transfers only, no third party..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                  />
+                </div>
+
+                {/* Payment Time Limit & Third Party Settings */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Payment Window</label>
+                    <select
+                      className="input select-premium"
+                      value={paymentWindow}
+                      onChange={e => setPaymentWindow(e.target.value)}
+                      style={{ height: '42px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', color: '#fff', padding: '0 10px', fontSize: '12.5px' }}
+                    >
+                      <option value="15">15 Minutes</option>
+                      <option value="30">30 Minutes</option>
+                      <option value="45">45 Minutes</option>
+                      <option value="60">60 Minutes</option>
+                    </select>
+                  </div>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Third-Party Payments</label>
+                    <select
+                      className="input select-premium"
+                      value={allowThirdParty ? 'true' : 'false'}
+                      onChange={e => setAllowThirdParty(e.target.value === 'true')}
+                      style={{ height: '42px', width: '100%', background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', color: '#fff', padding: '0 10px', fontSize: '12.5px' }}
+                    >
+                      <option value="false">🚫 No Third Party</option>
+                      <option value="true">✅ Third Party Ok</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Warning */}
-              <div style={{ background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '12px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--status-danger-text)', marginBottom: '4px' }}>⚠️ IMPORTANT</div>
-                <p style={{ fontSize: '11px', color: 'var(--status-danger-text)', lineHeight: '1.5', margin: 0 }}>
-                  Once you release escrow, the transaction is <strong>final and irreversible</strong>. Always confirm ETB receipt in your bank app first.
+              <div style={{ background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', borderRadius: '12px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--status-danger-text)', marginBottom: '3px' }}>⚠️ ESCROW SECURITY POLICY</div>
+                <p style={{ fontSize: '10.5px', color: 'var(--status-danger-text)', lineHeight: '1.4', margin: 0 }}>
+                  Escrow is locking transaction funds automatically. Do **NOT** release funds until you verify the ETB amount has cleared inside your personal banking application.
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" disabled={createType === 'sell' && (!user.payment_accounts || user.payment_accounts.length === 0)} className="btn btn-gold" style={{ flex: 2 }}>Create Listing</button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-outline" style={{ flex: 1, height: '46px', borderRadius: '12px' }}>Cancel</button>
+                <button type="submit" disabled={createType === 'sell' && (!user.payment_accounts || user.payment_accounts.length === 0)} className="btn btn-gold" style={{ flex: 2, height: '46px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>Post Advertisement</button>
               </div>
             </form>
           </div>
