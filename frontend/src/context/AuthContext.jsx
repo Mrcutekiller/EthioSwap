@@ -59,6 +59,15 @@ export const AuthProvider = ({ children }) => {
   const [trades, setTrades] = useState([]);
 
   useEffect(() => {
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const errorMsg = params.get('error_description') || params.get('error');
+      if (errorMsg) {
+        setError(decodeURIComponent(errorMsg.replace(/\+/g, ' ')));
+        window.history.replaceState(null, null, window.location.pathname);
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         loadUserProfile(session.user.id, session.user).finally(() => setInitializing(false));

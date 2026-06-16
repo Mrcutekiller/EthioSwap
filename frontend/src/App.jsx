@@ -854,6 +854,16 @@ const AppContent = () => {
   }, []);
 
   useEffect(() => {
+    if (window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      if (hash.includes('error=') || hash.includes('access_token=')) {
+        setShowAuth(true);
+        setAuthMode('login');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (user && user.role === 'admin' && page === 'home') {
       setPage('admin');
     }
