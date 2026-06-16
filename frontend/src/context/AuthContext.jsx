@@ -441,6 +441,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      // Step 1: Verify credentials with Supabase Auth
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -448,11 +449,98 @@ export const AuthProvider = ({ children }) => {
 
       if (authError) throw authError;
 
-      const profile = await loadUserProfile(data.user.id, data.user);
+      const userId = data.user.id;
+      const userEmail = data.user.email;
+      const userName = data.user.user_metadata?.full_name ||
+        data.user.user_metadata?.username ||
+        userEmail.split('@')[0];
 
+      // Step 2: Sign them back out — they must verify OTP first
+      await supabase.auth.signOut();
+
+      // Step 3: Call Edge Function to generate & email the OTP
+      const { error: fnError } = await supabase.functions.invoke('send-login-otp', {
+        body: { userId, email: userEmail, name: userName },
+      });
+
+      if (fnError) {
+        // If Edge Function fails, fall back to direct login (graceful degradation)
+        console.warn('OTP send failed, allowing direct login:', fnError.message);
+        const { data: reData, error: reAuthError } = await supabase.auth.signInWithPassword({ email, password });
+        if (reAuthError) throw reAuthError;
+        const profile = await loadUserProfile(reData.user.id, reData.user);
+        if (!profile) throw new Error('User profile not found');
+        setSuccess(`Welcome back, ${profile.username}!`);
+        return { status: 'success', user: profile };
+      }
+
+      // Step 4: Return OTP_REQUIRED status — UI shows OTP input
+      return {
+        status: 'otp_required',
+        userId,
+        email: userEmail,
+        password, // kept in memory so we can re-auth after OTP verification
+        name: userName,
+      };
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyLoginOtp = async (userId, email, password, otpCode) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch the latest unused, non-expired OTP for this user
+      const { data: otpRows, error: fetchErr } = await supabase
+        .from('login_otps')
+        .select('*')
+        .eq('email', email)
+        .eq('used', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (fetchErr) throw new Error('Failed to verify code. Please try again.');
+      if (!otpRows || otpRows.length === 0) throw new Error('Code has expired. Please sign in again.');
+
+      const otpRow = otpRows[0];
+
+      // Check max attempts (5 tries)
+      if (otpRow.attempts >= 5) {
+        throw new Error('Too many failed attempts. Please sign in again to get a new code.');
+      }
+
+      if (otpRow.otp_code !== otpCode.trim()) {
+        // Increment attempts counter
+        await supabase
+          .from('login_otps')
+          .update({ attempts: otpRow.attempts + 1 })
+          .eq('id', otpRow.id);
+        const remaining = 4 - otpRow.attempts;
+        throw new Error(`Incorrect code. ${remaining > 0 ? `${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.` : 'No attempts remaining.'}`);
+      }
+
+      // Mark OTP as used
+      await supabase
+        .from('login_otps')
+        .update({ used: true })
+        .eq('id', otpRow.id);
+
+      // Re-authenticate with original credentials to get a real session
+      const { data: authData, error: reAuthError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (reAuthError) throw reAuthError;
+
+      const profile = await loadUserProfile(authData.user.id, authData.user);
       if (!profile) throw new Error('User profile not found');
 
-      setSuccess(`Welcome back, ${profile.username}!`);
+      setSuccess(`Welcome back, ${profile.username}! ✓`);
       return { status: 'success', user: profile };
     } catch (err) {
       setError(err.message);
@@ -461,6 +549,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
 
   const register = async (username, password, phone, email, fullName, age, country, city, work, profilePic) => {
     setLoading(true);
@@ -1615,6 +1704,7 @@ export const AuthProvider = ({ children }) => {
       updateSensitiveDetails, updateListing, cancelListing,
       signInWithGoogle, sendPasswordResetEmail, updatePassword,
       isProfileIncomplete, completeGoogleProfile,
+      verifyLoginOtp,
       isRecoveringPassword, setIsRecoveringPassword,
       setError, setSuccess, setIsLocked,
       loadSystemSettings, createNotification, withdrawAdminEarnings
