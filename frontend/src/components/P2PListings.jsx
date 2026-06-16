@@ -92,7 +92,7 @@ const P2PListings = () => {
   const rate = systemSettings?.etbRatePerDollar ?? 190;
 
   // ── KYC gate ─────────────────────────────────────────────
-  const kycApproved = user?.kycStatus === 'approved' || user?.username === 'biruk';
+  const kycApproved = user?.kyc_status === 'approved' || user?.username === 'biruk';
 
   // ── Create listing ────────────────────────────────────────
   const handleCreateListing = async (e) => {
@@ -580,6 +580,33 @@ const P2PListings = () => {
           }}
         >
           Sell USD
+        </button>
+        <button
+          onClick={() => {
+            if (!kycApproved) {
+              alert('Please verify your identity first. Go to Profile to start KYC verification.');
+              return;
+            }
+            setCreateType(p2pTab === 'buy' ? 'sell' : 'buy');
+            setShowCreateModal(true);
+          }}
+          className="gold-glow-btn"
+          style={{
+            width: '46px', 
+            borderRadius: '8px', 
+            border: 'none', 
+            cursor: 'pointer',
+            fontWeight: 800, 
+            fontSize: '20px',
+            color: '#0A0C12',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          title="Post a Listing"
+        >
+          +
         </button>
       </div>
 
