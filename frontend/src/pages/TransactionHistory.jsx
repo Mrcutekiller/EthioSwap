@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 import EmptyState from '../components/EmptyState.jsx';
 
 const TransactionHistory = () => {
-  const { user, myDepositReqs, myWithdrawalReqs } = useAuth();
+  const { user, myDepositReqs, myWithdrawalReqs, systemSettings } = useAuth();
   const { t } = useTranslation();
 
   const [activeHistoryTab, setActiveHistoryTab] = useState('p2p');
@@ -15,6 +15,7 @@ const TransactionHistory = () => {
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTx, setSelectedTx] = useState(null);
+  const [selectedP2pTx, setSelectedP2pTx] = useState(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   const [p2pFilterStatus, setP2pFilterStatus] = useState('all');
@@ -279,78 +280,171 @@ const TransactionHistory = () => {
 
   const downloadReceipt = (tx) => {
     const doc = new jsPDF();
-    doc.setFont("helvetica", "bold");
+    const feePercent = systemSettings?.depositFeePercent ?? 5;
+    const fee = tx.type === 'deposit' ? tx.amount_usd * feePercent / 100 : 0;
+    const net = Math.max(0, tx.amount_usd - fee);
+    
+    // Header
+    doc.setFillColor(10, 12, 24);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
-    doc.setTextColor(28, 25, 23);
-    doc.text('EthioSwap Receipt', 20, 25);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(120, 113, 108);
-    doc.text('Official Transaction Document', 20, 32);
-    doc.text('Website: ethioswap.qzz.io', 20, 37);
-    doc.text('TIN: 0048392019', 20, 42);
-    doc.setDrawColor(231, 229, 228);
-    doc.setLineWidth(0.5);
-    doc.line(20, 48, 190, 48);
-    doc.setFontSize(11);
+    doc.setTextColor(245, 166, 35);
+    doc.text('EthioSwap', 20, 22);
+    doc.setFontSize(9);
+    doc.setTextColor(180, 180, 180);
+    doc.text('OFFICIAL TRANSACTION RECEIPT', 20, 32);
+    doc.setTextColor(140, 140, 140);
+    doc.text('ethioswap.qzz.io  ·  MrCute Finance Platform', 110, 22);
+    doc.text('Powered by Supabase & EthioSwap Ltd.', 110, 30);
+
+    // Divider
+    doc.setDrawColor(245, 166, 35);
+    doc.setLineWidth(0.8);
+    doc.line(20, 44, 190, 44);
+
+    // Info block
     doc.setTextColor(68, 64, 60);
-    doc.setFont("helvetica", "bold");
-    doc.text('Receipt No:', 20, 58);
-    doc.setFont("helvetica", "normal");
-    doc.text(`REC-${tx.id.substring(0, 8).toUpperCase()}`, 60, 58);
-    doc.setFont("helvetica", "bold");
-    doc.text('Date & Time:', 20, 66);
-    doc.setFont("helvetica", "normal");
-    doc.text(new Date(tx.created_at).toLocaleString(), 60, 66);
-    doc.setFont("helvetica", "bold");
-    doc.text('Type:', 20, 74);
-    doc.setFont("helvetica", "normal");
-    doc.text(tx.type.toUpperCase(), 60, 74);
-    doc.setFont("helvetica", "bold");
-    doc.text('Status:', 20, 82);
-    doc.setFont("helvetica", "normal");
-    doc.text(tx.status.toUpperCase(), 60, 82);
-    doc.line(20, 90, 190, 90);
-    doc.setFont("helvetica", "bold");
-    doc.text('From:', 20, 100);
-    doc.setFont("helvetica", "normal");
-    doc.text(tx.from, 60, 100);
-    doc.setFont("helvetica", "bold");
-    doc.text('To:', 20, 108);
-    doc.setFont("helvetica", "normal");
-    doc.text(tx.to, 60, 108);
-    doc.line(20, 116, 190, 116);
-    doc.setFont("helvetica", "bold");
-    doc.text('Subtotal:', 20, 126);
-    doc.setFont("helvetica", "normal");
-    doc.text(`$${tx.amount_usd.toFixed(2)} USD`, 60, 126);
-    doc.setFont("helvetica", "bold");
-    doc.text('Fees:', 20, 134);
-    doc.setFont("helvetica", "normal");
-    doc.text('$0.00 USD', 60, 134);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    const rows = [
+      ['Receipt No', `REC-${tx.id.substring(0, 8).toUpperCase()}`],
+      ['Date & Time', new Date(tx.created_at).toLocaleString()],
+      ['Account Name', user?.full_name || user?.username || 'EthioSwap User'],
+      ['Type', tx.type.toUpperCase()],
+      ['Status', tx.status.toUpperCase()],
+    ];
+    let y = 54;
+    rows.forEach(([label, val]) => {
+      doc.setFont('helvetica', 'bold'); doc.text(label + ':', 20, y);
+      doc.setFont('helvetica', 'normal'); doc.text(val, 75, y);
+      y += 8;
+    });
+
+    doc.setDrawColor(220, 218, 215);
+    doc.setLineWidth(0.4);
+    doc.line(20, y + 2, 190, y + 2); y += 10;
+
+    // From / To
+    doc.setFont('helvetica', 'bold'); doc.text('From:', 20, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(tx.from || 'External'), 75, y); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.text('To:', 20, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(tx.to || 'My Wallet'), 75, y); y += 10;
+
+    doc.line(20, y, 190, y); y += 8;
+
+    // Amounts
+    doc.setFont('helvetica', 'normal');
+    doc.text('Amount:', 20, y); doc.text(`$${tx.amount_usd.toFixed(2)} USD`, 75, y); y += 8;
+    doc.text(`Platform Fee (${tx.type === 'deposit' ? feePercent + '%' : '0%'}):`, 20, y);
+    doc.text(fee > 0 ? `-$${fee.toFixed(2)} USD` : 'FREE ✓', 75, y); y += 10;
+
+    doc.setDrawColor(245, 166, 35); doc.line(20, y, 190, y); y += 8;
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(4, 120, 87);
-    doc.text('Total Net:', 20, 144);
-    doc.text(`$${tx.amount_usd.toFixed(2)} USD`, 60, 144);
-    doc.setDrawColor(231, 229, 228);
-    doc.line(20, 152, 190, 152);
-    doc.setFontSize(10);
-    doc.setTextColor(120, 113, 108);
-    doc.text('Authorized Signature:', 120, 165);
-    doc.setFont("times", "italic");
-    doc.setFontSize(14);
-    doc.setTextColor(29, 78, 216);
-    doc.text('Biruk Fikru', 120, 175);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(120, 113, 108);
-    doc.text('CEO, EthioSwap', 120, 181);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(5, 150, 105);
-    doc.text('[ SECURED BY ETHIOSWAP ]', 20, 175);
+    doc.text('TOTAL NET:', 20, y);
+    doc.text(`$${net.toFixed(2)} USD`, 75, y); y += 16;
+
+    // Signature section
+    doc.setDrawColor(220, 218, 215); doc.setLineWidth(0.4);
+    doc.line(20, y, 190, y); y += 10;
+
+    doc.setFontSize(9); doc.setTextColor(120, 113, 108); doc.setFont('helvetica', 'normal');
+    doc.text('[ SECURED BY ETHIOSWAP  ✓ ]', 20, y + 4);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(68, 64, 60);
+    doc.text('Authorized Signature:', 120, y);
+    doc.setFont('times', 'italic'); doc.setFontSize(15); doc.setTextColor(29, 78, 216);
+    doc.text('Biruk Fikru', 120, y + 10);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120, 113, 108);
+    doc.text('CEO & Founder, EthioSwap  ·  MrCute', 120, y + 17);
+
+    // Footer
+    doc.setFillColor(245, 166, 35); doc.rect(0, 280, 210, 17, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(10, 12, 24);
+    doc.text('EthioSwap  —  Your Trusted Ethiopian Crypto Exchange  —  ethioswap.qzz.io', 20, 290);
+    
     doc.save(`EthioSwap_Receipt_${tx.id.substring(0, 8)}.pdf`);
+  };
+
+  const downloadP2PReceipt = (trade) => {
+    const doc = new jsPDF();
+    const isFree = systemSettings?.isP2pFreePeriod !== false;
+    const commissionPct = isFree ? 0 : (systemSettings?.commissionValue ?? 1);
+    const fee = trade.amountEth * commissionPct / 100;
+    const net = Math.max(0, trade.amountEth - fee);
+    const totalEtb = trade.amountEth * (trade.rate || 190);
+
+    // Header
+    doc.setFillColor(10, 12, 24);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(245, 166, 35);
+    doc.text('EthioSwap', 20, 22);
+    doc.setFontSize(9); doc.setTextColor(180, 180, 180);
+    doc.text('OFFICIAL P2P TRADE RECEIPT', 20, 32);
+    doc.setTextColor(140, 140, 140);
+    doc.text('ethioswap.qzz.io  ·  MrCute Finance Platform', 110, 22);
+    doc.text('Powered by Supabase & EthioSwap Ltd.', 110, 30);
+
+    doc.setDrawColor(245, 166, 35); doc.setLineWidth(0.8);
+    doc.line(20, 44, 190, 44);
+
+    doc.setTextColor(68, 64, 60); doc.setFontSize(10);
+    const tradeType = trade.tradeType?.toUpperCase() || 'P2P TRADE';
+    const counterparty = trade.counterparty || 'Unknown';
+    const rows = [
+      ['Receipt No', `P2P-${trade._id.substring(0, 8).toUpperCase()}`],
+      ['Date & Time', new Date(trade.createdAt).toLocaleString()],
+      ['Account Name', user?.full_name || user?.username || 'EthioSwap User'],
+      ['Trade Type', tradeType],
+      ['Status', (trade.status || 'pending').toUpperCase()],
+    ];
+    let y = 54;
+    rows.forEach(([label, val]) => {
+      doc.setFont('helvetica', 'bold'); doc.text(label + ':', 20, y);
+      doc.setFont('helvetica', 'normal'); doc.text(val, 75, y);
+      y += 8;
+    });
+
+    doc.setDrawColor(220, 218, 215); doc.setLineWidth(0.4);
+    doc.line(20, y + 2, 190, y + 2); y += 10;
+
+    doc.setFont('helvetica', 'bold'); doc.text('Buyer:', 20, y);
+    doc.setFont('helvetica', 'normal'); doc.text(`@${trade.buyerName || 'buyer'}`, 75, y); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.text('Seller:', 20, y);
+    doc.setFont('helvetica', 'normal'); doc.text(`@${trade.sellerName || 'seller'}`, 75, y); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.text('Trade Partner:', 20, y);
+    doc.setFont('helvetica', 'normal'); doc.text(`@${counterparty}`, 75, y); y += 10;
+
+    doc.line(20, y, 190, y); y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text('Amount (USDT):', 20, y); doc.text(`$${trade.amountEth.toFixed(2)} USDT`, 75, y); y += 8;
+    doc.text('Rate:', 20, y); doc.text(`${trade.rate || 190} ETB / $1`, 75, y); y += 8;
+    doc.text('Total (ETB):', 20, y); doc.text(`${totalEtb.toFixed(0)} ETB`, 75, y); y += 8;
+    doc.text(`Platform Fee (${isFree ? 'FREE PERIOD' : commissionPct + '%'}):`, 20, y);
+    doc.text(isFree ? 'FREE ✓' : `-$${fee.toFixed(2)} USDT`, 75, y); y += 10;
+
+    doc.setDrawColor(245, 166, 35); doc.line(20, y, 190, y); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(4, 120, 87);
+    doc.text('NET RECEIVED:', 20, y);
+    doc.text(`$${net.toFixed(2)} USDT`, 75, y); y += 16;
+
+    doc.setDrawColor(220, 218, 215); doc.setLineWidth(0.4);
+    doc.line(20, y, 190, y); y += 10;
+    doc.setFontSize(9); doc.setTextColor(120, 113, 108); doc.setFont('helvetica', 'normal');
+    doc.text('[ SECURED BY ETHIOSWAP  ✓ ]', 20, y + 4);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(68, 64, 60);
+    doc.text('Authorized Signature:', 120, y);
+    doc.setFont('times', 'italic'); doc.setFontSize(15); doc.setTextColor(29, 78, 216);
+    doc.text('Biruk Fikru', 120, y + 10);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120, 113, 108);
+    doc.text('CEO & Founder, EthioSwap  ·  MrCute', 120, y + 17);
+
+    doc.setFillColor(245, 166, 35); doc.rect(0, 280, 210, 17, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(10, 12, 24);
+    doc.text('EthioSwap  —  Your Trusted Ethiopian Crypto Exchange  —  ethioswap.qzz.io', 20, 290);
+
+    doc.save(`EthioSwap_P2P_Receipt_${trade._id.substring(0, 8)}.pdf`);
   };
 
   return (
@@ -440,7 +534,7 @@ const TransactionHistory = () => {
                       <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Total</th>
                       <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Partner</th>
                       <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Status</th>
-                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Rating Given</th>
+                      <th style={{ padding: '16px', fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -463,18 +557,24 @@ const TransactionHistory = () => {
                               background: t.status === 'completed' ? 'rgba(0,200,150,0.12)' : t.status === 'cancelled' ? 'rgba(255,77,77,0.12)' : 'rgba(245,166,35,0.12)'
                             }}>{t.status}</span>
                           </td>
-                          <td style={{ padding: '16px', fontSize: '13px' }}>
-                            {t.ratingGiven ? (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#F5A623', fontWeight: 600 }}>
-                                {t.ratingGiven} <Star size={12} fill="#F5A623" stroke="none" />
-                              </span>
-                            ) : t.status === 'completed' ? (
-                              <button onClick={() => setRatingTrade(t)} className="btn btn-sm btn-gold" style={{ padding: '4px 8px', fontSize: '11px' }}>
-                                Rate
+                          <td style={{ padding: '12px 16px', fontSize: '13px' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <button onClick={() => setSelectedP2pTx(t)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '8px', color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s ease', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.16)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.08)'; }}
+                              >
+                                <FileText size={11} /> View
                               </button>
-                            ) : (
-                              <span style={{ color: '#8A9BB8' }}>---</span>
-                            )}
+                              {t.ratingGiven ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#F5A623', fontWeight: 600 }}>
+                                  {t.ratingGiven} <Star size={12} fill="#F5A623" stroke="none" />
+                                </span>
+                              ) : t.status === 'completed' ? (
+                                <button onClick={() => setRatingTrade(t)} className="btn btn-sm btn-gold" style={{ padding: '4px 8px', fontSize: '11px' }}>
+                                  Rate
+                                </button>
+                              ) : null}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -506,19 +606,20 @@ const TransactionHistory = () => {
                           <span>Total: <b>{totalEtb.toFixed(0)} ETB</b></span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #1E2640', paddingTop: '8px' }}>
-                          <span>Partner: <b>@{t.counterparty}</b></span>
-                          <div>
+                          <span style={{ fontSize: '12px' }}>Partner: <b>@{t.counterparty}</b></span>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button onClick={() => setSelectedP2pTx(t)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '8px', color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <FileText size={11} /> View
+                            </button>
                             {t.ratingGiven ? (
                               <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#F5A623', fontWeight: 600, fontSize: '12px' }}>
                                 {t.ratingGiven} <Star size={12} fill="#F5A623" stroke="none" />
                               </span>
                             ) : t.status === 'completed' ? (
                               <button onClick={() => setRatingTrade(t)} className="btn btn-sm btn-gold" style={{ padding: '4px 8px', fontSize: '11px' }}>
-                                Rate Trade
+                                Rate
                               </button>
-                            ) : (
-                              <span style={{ color: '#8A9BB8' }}>---</span>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -628,48 +729,210 @@ const TransactionHistory = () => {
         </div>
       )}
 
+      {/* ── Premium Transaction Receipt Modal ── */}
       {selectedTx && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px' }} onClick={() => setSelectedTx(null)}>
-          <div className="premium-glow" style={{ background: '#fafaf9', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '24px', padding: '32px 24px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 166, 35, 0.15)', border: '2px solid #F5A623', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedTx(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.05)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#44403c', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>✕</button>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '24px' }}>🛡️</span>
-                <span style={{ fontWeight: 900, fontSize: '22px', color: '#1c1917' }}>EthioSwap</span>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(12px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedTx(null)}>
+          <div style={{ background: '#fff', color: '#1c1917', maxWidth: '400px', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,166,35,0.3)', fontFamily: "'Inter', sans-serif", position: 'relative' }} onClick={e => e.stopPropagation()}>
+            {/* Header Band */}
+            <div style={{ background: 'linear-gradient(135deg, #0a0c18 0%, #141827 100%)', padding: '24px 24px 20px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(245,166,35,0.08)', filter: 'blur(20px)' }} />
+              <button onClick={() => setSelectedTx(null)} style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(255,255,255,0.08)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🛡️</div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: '18px', color: '#F5A623', letterSpacing: '-0.02em' }}>EthioSwap</div>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, letterSpacing: '0.12em' }}>OFFICIAL TRANSACTION RECEIPT</div>
+                </div>
               </div>
-              <div style={{ fontSize: '11px', color: '#685e52', fontWeight: 600 }}>OFFICIAL TRANSACTION RECEIPT</div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
             </div>
-            <div style={{ borderTop: '2px dashed #e7e5e4', margin: '16px 0' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', color: '#44403c' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>Receipt No</span><span style={{ fontWeight: 700, fontFamily: 'monospace' }}>REC-{selectedTx.id.substring(0, 8).toUpperCase()}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>Date</span><span style={{ fontWeight: 600 }}>{new Date(selectedTx.created_at).toLocaleString()}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>Status</span><span style={{ fontWeight: 800, fontSize: '10px', color: '#047857', background: '#d1fae5', padding: '2px 8px', borderRadius: '12px' }}>{selectedTx.status}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>Type</span><span style={{ fontWeight: 700, textTransform: 'uppercase' }}>{selectedTx.type}</span></div>
-            </div>
-            <div style={{ borderTop: '2px dashed #e7e5e4', margin: '16px 0' }} />
-            <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>From</span><span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedTx.from}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#78716c' }}>To</span><span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedTx.to}</span></div>
-            </div>
-            <div style={{ borderTop: '2px dashed #e7e5e4', margin: '16px 0' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Amount</span><span>${selectedTx.amount_usd.toFixed(2)} USD</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16px', color: '#1c1917' }}><span>Total Net</span><span style={{ color: '#047857' }}>${selectedTx.amount_usd.toFixed(2)} USD</span></div>
-            </div>
-            <div style={{ borderTop: '2px dashed #e7e5e4', margin: '16px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '4px 8px', color: '#059669', fontSize: '9px', fontWeight: 900 }}>SECURED</div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ borderTop: '1px solid #d1d5db', width: '110px', textAlign: 'center', fontSize: '9px', color: '#78716c', paddingTop: '4px' }}>Biruk Fikru</div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px 24px', background: '#fff' }}>
+              {/* Receipt details */}
+              <div style={{ borderBottom: '2px dashed #e7e5e4', paddingBottom: '14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '12px', color: '#44403c' }}>
+                {[['Receipt No', `REC-${selectedTx.id.substring(0, 8).toUpperCase()}`], ['Date & Time', new Date(selectedTx.created_at).toLocaleString()], ['Account Name', user?.full_name || user?.username || 'User'], ['Transaction Type', selectedTx.type?.toUpperCase()]].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#78716c' }}>{k}</span>
+                    <span style={{ fontWeight: 700, fontFamily: k === 'Receipt No' ? 'monospace' : 'inherit', fontSize: k === 'Receipt No' ? '11px' : '12px' }}>{v}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#78716c' }}>Status</span>
+                  <span style={{ fontWeight: 800, fontSize: '10px', color: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#047857' : '#d97706', background: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#d1fae5' : '#fef3c7', padding: '2px 10px', borderRadius: '99px', textTransform: 'uppercase' }}>{selectedTx.status}</span>
+                </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => downloadReceipt(selectedTx)} style={{ flex: 1, padding: '12px', background: '#F5A623', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Download PDF</button>
-              <button onClick={() => setSelectedTx(null)} style={{ flex: 1, padding: '12px', background: '#e7e5e4', color: '#44403c', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Close</button>
+
+              {/* From / To */}
+              <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                  <span style={{ color: '#78716c', fontWeight: 600 }}>FROM</span>
+                  <span style={{ fontWeight: 700, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedTx.from}</span>
+                </div>
+                <div style={{ height: 1, background: '#e7e5e4' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                  <span style={{ color: '#78716c', fontWeight: 600 }}>TO</span>
+                  <span style={{ fontWeight: 700, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedTx.to}</span>
+                </div>
+              </div>
+
+              {/* Fee breakdown */}
+              <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#78716c' }}>Amount</span>
+                  <span style={{ fontWeight: 600 }}>${selectedTx.amount_usd.toFixed(2)} USD</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#78716c' }}>Platform Fee</span>
+                  <span style={{ fontWeight: 700, color: '#059669' }}>FREE ✓</span>
+                </div>
+                <div style={{ height: 1, background: '#e7e5e4' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16px', color: '#1c1917' }}>
+                  <span>TOTAL NET</span>
+                  <span style={{ color: '#047857' }}>${selectedTx.amount_usd.toFixed(2)} USD</span>
+                </div>
+              </div>
+
+              {/* Signature footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px', paddingTop: '14px', borderTop: '2px dashed #e7e5e4' }}>
+                <div style={{ display: 'flex', flex: 1 }}>
+                  <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '5px 10px', color: '#059669', fontSize: '9px', fontWeight: 900, letterSpacing: '0.06em', display: 'inline-block', height: 'fit-content' }}>SECURED ✓</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: "'Georgia', serif", fontSize: '18px', color: '#1d4ed8', fontStyle: 'italic', lineHeight: 1, marginBottom: '4px' }}>Biruk Fikru</div>
+                  <div style={{ height: '1px', background: '#d1d5db', marginBottom: '4px', width: '120px' }} />
+                  <div style={{ fontSize: '9px', color: '#78716c', fontWeight: 600 }}>CEO & Founder, EthioSwap</div>
+                  <div style={{ fontSize: '8px', color: '#a8a29e' }}>MrCute Finance Platform</div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button onClick={() => downloadReceipt(selectedTx)} style={{ flex: 1, padding: '13px', background: 'linear-gradient(135deg, #F5A623, #FFD966)', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  <Download size={14} /> Download PDF
+                </button>
+                <button onClick={() => setSelectedTx(null)} style={{ flex: 1, padding: '13px', background: '#f5f5f4', color: '#44403c', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Close</button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── P2P Trade Receipt Modal ── */}
+      {selectedP2pTx && (() => {
+        const t = selectedP2pTx;
+        const isFree = systemSettings?.isP2pFreePeriod !== false;
+        const commPct = isFree ? 0 : (systemSettings?.commissionValue ?? 1);
+        const fee = t.amountEth * commPct / 100;
+        const net = Math.max(0, t.amountEth - fee);
+        const totalEtb = t.amountEth * (t.rate || 190);
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(12px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedP2pTx(null)}>
+            <div style={{ background: '#fff', color: '#1c1917', maxWidth: '400px', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,200,150,0.3)', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
+              {/* Header Band */}
+              <div style={{ background: 'linear-gradient(135deg, #0a0c18 0%, #141827 100%)', padding: '24px 24px 20px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(0,200,150,0.08)', filter: 'blur(20px)' }} />
+                <button onClick={() => setSelectedP2pTx(null)} style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(255,255,255,0.08)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🤝</div>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: '18px', color: '#00C896', letterSpacing: '-0.02em' }}>EthioSwap</div>
+                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, letterSpacing: '0.12em' }}>OFFICIAL P2P TRADE RECEIPT</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '20px 24px 24px' }}>
+                {/* Trade details */}
+                <div style={{ borderBottom: '2px dashed #e7e5e4', paddingBottom: '14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '12px', color: '#44403c' }}>
+                  {[
+                    ['Receipt No', `P2P-${t._id.substring(0, 8).toUpperCase()}`],
+                    ['Date & Time', new Date(t.createdAt).toLocaleString()],
+                    ['Account Name', user?.full_name || user?.username || 'User'],
+                    ['Trade Type', t.tradeType?.toUpperCase()],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#78716c' }}>{k}</span>
+                      <span style={{ fontWeight: 700, fontFamily: k === 'Receipt No' ? 'monospace' : 'inherit', color: k === 'Trade Type' ? (t.tradeType === 'buy' ? '#047857' : '#b91c1c') : '#1c1917' }}>{v}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#78716c' }}>Status</span>
+                    <span style={{ fontWeight: 800, fontSize: '10px', color: t.status === 'completed' ? '#047857' : '#d97706', background: t.status === 'completed' ? '#d1fae5' : '#fef3c7', padding: '2px 10px', borderRadius: '99px', textTransform: 'uppercase' }}>{t.status}</span>
+                  </div>
+                </div>
+
+                {/* Buyer / Seller */}
+                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c', fontWeight: 600 }}>BUYER</span>
+                    <span style={{ fontWeight: 700 }}>@{t.buyerName || 'buyer'}</span>
+                  </div>
+                  <div style={{ height: 1, background: '#e7e5e4' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c', fontWeight: 600 }}>SELLER</span>
+                    <span style={{ fontWeight: 700 }}>@{t.sellerName || 'seller'}</span>
+                  </div>
+                  <div style={{ height: 1, background: '#e7e5e4' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c', fontWeight: 600 }}>TRADE PARTNER</span>
+                    <span style={{ fontWeight: 700, color: '#047857' }}>@{t.counterparty}</span>
+                  </div>
+                </div>
+
+                {/* Amounts */}
+                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Amount (USDT)</span>
+                    <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>${t.amountEth.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Exchange Rate</span>
+                    <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{t.rate || 190} ETB / $1</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Total (ETB)</span>
+                    <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{totalEtb.toFixed(0)} ETB</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Platform Fee</span>
+                    <span style={{ fontWeight: 700, color: '#059669' }}>{isFree ? 'FREE ✓ (0%)' : `-$${fee.toFixed(2)} USDT (${commPct}%)`}</span>
+                  </div>
+                  <div style={{ height: 1, background: '#e7e5e4' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '16px', color: '#1c1917' }}>
+                    <span>NET RECEIVED</span>
+                    <span style={{ color: '#047857', fontFamily: 'monospace' }}>${net.toFixed(2)} USDT</span>
+                  </div>
+                </div>
+
+                {/* Signature */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '14px', borderTop: '2px dashed #e7e5e4' }}>
+                  <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '5px 10px', color: '#059669', fontSize: '9px', fontWeight: 900, letterSpacing: '0.06em', height: 'fit-content' }}>SECURED ✓</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Georgia', serif", fontSize: '18px', color: '#1d4ed8', fontStyle: 'italic', lineHeight: 1, marginBottom: '4px' }}>Biruk Fikru</div>
+                    <div style={{ height: '1px', background: '#d1d5db', marginBottom: '4px', width: '120px' }} />
+                    <div style={{ fontSize: '9px', color: '#78716c', fontWeight: 600 }}>CEO & Founder, EthioSwap</div>
+                    <div style={{ fontSize: '8px', color: '#a8a29e' }}>MrCute Finance Platform</div>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <button onClick={() => downloadP2PReceipt(t)} style={{ flex: 1, padding: '13px', background: 'linear-gradient(135deg, #00C896, #00e6ad)', color: '#023026', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Download size={14} /> Download PDF
+                  </button>
+                  <button onClick={() => setSelectedP2pTx(null)} style={{ flex: 1, padding: '13px', background: '#f5f5f4', color: '#44403c', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       
       <style>{`
         .desktop-only {

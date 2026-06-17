@@ -115,6 +115,7 @@ const WalletCard = () => {
 
   const [receiveType, setReceiveType] = useState(null); // 'user' | 'chain' | null
   const [wdType, setWdType] = useState(null); // 'user' | 'address' | null
+  const [selectedWalletTx, setSelectedWalletTx] = useState(null);
 
   const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
 
@@ -359,14 +360,24 @@ const WalletCard = () => {
                           </div>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
-                        <span style={{
-                          fontSize: '8.5px', fontWeight: 600, padding: '1px 5px', borderRadius: '4px',
-                          textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
-                          background: item.status === 'approved' ? 'rgba(245,166,35,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
-                          color: item.status === 'approved' ? '#F5A623' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
-                        }}>{item.status}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
+                          <span style={{
+                            fontSize: '8.5px', fontWeight: 600, padding: '1px 5px', borderRadius: '4px',
+                            textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
+                            background: item.status === 'approved' ? 'rgba(245,166,35,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
+                            color: item.status === 'approved' ? '#F5A623' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
+                          }}>{item.status}</span>
+                        </div>
+                        <button
+                          onClick={() => setSelectedWalletTx({ ...item, isDep, amt })}
+                          style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.18)', borderRadius: '8px', color: '#F5A623', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.18s ease', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.15)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}
+                        >
+                          <i className="ti ti-file-text" style={{ fontSize: '12px' }}></i> View
+                        </button>
                       </div>
                     </div>
                   );
@@ -385,7 +396,95 @@ const WalletCard = () => {
         </div>
       )}
 
-      {/* SEND TAB */}
+      {/* ── Wallet Transaction Receipt Modal ── */}
+      {selectedWalletTx && (() => {
+        const item = selectedWalletTx;
+        const isDep = item.isDep;
+        const amt = item.amt;
+        const fromStr = isDep ? (item.sender_reference || item.wallet_type || 'External Chain') : (user?.full_name || user?.username || 'My Wallet');
+        const toStr = isDep ? (user?.full_name || user?.username || 'My Wallet') : (item.address || item.destination_address || item.wallet_type || 'External');
+        const statusLabel = item.status || 'pending';
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(12px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedWalletTx(null)}>
+            <div style={{ background: '#fff', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,166,35,0.25)', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #0a0c18 0%, #141827 100%)', padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(245,166,35,0.08)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+                <button onClick={() => setSelectedWalletTx(null)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,255,255,0.08)', border: 'none', width: '26px', height: '26px', borderRadius: '50%', color: '#fff', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '10px', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🛡️</div>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: '17px', color: '#F5A623', letterSpacing: '-0.02em' }}>EthioSwap</div>
+                    <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.12em' }}>OFFICIAL TRANSACTION RECEIPT</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '18px 22px 22px' }}>
+                <div style={{ borderBottom: '2px dashed #e7e5e4', paddingBottom: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#44403c' }}>
+                  {[
+                    ['Receipt No', `REC-${(item.id || '00000000').substring(0, 8).toUpperCase()}`],
+                    ['Date & Time', item.created_at ? new Date(item.created_at).toLocaleString() : 'Pending'],
+                    ['Account Name', user?.full_name || user?.username || 'User'],
+                    ['Type', isDep ? 'DEPOSIT' : 'WITHDRAWAL'],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#78716c' }}>{k}</span>
+                      <span style={{ fontWeight: 700, fontFamily: k === 'Receipt No' ? 'monospace' : 'inherit', fontSize: k === 'Receipt No' ? '10px' : '12px' }}>{v}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#78716c' }}>Status</span>
+                    <span style={{ fontWeight: 800, fontSize: '9px', color: statusLabel === 'approved' || statusLabel === 'completed' ? '#047857' : '#d97706', background: statusLabel === 'approved' || statusLabel === 'completed' ? '#d1fae5' : '#fef3c7', padding: '2px 8px', borderRadius: '99px', textTransform: 'uppercase' }}>{statusLabel}</span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '10px 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c', fontWeight: 600 }}>FROM</span>
+                    <span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fromStr}</span>
+                  </div>
+                  <div style={{ height: 1, background: '#e7e5e4' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c', fontWeight: 600 }}>TO</span>
+                    <span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toStr}</span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '10px 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Amount</span>
+                    <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>${fmt(amt)} USDT</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#78716c' }}>Platform Fee</span>
+                    <span style={{ fontWeight: 700, color: '#059669' }}>FREE ✓</span>
+                  </div>
+                  <div style={{ height: 1, background: '#e7e5e4' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px', color: '#1c1917' }}>
+                    <span>TOTAL NET</span>
+                    <span style={{ color: '#047857', fontFamily: 'monospace' }}>${fmt(amt)} USDT</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '12px', borderTop: '2px dashed #e7e5e4', marginBottom: '18px' }}>
+                  <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '4px 8px', color: '#059669', fontSize: '8px', fontWeight: 900, letterSpacing: '0.06em', height: 'fit-content' }}>SECURED ✓</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Georgia', serif", fontSize: '17px', color: '#1d4ed8', fontStyle: 'italic', lineHeight: 1, marginBottom: '4px' }}>Biruk Fikru</div>
+                    <div style={{ height: '1px', background: '#d1d5db', marginBottom: '3px', width: '110px' }} />
+                    <div style={{ fontSize: '8px', color: '#78716c', fontWeight: 600 }}>CEO & Founder, EthioSwap</div>
+                    <div style={{ fontSize: '7px', color: '#a8a29e' }}>MrCute Finance Platform</div>
+                  </div>
+                </div>
+
+                <button onClick={() => setSelectedWalletTx(null)} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #F5A623, #FFD966)', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {tab === 'send' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px' }}>
