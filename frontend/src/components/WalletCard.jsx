@@ -337,19 +337,48 @@ const WalletCard = () => {
       <style>{`
         @keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
         .sk { background: linear-gradient(90deg, #1a1d28 25%, #22263a 50%, #1a1d28 75%); background-size: 400px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 20px; }
+        
+        .w-grid-container {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        @media (min-width: 992px) {
+          .w-grid-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 24px;
+            align-items: start;
+          }
+          .w-mobile-only-qr {
+            display: none !important;
+          }
+          .w-desktop-only-qr {
+            display: block !important;
+          }
+        }
+        @media (max-width: 991px) {
+          .w-mobile-only-qr {
+            display: block !important;
+          }
+          .w-desktop-only-qr {
+            display: none !important;
+          }
+        }
+
         .w-hero-card {
           position: relative;
           border-radius: 24px;
-          padding: 26px;
-          background: linear-gradient(135deg, #161b30 0%, #0c0f1d 100%);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+          padding: 28px;
+          background: linear-gradient(135deg, #1b203c 0%, #0d1021 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05);
           overflow: hidden;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-hero-card:hover {
-          border-color: rgba(245, 166, 35, 0.22);
-          box-shadow: 0 24px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.07);
+          border-color: rgba(245, 166, 35, 0.25);
+          box-shadow: 0 24px 50px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 166, 35, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.08);
           transform: translateY(-2px);
         }
         .w-stat-sub-card {
@@ -360,50 +389,54 @@ const WalletCard = () => {
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-stat-sub-card:hover {
-          background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(255, 255, 255, 0.08);
-          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.1);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         .w-tab-btn {
           flex: 1;
-          padding: 12px 4px;
+          padding: 14px 4px;
           border-radius: 12px;
           border: 1px solid transparent;
           cursor: pointer;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           background: transparent;
           color: #8A9BB8;
-          transition: all 0.2s ease;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-tab-btn:hover {
           color: #fff;
-          background: rgba(255, 255, 255, 0.02);
+          background: rgba(255, 255, 255, 0.03);
         }
         .w-tab-btn.active {
-          background: #1A1F32;
+          background: rgba(245, 166, 35, 0.08);
           color: #F5A623;
-          border: 1px solid rgba(245, 166, 35, 0.12);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(245, 166, 35, 0.25);
+          box-shadow: 0 4px 12px rgba(245, 166, 35, 0.08);
         }
         .w-card {
-          background: #141827;
+          background: rgba(20, 24, 39, 0.7);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
           border-radius: 24px;
-          border: 1px solid #1E2640;
-          padding: 24px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-          transition: border-color 0.25s ease;
+          border: 1px solid rgba(30, 38, 64, 0.8);
+          padding: 26px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-card:hover {
-          border-color: rgba(245, 166, 35, 0.15);
+          border-color: rgba(245, 166, 35, 0.18);
+          box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4), 0 0 10px rgba(245, 166, 35, 0.03);
         }
         .w-input {
           width: 100%;
           box-sizing: border-box;
-          background: #090b15;
-          border: 1.5px solid #1e2640;
+          background: rgba(9, 11, 21, 0.75);
+          border: 1.5px solid rgba(30, 38, 64, 0.9);
           border-radius: 12px;
           color: #fff;
           outline: none;
@@ -411,15 +444,15 @@ const WalletCard = () => {
         }
         .w-input:focus {
           border-color: #F5A623;
-          background: rgba(245, 166, 35, 0.02);
-          box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.12);
+          background: rgba(245, 166, 35, 0.03);
+          box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15);
         }
         .w-input::placeholder {
           color: #4e5567;
         }
         .w-btn-primary {
           width: 100%;
-          padding: 14px;
+          padding: 15px;
           border-radius: 14px;
           border: none;
           background: linear-gradient(135deg, #F5A623 0%, #D88E10 100%);
@@ -432,19 +465,19 @@ const WalletCard = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
         }
         .w-btn-primary:hover:not(:disabled) {
           transform: translateY(-2px);
           filter: brightness(1.08);
-          box-shadow: 0 6px 20px rgba(245, 166, 35, 0.3);
+          box-shadow: 0 6px 20px rgba(245, 166, 35, 0.35);
         }
         .w-btn-primary:active:not(:disabled) {
           transform: translateY(0);
         }
         .w-btn-primary:disabled {
-          background: #1e2640 !important;
-          color: #8A9BB8 !important;
+          background: rgba(30, 38, 64, 0.6) !important;
+          color: #5A6275 !important;
           cursor: not-allowed;
           box-shadow: none;
           opacity: 0.6;
@@ -453,38 +486,42 @@ const WalletCard = () => {
           flex: 1;
           padding: 12px;
           border-radius: 12px;
-          border: 1px solid #1E2640;
+          border: 1px solid rgba(30, 38, 64, 0.8);
           background: transparent;
           color: #8A9BB8;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
         }
         .w-btn-secondary:hover {
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(255, 255, 255, 0.04);
           color: #fff;
-          border-color: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.12);
+          transform: translateY(-1px);
+        }
+        .w-btn-secondary:active {
+          transform: translateY(0);
         }
         .w-upload-zone {
-          background: #090b15;
-          border: 2px dashed #1E2640;
-          border-radius: 12px;
-          padding: 28px 20px;
+          background: rgba(9, 11, 21, 0.7);
+          border: 2px dashed rgba(30, 38, 64, 0.9);
+          border-radius: 14px;
+          padding: 30px 20px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           cursor: pointer;
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-upload-zone:hover {
           border-color: #F5A623;
-          background: rgba(245, 166, 35, 0.01);
+          background: rgba(245, 166, 35, 0.02);
         }
         .w-network-card {
           padding: 14px 16px;
@@ -497,197 +534,273 @@ const WalletCard = () => {
           flex: 1;
           min-width: 120px;
           text-align: left;
-          background: #141827;
-          border: 1.5px solid #1E2640;
+          background: rgba(20, 24, 39, 0.6);
+          border: 1.5px solid rgba(30, 38, 64, 0.8);
         }
         .w-network-card:hover {
-          transform: translateY(-1px);
+          transform: translateY(-2px);
           border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         .w-choice-btn {
           flex: 1;
-          padding: 24px 16px;
-          border-radius: 16px;
-          border: 1px solid #1E2640;
-          background: #1A1F32;
+          padding: 26px 20px;
+          border-radius: 18px;
+          border: 1px solid rgba(30, 38, 64, 0.8);
+          background: rgba(26, 31, 50, 0.6);
           cursor: pointer;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 12px;
-          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          gap: 14px;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .w-choice-btn:hover {
-          border-color: rgba(245, 166, 35, 0.22);
-          transform: translateY(-2px);
-          background: #20263d;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+          border-color: rgba(245, 166, 35, 0.3);
+          transform: translateY(-4px);
+          background: rgba(32, 38, 61, 0.8);
+        .w-choice-btn:active {
+          transform: translateY(-1px);
+        }
+        .w-grid-container {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        @media (min-width: 900px) {
+          .w-grid-container {
+            grid-template-columns: 380px 1fr;
+          }
+          .w-desktop-only-qr { display: block; }
+          .w-mobile-only-qr { display: none; }
+        }
+        @media (max-width: 899px) {
+          .w-desktop-only-qr { display: none; }
+          .w-mobile-only-qr { display: block; }
         }
       `}</style>
 
-      {/* HERO */}
-      <div className="w-hero-card">
-        <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.12)', filter: 'blur(50px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.04)', filter: 'blur(50px)', pointerEvents: 'none' }} />
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: '#F5A623', textTransform: 'uppercase', marginBottom: '4px' }}>EthioSwap Wallet</div>
-            {numId && <div style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600 }}>Account #{numId}</div>}
-          </div>
-          <div style={{ background: 'rgba(245, 166, 35, 0.08)', border: '1px solid rgba(245, 166, 35, 0.25)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.05em' }}>USDT</div>
-        </div>
-        
-        <div style={{ marginBottom: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#8A9BB8', fontWeight: 600 }}>Total Balance</span>
-        </div>
-        <div style={{ fontSize: '42px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '-0.04em', color: '#F5A623', lineHeight: 1.1, marginBottom: '4px' }}>
-          <span>${fmt(balance)}</span>
-          <span style={{ fontSize: '16px', color: '#8A9BB8', marginLeft: '8px', fontFamily: 'var(--font-body)', fontWeight: 500 }}>USD</span>
-        </div>
-        <div style={{ fontSize: '14px', color: '#00C896', fontWeight: 600, marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>
-          ≈ {fmtEtb(balance * rate)} ETB
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {[
-            { label: 'Available', usd: available, etb: available * rate, color: '#00C896' },
-            { label: 'In Escrow', usd: locked, etb: locked * rate, color: '#F5A623' },
-          ].map(c => (
-            <div key={c.label} className="w-stat-sub-card">
-              <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontWeight: 600 }}>{c.label}</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: c.color, fontFamily: 'var(--font-mono)' }}>${fmt(c.usd)}</div>
-              <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '2px' }}>≈ {fmtEtb(c.etb)} ETB</div>
+      {/* WRAPPER */}
+      <div className="w-grid-container">
+        {/* LEFT COLUMN: Wallet Hero + QR Info Card (Desktop Only) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* HERO CARD */}
+          <div className="w-hero-card">
+            <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.12)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.04)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: '#F5A623', textTransform: 'uppercase', marginBottom: '4px' }}>EthioSwap Wallet</div>
+                {numId && <div style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600 }}>Account #{numId}</div>}
+              </div>
+              <div style={{ background: 'rgba(245, 166, 35, 0.08)', border: '1px solid rgba(245, 166, 35, 0.25)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.05em' }}>USDT</div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div style={{ display: 'flex', background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', padding: '4px', gap: '4px' }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
-            className={`w-tab-btn ${tab === t.id ? 'active' : ''}`}
-          >
-            <i className={t.icon} style={{ fontSize: '20px' }}></i>
-            <span style={{ fontSize: '10px', fontWeight: 700 }}>{t.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* BALANCE TAB */}
-      {tab === 'balance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div className="w-card" style={{ padding: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Your Deposit Address
+            
+            <div style={{ marginBottom: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#8A9BB8', fontWeight: 600 }}>Total Balance</span>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              {NETWORKS.map(n => (
-                <button key={n.id} onClick={() => setQrNet(n.id)} style={{
-                  padding: '6px 12px', borderRadius: '8px',
-                  border: `1.5px solid ${qrNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
-                  background: qrNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
-                  color: qrNet === n.id ? '#fff' : '#8b92a8',
-                  fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
-                }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.color }} />
-                  {n.label}
-                </button>
+            <div style={{ fontSize: '42px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '-0.04em', color: '#F5A623', lineHeight: 1.1, marginBottom: '4px' }}>
+              <span>${fmt(balance)}</span>
+              <span style={{ fontSize: '16px', color: '#8A9BB8', marginLeft: '8px', fontFamily: 'var(--font-body)', fontWeight: 500 }}>USD</span>
+            </div>
+            <div style={{ fontSize: '14px', color: '#00C896', fontWeight: 600, marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>
+              ≈ {fmtEtb(balance * rate)} ETB
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                { label: 'Available', usd: available, etb: available * rate, color: '#00C896' },
+                { label: 'In Escrow', usd: locked, etb: locked * rate, color: '#F5A623' },
+              ].map(c => (
+                <div key={c.label} className="w-stat-sub-card">
+                  <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontWeight: 600 }}>{c.label}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: c.color, fontFamily: 'var(--font-mono)' }}>${fmt(c.usd)}</div>
+                  <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '2px' }}>≈ {fmtEtb(c.etb)} ETB</div>
+                </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${qrAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
+          </div>
+
+          {/* QUICK DEPOSIT QR CARD (Desktop Only) */}
+          <div className="w-desktop-only-qr">
+            <div className="w-card" style={{ padding: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Quick Deposit Address
               </div>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
-                <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
-                  {qrAddress || 'No address assigned'}
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                {NETWORKS.map(n => (
+                  <button key={n.id} onClick={() => setQrNet(n.id)} style={{
+                    padding: '4px 10px', borderRadius: '6px',
+                    border: `1.5px solid ${qrNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
+                    background: qrNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
+                    color: qrNet === n.id ? '#fff' : '#8b92a8',
+                    fontSize: '10px', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s ease',
+                  }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: n.color }} />
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ background: 'white', padding: '6px', borderRadius: '10px', flexShrink: 0 }}>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=80&data=${qrAddress}`} alt="QR" style={{ width: 68, height: 68, display: 'block' }} />
                 </div>
-                <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '8px' }}>
-                  {copied ? '✓ Copied!' : '📋 Copy Address'}
-                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '9px', color: '#8A9BB8', fontWeight: 600, marginBottom: '4px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
+                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '8px', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '10px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.4, marginBottom: '6px' }}>
+                    {qrAddress || 'No address assigned'}
+                  </div>
+                  <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '6px', fontSize: '11px' }}>
+                    {copied ? '✓ Copied!' : '📋 Copy Address'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {history.length > 0 ? (
-            <div className="w-card" style={{ padding: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
-                <i className="ti ti-clock" style={{ marginRight: '6px' }}></i>Recent Transactions
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {history.map((item, i) => {
-                  const isDep = item._kind === 'dep';
-                  const amt = item.amount_usd ?? item.amount_usd_legacy ?? 0;
-                  const date = item.created_at ?? '';
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s ease' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: isDep ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 77, 77, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
-                          <i className={isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up'} style={{ color: isDep ? '#F5A623' : '#FF4D4D' }}></i>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
-                            {isDep ? (item.wallet_type === 'INTERNAL' ? 'Received (Internal)' : 'Deposit') : (item.wallet_type === 'INTERNAL' ? 'Sent (Internal)' : 'Withdrawal')}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>
-                            {isDep ? (
-                              (() => {
-                                if (item.sender_reference && item.sender_reference.startsWith('{')) {
-                                  try {
-                                    const parsed = JSON.parse(item.sender_reference);
-                                    return `From ${parsed.email || parsed.username || 'Binance/Bybit'}`;
-                                  } catch(e) {}
-                                }
-                                return `From ${item.sender_reference || 'Chain'}`;
-                              })()
-                            ) : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
-                          </div>
-                        </div>
+        {/* RIGHT COLUMN: Tabs Navigation + Active Content Panel */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* TABS BAR */}
+          <div style={{ display: 'flex', background: 'rgba(20, 24, 39, 0.7)', border: '1px solid rgba(30, 38, 64, 0.8)', borderRadius: '16px', padding: '5px', gap: '5px' }}>
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
+                className={`w-tab-btn ${tab === t.id ? 'active' : ''}`}
+              >
+                <i className={t.icon} style={{ fontSize: '20px' }}></i>
+                <span style={{ fontSize: '10px', fontWeight: 700 }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* ACTIVE CONTENT VIEW */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* BALANCE TAB CONTENT */}
+            {tab === 'balance' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* MOBILE ONLY DEPOSIT ADDRESS */}
+                <div className="w-mobile-only-qr">
+                  <div className="w-card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Your Deposit Address
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                      {NETWORKS.map(n => (
+                        <button key={n.id} onClick={() => setQrNet(n.id)} style={{
+                          padding: '6px 12px', borderRadius: '8px',
+                          border: `1.5px solid ${qrNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
+                          background: qrNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
+                          color: qrNet === n.id ? '#fff' : '#8b92a8',
+                          fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.color }} />
+                          {n.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${qrAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
-                          <span style={{
-                            fontSize: '8.5px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
-                            textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
-                            background: item.status === 'approved' ? 'rgba(0,200,150,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
-                            color: item.status === 'approved' ? '#00C896' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
-                          }}>{item.status}</span>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
+                        <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
+                          {qrAddress || 'No address assigned'}
                         </div>
-                        <button
-                          onClick={() => setSelectedWalletTx({ ...item, isDep, amt })}
-                          style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.18)', borderRadius: '8px', color: '#F5A623', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.18s ease', whiteSpace: 'nowrap', flexShrink: 0 }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.15)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}
-                        >
-                          <i className="ti ti-file-text" style={{ fontSize: '12px' }}></i> View
+                        <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '8px' }}>
+                          {copied ? '✓ Copied!' : '📋 Copy Address'}
                         </button>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+
+                {/* RECENT TRANSACTIONS */}
+                {history.length > 0 ? (
+                  <div className="w-card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
+                      <i className="ti ti-clock" style={{ marginRight: '6px' }}></i>Recent Transactions
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {history.map((item, i) => {
+                        const isDep = item._kind === 'dep';
+                        const amt = item.amount_usd ?? item.amount_usd_legacy ?? 0;
+                        const date = item.created_at ?? '';
+                        return (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', transition: 'all 0.2s ease' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: isDep ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 77, 77, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                                <i className={isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up'} style={{ color: isDep ? '#F5A623' : '#FF4D4D' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                                  {isDep ? (item.wallet_type === 'INTERNAL' ? 'Received (Internal)' : 'Deposit') : (item.wallet_type === 'INTERNAL' ? 'Sent (Internal)' : 'Withdrawal')}
+                                </div>
+                                <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>
+                                  {isDep ? (
+                                    (() => {
+                                      if (item.sender_reference && item.sender_reference.startsWith('{')) {
+                                        try {
+                                          const parsed = JSON.parse(item.sender_reference);
+                                          return `From ${parsed.email || parsed.username || 'Binance/Bybit'}`;
+                                        } catch(e) {}
+                                      }
+                                      return `From ${item.sender_reference || 'Chain'}`;
+                                    })()
+                                  ) : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 700, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
+                                <span style={{
+                                  fontSize: '8.5px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
+                                  textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
+                                  background: item.status === 'approved' ? 'rgba(0,200,150,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
+                                  color: item.status === 'approved' ? '#00C896' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
+                                }}>{item.status}</span>
+                              </div>
+                              <button
+                                onClick={() => setSelectedWalletTx({ ...item, isDep, amt })}
+                                style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.18)', borderRadius: '8px', color: '#F5A623', cursor: 'pointer', padding: '6px 10px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.18s ease', whiteSpace: 'nowrap', flexShrink: 0 }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.15)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}
+                              >
+                                <i className="ti ti-file-text" style={{ fontSize: '12px' }}></i> View
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-card" style={{ padding: '32px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '36px', marginBottom: '10px' }}>
+                      <i className="ti ti-inbox" style={{ fontSize: '36px', color: '#8A9BB8' }}></i>
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#8A9BB8' }}>No transactions yet</div>
+                    <div style={{ fontSize: '12px', color: '#8A9BB8', marginTop: '4px' }}>Your deposit & withdrawal history will appear here</div>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <div className="w-card" style={{ padding: '32px', textAlign: 'center' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>
-                <i className="ti ti-inbox" style={{ fontSize: '36px', color: '#8A9BB8' }}></i>
-              </div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#8A9BB8' }}>No transactions yet</div>
-              <div style={{ fontSize: '12px', color: '#8A9BB8', marginTop: '4px' }}>Your deposit & withdrawal history will appear here</div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {/* ── Wallet Transaction Receipt Modal ── */}
       {selectedWalletTx && (() => {
