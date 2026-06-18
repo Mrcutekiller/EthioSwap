@@ -297,16 +297,19 @@ const WalletCard = () => {
       setSendAmt('');
       setSendType(null);
       setWdType(null);
-    } catch (err) { setError(err.message); }
-    finally { setSendLoading(false); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendLoading(false);
+    }
   };
 
   if (!wallet) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <style>{`@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}.sk{background:linear-gradient(90deg,#1a1d28 25%,#22263a 50%,#1a1d28 75%);background-size:400px 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:20px}`}</style>
-      <div className="sk" style={{ height: 200 }} />
-      <div className="sk" style={{ height: 60, borderRadius: 12 }} />
-      <div className="sk" style={{ height: 140, borderRadius: 16 }} />
+      <style>{`@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}.sk{background:linear-gradient(90deg,#1a1d28 25%,#22263a 50%,#1a1d28 75%);background-size:400px 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:24px}`}</style>
+      <div className="sk" style={{ height: 220 }} />
+      <div className="sk" style={{ height: 60, borderRadius: 16 }} />
+      <div className="sk" style={{ height: 160, borderRadius: 24 }} />
     </div>
   );
 
@@ -331,35 +334,229 @@ const WalletCard = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+        .sk { background: linear-gradient(90deg, #1a1d28 25%, #22263a 50%, #1a1d28 75%); background-size: 400px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 20px; }
+        .w-hero-card {
+          position: relative;
+          border-radius: 24px;
+          padding: 26px;
+          background: linear-gradient(135deg, #161b30 0%, #0c0f1d 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .w-hero-card:hover {
+          border-color: rgba(245, 166, 35, 0.22);
+          box-shadow: 0 24px 50px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.07);
+          transform: translateY(-2px);
+        }
+        .w-stat-sub-card {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 16px;
+          padding: 14px 16px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .w-stat-sub-card:hover {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.08);
+          transform: translateY(-1px);
+        }
+        .w-tab-btn {
+          flex: 1;
+          padding: 12px 4px;
+          border-radius: 12px;
+          border: 1px solid transparent;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          background: transparent;
+          color: #8A9BB8;
+          transition: all 0.2s ease;
+        }
+        .w-tab-btn:hover {
+          color: #fff;
+          background: rgba(255, 255, 255, 0.02);
+        }
+        .w-tab-btn.active {
+          background: #1A1F32;
+          color: #F5A623;
+          border: 1px solid rgba(245, 166, 35, 0.12);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .w-card {
+          background: #141827;
+          border-radius: 24px;
+          border: 1px solid #1E2640;
+          padding: 24px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+          transition: border-color 0.25s ease;
+        }
+        .w-card:hover {
+          border-color: rgba(245, 166, 35, 0.15);
+        }
+        .w-input {
+          width: 100%;
+          box-sizing: border-box;
+          background: #090b15;
+          border: 1.5px solid #1e2640;
+          border-radius: 12px;
+          color: #fff;
+          outline: none;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .w-input:focus {
+          border-color: #F5A623;
+          background: rgba(245, 166, 35, 0.02);
+          box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.12);
+        }
+        .w-input::placeholder {
+          color: #4e5567;
+        }
+        .w-btn-primary {
+          width: 100%;
+          padding: 14px;
+          border-radius: 14px;
+          border: none;
+          background: linear-gradient(135deg, #F5A623 0%, #D88E10 100%);
+          color: #0A0C12;
+          font-size: 14px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 16px rgba(245, 166, 35, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .w-btn-primary:hover:not(:disabled) {
+          transform: translateY(-2px);
+          filter: brightness(1.08);
+          box-shadow: 0 6px 20px rgba(245, 166, 35, 0.3);
+        }
+        .w-btn-primary:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        .w-btn-primary:disabled {
+          background: #1e2640 !important;
+          color: #8A9BB8 !important;
+          cursor: not-allowed;
+          box-shadow: none;
+          opacity: 0.6;
+        }
+        .w-btn-secondary {
+          flex: 1;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid #1E2640;
+          background: transparent;
+          color: #8A9BB8;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .w-btn-secondary:hover {
+          background: rgba(255, 255, 255, 0.03);
+          color: #fff;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .w-upload-zone {
+          background: #090b15;
+          border: 2px dashed #1E2640;
+          border-radius: 12px;
+          padding: 28px 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .w-upload-zone:hover {
+          border-color: #F5A623;
+          background: rgba(245, 166, 35, 0.01);
+        }
+        .w-network-card {
+          padding: 14px 16px;
+          border-radius: 14px;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          flex: 1;
+          min-width: 120px;
+          text-align: left;
+          background: #141827;
+          border: 1.5px solid #1E2640;
+        }
+        .w-network-card:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+        .w-choice-btn {
+          flex: 1;
+          padding: 24px 16px;
+          border-radius: 16px;
+          border: 1px solid #1E2640;
+          background: #1A1F32;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .w-choice-btn:hover {
+          border-color: rgba(245, 166, 35, 0.22);
+          transform: translateY(-2px);
+          background: #20263d;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+      `}</style>
 
       {/* HERO */}
-      <div style={{ position: 'relative', borderRadius: '20px', padding: '24px', background: 'linear-gradient(135deg, #141827 0%, #0B0E1A 100%)', border: '1px solid #1E2640', boxShadow: '0 12px 40px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.04)', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.08)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+      <div className="w-hero-card">
+        <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.12)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.04)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
           <div>
-            <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', color: '#F5A623', textTransform: 'uppercase', marginBottom: '4px' }}>EthioSwap Wallet</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: '#F5A623', textTransform: 'uppercase', marginBottom: '4px' }}>EthioSwap Wallet</div>
             {numId && <div style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600 }}>Account #{numId}</div>}
           </div>
-          <div style={{ background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 600, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.05em' }}>USDT</div>
+          <div style={{ background: 'rgba(245, 166, 35, 0.08)', border: '1px solid rgba(245, 166, 35, 0.25)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.05em' }}>USDT</div>
         </div>
+        
         <div style={{ marginBottom: '6px' }}>
           <span style={{ fontSize: '13px', color: '#8A9BB8', fontWeight: 600 }}>Total Balance</span>
         </div>
-        <div style={{ fontSize: '42px', fontWeight: 600, fontFamily: 'var(--font-mono)', letterSpacing: '-0.04em', color: '#F5A623', lineHeight: 1.1, marginBottom: '4px' }}>
+        <div style={{ fontSize: '42px', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: '-0.04em', color: '#F5A623', lineHeight: 1.1, marginBottom: '4px' }}>
           <span>${fmt(balance)}</span>
           <span style={{ fontSize: '16px', color: '#8A9BB8', marginLeft: '8px', fontFamily: 'var(--font-body)', fontWeight: 500 }}>USD</span>
         </div>
         <div style={{ fontSize: '14px', color: '#00C896', fontWeight: 600, marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>
           ≈ {fmtEtb(balance * rate)} ETB
         </div>
+        
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {[
             { label: 'Available', usd: available, etb: available * rate, color: '#00C896' },
             { label: 'In Escrow', usd: locked, etb: locked * rate, color: '#F5A623' },
           ].map(c => (
-            <div key={c.label} style={{ background: '#1A1F32', borderRadius: '14px', padding: '14px 16px', border: '1px solid #1E2640' }}>
+            <div key={c.label} className="w-stat-sub-card">
               <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontWeight: 600 }}>{c.label}</div>
-              <div style={{ fontSize: '18px', fontWeight: 600, color: c.color, fontFamily: 'var(--font-mono)' }}>${fmt(c.usd)}</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: c.color, fontFamily: 'var(--font-mono)' }}>${fmt(c.usd)}</div>
               <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '2px' }}>≈ {fmtEtb(c.etb)} ETB</div>
             </div>
           ))}
@@ -369,19 +566,13 @@ const WalletCard = () => {
       {/* TABS */}
       <div style={{ display: 'flex', background: '#141827', border: '1px solid #1E2640', borderRadius: '16px', padding: '4px', gap: '4px' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
-            style={{
-              flex: 1, padding: '10px 4px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              background: tab === t.id ? '#1A1F32' : 'transparent',
-              color: tab === t.id ? '#F5A623' : '#8A9BB8',
-              border: tab === t.id ? '1px solid rgba(245,166,35,0.1)' : '1px solid transparent',
-              boxShadow: tab === t.id ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
-              transition: 'all 0.2s ease',
-            }}
+          <button
+            key={t.id}
+            onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
+            className={`w-tab-btn ${tab === t.id ? 'active' : ''}`}
           >
             <i className={t.icon} style={{ fontSize: '20px' }}></i>
-            <span style={{ fontSize: '10px', fontWeight: 600 }}>{t.label}</span>
+            <span style={{ fontSize: '10px', fontWeight: 700 }}>{t.label}</span>
           </button>
         ))}
       </div>
@@ -389,8 +580,8 @@ const WalletCard = () => {
       {/* BALANCE TAB */}
       {tab === 'balance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div className="w-card" style={{ padding: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Your Deposit Address
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -417,11 +608,7 @@ const WalletCard = () => {
                 <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
                   {qrAddress || 'No address assigned'}
                 </div>
-                <button onClick={() => handleCopy(qrAddress)} style={{
-                  padding: '7px 16px', borderRadius: '8px', width: '100%',
-                  background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
-                  color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                }}>
+                <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '8px' }}>
                   {copied ? '✓ Copied!' : '📋 Copy Address'}
                 </button>
               </div>
@@ -429,8 +616,8 @@ const WalletCard = () => {
           </div>
 
           {history.length > 0 ? (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
+            <div className="w-card" style={{ padding: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
                 <i className="ti ti-clock" style={{ marginRight: '6px' }}></i>Recent Transactions
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -439,7 +626,10 @@ const WalletCard = () => {
                   const amt = item.amount_usd ?? item.amount_usd_legacy ?? 0;
                   const date = item.created_at ?? '';
                   return (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#1A1F32', borderRadius: '12px', border: '1px solid #1E2640' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s ease' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: isDep ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 77, 77, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
                           <i className={isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up'} style={{ color: isDep ? '#F5A623' : '#FF4D4D' }}></i>
@@ -449,18 +639,28 @@ const WalletCard = () => {
                             {isDep ? (item.wallet_type === 'INTERNAL' ? 'Received (Internal)' : 'Deposit') : (item.wallet_type === 'INTERNAL' ? 'Sent (Internal)' : 'Withdrawal')}
                           </div>
                           <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>
-                            {isDep ? `From ${item.sender_reference || 'Chain'}` : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                            {isDep ? (
+                              (() => {
+                                if (item.sender_reference && item.sender_reference.startsWith('{')) {
+                                  try {
+                                    const parsed = JSON.parse(item.sender_reference);
+                                    return `From ${parsed.email || parsed.username || 'Binance/Bybit'}`;
+                                  } catch(e) {}
+                                }
+                                return `From ${item.sender_reference || 'Chain'}`;
+                              })()
+                            ) : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                           </div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 600, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
                           <span style={{
-                            fontSize: '8.5px', fontWeight: 600, padding: '1px 5px', borderRadius: '4px',
+                            fontSize: '8.5px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
                             textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
-                            background: item.status === 'approved' ? 'rgba(245,166,35,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
-                            color: item.status === 'approved' ? '#F5A623' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
+                            background: item.status === 'approved' ? 'rgba(0,200,150,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
+                            color: item.status === 'approved' ? '#00C896' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
                           }}>{item.status}</span>
                         </div>
                         <button
@@ -478,7 +678,7 @@ const WalletCard = () => {
               </div>
             </div>
           ) : (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '32px', textAlign: 'center' }}>
+            <div className="w-card" style={{ padding: '32px', textAlign: 'center' }}>
               <div style={{ fontSize: '36px', marginBottom: '10px' }}>
                 <i className="ti ti-inbox" style={{ fontSize: '36px', color: '#8A9BB8' }}></i>
               </div>
@@ -494,7 +694,17 @@ const WalletCard = () => {
         const item = selectedWalletTx;
         const isDep = item.isDep;
         const amt = item.amt;
-        const fromStr = isDep ? (item.sender_reference || item.wallet_type || 'External Chain') : (user?.full_name || user?.username || 'My Wallet');
+        const fromStr = isDep ? (
+          (() => {
+            if (item.sender_reference && item.sender_reference.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(item.sender_reference);
+                return parsed.email || parsed.username || 'Binance/Bybit';
+              } catch(e) {}
+            }
+            return item.sender_reference || item.wallet_type || 'External Chain';
+          })()
+        ) : (user?.full_name || user?.username || 'My Wallet');
         const toStr = isDep ? (user?.full_name || user?.username || 'My Wallet') : (item.address || item.destination_address || item.wallet_type || 'External');
         const statusLabel = item.status || 'pending';
         return (
@@ -578,9 +788,11 @@ const WalletCard = () => {
           </div>
         );
       })()}
+
+      {/* SEND TAB */}
       {tab === 'send' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px' }}>
+          <div className="w-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send to User</div>
             </div>
@@ -594,11 +806,8 @@ const WalletCard = () => {
                   value={sendUsername}
                   onChange={e => setSendUsername(e.target.value)}
                   placeholder="username"
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '13px 16px 13px 32px',
-                    borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
-                    color: '#fff', fontSize: '13px', outline: 'none',
-                  }}
+                  className="w-input"
+                  style={{ padding: '13px 16px 13px 32px' }}
                 />
               </div>
             </div>
@@ -612,23 +821,15 @@ const WalletCard = () => {
                 value={sendAmt}
                 onChange={e => setSendAmt(e.target.value)}
                 placeholder="0.00"
-                style={{
-                  width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
-                  background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
-                  color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none',
-                }}
+                className="w-input"
+                style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
               />
             </div>
 
             <button
               onClick={handleInternalSendSubmit}
               disabled={sendLoading || !sendUsername.trim() || !sendAmt}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: sendLoading || !sendUsername.trim() || !sendAmt ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                color: sendLoading || !sendUsername.trim() || !sendAmt ? '#8A9BB8' : '#0A0C12',
-                fontSize: '15px', fontWeight: 800, cursor: sendLoading || !sendUsername.trim() || !sendAmt ? 'not-allowed' : 'pointer',
-              }}
+              className="w-btn-primary"
             >
               {sendLoading ? '⏳ Processing...' : '✓ Send Instantly'}
             </button>
@@ -651,9 +852,9 @@ const WalletCard = () => {
               onSelect={setReceiveType}
             />
           ) : receiveType === 'user' ? (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px', textAlign: 'center' }}>
+            <div className="w-card" style={{ textAlign: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                <button onClick={() => setReceiveType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                   <i className="ti ti-arrow-left"></i>
                 </button>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Receive from User</div>
@@ -675,19 +876,15 @@ const WalletCard = () => {
                 Share your username or Account ID with another EthioSwap user. They can transfer funds instantly to you with zero network fees.
               </p>
 
-              <button onClick={() => handleCopy(`@${user?.username}`)} style={{
-                width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
-                background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
-                color: '#F5A623', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-              }}>
+              <button onClick={() => handleCopy(`@${user?.username}`)} className="w-btn-primary" style={{ width: '100%' }}>
                 {copied ? '✓ Copied Username!' : '📋 Copy Username'}
               </button>
             </div>
           ) : receiveType === 'binance_bybit' ? (
-            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px' }}>
+            <div className="w-card">
               {/* Back Button & Title */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={() => setReceiveType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                   <i className="ti ti-arrow-left"></i>
                 </button>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Binance / Bybit Deposit</div>
@@ -727,12 +924,12 @@ const WalletCard = () => {
                           key={method}
                           type="button"
                           onClick={() => setBbMethod(method)}
+                          className="w-network-card"
                           style={{
-                            flex: 1, padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                            border: `1.5px solid ${isActive ? '#F5A623' : '#1E2640'}`,
+                            padding: '10px',
+                            borderColor: isActive ? '#F5A623' : '#1E2640',
                             background: isActive ? 'rgba(245, 166, 35, 0.08)' : '#0B0E1A',
                             color: isActive ? '#fff' : '#8A9BB8',
-                            transition: 'all 0.15s ease'
                           }}
                         >
                           {method === 'binance' ? '🟡 Binance Pay' : '⚫ Bybit Transfer'}
@@ -750,11 +947,8 @@ const WalletCard = () => {
                       type="number" step="0.01" min={minDep}
                       value={bbAmount} onChange={e => setBbAmount(e.target.value)}
                       placeholder="0.00"
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '14px 16px 14px 36px',
-                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '12px',
-                        color: '#fff', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none'
-                      }}
+                      className="w-input"
+                      style={{ padding: '14px 16px 14px 36px', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
                   {parseFloat(bbAmount) > 0 && (
@@ -771,11 +965,8 @@ const WalletCard = () => {
                     value={bbSenderEmail} onChange={e => setBbSenderEmail(e.target.value)}
                     placeholder="Enter the email address you sent from"
                     required
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
-                      color: '#fff', fontSize: '13px', outline: 'none'
-                    }}
+                    className="w-input"
+                    style={{ padding: '12px 14px' }}
                   />
                 </div>
 
@@ -786,11 +977,8 @@ const WalletCard = () => {
                     value={bbSenderUsername} onChange={e => setBbSenderUsername(e.target.value)}
                     placeholder="Enter the account username you sent from"
                     required
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
-                      color: '#fff', fontSize: '13px', outline: 'none'
-                    }}
+                    className="w-input"
+                    style={{ padding: '12px 14px' }}
                   />
                 </div>
 
@@ -800,11 +988,8 @@ const WalletCard = () => {
                     type="text"
                     value={bbTxRef} onChange={e => setBbTxRef(e.target.value)}
                     placeholder="Enter Binance Pay ID or Bybit TxID"
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
-                      color: '#fff', fontSize: '13px', outline: 'none'
-                    }}
+                    className="w-input"
+                    style={{ padding: '12px 14px' }}
                   />
                 </div>
 
@@ -823,10 +1008,7 @@ const WalletCard = () => {
                       </button>
                     </div>
                   ) : (
-                    <label style={{ background: '#0B0E1A', border: '2px dashed #1E2640', borderRadius: '12px', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'border-color 0.2s ease' }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#F5A623'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = '#1E2640'}
-                    >
+                    <label className="w-upload-zone">
                       <span style={{ fontSize: '24px' }}>📁</span>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Click to Upload Screenshot</span>
                       <span style={{ fontSize: '10px', color: '#4E5567' }}>Supports JPG, PNG (Max 5MB)</span>
@@ -859,7 +1041,7 @@ const WalletCard = () => {
                 <button 
                   type="button" 
                   onClick={() => setReceiveType(null)} 
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                  className="w-btn-secondary"
                 >
                   Cancel
                 </button>
@@ -867,12 +1049,8 @@ const WalletCard = () => {
                   type="button"
                   onClick={handleBinanceBybitSubmit}
                   disabled={bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim()}
-                  style={{
-                    flex: 2, padding: '12px', borderRadius: '10px', border: 'none',
-                    background: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                    color: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? '#8A9BB8' : '#0A0C12',
-                    fontSize: '14px', fontWeight: 800, cursor: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? 'not-allowed' : 'pointer'
-                  }}
+                  className="w-btn-primary"
+                  style={{ flex: 2 }}
                 >
                   {bbLoading ? '⏳ Processing...' : '✓ Submit Deposit Request'}
                 </button>
@@ -884,9 +1062,9 @@ const WalletCard = () => {
 
               {/* STEP 1: Pick Network */}
               {depStep === 1 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setReceiveType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Pick Network</div>
@@ -895,19 +1073,17 @@ const WalletCard = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                     {NETWORKS.map(n => <NetworkCard key={n.id} network={n} selected={depNet} onSelect={setDepNet} />)}
                   </div>
-                  <button onClick={() => setDepStep(2)} style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                    background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
-                    fontSize: '15px', fontWeight: 800, cursor: 'pointer',
-                  }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+                  <button onClick={() => setDepStep(2)} className="w-btn-primary">
+                    Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i>
+                  </button>
                 </div>
               )}
 
               {/* STEP 2: Enter Amount */}
               {depStep === 2 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setDepStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setDepStep(1)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Enter Amount</div>
@@ -922,12 +1098,8 @@ const WalletCard = () => {
                       type="number" step="0.01" min={minDep}
                       value={depAmt} onChange={e => setDepAmt(e.target.value)}
                       placeholder="0.00"
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
-                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
-                        color: '#fff', fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-mono)',
-                        outline: 'none',
-                      }}
+                      className="w-input"
+                      style={{ padding: '16px 16px 16px 36px', fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
@@ -947,24 +1119,21 @@ const WalletCard = () => {
                   )}
 
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => setDepStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setDepStep(1)} className="w-btn-secondary" style={{ flex: 'none', padding: '14px 20px' }}>
                       <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
                     </button>
-                    <button onClick={() => { if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; } setDepStep(3); }} style={{
-                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                      background: depAmtNum >= minDep ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
-                      color: depAmtNum >= minDep ? '#0A0C12' : '#8A9BB8',
-                      fontSize: '15px', fontWeight: 800, cursor: depAmtNum >= minDep ? 'pointer' : 'not-allowed',
-                    }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+                    <button onClick={() => { if (depAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; } setDepStep(3); }} className="w-btn-primary" style={{ flex: 1 }}>
+                      Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i>
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* STEP 3: Deposit Address + TxID */}
               {depStep === 3 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setDepStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setDepStep(2)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send USDT</div>
@@ -991,11 +1160,7 @@ const WalletCard = () => {
                       <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
                         {depAddress || 'No address assigned'}
                       </div>
-                      <button onClick={() => handleCopy(depAddress)} style={{
-                        padding: '7px 16px', borderRadius: '8px', width: '100%',
-                        background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)',
-                        color: '#F5A623', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                      }}>
+                      <button onClick={() => handleCopy(depAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '8px' }}>
                         {copied ? '✓ Copied!' : '📋 Copy Address'}
                       </button>
                     </div>
@@ -1015,24 +1180,16 @@ const WalletCard = () => {
                       type="text" required
                       value={depTxId} onChange={e => setDepTxId(e.target.value)}
                       placeholder="Paste your TxID after sending"
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '13px 16px',
-                        borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
-                        color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
-                      }}
+                      className="w-input"
+                      style={{ padding: '13px 16px', fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => setDepStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setDepStep(2)} className="w-btn-secondary" style={{ flex: 'none', padding: '14px 20px' }}>
                       <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
                     </button>
-                    <button onClick={handleDepositSubmit} disabled={depLoading || !depTxId.trim()} style={{
-                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                      background: depLoading || !depTxId.trim() ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                      color: depLoading || !depTxId.trim() ? '#8A9BB8' : '#0A0C12',
-                      fontSize: '15px', fontWeight: 800, cursor: depLoading || !depTxId.trim() ? 'not-allowed' : 'pointer',
-                    }}>
+                    <button onClick={handleDepositSubmit} disabled={depLoading || !depTxId.trim()} className="w-btn-primary" style={{ flex: 1 }}>
                       {depLoading ? '⏳ Submitting…' : '✓ Submit Deposit'}
                     </button>
                   </div>
@@ -1062,9 +1219,9 @@ const WalletCard = () => {
 
               {/* STEP 1: Pick Network */}
               {wdStep === 1 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setWdType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setWdType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Pick Network</div>
@@ -1077,19 +1234,17 @@ const WalletCard = () => {
                     <i className="ti ti-wallet" style={{ color: '#F5A623' }}></i>
                     Available: <span style={{ color: '#F5A623', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>${fmt(available)}</span>
                   </div>
-                  <button onClick={() => setWdStep(2)} style={{
-                    width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                    background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12',
-                    fontSize: '15px', fontWeight: 800, cursor: 'pointer',
-                  }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+                  <button onClick={() => setWdStep(2)} className="w-btn-primary">
+                    Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i>
+                  </button>
                 </div>
               )}
 
               {/* STEP 2: Amount + Address */}
               {wdStep === 2 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setWdStep(1)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setWdStep(1)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Withdraw</div>
@@ -1103,11 +1258,8 @@ const WalletCard = () => {
                     <input
                       type="text" required value={wdAddr} onChange={e => setWdAddr(e.target.value)}
                       placeholder={wdNetData?.addrPlaceholder}
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '13px 16px',
-                        borderRadius: '12px', background: '#0B0E1A', border: '1.5px solid #1E2640',
-                        color: '#fff', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
-                      }}
+                      className="w-input"
+                      style={{ padding: '13px 16px', fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
@@ -1118,11 +1270,8 @@ const WalletCard = () => {
                       type="number" step="0.01" min={minWd}
                       value={wdAmt} onChange={e => setWdAmt(e.target.value)}
                       placeholder="0.00"
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '16px 16px 16px 36px',
-                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '14px',
-                        color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none',
-                      }}
+                      className="w-input"
+                      style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
@@ -1141,7 +1290,7 @@ const WalletCard = () => {
                   )}
 
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => setWdStep(1)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setWdStep(1)} className="w-btn-secondary" style={{ flex: 'none', padding: '14px 20px' }}>
                       <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
                     </button>
                     <button onClick={() => {
@@ -1149,21 +1298,18 @@ const WalletCard = () => {
                       if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
                       if (!wdAddr.trim()) { setError('Enter a wallet address'); return; }
                       setWdStep(3);
-                    }} style={{
-                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                      background: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'linear-gradient(135deg, #F5A623, #FFE082)' : '#1E2640',
-                      color: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? '#0A0C12' : '#8A9BB8',
-                      fontSize: '15px', fontWeight: 800, cursor: wdAmtNum >= minWd && wdAmtNum <= available && wdAddr.trim() ? 'pointer' : 'not-allowed',
-                    }}>Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i></button>
+                    }} className="w-btn-primary" style={{ flex: 1 }}>
+                      Next <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i>
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* STEP 3: Confirmation */}
               {wdStep === 3 && (
-                <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '20px' }}>
+                <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <button onClick={() => setWdStep(2)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => setWdStep(2)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
                       <i className="ti ti-arrow-left"></i>
                     </button>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Confirm Withdrawal</div>
@@ -1204,15 +1350,10 @@ const WalletCard = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => setWdStep(2)} style={{ padding: '14px 20px', borderRadius: '14px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setWdStep(2)} className="w-btn-secondary" style={{ flex: 'none', padding: '14px 20px' }}>
                       <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
                     </button>
-                    <button onClick={handleWithdrawSubmit} disabled={wdLoading} style={{
-                      flex: 1, padding: '14px', borderRadius: '14px', border: 'none',
-                      background: wdLoading ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                      color: wdLoading ? '#8A9BB8' : '#0A0C12',
-                      fontSize: '15px', fontWeight: 800, cursor: wdLoading ? 'not-allowed' : 'pointer',
-                    }}>
+                    <button onClick={handleWithdrawSubmit} disabled={wdLoading} className="w-btn-primary" style={{ flex: 1 }}>
                       {wdLoading ? '⏳ Processing…' : '✓ Confirm Withdrawal'}
                     </button>
                   </div>
