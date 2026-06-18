@@ -124,7 +124,7 @@ const DepositScreenshot = ({ requestId, getImageUrl, onImageClick }) => {
     if (!requestId) return;
     supabase.from('deposit_requests').select('*').eq('id', requestId).single().then(({ data }) => setDeposit(data));
   }, [requestId]);
-  const screenshotUrl = deposit?.screenshotUrl;
+  const screenshotUrl = deposit?.screenshot_url || deposit?.screenshotUrl;
 
   if (deposit === undefined) {
     return (
@@ -737,12 +737,18 @@ const AdminPanel = ({ user }) => {
       setSelectedTicket(prev => ({ ...prev, messages }));
     } catch (e) { showAlert(e.message, 'error'); }
   };
-  const handleApproveDeposit = async (id) => {
-    if (!window.confirm('Approve this deposit request and credit funds to user balance?')) return;
+  const handleApproveDeposit = async (id, requestedAmount) => {
+    const amountStr = window.prompt("Enter the final USD ($) amount to credit to the user's balance:", requestedAmount);
+    if (amountStr === null) return;
+    const finalAmount = parseFloat(amountStr);
+    if (isNaN(finalAmount) || finalAmount < 0) {
+      showAlert("Please enter a valid amount.", "error");
+      return;
+    }
     setProcessingDepositId(id);
     showAlert('Processing deposit...');
     try {
-      await approveDepositRequest(id);
+      await approveDepositRequest(id, finalAmount);
       showAlert('✓ Deposit approved! Balance credited to user wallet.');
     } catch (err) { showAlert(err.message, 'error'); }
     finally { setProcessingDepositId(null); setSelectedDepositDetailId(null); }
@@ -2842,7 +2848,7 @@ const AdminPanel = ({ user }) => {
                             <td onClick={e => e.stopPropagation()}>
                               {req.status === 'pending' ? (
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button onClick={() => handleApproveDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req.id ? 0.6 : 1 }}>
+                                  <button onClick={() => handleApproveDeposit(req.id, req.amount_usd)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req.id ? 0.6 : 1 }}>
                                     {processingDepositId === req.id ? '⏳ Processing...' : '✓ Approve'}
                                   </button>
                                   <button onClick={() => handleRejectDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-danger" style={{ padding: '6px 12px', fontSize: '11px', opacity: processingDepositId === req.id ? 0.6 : 1 }}>
@@ -4797,7 +4803,7 @@ const user = await ctx.db
                 </div>
 
                 {/* Proof screenshot */}
-                {req.hasScreenshot && (
+                {!!req.screenshot_url && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Uploaded Receipt Proof Image:</div>
                     <DepositScreenshot requestId={req.id} getImageUrl={getImageUrl} onImageClick={setActiveLightboxImage} />
@@ -4808,7 +4814,7 @@ const user = await ctx.db
               {/* Approve/Reject footer if pending */}
               {req.status === 'pending' && (
                 <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '10px' }}>
-                  <button onClick={() => handleApproveDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ flex: 1, opacity: processingDepositId === req.id ? 0.6 : 1 }}>
+                  <button onClick={() => handleApproveDeposit(req.id, req.amount_usd)} disabled={processingDepositId === req.id} className="btn-premium-primary" style={{ flex: 1, opacity: processingDepositId === req.id ? 0.6 : 1 }}>
                     {processingDepositId === req.id ? '⏳ Processing Deposit & Crediting...' : '✓ Approve & Credit Funds'}
                   </button>
                   <button onClick={() => handleRejectDeposit(req.id)} disabled={processingDepositId === req.id} className="btn-premium-danger" style={{ flex: 1, opacity: processingDepositId === req.id ? 0.6 : 1 }}>

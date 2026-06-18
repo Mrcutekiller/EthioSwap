@@ -863,40 +863,47 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+      const isInternal = network === 'INTERNAL';
+
       const { error: insertErr } = await supabase.from('deposit_requests').insert({
         user_id: user.id,
         amount_usd: amountUSD,
         amount_eth: amountUSD / ETH_USD_PRICE,
-        screenshot_url: screenshotUrl,
+        screenshot_url: screenshotUrl || '',
         wallet_type: network,
-        sender_reference: txHash,
+        sender_reference: txHash || '',
         username: user.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
+        status: isInternal ? 'approved' : 'pending',
+        reviewed_at: isInternal ? new Date().toISOString() : null,
       });
       if (insertErr) throw insertErr;
 
-      const { data: userData, error: userErr } = await supabase
-        .from('users')
-        .select('eth_balance')
-        .eq('id', user.id)
-        .single();
-      if (userErr) throw userErr;
+      if (isInternal) {
+        const { data: userData, error: userErr } = await supabase
+          .from('users')
+          .select('eth_balance')
+          .eq('id', user.id)
+          .single();
+        if (userErr) throw userErr;
 
-      const newBalance = (userData?.eth_balance || 0) + netCredit;
-      const { error: balanceErr } = await supabase
-        .from('users')
-        .update({ eth_balance: newBalance })
-        .eq('id', user.id);
-      if (balanceErr) throw balanceErr;
+        const newBalance = (userData?.eth_balance || 0) + netCredit;
+        const { error: balanceErr } = await supabase
+          .from('users')
+          .update({ eth_balance: newBalance })
+          .eq('id', user.id);
+        if (balanceErr) throw balanceErr;
 
-      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
-      if (sett) {
-        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+        const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+        if (sett) {
+          await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+        }
+
+        setUser(prev => ({ ...prev, eth_balance: newBalance }));
+        setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee deducted).`);
+      } else {
+        setSuccess(`Deposit request of $${amountUSD.toFixed(2)} USD submitted successfully! It is pending admin verification.`);
       }
 
-      setUser(prev => ({ ...prev, eth_balance: newBalance }));
-      setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee deducted).`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -933,6 +940,8 @@ export const AuthProvider = ({ children }) => {
         .eq('id', user.id);
       if (balanceErr) throw balanceErr;
 
+      const isInternal = network === 'INTERNAL';
+
       const { error: insertErr } = await supabase.from('withdraw_requests').insert({
         user_id: user.id,
         amount_eth: amountUSD / ETH_USD_PRICE,
@@ -940,18 +949,22 @@ export const AuthProvider = ({ children }) => {
         address,
         wallet_type: network,
         username: user.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
+        status: isInternal ? 'approved' : 'pending',
+        reviewed_at: isInternal ? new Date().toISOString() : null,
       });
       if (insertErr) throw insertErr;
 
-      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
-      if (sett) {
-        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+      if (isInternal) {
+        const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+        if (sett) {
+          await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
+        }
+        setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address.substring(0, 10)}... (${platformFeePercent}% fee deducted).`);
+      } else {
+        setSuccess(`Withdrawal request of $${amountUSD.toFixed(2)} USD submitted! Pending admin verification ($${platformFee.toFixed(2)} platform fee will be finalized on approval).`);
       }
 
       setUser(prev => ({ ...prev, eth_balance: newBalance }));
-      setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address.substring(0, 10)}... (${platformFeePercent}% fee deducted).`);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -1142,7 +1155,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const approveDepositRequest = async (id) => {
+  const approveDepositRequest = async (id, finalAmountUsd) => {
     try {
       const { data: req, error: fetchErr } = await supabase
         .from('deposit_requests')
@@ -1159,13 +1172,18 @@ export const AuthProvider = ({ children }) => {
       }
 
       const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
-      const depositAmount = req.amount_usd || 0;
-      const platformFee = depositAmount * platformFeePercent / 100;
-      const netCredit = Math.max(0, depositAmount - platformFee);
+      const approvedAmount = typeof finalAmountUsd === 'number' ? finalAmountUsd : (req.amount_usd || 0);
+      const netCredit = approvedAmount;
+      const platformFee = netCredit * platformFeePercent / 100;
 
       const { error: updateErr } = await supabase
         .from('deposit_requests')
-        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+        .update({ 
+          status: 'approved', 
+          amount_usd: approvedAmount,
+          amount_eth: approvedAmount / ETH_USD_PRICE,
+          reviewed_at: new Date().toISOString() 
+        })
         .eq('id', id);
       if (updateErr) throw updateErr;
 
@@ -1192,11 +1210,11 @@ export const AuthProvider = ({ children }) => {
         req.user_id,
         'deposit_approved',
         'Deposit Approved',
-        `Your deposit of $${depositAmount.toFixed(2)} USD has been approved and credited to your wallet.`
+        `Your deposit has been approved and $${netCredit.toFixed(2)} USD credited to your wallet.`
       );
 
       await loadAllDepositRequests();
-      setSuccess(`Deposit approved! $${netCredit.toFixed(2)} credited (${platformFeePercent}% fee deducted).`);
+      setSuccess(`Deposit approved! $${netCredit.toFixed(2)} credited.`);
     } catch (err) {
       setError(err.message);
     }

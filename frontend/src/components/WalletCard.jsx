@@ -81,6 +81,50 @@ const ChoiceSelector = ({ title, desc, options, onSelect }) => (
   </div>
 );
 
+// Helper to compress and convert File/Blob to compressed base64 JPEG
+const compressImage = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 480;
+      const MAX_HEIGHT = 480;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Compress to JPEG with 0.4 quality to stay well below Convex's 1MB limit
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.4);
+      resolve(compressedDataUrl);
+    };
+    img.onerror = () => {
+      reject(new Error("Failed to load image for compression"));
+    };
+    img.src = event.target.result;
+  };
+  reader.onerror = (err) => {
+    reject(new Error("Failed to read file"));
+  };
+});
+
 const WalletCard = () => {
   const {
     user, wallet, systemSettings,
@@ -99,6 +143,14 @@ const WalletCard = () => {
   const [depAmt, setDepAmt] = useState('');
   const [depTxId, setDepTxId] = useState('');
   const [depLoading, setDepLoading] = useState(false);
+
+  // Binance / Bybit Deposit flow states
+  const [bbAmount, setBbAmount] = useState('');
+  const [bbMethod, setBbMethod] = useState('binance'); // 'binance' | 'bybit'
+  const [bbScreenshot, setBbScreenshot] = useState(null);
+  const [bbScreenshotPreview, setBbScreenshotPreview] = useState(null);
+  const [bbTxRef, setBbTxRef] = useState('');
+  const [bbLoading, setBbLoading] = useState(false);
 
   // Withdrawal/Send Chain flow
   const [wdStep, setWdStep] = useState(1);
@@ -172,6 +224,36 @@ const WalletCard = () => {
       }
     } catch (err) { setError(err.message); }
     finally { setDepLoading(false); }
+  };
+
+  const handleBinanceBybitSubmit = async () => {
+    const bbAmtNum = parseFloat(bbAmount) || 0;
+    if (bbAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
+    if (!bbScreenshot) { setError('Please upload a screenshot proof of payment'); return; }
+    
+    setBbLoading(true);
+    setSuccess('Submitting deposit request...');
+    try {
+      const methodLabel = bbMethod === 'binance' ? 'BINANCE' : 'BYBIT';
+      const res = await createDepositRequest(
+        bbAmtNum,
+        methodLabel,
+        bbTxRef.trim(),
+        bbScreenshot,
+        undefined
+      );
+      if (res && res.success) {
+        setBbAmount('');
+        setBbScreenshot(null);
+        setBbScreenshotPreview(null);
+        setBbTxRef('');
+        setReceiveType(null); // Go back to receive choices
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBbLoading(false);
+    }
   };
 
   const handleWithdrawSubmit = async () => {
@@ -552,6 +634,7 @@ const WalletCard = () => {
               desc="Select how you want to receive your USDT"
               options={[
                 { id: 'user', icon: '👤', label: 'From User', desc: 'Share your username / Account ID for internal transfer' },
+                { id: 'binance_bybit', icon: '💳', label: 'Binance / Bybit', desc: 'Deposit via Binance Pay or Bybit transfer' },
                 { id: 'chain', icon: '🔗', label: 'From Chain', desc: 'Deposit from an external blockchain network' },
               ]}
               onSelect={setReceiveType}
@@ -588,6 +671,171 @@ const WalletCard = () => {
               }}>
                 {copied ? '✓ Copied Username!' : '📋 Copy Username'}
               </button>
+            </div>
+          ) : receiveType === 'binance_bybit' ? (
+            <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px' }}>
+              {/* Back Button & Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                <button onClick={() => setReceiveType(null)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', borderRadius: '50px', color: '#8A9BB8', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="ti ti-arrow-left"></i>
+                </button>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Binance / Bybit Deposit</div>
+              </div>
+
+              {/* Instructions */}
+              <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>1. Transfer Payment</div>
+                <div style={{ fontSize: '13px', color: '#fff', lineHeight: 1.5 }}>
+                  Send your USDT deposit using Binance Pay or Bybit Transfer to our designated email account:
+                </div>
+                
+                <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: '#F5A623', fontWeight: 700 }}>birukf37@gmail.com</span>
+                  <button 
+                    onClick={() => handleCopy('birukf37@gmail.com')} 
+                    style={{ background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)', color: '#F5A623', fontSize: '11px', fontWeight: 600, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    📋 Copy
+                  </button>
+                </div>
+
+                <div style={{ background: 'rgba(245, 166, 35, 0.05)', border: '1px solid rgba(245, 166, 35, 0.15)', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#FFE082', lineHeight: 1.5 }}>
+                  💡 <strong>Important Note:</strong> Please remember to add the <strong>5% platform fee</strong> to your transfer. E.g., if you want to receive <strong>$100.00</strong> in your balance, you must send exactly <strong>$105.00</strong> to the email.
+                </div>
+              </div>
+
+              {/* Form Input fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Select Transfer Method</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {['binance', 'bybit'].map(method => {
+                      const isActive = bbMethod === method;
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setBbMethod(method)}
+                          style={{
+                            flex: 1, padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                            border: `1.5px solid ${isActive ? '#F5A623' : '#1E2640'}`,
+                            background: isActive ? 'rgba(245, 166, 35, 0.08)' : '#0B0E1A',
+                            color: isActive ? '#fff' : '#8A9BB8',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {method === 'binance' ? '🟡 Binance Pay' : '⚫ Bybit Transfer'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Amount to Credit (USD)</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                    <input
+                      type="number" step="0.01" min={minDep}
+                      value={bbAmount} onChange={e => setBbAmount(e.target.value)}
+                      placeholder="0.00"
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '14px 16px 14px 36px',
+                        background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '12px',
+                        color: '#fff', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)', outline: 'none'
+                      }}
+                    />
+                  </div>
+                  {parseFloat(bbAmount) > 0 && (
+                    <div style={{ marginTop: '6px', fontSize: '12px', color: '#8A9BB8' }}>
+                      Required send amount (incl. 5% fee): <strong style={{ color: '#F5A623' }}>${(parseFloat(bbAmount) * 1.05).toFixed(2)} USD</strong>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Transaction ID / Reference (Optional)</label>
+                  <input
+                    type="text"
+                    value={bbTxRef} onChange={e => setBbTxRef(e.target.value)}
+                    placeholder="Enter Binance Pay ID or Bybit TxID"
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
+                      color: '#fff', fontSize: '13px', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Upload Screenshot Proof *</label>
+                  
+                  {bbScreenshotPreview ? (
+                    <div style={{ position: 'relative', borderRadius: '12px', border: '1px solid #1E2640', overflow: 'hidden', height: '140px', background: '#0B0E1A' }}>
+                      <img src={bbScreenshotPreview} alt="Screenshot Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      <button 
+                        type="button" 
+                        onClick={() => { setBbScreenshot(null); setBbScreenshotPreview(null); }}
+                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '6px', color: '#FF4D4D', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label style={{ background: '#0B0E1A', border: '2px dashed #1E2640', borderRadius: '12px', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', transition: 'border-color 0.2s ease' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#F5A623'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = '#1E2640'}
+                    >
+                      <span style={{ fontSize: '24px' }}>📁</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Click to Upload Screenshot</span>
+                      <span style={{ fontSize: '10px', color: '#4E5567' }}>Supports JPG, PNG (Max 5MB)</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          try {
+                            setBbLoading(true);
+                            const compressed = await compressImage(file);
+                            setBbScreenshot(compressed);
+                            setBbScreenshotPreview(compressed);
+                          } catch (err) {
+                            setError('Failed to compress screenshot: ' + err.message);
+                          } finally {
+                            setBbLoading(false);
+                          }
+                        }} 
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit / Cancel Buttons */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setReceiveType(null)} 
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #1E2640', background: 'transparent', color: '#8A9BB8', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBinanceBybitSubmit}
+                  disabled={bbLoading || !bbAmount || !bbScreenshot}
+                  style={{
+                    flex: 2, padding: '12px', borderRadius: '10px', border: 'none',
+                    background: bbLoading || !bbAmount || !bbScreenshot ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+                    color: bbLoading || !bbAmount || !bbScreenshot ? '#8A9BB8' : '#0A0C12',
+                    fontSize: '14px', fontWeight: 800, cursor: bbLoading || !bbAmount || !bbScreenshot ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {bbLoading ? '⏳ Processing...' : '✓ Submit Deposit Request'}
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
