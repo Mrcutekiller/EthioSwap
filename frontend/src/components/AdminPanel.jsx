@@ -738,7 +738,12 @@ const AdminPanel = ({ user }) => {
     } catch (e) { showAlert(e.message, 'error'); }
   };
   const handleApproveDeposit = async (id, requestedAmount) => {
-    const amountStr = window.prompt("Enter the final USD ($) amount to credit to the user's balance:", requestedAmount);
+    const feePercent = settings?.deposit_fee_percent ?? 5.0;
+    const defaultCredit = (requestedAmount * (1 - feePercent / 100)).toFixed(2);
+    const amountStr = window.prompt(
+      `User sent/reported: $${requestedAmount.toFixed(2)} USD\nEstimated credit (excl. ${feePercent}% fee): $${defaultCredit} USD\n\nEnter the final USD ($) amount to credit to the user's balance:`,
+      defaultCredit
+    );
     if (amountStr === null) return;
     const finalAmount = parseFloat(amountStr);
     if (isNaN(finalAmount) || finalAmount < 0) {
@@ -2835,9 +2840,25 @@ const AdminPanel = ({ user }) => {
                             <td style={{ color: '#00C896', fontWeight: 700 }}>${(req.amount_usd ?? req.amount_usd ?? 0).toFixed(2)}</td>
                             <td style={{ color: '#8b92a8' }}>{Math.round(req.amount_usd * rate).toLocaleString()} ETB</td>
                             <td>
-                              <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                {req.wallet_type?.toUpperCase() || 'USDT'}
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', width: 'fit-content' }}>
+                                  {req.wallet_type?.toUpperCase() || 'USDT'}
+                                </span>
+                                {(() => {
+                                  const isBB = req.wallet_type === 'BINANCE' || req.wallet_type === 'BYBIT';
+                                  if (isBB && req.sender_reference && req.sender_reference.startsWith('{')) {
+                                    try {
+                                      const p = JSON.parse(req.sender_reference);
+                                      return (
+                                        <span style={{ fontSize: '10px', color: '#8b92a8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }} title={`Sent from Email: ${p.email} | User: ${p.username}`}>
+                                          {p.email || p.username}
+                                        </span>
+                                      );
+                                    } catch (e) {}
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                             </td>
                             <td style={{ color: '#8b92a8', fontSize: '13px' }}>
                               {new Date(req.created_at).toLocaleString()}
@@ -4747,6 +4768,23 @@ const user = await ctx.db
       {selectedDepositDetailId && (() => {
         const req = allDepositReqs?.find(r => r.id === selectedDepositDetailId);
         if (!req) return null;
+
+        const isBinanceOrBybit = req.wallet_type === 'BINANCE' || req.wallet_type === 'BYBIT';
+        let senderEmail = '';
+        let senderUsername = '';
+        let referenceHash = req.sender_reference || '';
+
+        if (isBinanceOrBybit && req.sender_reference && req.sender_reference.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(req.sender_reference);
+            senderEmail = parsed.email || '';
+            senderUsername = parsed.username || '';
+            referenceHash = parsed.ref || '';
+          } catch (e) {
+            // fallback
+          }
+        }
+
         return (
           <>
             <div className="drawer-backdrop" onClick={() => setSelectedDepositDetailId(null)} />
@@ -4788,9 +4826,21 @@ const user = await ctx.db
                     <span style={{ color: '#8b92a8' }}>Deposit Method:</span>
                     <strong style={{ color: '#f0f2f8' }}>{req.wallet_type?.toUpperCase()}</strong>
                   </div>
+                  {isBinanceOrBybit && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>Sender Email:</span>
+                        <strong style={{ color: '#F5A623' }}>{senderEmail || 'N/A'}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#8b92a8' }}>Sender Username:</span>
+                        <strong style={{ color: '#F5A623' }}>{senderUsername || 'N/A'}</strong>
+                      </div>
+                    </>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>TxID / Reference:</span>
-                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{req.sender_reference || 'No hash reference'}</strong>
+                    <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{referenceHash || 'No reference'}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#8b92a8' }}>Submitted at:</span>

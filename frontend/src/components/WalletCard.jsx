@@ -151,6 +151,8 @@ const WalletCard = () => {
   const [bbScreenshotPreview, setBbScreenshotPreview] = useState(null);
   const [bbTxRef, setBbTxRef] = useState('');
   const [bbLoading, setBbLoading] = useState(false);
+  const [bbSenderEmail, setBbSenderEmail] = useState('');
+  const [bbSenderUsername, setBbSenderUsername] = useState('');
 
   // Withdrawal/Send Chain flow
   const [wdStep, setWdStep] = useState(1);
@@ -229,21 +231,30 @@ const WalletCard = () => {
   const handleBinanceBybitSubmit = async () => {
     const bbAmtNum = parseFloat(bbAmount) || 0;
     if (bbAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
+    if (!bbSenderEmail.trim()) { setError('Please enter your Binance/Bybit email'); return; }
+    if (!bbSenderUsername.trim()) { setError('Please enter your Binance/Bybit username'); return; }
     if (!bbScreenshot) { setError('Please upload a screenshot proof of payment'); return; }
     
     setBbLoading(true);
     setSuccess('Submitting deposit request...');
     try {
       const methodLabel = bbMethod === 'binance' ? 'BINANCE' : 'BYBIT';
+      const refPayload = JSON.stringify({
+        email: bbSenderEmail.trim(),
+        username: bbSenderUsername.trim(),
+        ref: bbTxRef.trim()
+      });
       const res = await createDepositRequest(
         bbAmtNum,
         methodLabel,
-        bbTxRef.trim(),
+        refPayload,
         bbScreenshot,
         undefined
       );
       if (res && res.success) {
         setBbAmount('');
+        setBbSenderEmail('');
+        setBbSenderUsername('');
         setBbScreenshot(null);
         setBbScreenshotPreview(null);
         setBbTxRef('');
@@ -732,7 +743,7 @@ const WalletCard = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Amount to Credit (USD)</label>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Amount Sent (USD)</label>
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
                     <input
@@ -748,9 +759,39 @@ const WalletCard = () => {
                   </div>
                   {parseFloat(bbAmount) > 0 && (
                     <div style={{ marginTop: '6px', fontSize: '12px', color: '#8A9BB8' }}>
-                      Required send amount (incl. 5% fee): <strong style={{ color: '#F5A623' }}>${(parseFloat(bbAmount) * 1.05).toFixed(2)} USD</strong>
+                      Estimated credit amount (excl. {platformFeePercent}% fee): <strong style={{ color: '#00C896' }}>${(parseFloat(bbAmount) * (1 - platformFeePercent / 100)).toFixed(2)} USD</strong>
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Email *</label>
+                  <input
+                    type="email"
+                    value={bbSenderEmail} onChange={e => setBbSenderEmail(e.target.value)}
+                    placeholder="Enter the email address you sent from"
+                    required
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
+                      color: '#fff', fontSize: '13px', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Username *</label>
+                  <input
+                    type="text"
+                    value={bbSenderUsername} onChange={e => setBbSenderUsername(e.target.value)}
+                    placeholder="Enter the account username you sent from"
+                    required
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px',
+                      color: '#fff', fontSize: '13px', outline: 'none'
+                    }}
+                  />
                 </div>
 
                 <div>
@@ -825,12 +866,12 @@ const WalletCard = () => {
                 <button
                   type="button"
                   onClick={handleBinanceBybitSubmit}
-                  disabled={bbLoading || !bbAmount || !bbScreenshot}
+                  disabled={bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim()}
                   style={{
                     flex: 2, padding: '12px', borderRadius: '10px', border: 'none',
-                    background: bbLoading || !bbAmount || !bbScreenshot ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
-                    color: bbLoading || !bbAmount || !bbScreenshot ? '#8A9BB8' : '#0A0C12',
-                    fontSize: '14px', fontWeight: 800, cursor: bbLoading || !bbAmount || !bbScreenshot ? 'not-allowed' : 'pointer'
+                    background: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? '#1E2640' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+                    color: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? '#8A9BB8' : '#0A0C12',
+                    fontSize: '14px', fontWeight: 800, cursor: bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim() ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {bbLoading ? '⏳ Processing...' : '✓ Submit Deposit Request'}
