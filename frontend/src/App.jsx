@@ -4,7 +4,6 @@ import LandingPage, { FloatingBill } from './pages/LandingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import P2PListings from './components/P2PListings.jsx';
-import UserDashboard from './components/UserDashboard.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import TradeRoom from './components/TradeRoom.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
@@ -1036,13 +1035,12 @@ const RecoveryForm = () => {
   );
 };
 
-const PAGE_TITLES = { home: 'Home', p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile' };
+const PAGE_TITLES = { p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile' };
 
 const DesktopSidebar = ({ page, setPage, user, logout }) => {
   const navItems = [
-    { id: 'home', icon: 'ti ti-home', label: 'Home' },
-    { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
+    { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
     { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
     { id: 'notifications', icon: 'ti ti-bell', label: 'Notifications' },
     { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
@@ -1052,7 +1050,7 @@ const DesktopSidebar = ({ page, setPage, user, logout }) => {
 
   return (
     <aside style={{ position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh', background: '#0D1117', borderRight: '1px solid #1E2640', display: 'flex', flexDirection: 'column', zIndex: 100 }}>
-      <div style={{ padding: '24px 20px 32px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setPage('home')}>
+      <div style={{ padding: '24px 20px 32px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setPage('wallet')}>
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px' }}>E</div>
         <span style={{ fontSize: '18px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
       </div>
@@ -1082,7 +1080,7 @@ const DesktopSidebar = ({ page, setPage, user, logout }) => {
 
 const MobileBottomNav = ({ page, setPage }) => {
   const tabs = [
-    { id: 'home', icon: 'ti ti-home', label: 'Home' },
+    { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
     { id: 'scan', icon: 'ti ti-scan', label: 'Scan', center: true },
     { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
@@ -1111,7 +1109,7 @@ const MobileBottomNav = ({ page, setPage }) => {
 
 const AppContent = () => {
   const { user, logout, isLocked, setIsLocked, systemSettings, isRecoveringPassword, isProfileIncomplete } = useAuth();
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState('wallet');
   const [walletInitialTab, setWalletInitialTab] = useState('balance');
   const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
@@ -1137,10 +1135,10 @@ const AppContent = () => {
   }, []);
 
   useEffect(() => {
-    if (user && user.role === 'admin' && page === 'home') {
+    if (user && user.role === 'admin' && page === 'wallet') {
       setPage('admin');
     }
-  }, [user]);
+  }, [user, page]);
 
   const navigateToSeller = (id) => { setSellerId(id); setPage('sellerProfile'); };
 
@@ -1180,17 +1178,6 @@ const AppContent = () => {
 
       <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
-          {page === 'home' && (
-            <UserDashboard
-              onNavigate={(targetPage, subTab) => {
-                setPage(targetPage);
-                if (targetPage === 'wallet') {
-                  setWalletInitialTab(subTab || 'balance');
-                }
-              }}
-              onNavigateToSeller={navigateToSeller}
-            />
-          )}
           {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
           {page === 'wallet' && <WalletCard initialTab={walletInitialTab} />}
           {page === 'profile' && <ProfilePage />}

@@ -56,6 +56,40 @@ const NetworkCard = ({ network, selected, onSelect, compact }) => {
   );
 };
 
+const StatCard = ({ icon, label, value, sub, color = '#F5A623' }) => (
+  <div style={{
+    background: 'rgba(20, 24, 39, 0.6)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(30, 38, 64, 0.8)',
+    borderRadius: '16px',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    position: 'relative',
+    overflow: 'hidden',
+    transition: 'all 0.25s ease',
+    flex: 1,
+    minWidth: '140px'
+  }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = `${color}66`; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 30px ${color}15`; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(30, 38, 64, 0.8)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+  >
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+      </div>
+    </div>
+    <div>
+      <div style={{ fontSize: '24px', fontWeight: 700, color: color, fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '4px', fontWeight: 400 }}>{sub}</div>}
+    </div>
+  </div>
+);
+
 const ChoiceSelector = ({ title, desc, options, onSelect }) => (
   <div style={{ background: '#141827', borderRadius: '20px', border: '1px solid #1E2640', padding: '24px', textAlign: 'center' }}>
     <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{title}</h3>
@@ -131,6 +165,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     withdrawETH, myDepositReqs, myWithdrawalReqs,
     createDepositRequest, setError, setSuccess,
     transferToUser,
+    trades,
   } = useAuth();
 
   const [tab, setTab] = useState(initialTab);
@@ -191,6 +226,14 @@ const WalletCard = ({ initialTab = 'balance' }) => {
   const rate = systemSettings?.etb_rate_per_dollar ?? 190;
   const minDep = systemSettings?.min_deposit_usd ?? 1;
   const minWd = systemSettings?.min_withdrawal_usd ?? 10;
+
+  const completedTrades = useMemo(() => (trades || []).filter(t => t.status === 'completed'), [trades]);
+  const pendingTrades = useMemo(() => (trades || []).filter(t => t.status === 'pending' || t.status === 'active'), [trades]);
+  const totalVolume = useMemo(() => completedTrades.reduce((sum, t) => sum + (t.amount_eth || 0), 0), [completedTrades]);
+  const totalDeposited = useMemo(() =>
+    (myDepositReqs || []).filter(r => r.status === 'approved').reduce((s, r) => s + (r.amount_usd || 0), 0),
+    [myDepositReqs]
+  );
 
   const depNetData = NETWORKS.find(n => n.id === depNet);
   const wdNetData = NETWORKS.find(n => n.id === wdNet);
@@ -588,6 +631,14 @@ const WalletCard = ({ initialTab = 'balance' }) => {
           .w-mobile-only-qr { display: block; }
         }
       `}</style>
+
+      {/* STAT CARDS ROW */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <StatCard icon="💰" label="Total Balance" value={`$${fmt(balance)}`} sub="Your USDT wallet" color="#F5A623" />
+        <StatCard icon="📤" label="Total Sent" value={`$${fmt(totalVolume || 0)}`} sub="All time" color="#FF4D4D" />
+        <StatCard icon="📥" label="Total Received" value={`$${fmt(totalDeposited || 0)}`} sub="All time" color="#00C896" />
+        <StatCard icon="📋" label="Active Orders" value={pendingTrades.length} sub="Open trades" color="#8A9BB8" />
+      </div>
 
       {/* WRAPPER */}
       <div className="w-grid-container">
