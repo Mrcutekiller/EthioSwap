@@ -1058,7 +1058,7 @@ const DesktopSidebar = ({ page, setPage, user, logout }) => {
       </div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 8px' }}>
         {navItems.map(item => (
-          <button key={item.id} onClick={() => setPage(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: page === item.id ? '#F5A623' : '#8A9BB8', background: page === item.id ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: page === item.id ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button key={item.id} onClick={() => { setPage(item.id); if (item.id === 'wallet') setWalletInitialTab('balance'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: page === item.id ? '#F5A623' : '#8A9BB8', background: page === item.id ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: page === item.id ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
             <i className={item.icon} style={{ fontSize: '20px' }}></i>
             <span style={{ fontWeight: page === item.id ? 700 : 500 }}>{item.label}</span>
           </button>
@@ -1112,6 +1112,7 @@ const MobileBottomNav = ({ page, setPage }) => {
 const AppContent = () => {
   const { user, logout, isLocked, setIsLocked, systemSettings, isRecoveringPassword, isProfileIncomplete } = useAuth();
   const [page, setPage] = useState('home');
+  const [walletInitialTab, setWalletInitialTab] = useState('balance');
   const [authMode, setAuthMode] = useState('login');
   const [showAuth, setShowAuth] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1179,9 +1180,19 @@ const AppContent = () => {
 
       <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
-          {page === 'home' && <UserDashboard onNavigate={setPage} onNavigateToSeller={navigateToSeller} />}
+          {page === 'home' && (
+            <UserDashboard
+              onNavigate={(targetPage, subTab) => {
+                setPage(targetPage);
+                if (targetPage === 'wallet') {
+                  setWalletInitialTab(subTab || 'balance');
+                }
+              }}
+              onNavigateToSeller={navigateToSeller}
+            />
+          )}
           {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
-          {page === 'wallet' && <WalletCard />}
+          {page === 'wallet' && <WalletCard initialTab={walletInitialTab} />}
           {page === 'profile' && <ProfilePage />}
           {page === 'settings' && <SettingsPage user={user} onLogout={logout} />}
           {page === 'transactions' && <TransactionHistory />}

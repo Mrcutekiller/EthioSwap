@@ -394,14 +394,12 @@ const UserDashboard = ({ onNavigate, onNavigateToSeller }) => {
         <StatCard icon="📋" label="Active Orders" value={pendingTrades.length} sub="Open trades" color="var(--text)" />
       </div>
 
-      <div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: '4px' }}>
           <QuickAction icon={<i className="ti ti-send" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Send" color="var(--teal)" onClick={() => onNavigate?.('scan')} />
-          <QuickAction icon={<i className="ti ti-download" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Receive" color="var(--teal)" onClick={() => setShowQR(true)} />
+          <QuickAction icon={<i className="ti ti-download" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Receive" color="var(--teal)" onClick={() => onNavigate?.('wallet', 'receive')} />
           <QuickAction icon={<i className="ti ti-scan" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Scan QR" color="var(--teal)" onClick={() => onNavigate?.('scan')} />
-          <QuickAction icon={<i className="ti ti-arrow-up" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Withdraw" color="var(--teal)" onClick={() => onNavigate?.('wallet')} />
+          <QuickAction icon={<i className="ti ti-arrow-up" style={{ fontSize: '20px', color: 'var(--teal)' }}></i>} label="Withdraw" color="var(--teal)" onClick={() => onNavigate?.('wallet', 'withdraw')} />
         </div>
-      </div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

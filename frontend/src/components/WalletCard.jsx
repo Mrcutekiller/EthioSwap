@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getNetworkAddress } from '../utils/crypto.js';
 
@@ -125,7 +125,7 @@ const compressImage = (file) => new Promise((resolve, reject) => {
   };
 });
 
-const WalletCard = () => {
+const WalletCard = ({ initialTab = 'balance' }) => {
   const {
     user, wallet, systemSettings,
     withdrawETH, myDepositReqs, myWithdrawalReqs,
@@ -133,9 +133,17 @@ const WalletCard = () => {
     transferToUser,
   } = useAuth();
 
-  const [tab, setTab] = useState('balance');
+  const [tab, setTab] = useState(initialTab);
   const [copied, setCopied] = useState(false);
   const [qrNet, setQrNet] = useState('trc20');
+
+  useEffect(() => {
+    setTab(initialTab);
+    // Reset wizard states when tab changes
+    setSendType(initialTab === 'send' ? 'user' : null);
+    setReceiveType(null);
+    setWdType(null);
+  }, [initialTab]);
 
   // Deposit/Receive Chain flow
   const [depStep, setDepStep] = useState(1);
@@ -559,6 +567,7 @@ const WalletCard = () => {
           border-color: rgba(245, 166, 35, 0.3);
           transform: translateY(-4px);
           background: rgba(32, 38, 61, 0.8);
+        }
         .w-choice-btn:active {
           transform: translateY(-1px);
         }
@@ -623,43 +632,7 @@ const WalletCard = () => {
             </div>
           </div>
 
-          {/* QUICK DEPOSIT QR CARD (Desktop Only) */}
-          <div className="w-desktop-only-qr">
-            <div className="w-card" style={{ padding: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Quick Deposit Address
-              </div>
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                {NETWORKS.map(n => (
-                  <button key={n.id} onClick={() => setQrNet(n.id)} style={{
-                    padding: '4px 10px', borderRadius: '6px',
-                    border: `1.5px solid ${qrNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
-                    background: qrNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
-                    color: qrNet === n.id ? '#fff' : '#8b92a8',
-                    fontSize: '10px', fontWeight: 700, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s ease',
-                  }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: n.color }} />
-                    {n.label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ background: 'white', padding: '6px', borderRadius: '10px', flexShrink: 0 }}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=80&data=${qrAddress}`} alt="QR" style={{ width: 68, height: 68, display: 'block' }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '9px', color: '#8A9BB8', fontWeight: 600, marginBottom: '4px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
-                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '8px', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: '10px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.4, marginBottom: '6px' }}>
-                    {qrAddress || 'No address assigned'}
-                  </div>
-                  <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '6px', fontSize: '11px' }}>
-                    {copied ? '✓ Copied!' : '📋 Copy Address'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* QUICK DEPOSIT QR CARD removed from default view as per user request */}
         </div>
 
         {/* RIGHT COLUMN: Tabs Navigation + Active Content Panel */}
@@ -686,43 +659,7 @@ const WalletCard = () => {
             {tab === 'balance' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                {/* MOBILE ONLY DEPOSIT ADDRESS */}
-                <div className="w-mobile-only-qr">
-                  <div className="w-card" style={{ padding: '20px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      <i className="ti ti-arrow-down" style={{ marginRight: '6px' }}></i>Your Deposit Address
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                      {NETWORKS.map(n => (
-                        <button key={n.id} onClick={() => setQrNet(n.id)} style={{
-                          padding: '6px 12px', borderRadius: '8px',
-                          border: `1.5px solid ${qrNet === n.id ? n.color : 'rgba(255,255,255,0.06)'}`,
-                          background: qrNet === n.id ? 'rgba(255,255,255,0.03)' : 'transparent',
-                          color: qrNet === n.id ? '#fff' : '#8b92a8',
-                          fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
-                        }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.color }} />
-                          {n.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <div style={{ background: 'white', padding: '8px', borderRadius: '12px', flexShrink: 0, margin: '0 auto' }}>
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=96&data=${qrAddress}`} alt="QR" style={{ width: 80, height: 80, display: 'block' }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px' }}>Send {qrNet.toUpperCase()} USDT to this address</div>
-                        <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', wordBreak: 'break-all', color: '#F5A623', lineHeight: 1.6, marginBottom: '10px' }}>
-                          {qrAddress || 'No address assigned'}
-                        </div>
-                        <button onClick={() => handleCopy(qrAddress)} className="w-btn-secondary" style={{ width: '100%', padding: '8px' }}>
-                          {copied ? '✓ Copied!' : '📋 Copy Address'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* MOBILE ONLY DEPOSIT ADDRESS removed from default view as per user request */}
 
                 {/* RECENT TRANSACTIONS */}
                 {history.length > 0 ? (
