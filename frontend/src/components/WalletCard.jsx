@@ -358,16 +358,19 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         throw new Error("You cannot send funds to yourself.");
       }
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('username, email, full_name, profile_pic')
-        .or(`username.ilike.${queryVal},email.ilike.${queryVal}`)
-        .single();
+      const { data, error } = await supabase.rpc('get_user_by_username_or_email', {
+        search_query: queryVal
+      });
 
-      if (error || !data) {
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const recipient = data && data.length > 0 ? data[0] : null;
+      if (!recipient) {
         throw new Error("Recipient not found. Please verify the username or email.");
       }
-      setFoundRecipient(data);
+      setFoundRecipient(recipient);
     } catch (err) {
       setLookupError(err.message);
     } finally {

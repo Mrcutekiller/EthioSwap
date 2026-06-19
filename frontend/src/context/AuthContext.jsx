@@ -1026,81 +1026,27 @@ export const AuthProvider = ({ children }) => {
         throw new Error("You cannot transfer funds to yourself.");
       }
 
-      // 1. Find recipient
-      const { data: recipient, error: findErr } = await supabase
-        .from('users')
-        .select('id, eth_balance, username')
-        .ilike('username', cleanUsername)
-        .single();
-      
-      if (findErr || !recipient) {
-        throw new Error(`User @${cleanUsername} not found.`);
+      // Call the secure RPC function to perform the transfer in one database transaction
+      const { error: transferErr } = await supabase.rpc('execute_internal_transfer', {
+        recipient_username: cleanUsername,
+        transfer_amount: amountUSD
+      });
+
+      if (transferErr) {
+        throw new Error(transferErr.message);
       }
 
-      // 2. Fetch sender current balance
-      const { data: senderData, error: senderErr } = await supabase
+      // The execution succeeded, fetch the sender's new balance to update local state
+      const { data: newBalanceData, error: balErr } = await supabase
         .from('users')
         .select('eth_balance')
         .eq('id', user.id)
         .single();
-      if (senderErr) throw senderErr;
+      
+      const newSenderBalance = balErr ? (user.eth_balance - amountUSD) : newBalanceData.eth_balance;
 
-      const senderBalance = senderData?.eth_balance || 0;
-      if (senderBalance < amountUSD) {
-        throw new Error(`Insufficient balance. Available: $${senderBalance.toFixed(2)}`);
-      }
-
-      // 3. Deduct from sender
-      const newSenderBalance = senderBalance - amountUSD;
-      const { error: deductErr } = await supabase
-        .from('users')
-        .update({ eth_balance: newSenderBalance })
-        .eq('id', user.id);
-      if (deductErr) throw deductErr;
-
-      // 4. Add to recipient
-      const newRecipientBalance = (recipient.eth_balance || 0) + amountUSD;
-      const { error: creditErr } = await supabase
-        .from('users')
-        .update({ eth_balance: newRecipientBalance })
-        .eq('id', recipient.id);
-      if (creditErr) throw creditErr;
-
-      // 5. Log transfer (withdraw_request for sender, deposit_request for recipient)
-      await supabase.from('withdraw_requests').insert({
-        user_id: user.id,
-        amount_eth: amountUSD / ETH_USD_PRICE,
-        amount_usd: amountUSD,
-        address: `@${recipient.username}`,
-        wallet_type: 'INTERNAL',
-        username: user.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-      });
-
-      await supabase.from('deposit_requests').insert({
-        user_id: recipient.id,
-        amount_usd: amountUSD,
-        amount_eth: amountUSD / ETH_USD_PRICE,
-        screenshot_url: '',
-        wallet_type: 'INTERNAL',
-        sender_reference: `@${user.username}`,
-        username: recipient.username,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-      });
-
-      // 6. Create notifications
-      await createNotification(
-        recipient.id,
-        'transfer_received',
-        'Transfer Received',
-        `You received $${amountUSD.toFixed(2)} USD from @${user.username}.`
-      );
-
-      // Update local sender state
       setUser(prev => ({ ...prev, eth_balance: newSenderBalance }));
-      setSuccess(`Successfully transferred $${amountUSD.toFixed(2)} USD to @${recipient.username}!`);
+      setSuccess(`Successfully transferred $${amountUSD.toFixed(2)} USD to @${cleanUsername}!`);
       return { success: true };
     } catch (err) {
       setError(err.message);
