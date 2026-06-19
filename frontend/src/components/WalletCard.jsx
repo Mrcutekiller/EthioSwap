@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getNetworkAddress } from '../utils/crypto.js';
+import { supabase } from '../lib/supabase';
 
 const fmt = (n, d = 2) => (+(n ?? 0)).toFixed(d);
 const fmtEtb = (n) => Math.round(n ?? 0).toLocaleString();
@@ -172,12 +173,24 @@ const WalletCard = ({ initialTab = 'balance' }) => {
   const [copied, setCopied] = useState(false);
   const [qrNet, setQrNet] = useState('trc20');
 
+  // User verification send states
+  const [sendStep, setSendStep] = useState(1);
+  const [sendQuery, setSendQuery] = useState('');
+  const [foundRecipient, setFoundRecipient] = useState(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+
   useEffect(() => {
     setTab(initialTab);
     // Reset wizard states when tab changes
     setSendType(initialTab === 'send' ? 'user' : null);
     setReceiveType(null);
     setWdType(null);
+    setSendStep(1);
+    setSendQuery('');
+    setFoundRecipient(null);
+    setLookupError('');
+    setSendAmt('');
   }, [initialTab]);
 
   // Deposit/Receive Chain flow
@@ -334,8 +347,36 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     finally { setWdLoading(false); }
   };
 
+  const handleUserLookup = async () => {
+    if (!sendQuery.trim()) return;
+    setLookupLoading(true);
+    setLookupError('');
+    setFoundRecipient(null);
+    try {
+      const queryVal = sendQuery.trim().replace('@', '');
+      if (queryVal.toLowerCase() === user.username.toLowerCase() || queryVal.toLowerCase() === user.email.toLowerCase()) {
+        throw new Error("You cannot send funds to yourself.");
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('username, email, full_name, profile_pic')
+        .or(`username.ilike.${queryVal},email.ilike.${queryVal}`)
+        .single();
+
+      if (error || !data) {
+        throw new Error("Recipient not found. Please verify the username or email.");
+      }
+      setFoundRecipient(data);
+    } catch (err) {
+      setLookupError(err.message);
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
   const handleInternalSendSubmit = async () => {
-    if (!sendUsername.trim()) { setError('Please enter a username'); return; }
+    if (!foundRecipient) { setError('Please verify the recipient first'); return; }
     const amt = parseFloat(sendAmt) || 0;
     if (amt <= 0) { setError('Enter a valid amount'); return; }
     if (amt > available) { setError(`Max available: $${fmt(available)}`); return; }
@@ -343,9 +384,11 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     setSendLoading(true);
     setSuccess('Processing transfer...');
     try {
-      await transferToUser(sendUsername, amt);
-      setSendUsername('');
+      await transferToUser(foundRecipient.username, amt);
+      setSendQuery('');
+      setFoundRecipient(null);
       setSendAmt('');
+      setSendStep(1);
       setSendType(null);
       setWdType(null);
     } catch (err) {
@@ -694,7 +737,17 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             {TABS.map(t => (
               <button
                 key={t.id}
-                onClick={() => { setTab(t.id); setSendType(t.id === 'send' ? 'user' : null); setReceiveType(null); setWdType(null); }}
+                onClick={() => {
+                  setTab(t.id);
+                  setSendType(t.id === 'send' ? 'user' : null);
+                  setReceiveType(null);
+                  setWdType(null);
+                  setSendStep(1);
+                  setSendQuery('');
+                  setFoundRecipient(null);
+                  setLookupError('');
+                  setSendAmt('');
+                }}
                 className={`w-tab-btn ${tab === t.id ? 'active' : ''}`}
               >
                 <i className={t.icon} style={{ fontSize: '20px' }}></i>
@@ -709,10 +762,6 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             {/* BALANCE TAB CONTENT */}
             {tab === 'balance' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
-                {/* MOBILE ONLY DEPOSIT ADDRESS removed from default view as per user request */}
-
-                {/* RECENT TRANSACTIONS */}
                 {history.length > 0 ? (
                   <div className="w-card" style={{ padding: '20px' }}>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>
@@ -811,7 +860,6 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(12px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedWalletTx(null)}>
             <div style={{ background: '#fff', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,166,35,0.25)', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
-              {/* Header */}
               <div style={{ background: 'linear-gradient(135deg, #0a0c18 0%, #141827 100%)', padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(245,166,35,0.08)', filter: 'blur(20px)', pointerEvents: 'none' }} />
                 <button onClick={() => setSelectedWalletTx(null)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,255,255,0.08)', border: 'none', width: '26px', height: '26px', borderRadius: '50%', color: '#fff', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -825,7 +873,6 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                 <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
               </div>
 
-              {/* Body */}
               <div style={{ padding: '18px 22px 22px' }}>
                 <div style={{ borderBottom: '2px dashed #e7e5e4', paddingBottom: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#44403c' }}>
                   {[
@@ -898,42 +945,129 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Send to User</div>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>RECIPIENT USERNAME</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 700, color: '#8A9BB8' }}>@</span>
-                <input
-                  type="text"
-                  value={sendUsername}
-                  onChange={e => setSendUsername(e.target.value)}
-                  placeholder="username"
-                  className="w-input"
-                  style={{ padding: '13px 16px 13px 32px' }}
-                />
+            {sendStep === 1 ? (
+              <div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>RECIPIENT USERNAME OR EMAIL</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={sendQuery}
+                      onChange={e => {
+                        setSendQuery(e.target.value);
+                        if (foundRecipient) setFoundRecipient(null);
+                        if (lookupError) setLookupError('');
+                      }}
+                      placeholder="Enter username or email address"
+                      className="w-input"
+                      style={{ padding: '13px 16px' }}
+                    />
+                  </div>
+                </div>
+
+                {lookupError && (
+                  <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i>
+                    <span>{lookupError}</span>
+                  </div>
+                )}
+
+                {foundRecipient && (
+                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    {foundRecipient.profile_pic ? (
+                      <img src={foundRecipient.profile_pic} alt="" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #F5A623' }} />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px' }}>
+                        {(foundRecipient.username || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>@{foundRecipient.username}</div>
+                      {foundRecipient.full_name && <div style={{ fontSize: '13px', color: '#8A9BB8' }}>{foundRecipient.full_name}</div>}
+                      <div style={{ fontSize: '12px', color: '#8A9BB8', fontFamily: 'var(--font-mono)' }}>{foundRecipient.email}</div>
+                    </div>
+                  </div>
+                )}
+
+                {!foundRecipient ? (
+                  <button
+                    onClick={handleUserLookup}
+                    disabled={lookupLoading || !sendQuery.trim()}
+                    className="w-btn-primary"
+                  >
+                    {lookupLoading ? '⏳ Searching...' : '🔍 Find Recipient'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setSendStep(2)}
+                    className="w-btn-primary"
+                  >
+                    Continue <i className="ti ti-arrow-right" style={{ marginLeft: '6px' }}></i>
+                  </button>
+                )}
               </div>
-            </div>
+            ) : (
+              <div>
+                {/* BACK TO RECIPIENT */}
+                <button
+                  type="button"
+                  onClick={() => setSendStep(1)}
+                  className="w-btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', padding: '8px 12px' }}
+                >
+                  <i className="ti ti-arrow-left"></i> Change Recipient
+                </button>
 
-            <div style={{ position: 'relative', marginBottom: '20px' }}>
-              <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
-              <span style={{ position: 'absolute', left: '16px', top: '42px', transform: 'translateY(-50%)', fontSize: '18px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
-              <input
-                type="number"
-                step="0.01"
-                value={sendAmt}
-                onChange={e => setSendAmt(e.target.value)}
-                placeholder="0.00"
-                className="w-input"
-                style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
-              />
-            </div>
+                {/* SHOW RECIPIENT BRIEF */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  {foundRecipient.profile_pic ? (
+                    <img src={foundRecipient.profile_pic} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px' }}>
+                      {(foundRecipient.username || 'U')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Sending to: <span style={{ color: '#F5A623' }}>@{foundRecipient.username}</span></div>
+                    <div style={{ fontSize: '11px', color: '#8A9BB8' }}>{foundRecipient.email}</div>
+                  </div>
+                </div>
 
-            <button
-              onClick={handleInternalSendSubmit}
-              disabled={sendLoading || !sendUsername.trim() || !sendAmt}
-              className="w-btn-primary"
-            >
-              {sendLoading ? '⏳ Processing...' : '✓ Send Instantly'}
-            </button>
+                <div style={{ position: 'relative', marginBottom: '20px' }}>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px' }}>AMOUNT (USD)</label>
+                  <span style={{ position: 'absolute', left: '16px', top: '42px', transform: 'translateY(-50%)', fontSize: '18px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={sendAmt}
+                    onChange={e => setSendAmt(e.target.value)}
+                    placeholder="0.00"
+                    className="w-input"
+                    style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
+                  />
+                  <div style={{ marginTop: '6px', fontSize: '12px', color: '#8A9BB8', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Available balance: <strong>${fmt(available)}</strong></span>
+                    {available > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSendAmt(available.toFixed(2))}
+                        style={{ background: 'none', border: 'none', color: '#F5A623', cursor: 'pointer', fontWeight: 700, fontSize: '12px', padding: 0 }}
+                      >
+                        Send Max
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleInternalSendSubmit}
+                  disabled={sendLoading || !sendAmt || parseFloat(sendAmt) <= 0 || parseFloat(sendAmt) > available}
+                  className="w-btn-primary"
+                >
+                  {sendLoading ? '⏳ Processing...' : '✓ Send Instantly'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

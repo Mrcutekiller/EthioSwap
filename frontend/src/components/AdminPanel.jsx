@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
 import { supabase } from '../lib/supabase';
@@ -322,6 +322,56 @@ const AdminPanel = ({ user }) => {
     };
     loadLogs();
   }, [user]);
+
+  const depositAnalytics = useMemo(() => {
+    const deps = allDepositReqs || [];
+    const approved = deps.filter(r => r.status === 'approved');
+
+    const chainTotals = {
+      TRC20: 0,
+      ERC20: 0,
+      BEP20: 0,
+      APTOS: 0
+    };
+    
+    let totalBinanceNet = 0;
+    let totalBybitNet = 0;
+
+    approved.forEach(r => {
+      const type = (r.wallet_type || '').trim().toUpperCase();
+      const amt = r.amount_usd || 0;
+      
+      if (type === 'BINANCE') {
+        totalBinanceNet += amt;
+      } else if (type === 'BYBIT') {
+        totalBybitNet += amt;
+      } else if (type === 'TRC20' || type === 'TRC-20') {
+        chainTotals.TRC20 += amt;
+      } else if (type === 'ERC20' || type === 'ERC-20') {
+        chainTotals.ERC20 += amt;
+      } else if (type === 'BEP20' || type === 'BEP-20' || type === 'BSC') {
+        chainTotals.BEP20 += amt;
+      } else if (type === 'APTOS') {
+        chainTotals.APTOS += amt;
+      }
+    });
+
+    const totalBinanceGross = totalBinanceNet * 1.05;
+    const totalBybitGross = totalBybitNet * 1.05;
+
+    return {
+      chainTotals,
+      binance: {
+        net: totalBinanceNet,
+        gross: totalBinanceGross
+      },
+      bybit: {
+        net: totalBybitNet,
+        gross: totalBybitGross
+      },
+      totalMustHaveBinanceBybit: totalBinanceGross + totalBybitGross
+    };
+  }, [allDepositReqs]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -1906,6 +1956,102 @@ const AdminPanel = ({ user }) => {
                       <div className="admin-stat-label">Pending KYC</div>
                       <div className="admin-stat-value">{adminAnalytics.today.pendingKyc}</div>
                       <div className="admin-stat-sub">Awaiting review</div>
+                    </div>
+                  </div>
+
+                  {/* DEPOSIT ACCOUNTING METRICS CARD */}
+                  <div className="card-premium" style={{ padding: '24px', marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f0f2f8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>💰</span> Deposit Accounting & Reconciliation
+                      </h3>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>
+                        Live reconciliation of approved deposits by network/method and expected balances.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+                      
+                      {/* On-Chain Deposits */}
+                      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '16px' }}>
+                        <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                          🔗 On-Chain Deposits
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {Object.entries(depositAnalytics.chainTotals).map(([chain, total]) => (
+                            <div key={chain} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>{chain}</span>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                                ${total.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                          <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#00C896', fontWeight: 700 }}>Total Chain</span>
+                            <span style={{ fontSize: '15px', fontWeight: 800, color: '#00C896', fontFamily: 'monospace' }}>
+                              ${Object.values(depositAnalytics.chainTotals).reduce((a, b) => a + b, 0).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Binance / Bybit Deposits */}
+                      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '16px' }}>
+                        <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                          💳 Binance & Bybit User Deposits (Net)
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>🔶 Binance Pay (Net)</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                              ${depositAnalytics.binance.net.toFixed(2)}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>🟡 Bybit Transfer (Net)</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                              ${depositAnalytics.bybit.net.toFixed(2)}
+                            </span>
+                          </div>
+                          <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#F5A623', fontWeight: 700 }}>Total User Deposit (Net)</span>
+                            <span style={{ fontSize: '15px', fontWeight: 800, color: '#F5A623', fontFamily: 'monospace' }}>
+                              ${(depositAnalytics.binance.net + depositAnalytics.bybit.net).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Required Balances (Gross + Fee) */}
+                      <div style={{ background: 'rgba(245,166,35,0.03)', border: '1px solid rgba(245,166,35,0.1)', borderRadius: '16px', padding: '16px' }}>
+                        <div style={{ fontSize: '11px', color: '#F5A623', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                          🏦 What You Must Have in Binance / Bybit (Gross)
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>Binance Account (incl. 5% fee)</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                              ${depositAnalytics.binance.gross.toFixed(2)}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#8b92a8', fontWeight: 600 }}>Bybit Account (incl. 5% fee)</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                              ${depositAnalytics.bybit.gross.toFixed(2)}
+                            </span>
+                          </div>
+                          <div style={{ height: '1px', background: 'rgba(245,166,35,0.15)', margin: '4px 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', color: '#FFE082', fontWeight: 800 }}>Total Required Balance</span>
+                            <span style={{ fontSize: '16px', fontWeight: 800, color: '#FFE082', fontFamily: 'monospace' }}>
+                              ${depositAnalytics.totalMustHaveBinanceBybit.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
