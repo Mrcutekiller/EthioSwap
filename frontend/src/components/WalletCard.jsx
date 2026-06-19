@@ -678,21 +678,8 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         }
       `}</style>
 
-      {/* STAT CARDS ROW */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <StatCard icon="💰" label="Total Balance" value={`$${fmt(balance)}`} sub="Your USDT wallet" color="#F5A623" />
-        <StatCard icon="📤" label="Total Sent" value={`$${fmt(totalVolume || 0)}`} sub="All time" color="#FF4D4D" />
-        <StatCard icon="📥" label="Total Received" value={`$${fmt(totalDeposited || 0)}`} sub="All time" color="#00C896" />
-        <StatCard icon="📋" label="Active Orders" value={pendingTrades.length} sub="Open trades" color="#8A9BB8" />
-      </div>
-
-      {/* WRAPPER */}
-      <div className="w-grid-container">
-        {/* LEFT COLUMN: Wallet Hero + QR Info Card (Desktop Only) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* HERO CARD */}
-          <div className="w-hero-card">
+      {/* 1. HERO CARD */}
+      <div className="w-hero-card" style={{ marginBottom: '20px' }}>
             <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(245, 166, 35, 0.12)', filter: 'blur(50px)', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '180px', height: '180px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.04)', filter: 'blur(50px)', pointerEvents: 'none' }} />
             
@@ -729,13 +716,10 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             </div>
           </div>
 
-          {/* QUICK DEPOSIT QR CARD removed from default view as per user request */}
-        </div>
-
-        {/* RIGHT COLUMN: Tabs Navigation + Active Content Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* TABS BAR */}
+      {/* 2. TABS BAR + ACTIVE CONTENT PANEL */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
+        
+        {/* TABS BAR */}
           <div style={{ display: 'flex', background: 'rgba(20, 24, 39, 0.7)', border: '1px solid rgba(30, 38, 64, 0.8)', borderRadius: '16px', padding: '5px', gap: '5px' }}>
             {TABS.map(t => (
               <button
@@ -840,7 +824,6 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             )}
           </div>
         </div>
-      </div>
 
       {/* ── Wallet Transaction Receipt Modal ── */}
       {selectedWalletTx && (() => {
@@ -1601,6 +1584,14 @@ const WalletCard = ({ initialTab = 'balance' }) => {
           )}
         </div>
       )}
+
+      {/* 3. STAT CARDS ROW */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginTop: '24px' }}>
+        <StatCard icon="💰" label="Total Balance" value={`$${fmt(balance)}`} sub="Your USDT wallet" color="#F5A623" />
+        <StatCard icon="📤" label="Total Sent" value={`$${fmt(totalVolume || 0)}`} sub="All time" color="#FF4D4D" />
+        <StatCard icon="📥" label="Total Received" value={`$${fmt(totalDeposited || 0)}`} sub="All time" color="#00C896" />
+        <StatCard icon="📋" label="Active Orders" value={pendingTrades.length} sub="Open trades" color="#8A9BB8" />
+      </div>
 
     </div>
   );
