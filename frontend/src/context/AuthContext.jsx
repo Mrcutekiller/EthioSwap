@@ -1021,7 +1021,10 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const cleanUsername = recipientUsername.trim().replace('@', '');
+      let cleanUsername = recipientUsername.trim();
+      if (cleanUsername.startsWith('@')) {
+        cleanUsername = cleanUsername.substring(1);
+      }
       if (cleanUsername.toLowerCase() === user.username.toLowerCase()) {
         throw new Error("You cannot transfer funds to yourself.");
       }

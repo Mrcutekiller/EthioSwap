@@ -353,7 +353,10 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     setLookupError('');
     setFoundRecipient(null);
     try {
-      const queryVal = sendQuery.trim().replace('@', '');
+      let queryVal = sendQuery.trim();
+      if (queryVal.startsWith('@')) {
+        queryVal = queryVal.substring(1);
+      }
       if (queryVal.toLowerCase() === user.username.toLowerCase() || queryVal.toLowerCase() === user.email.toLowerCase()) {
         throw new Error("You cannot send funds to yourself.");
       }
