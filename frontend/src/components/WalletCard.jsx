@@ -833,6 +833,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         const item = selectedWalletTx;
         const isDep = item.isDep;
         const amt = item.amt;
+        const isInternal = item.wallet_type === 'INTERNAL';
         const fromStr = isDep ? (
           (() => {
             if (item.sender_reference && item.sender_reference.startsWith('{')) {
@@ -900,12 +901,18 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#78716c' }}>Platform Fee</span>
-                    <span style={{ fontWeight: 700, color: '#059669' }}>FREE ✓</span>
+                    {isInternal ? (
+                      <span style={{ fontWeight: 700, color: '#059669' }}>FREE ✓</span>
+                    ) : (
+                      <span style={{ fontWeight: 600, color: '#FF4D4D', fontFamily: 'monospace' }}>-${fmt(amt * platformFeePercent / 100)} USDT ({platformFeePercent}%)</span>
+                    )}
                   </div>
                   <div style={{ height: 1, background: '#e7e5e4' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px', color: '#1c1917' }}>
-                    <span>TOTAL NET</span>
-                    <span style={{ color: '#047857', fontFamily: 'monospace' }}>${fmt(amt)} USDT</span>
+                    <span>{isDep ? 'TOTAL NET CREDIT' : 'TOTAL NET DEDUCTED'}</span>
+                    <span style={{ color: '#047857', fontFamily: 'monospace' }}>
+                      ${fmt(isDep ? (isInternal ? amt : amt * (1 - platformFeePercent / 100)) : (isInternal ? amt : amt * (1 + platformFeePercent / 100)))} USDT
+                    </span>
                   </div>
                 </div>
 
@@ -1175,11 +1182,24 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                       style={{ padding: '14px 16px 14px 36px', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
-                  {parseFloat(bbAmount) > 0 && (
-                    <div style={{ marginTop: '6px', fontSize: '12px', color: '#8A9BB8' }}>
-                      Estimated credit amount (excl. {platformFeePercent}% fee): <strong style={{ color: '#00C896' }}>${(parseFloat(bbAmount) * (1 - platformFeePercent / 100)).toFixed(2)} USD</strong>
-                    </div>
-                  )}
+                  {parseFloat(bbAmount) > 0 && (() => {
+                    const amtVal = parseFloat(bbAmount);
+                    const platFee = amtVal * platformFeePercent / 100;
+                    const netCred = Math.max(0, amtVal - platFee);
+                    return (
+                      <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                          <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+                        </div>
+                        <FeePill label="Deposit Amount" value={`$${fmt(amtVal)} USDT`} color="#fff" />
+                        <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(platFee)} USDT`} color="#FF4D4D" />
+                        <FeePill label="Transfer Fee (Binance/Bybit)" value="FREE" color="#00C896" />
+                        <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
+                        <FeePill label="💰 You Receive in Wallet" value={`$${fmt(netCred)} USDT`} color="#00C896" />
+                        <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(netCred * rate)} ETB</div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div>

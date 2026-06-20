@@ -428,18 +428,26 @@ export const AutoScrollingBills = ({ direction = 'up', speed = '20s', size = 'md
 
 const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ traders: 0, volume: 0, avg: '0.0', scams: 0 });
+  const [stats, setStats] = useState({ traders: 0, deposited: 0, traded: 0, avg: '0.0', scams: 0 });
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
-      const [usersRes, depositsRes, reviewsRes] = await Promise.all([
+      const [usersRes, depositsRes, tradesRes, reviewsRes] = await Promise.all([
         supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('deposit_requests').select('amount_usd').eq('status', 'approved'),
+        supabase.from('trades').select('amount_usd').eq('status', 'completed'),
         supabase.from('reviews').select('*').eq('is_approved', true),
       ]);
-      const totalVolume = (depositsRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
-      setStats({ traders: usersRes.count || 0, volume: totalVolume, avg: '4.8', scams: 0 });
+      const totalDeposited = (depositsRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
+      const totalTraded = (tradesRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
+      setStats({
+        traders: usersRes.count || 0,
+        deposited: totalDeposited,
+        traded: totalTraded,
+        avg: '4.8',
+        scams: 0
+      });
       setReviews(reviewsRes.data || []);
     };
     loadData();
@@ -1046,26 +1054,33 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
 
               {/* Stats Row */}
-              <div style={{ display: 'flex', gap: width < 768 ? '24px' : '48px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start' }}>
+              <div style={{ display: 'flex', gap: width < 768 ? '20px' : '36px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '26px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
                     <AnimatedCounter value={stats.traders} suffix="+" />
                   </span>
-                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>Active traders</span>
+                  <span style={{ fontSize: width < 768 ? '11px' : '13px', color: 'var(--text-dim)', fontWeight: 600 }}>Active traders</span>
                 </div>
-                <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
+                <div style={{ width: '1px', height: '24px', background: 'var(--border)', alignSelf: 'center' }} />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
-                    <AnimatedCounter value={stats.volume} prefix="$" />
+                  <span style={{ fontSize: width < 768 ? '20px' : '26px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                    <AnimatedCounter value={stats.deposited} prefix="$" />
                   </span>
-                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>USDT traded</span>
+                  <span style={{ fontSize: width < 768 ? '11px' : '13px', color: 'var(--text-dim)', fontWeight: 600 }}>USDT Deposited</span>
                 </div>
-                <div style={{ width: '1px', height: '30px', background: 'var(--border)', alignSelf: 'center' }} />
+                <div style={{ width: '1px', height: '24px', background: 'var(--border)', alignSelf: 'center' }} />
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: width < 768 ? '20px' : '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '26px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
+                    <AnimatedCounter value={stats.traded} prefix="$" />
+                  </span>
+                  <span style={{ fontSize: width < 768 ? '11px' : '13px', color: 'var(--text-dim)', fontWeight: 600 }}>USDT Traded</span>
+                </div>
+                <div style={{ width: '1px', height: '24px', background: 'var(--border)', alignSelf: 'center' }} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: width < 768 ? '20px' : '26px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>
                     <AnimatedCounter value={stats.avg} suffix="★" isDecimal={true} />
                   </span>
-                  <span style={{ fontSize: width < 768 ? '12px' : '14px', color: 'var(--text-dim)', fontWeight: 600 }}>User rating</span>
+                  <span style={{ fontSize: width < 768 ? '11px' : '13px', color: 'var(--text-dim)', fontWeight: 600 }}>User rating</span>
                 </div>
               </div>
             </div>
