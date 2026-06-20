@@ -48,6 +48,7 @@ const P2PListings = () => {
   const [sortBy, setSortBy] = useState('rate_asc');
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [onlyKyc, setOnlyKyc] = useState(false);
+  const [onlyMyAds, setOnlyMyAds] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
 
@@ -228,7 +229,9 @@ const P2PListings = () => {
   // ── Filter and Sort listings ──────────────────────────────
   const filtered = listings
     .filter(l => {
-      const matchesType = p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy');
+      const isOwnListing = l.seller_id === user?.id;
+      const matchesMyAds = !onlyMyAds || isOwnListing;
+      const matchesType = onlyMyAds || (p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy'));
       const matchesPayment = filterPayment === 'All' || l.payment_methods.includes(filterPayment);
       
       let matchesAmount = true;
@@ -265,7 +268,7 @@ const P2PListings = () => {
         }
       }
 
-      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc;
+      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesMyAds;
     })
     .sort((a, b) => {
       const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
@@ -929,6 +932,23 @@ const P2PListings = () => {
           }}
         >
           🛡️ KYC Verified Only
+        </button>
+        <button
+          onClick={() => setOnlyMyAds(!onlyMyAds)}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            border: '1px solid',
+            background: onlyMyAds ? 'rgba(0, 200, 255, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+            borderColor: onlyMyAds ? '#00c8ff' : 'rgba(255, 255, 255, 0.08)',
+            color: onlyMyAds ? '#00c8ff' : '#8b92a8',
+            transition: 'all 0.2s',
+          }}
+        >
+          👤 My Ads Only
         </button>
       </div>
 
