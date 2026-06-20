@@ -23,6 +23,7 @@ const repColor = (rep) => rep >= 95 ? '#10B981' : rep >= 80 ? '#E8B84B' : '#EF44
 
 const P2PListings = () => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
+  const minP2pListing = 0.01;
 
   const [viewingTraderId, setViewingTraderId] = useState(null);
   const [p2pTab, setP2pTabState] = useState(() => {
@@ -130,7 +131,6 @@ const P2PListings = () => {
       alert('Please fill in all fields.');
       return;
     }
-    const minP2pListing = systemSettings?.minP2pListingUsd ?? 1.0;
     if (parseFloat(amount_eth) < minP2pListing) {
       alert(`Minimum ad amount is $${minP2pListing.toFixed(2)} USD.`);
       return;
@@ -194,8 +194,7 @@ const P2PListings = () => {
     }
     setTradeError('');
     const amt = parseFloat(tradeamount_eth);
-    const minP2pListingVal = systemSettings?.minP2pListingUsd ?? 1.0;
-    if (isNaN(amt) || amt < minP2pListingVal) { setTradeError(`Minimum transaction amount is $${minP2pListingVal.toFixed(2)} USD.`); return; }
+    if (isNaN(amt) || amt < minP2pListing) { setTradeError(`Minimum transaction amount is $${minP2pListing.toFixed(2)} USD.`); return; }
     if (amt > selectedListing.amount_eth) {
       setTradeError(`Maximum available is $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD.`);
       return;
@@ -1472,7 +1471,7 @@ const P2PListings = () => {
                       type="number" step="0.01" required
                       className="input"
                       style={{ paddingRight: '64px', height: '44px', borderRadius: '10px' }}
-                      placeholder={`Min: $${systemSettings?.minP2pListingUsd ?? '1.00'}`}
+                      placeholder={`Min: $${minP2pListing.toFixed(2)}`}
                       value={amount_eth}
                       onChange={e => setamount_eth(e.target.value)}
                     />
