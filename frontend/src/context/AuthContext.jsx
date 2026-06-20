@@ -715,6 +715,7 @@ export const AuthProvider = ({ children }) => {
       });
       if (error) throw error;
       setSuccess('Listing published!');
+      await loadListings();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -793,6 +794,7 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
       createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${(amountEth * ETH_USD_PRICE).toFixed(2)} USD.`);
       setSuccess('Trade initiated!');
+      await loadListings();
     } catch (err) {
       setError(err.message);
     } finally {

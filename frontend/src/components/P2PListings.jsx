@@ -248,7 +248,7 @@ const P2PListings = () => {
         (l.payment_methods || []).some(p => p.toLowerCase().includes(term));
 
       const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
-      const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified';
+      const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified' || l.seller_kyc_status === 'approved';
 
       // Quick amount filter calculator logic
       let matchesCalc = true;
