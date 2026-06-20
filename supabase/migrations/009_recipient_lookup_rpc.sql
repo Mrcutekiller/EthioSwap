@@ -140,6 +140,21 @@ BEGIN
     NOW()
   );
 
+  -- Log notification for sender
+  INSERT INTO notifications (
+    user_id,
+    type,
+    title,
+    message,
+    is_read
+  ) VALUES (
+    sender_id,
+    'transfer_sent',
+    'Transfer Successfully',
+    'Your transfer of $' || TO_CHAR(transfer_amount, 'FM999,999,990.00') || ' USD to @' || recipient_uname || ' was completed successfully.',
+    false
+  );
+
   -- Log notification for recipient
   INSERT INTO notifications (
     user_id,
@@ -150,8 +165,8 @@ BEGIN
   ) VALUES (
     recipient_id,
     'transfer_received',
-    'Transfer Received',
-    'You received $' || TO_CHAR(transfer_amount, 'FM999,999,990.00') || ' USD from @' || sender_uname || '.',
+    'Transfer Successfully',
+    'You received $' || TO_CHAR(transfer_amount, 'FM999,999,990.00') || ' USD from @' || sender_uname || ' successfully.',
     false
   );
 END;

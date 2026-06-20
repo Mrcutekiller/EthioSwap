@@ -455,50 +455,11 @@ export const AuthProvider = ({ children }) => {
         data.user.user_metadata?.username ||
         userEmail.split('@')[0];
 
-      // Step 2: Check role from DB — admins skip OTP entirely
-      const { data: profileRow } = await supabase
-        .from('users')
-        .select('role, username')
-        .eq('id', userId)
-        .single();
-
-      const isAdmin = profileRow?.role === 'admin';
-
-      if (isAdmin) {
-        // Admin: load profile and log in immediately — no OTP
-        const profile = await loadUserProfile(userId, data.user);
-        if (!profile) throw new Error('Admin profile not found');
-        setSuccess(`Welcome back, ${profile.username || 'Admin'}!`);
-        return { status: 'success', user: profile };
-      }
-
-      // Step 3: Regular user — sign them back out, they must verify OTP first
-      await supabase.auth.signOut();
-
-      // Step 4: Call Edge Function to generate & email the OTP
-      const { error: fnError } = await supabase.functions.invoke('send-login-otp', {
-        body: { userId, email: userEmail, name: userName },
-      });
-
-      if (fnError) {
-        // If Edge Function fails, fall back to direct login (graceful degradation)
-        console.warn('OTP send failed, allowing direct login:', fnError.message);
-        const { data: reData, error: reAuthError } = await supabase.auth.signInWithPassword({ email, password });
-        if (reAuthError) throw reAuthError;
-        const profile = await loadUserProfile(reData.user.id, reData.user);
-        if (!profile) throw new Error('User profile not found');
-        setSuccess(`Welcome back, ${profile.username}!`);
-        return { status: 'success', user: profile };
-      }
-
-      // Step 5: Return OTP_REQUIRED status — UI shows OTP input
-      return {
-        status: 'otp_required',
-        userId,
-        email: userEmail,
-        password, // kept in memory so we can re-auth after OTP verification
-        name: userName,
-      };
+      // Load profile and log in immediately — no OTP
+      const profile = await loadUserProfile(userId, data.user);
+      if (!profile) throw new Error('User profile not found');
+      setSuccess(`Welcome back, ${profile.username}!`);
+      return { status: 'success', user: profile };
     } catch (err) {
       setError(err.message);
       return null;
@@ -815,8 +776,8 @@ export const AuthProvider = ({ children }) => {
       if (!listing) throw new Error('Listing not found');
 
       const standardRate = listing.type === 'buy'
-        ? systemSettings.etbRatePerDollar
-        : (systemSettings.etbRatePerDollarSell ?? systemSettings.etbRatePerDollar);
+        ? (systemSettings.etbRatePerDollarSell ?? systemSettings.etbRatePerDollar)
+        : systemSettings.etbRatePerDollar;
       const rateToUse = listing.custom_rate_etb || standardRate;
 
       const { data: newTrade, error } = await supabase.from('trades').insert({
@@ -900,8 +861,10 @@ export const AuthProvider = ({ children }) => {
 
         setUser(prev => ({ ...prev, eth_balance: newBalance }));
         setSuccess(`Deposit successful! $${netCredit.toFixed(2)} credited to your wallet (${platformFeePercent}% fee deducted).`);
+        await createNotification(user.id, 'deposit', 'Deposit Successfully', `Your internal deposit of $${netCredit.toFixed(2)} USD was completed successfully.`);
       } else {
         setSuccess(`Deposit request of $${amountUSD.toFixed(2)} USD submitted successfully! It is pending admin verification.`);
+        await createNotification(user.id, 'deposit', 'Deposit Processing', `Your deposit request of $${amountUSD.toFixed(2)} USD is processing.`);
       }
 
       return { success: true };
@@ -922,10 +885,10 @@ export const AuthProvider = ({ children }) => {
       const totalDeduction = amountUSD + platformFee;
 
       const { data: userData, error: userErr } = await supabase
-        .from('users')
-        .select('eth_balance')
-        .eq('id', user.id)
-        .single();
+          .from('users')
+          .select('eth_balance')
+          .eq('id', user.id)
+          .single();
       if (userErr) throw userErr;
 
       const currentBalance = userData?.eth_balance || 0;
@@ -960,8 +923,10 @@ export const AuthProvider = ({ children }) => {
           await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + platformFee }).eq('id', sett.id);
         }
         setSuccess(`Withdrawal successful! $${amountUSD.toFixed(2)} sent to ${address.substring(0, 10)}... (${platformFeePercent}% fee deducted).`);
+        await createNotification(user.id, 'withdrawal', 'Withdrawal Successfully', `Your internal withdrawal of $${amountUSD.toFixed(2)} USD was completed successfully.`);
       } else {
         setSuccess(`Withdrawal request of $${amountUSD.toFixed(2)} USD submitted! Pending admin verification ($${platformFee.toFixed(2)} platform fee will be finalized on approval).`);
+        await createNotification(user.id, 'withdrawal', 'Withdrawal Processing', `Your withdrawal request of $${amountUSD.toFixed(2)} USD is processing.`);
       }
 
       setUser(prev => ({ ...prev, eth_balance: newBalance }));
@@ -1158,8 +1123,8 @@ export const AuthProvider = ({ children }) => {
       await createNotification(
         req.user_id,
         'deposit_approved',
-        'Deposit Approved',
-        `Your deposit has been approved and $${netCredit.toFixed(2)} USD credited to your wallet.`
+        'Deposit Successfully',
+        `Your deposit of $${netCredit.toFixed(2)} USD was completed successfully.`
       );
 
       await loadAllDepositRequests();
@@ -1241,8 +1206,8 @@ export const AuthProvider = ({ children }) => {
       await createNotification(
         req.user_id,
         'withdrawal_approved',
-        'Withdrawal Approved',
-        `Your withdrawal of $${withdrawAmount.toFixed(2)} USD to ${req.address.substring(0, 10)}... has been approved and sent.`
+        'Withdrawal Successfully',
+        `Your withdrawal of $${withdrawAmount.toFixed(2)} USD was completed successfully.`
       );
 
       setSuccess(`Success! $${withdrawAmount.toFixed(2)} sent to ${req.address || 'wallet'} ($${platformFee.toFixed(2)} fee recorded).`);

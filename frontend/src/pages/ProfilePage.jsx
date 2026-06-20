@@ -638,6 +638,63 @@ const ProfilePage = () => {
         </button>
       </div>
 
+      {/* ─── PAYMENT ACCOUNTS (BANK DETAILS) ─── */}
+      <div className="card" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0 }}>Payment / Bank Accounts</h3>
+          <button 
+            onClick={() => setShowAddAcc(true)}
+            style={{ 
+              background: '#00C896', color: '#04342C', border: 'none', borderRadius: '8px', 
+              padding: '6px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '4px' 
+            }}
+          >
+            <Plus size={14} /> Add Account
+          </button>
+        </div>
+
+        {/* List of saved payment accounts */}
+        {user.payment_accounts && user.payment_accounts.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {user.payment_accounts.map(acc => {
+              const matched = SUPPORTED_BANKS.find(b => b.id === acc.bankName);
+              return (
+                <div key={acc.id} style={{ 
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
+                  borderRadius: '12px', padding: '12px 14px', display: 'flex', 
+                  justifyContent: 'space-between', alignItems: 'center' 
+                }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                      <span>{matched?.icon || '🏦'}</span>
+                      <span>{matched?.label || acc.bankName}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
+                      Acc: <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{acc.accountNumber}</span> · Holder: <span style={{ color: '#fff' }}>{acc.holderName}</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteAccount(acc.id)}
+                    style={{ background: 'none', border: 'none', color: '#FF4D4D', cursor: 'pointer', padding: '6px' }}
+                    title="Delete Account"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ 
+            padding: '20px', textAlign: 'center', border: '1px dashed var(--border)', 
+            borderRadius: '12px', color: 'var(--muted)', fontSize: '13px' 
+          }}>
+            No saved bank profiles. Add one to receive birr payments.
+          </div>
+        )}
+      </div>
+
       {/* ─── QUICK ACTIONS ─────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '12px' }}>
         <button className="action-btn" onClick={() => {/* handle deposit */}}>
@@ -1120,7 +1177,66 @@ const ProfilePage = () => {
         </div>
       )}
 
+      {/* ─── ADD PAYMENT ACCOUNT MODAL ─── */}
+      {showAddAcc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowAddAcc(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
+              ✕
+            </button>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#fff' }}>Add Bank / Wallet</h3>
+            
+            <form onSubmit={handleAddAccount} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Bank or Wallet</label>
+                <select 
+                  value={newBank} 
+                  onChange={e => setNewBank(e.target.value)}
+                  style={{ width: '100%', padding: '12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                >
+                  {SUPPORTED_BANKS.map(b => (
+                    <option key={b.id} value={b.id} style={{ background: '#141827', color: '#fff' }}>
+                      {b.icon} {b.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Account / Phone Number</label>
+                <input 
+                  type="text" 
+                  value={newAccNum} 
+                  onChange={e => setNewAccNum(e.target.value)} 
+                  placeholder="Enter account number or phone"
+                  style={{ width: '100%', padding: '12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase' }}>Account Holder Name</label>
+                <input 
+                  type="text" 
+                  value={newHolder} 
+                  onChange={e => setNewHolder(e.target.value)} 
+                  placeholder="Enter full name on account"
+                  style={{ width: '100%', padding: '12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-gold btn-full" 
+                style={{ marginTop: '10px', padding: '14px', background: '#F5A623', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Add Account Profile
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -10,6 +10,12 @@ const TransactionHistory = () => {
   const { user, myDepositReqs, myWithdrawalReqs, systemSettings } = useAuth();
   const { t } = useTranslation();
 
+  const formatTxStatus = (status) => {
+    if (status === 'pending') return 'Processing';
+    if (status === 'completed' || status === 'approved') return 'Successfully';
+    return status;
+  };
+
   const [activeHistoryTab, setActiveHistoryTab] = useState('p2p');
   
   const [filterType, setFilterType] = useState('all');
@@ -685,7 +691,7 @@ const TransactionHistory = () => {
                       </div>
                       <div style={{ marginTop: '4px' }}>
                         <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 7px', borderRadius: '99px', textTransform: 'uppercase', background: tx.status === 'completed' ? 'rgba(0,200,150,0.12)' : 'rgba(245,166,35,0.12)', color: tx.status === 'completed' ? '#00C896' : '#F5A623' }}>
-                          {tx.status}
+                          {formatTxStatus(tx.status)}
                         </span>
                       </div>
                     </div>
@@ -759,7 +765,7 @@ const TransactionHistory = () => {
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#78716c' }}>Status</span>
-                  <span style={{ fontWeight: 800, fontSize: '10px', color: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#047857' : '#d97706', background: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#d1fae5' : '#fef3c7', padding: '2px 10px', borderRadius: '99px', textTransform: 'uppercase' }}>{selectedTx.status}</span>
+                  <span style={{ fontWeight: 800, fontSize: '10px', color: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#047857' : '#d97706', background: selectedTx.status === 'completed' || selectedTx.status === 'approved' ? '#d1fae5' : '#fef3c7', padding: '2px 10px', borderRadius: '99px', textTransform: 'uppercase' }}>{formatTxStatus(selectedTx.status)}</span>
                 </div>
               </div>
 

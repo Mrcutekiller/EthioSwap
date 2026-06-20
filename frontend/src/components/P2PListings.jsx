@@ -135,7 +135,7 @@ const P2PListings = () => {
       alert(`Minimum ad amount is $${minP2pListing.toFixed(2)} USD.`);
       return;
     }
-    const currentStandardRate = createType === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
+    const currentStandardRate = createType === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
     const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : currentStandardRate;
     const minUSD = parseFloat(minLimit) / effectiveRate;
     if (minUSD < (minP2pListing - 0.01)) {
@@ -201,8 +201,8 @@ const P2PListings = () => {
       return;
     }
     const standardRate = selectedListing.type === 'buy'
-      ? (systemSettings?.etbRatePerDollar ?? rate)
-      : (systemSettings?.etbRatePerDollarSell ?? rate);
+      ? (systemSettings?.etbRatePerDollarSell ?? rate)
+      : (systemSettings?.etbRatePerDollar ?? rate);
     const effectiveRate = selectedListing.custom_rate_etb || standardRate;
     const totalEtb = amt * effectiveRate;
     if (totalEtb < selectedListing.min_limit_etb || totalEtb > selectedListing.max_limit_etb) {
@@ -258,8 +258,8 @@ const P2PListings = () => {
           matchesCalc = l.min_limit_etb <= amtVal && l.max_limit_etb >= amtVal;
         } else {
           const standardRate = l.type === 'buy'
-            ? (systemSettings?.etbRatePerDollar ?? rate)
-            : (systemSettings?.etbRatePerDollarSell ?? rate);
+            ? (systemSettings?.etbRatePerDollarSell ?? rate)
+            : (systemSettings?.etbRatePerDollar ?? rate);
           const effRate = l.custom_rate_etb || standardRate;
           const etbEquiv = amtVal * effRate;
           matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
@@ -269,8 +269,8 @@ const P2PListings = () => {
       return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc;
     })
     .sort((a, b) => {
-      const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
-      const standardRateB = b.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate);
+      const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
+      const standardRateB = b.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
       const rateA = a.custom_rate_etb || standardRateA;
       const rateB = b.custom_rate_etb || standardRateB;
       
@@ -617,7 +617,7 @@ const P2PListings = () => {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '3px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
               <strong style={{ color: 'var(--gold)', fontSize: '18px', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-                ${(wallet?.ethAvailable ?? 0).toFixed(2)}
+                ${(wallet?.eth_available ?? 0).toFixed(2)}
               </strong>
               <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>USD</span>
             </div>
@@ -628,7 +628,7 @@ const P2PListings = () => {
                 </span>
               )}
               <span style={{ fontSize: '11px', color: '#e0e0e0', fontWeight: 600 }}>
-                ≈ {Math.round((wallet?.ethAvailable ?? 0) * rate).toLocaleString()} ETB
+                ≈ {Math.round((wallet?.eth_available ?? 0) * rate).toLocaleString()} ETB
               </span>
             </div>
           </div>
@@ -1076,8 +1076,8 @@ const P2PListings = () => {
         <div className="p2p-listings-grid">
           {filtered.map((listing, index) => {
             const standardRate = listing.type === 'buy'
-              ? (systemSettings?.etbRatePerDollar ?? rate)
-              : (systemSettings?.etbRatePerDollarSell ?? rate);
+              ? (systemSettings?.etbRatePerDollarSell ?? rate)
+              : (systemSettings?.etbRatePerDollar ?? rate);
             const effectiveRate = listing.custom_rate_etb || standardRate;
             const isOwnListing = listing.seller_id === user?.id;
             const isBuyType = listing.type === 'buy';
@@ -1773,7 +1773,7 @@ const P2PListings = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate))} ETB / $1
+                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB / $1
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
                   Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
@@ -1859,14 +1859,14 @@ const P2PListings = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-3)' }}>Rate</span>
                     <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate))} ETB/$1
+                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB/$1
                     </span>
                   </div>
                   <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
                     <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
                     <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollar ?? rate) : (systemSettings?.etbRatePerDollarSell ?? rate)))).toLocaleString()} ETB
+                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate)))).toLocaleString()} ETB
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
