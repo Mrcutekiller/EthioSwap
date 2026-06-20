@@ -801,6 +801,7 @@ export const AuthProvider = ({ children }) => {
         rate: rateToUse,
         fee_eth: 0,
         status: 'payment_pending',
+        payment_method: selectedPaymentAccount ? JSON.stringify(selectedPaymentAccount) : null,
       }).select().single();
       if (error) throw error;
       createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${(amountEth * ETH_USD_PRICE).toFixed(2)} USD.`);

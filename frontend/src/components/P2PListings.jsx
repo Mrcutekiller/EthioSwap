@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabase';
 import EmptyState from './EmptyState.jsx';
 import MarketRates from './MarketRates.jsx';
+import Logo from './Logo.jsx';
 
 // ─── All Ethiopian payment methods ───────────────────────────
 const ALL_PAYMENT_METHODS = [
@@ -21,6 +22,18 @@ const ALL_PAYMENT_METHODS = [
 // ─── Reputation ring color ────────────────────────────────────
 const repColor = (rep) => rep >= 95 ? '#10B981' : rep >= 80 ? '#E8B84B' : '#EF4444';
 
+const formatTimeAgo = (iso) => {
+  if (!iso) return 'Just now';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+};
+
 const P2PListings = () => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
   const minP2pListing = 0.01;
@@ -37,6 +50,9 @@ const P2PListings = () => {
 
   const [filterPayment, setFilterPayment] = useState('All');
   const [filterAmountRange, setFilterAmountRange] = useState('All');
+  const [filterMinRate, setFilterMinRate] = useState('');
+  const [filterMaxRate, setFilterMaxRate] = useState('');
+  const [buyModalStep, setBuyModalStep] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBuyModal, setShowBuyModal]    = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
@@ -55,6 +71,7 @@ const P2PListings = () => {
   // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
   React.useEffect(() => {
     if (selectedListing) {
+      setBuyModalStep(1);
       if (selectedListing.type === 'buy') {
         // Taker is seller, so default to taker's own first saved payment account
         if (user.payment_accounts && user.payment_accounts.length > 0) {
@@ -187,8 +204,8 @@ const P2PListings = () => {
   };
 
   // ── Open trade ────────────────────────────────────────────
-  const handleOpenTrade = async (e) => {
-    e.preventDefault();
+  const handleNextConfirm = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!kycApproved) {
       alert('Please verify your identity first. Go to Profile to start KYC verification.');
       return;
@@ -221,9 +238,31 @@ const P2PListings = () => {
         return;
       }
     }
-    
+    setBuyModalStep(2);
+  };
+
+  const handleOpenTrade = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const amt = parseFloat(tradeamount_eth);
     const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
-    if (trade) { setSelectedListing(null); setTradeamount_eth(''); setShowBuyModal(false); }
+    setSelectedListing(null); 
+    setTradeamount_eth(''); 
+    setShowBuyModal(false);
+    setBuyModalStep(1);
+    
+    // Auto redirect to Active Trades tab
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'trades' }));
+    }, 150);
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (buyModalStep === 1) {
+      handleNextConfirm(e);
+    } else {
+      handleOpenTrade(e);
+    }
   };
 
   // ── Filter and Sort listings ──────────────────────────────
@@ -272,7 +311,20 @@ const P2PListings = () => {
         }
       }
 
-      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesMyAds;
+      // Rate range filter logic
+      let matchesRate = true;
+      const standardRate = l.type === 'buy'
+        ? (systemSettings?.etbRatePerDollarSell ?? rate)
+        : (systemSettings?.etbRatePerDollar ?? rate);
+      const rateVal = l.custom_rate_etb || standardRate;
+      if (filterMinRate && !isNaN(parseFloat(filterMinRate))) {
+        matchesRate = matchesRate && rateVal >= parseFloat(filterMinRate);
+      }
+      if (filterMaxRate && !isNaN(parseFloat(filterMaxRate))) {
+        matchesRate = matchesRate && rateVal <= parseFloat(filterMaxRate);
+      }
+
+      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesRate && matchesMyAds;
     })
     .sort((a, b) => {
       const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
@@ -509,9 +561,12 @@ const P2PListings = () => {
 
       {/* ── Header ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 600, color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>P2P Marketplace</h2>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Logo size={36} />
+          <div>
+            <h2 style={{ fontSize: '22px', fontWeight: 600, color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>P2P Marketplace</h2>
+            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -693,7 +748,7 @@ const P2PListings = () => {
             boxShadow: p2pTab === 'buy' ? '0 4px 15px rgba(0,200,150,0.3)' : 'none'
           }}
         >
-          Buy USD
+          Buy USDT from locals
         </button>
         <button
           onClick={() => setP2pTab('sell')}
@@ -715,7 +770,7 @@ const P2PListings = () => {
             boxShadow: p2pTab === 'sell' ? '0 4px 15px rgba(245,166,35,0.3)' : 'none'
           }}
         >
-          Sell USD
+          Sell USDT to locals
         </button>
         <button
           onClick={() => {
@@ -863,6 +918,44 @@ const P2PListings = () => {
               ✕
             </button>
           )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="number"
+            placeholder="Min Rate"
+            value={filterMinRate}
+            onChange={e => setFilterMinRate(e.target.value)}
+            style={{
+              width: '85px',
+              padding: '11px 10px',
+              background: '#141827',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none',
+              fontFamily: 'var(--font)',
+            }}
+          />
+          <span style={{ color: 'var(--muted)', fontSize: '12px' }}>-</span>
+          <input
+            type="number"
+            placeholder="Max Rate"
+            value={filterMaxRate}
+            onChange={e => setFilterMaxRate(e.target.value)}
+            style={{
+              width: '85px',
+              padding: '11px 10px',
+              background: '#141827',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '10px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none',
+              fontFamily: 'var(--font)',
+            }}
+          />
         </div>
 
         <select
@@ -1202,6 +1295,10 @@ const P2PListings = () => {
                         <span style={{ color: 'rgba(255,255,255,0.12)' }}>|</span>
                         <span style={{ color: '#00C896', fontWeight: 600 }}>
                           👍 {listing.sellerPositivePercentage || 100}%
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.12)' }}>|</span>
+                        <span style={{ color: 'var(--muted)' }}>
+                          🕒 {formatTimeAgo(listing.created_at)}
                         </span>
                       </div>
                     </div>
@@ -1759,10 +1856,10 @@ const P2PListings = () => {
         <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) { setShowBuyModal(false); setSelectedListing(null); } }}>
           <div style={sheetStyle}>
             <div style={handleStyle} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontWeight: 800, fontSize: '17px', margin: 0 }}>
-                {selectedListing.type === 'buy' ? `Sell USD to @${selectedListing.seller_name}` : `Buy from @${selectedListing.seller_name}`}
-              </h3>
+            
+            {/* Logo and Brand Name Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+              <Logo size={28} />
               <button onClick={() => { setShowBuyModal(false); setSelectedListing(null); }} style={{
                 width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '16px',
@@ -1770,248 +1867,354 @@ const P2PListings = () => {
               }}>✕</button>
             </div>
 
-            {/* Partner info */}
-            <div style={{
-              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-              borderRadius: '12px', padding: '16px', marginBottom: '16px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setShowBuyModal(false); setViewingTraderId(selectedListing.seller_id); }}>
-                    @{selectedListing.seller_name}
-                  </span>
-                  {(selectedListing.seller_kyc_status === 'verified' || selectedListing.seller_kyc_status === 'approved') && (
-                    <span style={{ background: 'rgba(0,200,150,0.12)', color: '#00C896', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
-                      ✅ Verified
-                    </span>
+            {buyModalStep === 1 ? (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ fontWeight: 800, fontSize: '18px', margin: '0 0 4px 0', color: '#fff' }}>
+                    {selectedListing.type === 'buy' ? `Sell USD to @${selectedListing.seller_name}` : `Buy from @${selectedListing.seller_name}`}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--muted)' }}>
+                    Confirm your trade details to initiate the secure escrow transaction.
+                  </p>
+                </div>
+
+                {/* Partner info */}
+                <div style={{
+                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  borderRadius: '12px', padding: '16px', marginBottom: '16px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setShowBuyModal(false); setViewingTraderId(selectedListing.seller_id); }}>
+                        @{selectedListing.seller_name}
+                      </span>
+                      {(selectedListing.seller_kyc_status === 'verified' || selectedListing.seller_kyc_status === 'approved') && (
+                        <span style={{ background: 'rgba(0,200,150,0.12)', color: '#00C896', fontSize: '8.5px', fontWeight: 700, padding: '1px 5px', borderRadius: '99px' }}>
+                          ✅ Verified
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span>⭐ {(selectedListing.sellerAverageRating || 5.0).toFixed(1)}</span>
+                      <span>({selectedListing.sellerTotalTrades || 0} trades)</span>
+                      <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
+                      <span style={{ color: '#00C896' }}>👍 {selectedListing.sellerPositivePercentage || 100}% positive</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
+                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB / $1
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
+                      Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
+                    </div>
+                  </div>
+                </div>
+
+                {/* Steps */}
+                {selectedListing.type === 'buy' ? (
+                  <div style={{ background: 'rgba(0,212,170,0.07)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', marginBottom: '6px' }}>📖 Steps:</div>
+                    <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
+                      <li>Enter how much USD you want to sell to this buyer</li>
+                      <li>You'll see the exact ETB they will transfer to you</li>
+                      <li>Select your bank account where they will send local Birr</li>
+                      <li>Open trade → your USD is locked in escrow → they pay you</li>
+                    </ol>
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px' }}>📖 Steps:</div>
+                    <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
+                      <li>Enter how much USD you want to buy</li>
+                      <li>You'll see the exact ETB you need to send</li>
+                      <li>Open trade → chat with seller privately</li>
+                      <li>Send ETB → upload receipt → seller releases USD</li>
+                    </ol>
+                  </div>
+                )}
+
+                {/* Trade Terms & Conditions */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
+                      ⏱️ Payment Window: <span style={{ color: 'var(--gold-light)' }}>{selectedListing.payment_window || 15} mins</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
+                      👤 Third-Party: <span style={{ color: selectedListing.allow_third_party ? '#00C896' : '#EF4444' }}>
+                        {selectedListing.allow_third_party ? 'Allowed' : 'Not Allowed'}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedListing.description && (
+                    <>
+                      <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                      <div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 600 }}>
+                          {selectedListing.type === 'buy' ? "Buyer's Terms & Instructions" : "Seller's Terms & Instructions"}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#e0e0e0', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                          {selectedListing.description}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span>⭐ {(selectedListing.sellerAverageRating || 5.0).toFixed(1)}</span>
-                  <span>({selectedListing.sellerTotalTrades || 0} trades)</span>
-                  <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
-                  <span style={{ color: '#00C896' }}>👍 {selectedListing.sellerPositivePercentage || 100}% positive</span>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                  {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB / $1
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>
-                  Limits: {selectedListing.min_limit_etb.toLocaleString()} – {selectedListing.max_limit_etb.toLocaleString()} ETB
-                </div>
-              </div>
-            </div>
 
-            {/* Steps */}
-            {selectedListing.type === 'buy' ? (
-              <div style={{ background: 'rgba(0,212,170,0.07)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)', marginBottom: '6px' }}>📖 Steps:</div>
-                <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
-                  <li>Enter how much USD you want to sell to this buyer</li>
-                  <li>You'll see the exact ETB they will transfer to you</li>
-                  <li>Select your bank account where they will send local Birr</li>
-                  <li>Open trade → your USD is locked in escrow → they pay you</li>
-                </ol>
-              </div>
-            ) : (
-              <div style={{ background: 'var(--gold-bg)', border: '1px solid rgba(200,150,44,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold-light)', marginBottom: '6px' }}>📖 Steps:</div>
-                <ol style={{ fontSize: '11px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px', margin: 0 }}>
-                  <li>Enter how much USD you want to buy</li>
-                  <li>You'll see the exact ETB you need to send</li>
-                  <li>Open trade → chat with seller privately</li>
-                  <li>Send ETB → upload receipt → seller releases USD</li>
-                </ol>
-              </div>
-            )}
+                <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label">
+                      {selectedListing.type === 'buy' ? 'Amount to Sell (USD)' : 'Amount to Buy (USD)'}
+                    </label>
+                    <input
+                      type="number" step="0.01" required
+                      className="input"
+                      placeholder={`Max: $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD`}
+                      value={tradeamount_eth}
+                      onChange={e => setTradeamount_eth(e.target.value)}
+                    />
+                  </div>
 
-            {/* Trade Terms & Conditions */}
-            <div style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '12px',
-              padding: '14px',
-              marginBottom: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
-                  ⏱️ Payment Window: <span style={{ color: 'var(--gold-light)' }}>{selectedListing.payment_window || 15} mins</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
-                  👤 Third-Party: <span style={{ color: selectedListing.allow_third_party ? '#00C896' : '#EF4444' }}>
-                    {selectedListing.allow_third_party ? 'Allowed' : 'Not Allowed'}
-                  </span>
-                </div>
-              </div>
-              {selectedListing.description && (
-                <>
-                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-                  <div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', fontWeight: 600 }}>
-                      {selectedListing.type === 'buy' ? "Buyer's Terms & Instructions" : "Seller's Terms & Instructions"}
+                  {tradeamount_eth && !isNaN(parseFloat(tradeamount_eth)) && (
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
+                        <span style={{ color: 'var(--text-3)' }}>Rate</span>
+                        <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
+                          {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB/$1
+                        </span>
+                      </div>
+                      <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
+                        <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
+                        <span style={{ color: 'var(--gold-light)' }}>
+                          {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate)))).toLocaleString()} ETB
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
+                        <span>Platform Fee:</span>
+                        <span>{systemSettings?.isP2pFreePeriod ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#e0e0e0', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                      {selectedListing.description}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+                  )}
 
-            <form onSubmit={handleOpenTrade} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label className="input-label">
-                  {selectedListing.type === 'buy' ? 'Amount to Sell (USD)' : 'Amount to Buy (USD)'}
-                </label>
-                <input
-                  type="number" step="0.01" required
-                  className="input"
-                  placeholder={`Max: $${(selectedListing.amount_eth ?? 0).toFixed(2)} USD`}
-                  value={tradeamount_eth}
-                  onChange={e => setTradeamount_eth(e.target.value)}
-                />
-              </div>
-
-              {tradeamount_eth && !isNaN(parseFloat(tradeamount_eth)) && (
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-3)' }}>Rate</span>
-                    <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-                      {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB/$1
-                    </span>
-                  </div>
-                  <div style={{ height: '1px', background: 'var(--border)', margin: '6px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 800 }}>
-                    <span>{selectedListing.type === 'buy' ? 'You Receive:' : 'You Pay:'}</span>
-                    <span style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate)))).toLocaleString()} ETB
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', color: '#00C896', fontWeight: 600 }}>
-                    <span>Platform Fee:</span>
-                    <span>{systemSettings?.isP2pFreePeriod ? 'FREE (0%)' : `${systemSettings?.p2p_commission || 1}%`}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Dynamic Bank Accounts Selector */}
-              {selectedListing.type === 'buy' ? (
-                /* Taker is seller: Taker chooses ONE of THEIR OWN accounts to receive payment */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label className="input-label" style={{ marginBottom: '2px' }}>Receive Payout Into (My Bank/Wallet)</label>
-                  {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
-                    <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
-                      <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
-                        You must add a bank account in your Profile first so this buyer can send you the ETB.
-                      </p>
-                      <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
-                        Go to Profile page & add account →
-                      </a>
+                  {/* Dynamic Bank Accounts Selector */}
+                  {selectedListing.type === 'buy' ? (
+                    /* Taker is seller: Taker chooses ONE of THEIR OWN accounts to receive payment */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label className="input-label" style={{ marginBottom: '2px' }}>Receive Payout Into (My Bank/Wallet)</label>
+                      {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
+                        <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '20px', marginBottom: '4px' }}>⚠️</div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
+                          <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: '4px 0 10px', lineHeight: 1.5 }}>
+                            You must add a bank account in your Profile first so this buyer can send you the ETB.
+                          </p>
+                          <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }} onClick={(e) => {
+                            e.preventDefault();
+                            setShowBuyModal(false);
+                            window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'profile' }));
+                          }}>
+                            Go to Profile page & add account →
+                          </a>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {user.payment_accounts.map(acc => {
+                            const sel = chosenPaymentAccount?.id === acc.id;
+                            const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                            return (
+                              <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                                background: sel ? 'rgba(0,212,170,0.08)' : 'var(--bg-elevated)',
+                                border: `1px solid ${sel ? 'var(--teal)' : 'var(--border)'}`,
+                                borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
+                                transition: 'all 0.15s ease',
+                              }}>
+                                <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ color: sel ? 'var(--teal-light)' : 'var(--text-1)' }}>
+                                    {matched?.label || acc.bankName}
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
+                                    Acc: {acc.accountNumber} · Holder: {acc.holderName}
+                                  </div>
+                                </div>
+                                <span style={{
+                                  width: '18px', height: '18px', borderRadius: '50%',
+                                  border: `2px solid ${sel ? 'var(--teal)' : 'var(--border-hover)'}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  background: sel ? 'var(--teal)' : 'transparent',
+                                  color: '#0A0C12', fontSize: '10px', fontWeight: 900
+                                }}>
+                                  {sel && '✓'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {user.payment_accounts.map(acc => {
-                        const sel = chosenPaymentAccount?.id === acc.id;
-                        const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
-                        return (
-                          <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
-                            display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
-                            background: sel ? 'rgba(0,212,170,0.08)' : 'var(--bg-elevated)',
-                            border: `1px solid ${sel ? 'var(--teal)' : 'var(--border)'}`,
-                            borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
-                            transition: 'all 0.15s ease',
-                          }}>
-                            <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ color: sel ? 'var(--teal-light)' : 'var(--text-1)' }}>
-                                {matched?.label || acc.bankName}
+                    /* Taker is buyer: Taker chooses one of the Maker's bank accounts to pay to */
+                    selectedListing.payment_accounts && selectedListing.payment_accounts.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label className="input-label" style={{ marginBottom: '2px' }}>Send Payout To (Seller Bank/Wallet)</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {selectedListing.payment_accounts.map(acc => {
+                            const sel = chosenPaymentAccount?.id === acc.id;
+                            const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
+                            return (
+                              <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
+                                background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
+                                border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
+                                borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
+                                transition: 'all 0.15s ease',
+                              }}>
+                                <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
+                                    {matched?.label || acc.bankName}
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
+                                    Acc Holder: {acc.holderName}
+                                  </div>
+                                </div>
+                                <span style={{
+                                  width: '18px', height: '18px', borderRadius: '50%',
+                                  border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  background: sel ? 'var(--gold)' : 'transparent',
+                                  color: '#0A0C12', fontSize: '10px', fontWeight: 900
+                                }}>
+                                  {sel && '✓'}
+                                </span>
                               </div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
-                                Acc: {acc.accountNumber} · Holder: {acc.holderName}
-                              </div>
-                            </div>
-                            <span style={{
-                              width: '18px', height: '18px', borderRadius: '50%',
-                              border: `2px solid ${sel ? 'var(--teal)' : 'var(--border-hover)'}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: sel ? 'var(--teal)' : 'transparent',
-                              color: '#0A0C12', fontSize: '10px', fontWeight: 900
-                            }}>
-                              {sel && '✓'}
-                            </span>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {tradeError && (
+                    <div style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--status-danger-border)' }}>
+                      ⚠️ {tradeError}
                     </div>
                   )}
-                </div>
-              ) : (
-                /* Taker is buyer: Taker chooses one of the Maker's bank accounts to pay to */
-                selectedListing.payment_accounts && selectedListing.payment_accounts.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label className="input-label" style={{ marginBottom: '2px' }}>Send Payout To (Seller Bank/Wallet)</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {selectedListing.payment_accounts.map(acc => {
-                        const sel = chosenPaymentAccount?.id === acc.id;
-                        const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
-                        return (
-                          <div key={acc.id} onClick={() => setChosenPaymentAccount(acc)} style={{
-                            display: 'flex', alignItems: 'center', gap: '10px', padding: '12px',
-                            background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
-                            border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                            borderRadius: '12px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 600,
-                            transition: 'all 0.15s ease',
-                          }}>
-                            <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
-                                {matched?.label || acc.bankName}
-                              </div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-3)', fontWeight: 400, marginTop: '2px' }}>
-                                Acc Holder: {acc.holderName}
-                              </div>
-                            </div>
-                            <span style={{
-                              width: '18px', height: '18px', borderRadius: '50%',
-                              border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: sel ? 'var(--gold)' : 'transparent',
-                              color: '#0A0C12', fontSize: '10px', fontWeight: 900
-                            }}>
-                              {sel && '✓'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <button type="button" onClick={() => { setShowBuyModal(false); setSelectedListing(null); }} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn teal-glow-btn" style={{ flex: 2, color: '#0B0E1A', fontWeight: 700 }}>
+                      {selectedListing.type === 'buy' ? 'Sell Now' : 'Buy Now'}
+                    </button>
                   </div>
-                )
-              )}
-
-              {tradeError && (
-                <div style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--status-danger-border)' }}>
-                  ⚠️ {tradeError}
+                </form>
+              </>
+            ) : (
+              <>
+                {/* STEP 2: CONFIRMATION MODAL */}
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ fontWeight: 800, fontSize: '19px', margin: '0 0 4px 0', color: 'var(--gold)' }}>
+                    {selectedListing.type === 'sell' ? "You're buying USDT" : "You're selling USDT"}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--muted)' }}>
+                    Please review and confirm the trade details below before opening the trade.
+                  </p>
                 </div>
-              )}
 
-              <div style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: '10px', padding: '10px' }}>
-                <p style={{ fontSize: '11px', color: 'var(--status-warning-text)', lineHeight: '1.5', margin: 0 }}>
-                  ⚠️ Do <strong>NOT</strong> mark as paid until you have actually sent the funds. False claims may result in account suspension.
-                </p>
-              </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Details table */}
+                  <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: 'var(--muted)' }}>Trade Partner</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>@{selectedListing.seller_name}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: 'var(--muted)' }}>Exchange Rate</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>
+                        {selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate))} ETB / $1
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: 'var(--muted)' }}>USDT Amount</span>
+                      <span style={{ color: 'var(--gold)', fontWeight: 700 }}>${parseFloat(tradeamount_eth).toFixed(2)} USDT</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: 'var(--muted)' }}>Total ETB Amount</span>
+                      <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                        {Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate)))).toLocaleString()} ETB
+                      </span>
+                    </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button type="button" onClick={() => { setShowBuyModal(false); setSelectedListing(null); }} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn btn-gold" style={{ flex: 2 }}>Open Trade →</button>
-              </div>
-            </form>
+                    {chosenPaymentAccount && (
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {selectedListing.type === 'sell' ? 'Payment Destination' : 'Your Receiving Account'}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--muted)' }}>Bank/Wallet</span>
+                          <span style={{ color: '#fff', fontWeight: 600 }}>{chosenPaymentAccount.bankName}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--muted)' }}>Holder Name</span>
+                          <span style={{ color: '#fff', fontWeight: 600 }}>{chosenPaymentAccount.holderName}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--muted)' }}>Account Number</span>
+                          <span style={{ color: 'var(--gold-light)', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace' }}>{chosenPaymentAccount.accountNumber}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Warning Alerts */}
+                  {selectedListing.type === 'sell' ? (
+                    <div style={{ background: 'rgba(245, 166, 35, 0.08)', border: '1px solid rgba(245, 166, 35, 0.25)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ color: '#F5A623', fontSize: '13px', fontWeight: 700 }}>⚠️ Important Transfer Instruction</span>
+                      <span style={{ color: '#ffd580', fontSize: '11.5px', lineHeight: 1.5 }}>
+                        You must transfer exactly <strong>{Math.round(parseFloat(tradeamount_eth) * (selectedListing.custom_rate_etb || (selectedListing.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate)))).toLocaleString()} ETB</strong> to the seller's payment account shown above within <strong>{selectedListing.payment_window || 30} minutes</strong>.
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ background: 'rgba(0, 200, 150, 0.08)', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ color: '#00C896', fontSize: '13px', fontWeight: 700 }}>ℹ️ Secure Escrow Transfer</span>
+                      <span style={{ color: '#a0eedb', fontSize: '11.5px', lineHeight: 1.5 }}>
+                        The buyer will transfer the ETB to your account. Once verified, you will release the USDT. Your USDT is locked securely in escrow during this period.
+                      </span>
+                    </div>
+                  )}
+
+                  {tradeError && (
+                    <div style={{ background: 'var(--status-danger-bg)', color: 'var(--status-danger-text)', padding: '10px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--status-danger-border)' }}>
+                      ⚠️ {tradeError}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                    <button type="button" onClick={() => setBuyModalStep(1)} className="btn btn-outline" style={{ flex: 1 }}>Back</button>
+                    <button 
+                      type="button" 
+                      onClick={handleOpenTrade} 
+                      className="btn gold-glow-btn" 
+                      style={{ flex: 2, color: '#0B0E1A', fontWeight: 700 }}
+                    >
+                      {selectedListing.type === 'sell' ? 'Confirm & Transfer' : 'Confirm & Proceed'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import TradeChat from './TradeChat.jsx';
 import { Star, Shield, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Upload, FileImage } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import Logo from './Logo.jsx';
 
 const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   const [stars, setStars] = useState(5);
@@ -227,6 +228,7 @@ const TradeRoom = () => {
   const [showRating, setShowRating] = useState(false);
   const [skippedTrades, setSkippedTrades] = useState({});
   const [timeRemaining, setTimeRemaining] = useState('');
+  const [isReleasing, setIsReleasing] = useState(false);
 
   const activeTrade = trades.find(t => t.id === selectedTradeId);
 
@@ -279,8 +281,18 @@ const TradeRoom = () => {
   };
 
   const handleRelease = async () => {
-    if (!window.confirm("Confirm that you have received the payment? This will release the ETH to the buyer.")) return;
-    await releaseEscrow(activeTrade.id);
+    if (!window.confirm("Confirm that you have received the payment? This will release the USDT to the buyer.")) return;
+    setIsReleasing(true);
+    try {
+      await releaseEscrow(activeTrade.id);
+      setSuccess("USDT released successfully!");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTimeout(() => {
+        setIsReleasing(false);
+      }, 1500);
+    }
   };
 
   const handleCancel = async () => {
@@ -309,12 +321,36 @@ const TradeRoom = () => {
     }
   };
 
+  const rate = activeTrade?.rate_etb || 190;
+  const isBuyer = activeTrade ? user.id === activeTrade.buyer_id : false;
+  
+  let paymentAccount = null;
+  if (activeTrade && activeTrade.payment_method) {
+    try {
+      paymentAccount = JSON.parse(activeTrade.payment_method);
+    } catch (e) {
+      // Fallback
+      paymentAccount = { bankName: activeTrade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' };
+    }
+  }
+
   if (trades.length === 0) {
-    return <div className="card" style={{ padding: '40px', textAlign: 'center' }}>No active trades</div>;
+    return <div className="card" style={{ padding: '40px', textAlign: 'center', background: '#141827', color: 'var(--text-secondary)' }}>No active trades</div>;
   }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '24px', height: 'calc(100vh - 120px)' }}>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0% { opacity: 0.6; }
+          50% { opacity: 1; }
+          100% { opacity: 0.6; }
+        }
+      `}</style>
+      
       {/* Sidebar: Active Trades */}
       <div className="card glass-card" style={{ overflowY: 'auto', padding: '16px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px' }}>My Trades</h3>
@@ -322,74 +358,322 @@ const TradeRoom = () => {
           {trades.map(trade => {
             const partnerPic = user.id === trade.buyer_id ? trade.seller_profile_pic : trade.buyer_profile_pic;
             return (
-            <div 
-              key={trade.id} 
-              onClick={() => setSelectedTradeId(trade.id)}
-              className={selectedTradeId === trade.id ? "premium-glow" : ""}
-              style={{
-                padding: '12px', borderRadius: '12px', cursor: 'pointer',
-                background: selectedTradeId === trade.id ? 'rgba(245,166,35, 0.05)' : 'var(--bg-elevated)',
-                border: `1px solid ${selectedTradeId === trade.id ? '#F5A623' : 'var(--border)'}`,
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#F5A623', flexShrink: 0 }}>
-                  {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name || 'U').charAt(0).toUpperCase()}
+              <div 
+                key={trade.id} 
+                onClick={() => setSelectedTradeId(trade.id)}
+                className={selectedTradeId === trade.id ? "premium-glow" : ""}
+                style={{
+                  padding: '12px', borderRadius: '12px', cursor: 'pointer',
+                  background: selectedTradeId === trade.id ? 'rgba(245,166,35, 0.05)' : 'var(--bg-elevated)',
+                  border: `1px solid ${selectedTradeId === trade.id ? '#F5A623' : 'var(--border)'}`,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#F5A623', flexShrink: 0 }}>
+                    {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>@{user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623', flexShrink: 0 }}>
+                    {trade.status.toUpperCase()}
+                  </span>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>@{user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name}</span>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: trade.status === 'completed' ? '#00C896' : '#F5A623', flexShrink: 0 }}>
-                  {trade.status.toUpperCase()}
-                </span>
+                <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>${trade.amount_eth.toFixed(2)} USDT</div>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>{trade.amount_eth.toFixed(4)} ETH</div>
-            </div>
-          );
+            );
           })}
         </div>
       </div>
 
       {/* Main Area: Chat & Controls */}
       {activeTrade ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflow: 'hidden' }}>
-          {/* Status Header */}
-          <div className="card glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(245,166,35, 0.1)', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Shield size={24} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflow: 'hidden', position: 'relative' }}>
+          
+          {/* Releasing animation overlay */}
+          {isReleasing && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(11, 14, 26, 0.95)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              zIndex: 100, borderRadius: '16px'
+            }}>
+              <div style={{ width: '48px', height: '48px', border: '4px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ marginTop: '16px', fontSize: '16px', fontWeight: 700, color: 'var(--gold)' }}>Sending USDT...</span>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--muted)' }}>Unlocking escrow safe node</p>
+            </div>
+          )}
+
+          {activeTrade.status === 'completed' ? (
+            /* COMPLETED RECEIPT VIEW */
+            <div className="card glass-card" style={{ padding: '24px', background: '#141827', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                  <CheckCircle size={32} />
+                </div>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  {isBuyer ? 'USDT Received' : 'USDT Released'}
+                </h2>
+                <span style={{ fontSize: '12px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>
+                  ✓ Trade Completed Successfully
+                </span>
               </div>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Trade #{activeTrade.id.substring(0, 8)}</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-3)' }}>
-                  <Clock size={14} /> {timeRemaining || 'Trade Locked'}
+
+              {/* Universal Receipt details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                  <Logo size={28} />
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', marginBottom: '12px' }}>
+                  Official P2P Transaction Receipt
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Transaction Type:</span>
+                    <strong style={{ color: '#fff' }}>{isBuyer ? 'P2P USDT Purchase' : 'P2P USDT Sale'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>From (Seller):</span>
+                    <strong style={{ color: '#fff' }}>@{activeTrade.seller_name}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>To (Buyer):</span>
+                    <strong style={{ color: '#fff' }}>@{activeTrade.buyer_name}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Amount (USDT):</span>
+                    <strong style={{ color: 'var(--gold)' }}>${activeTrade.amount_eth.toFixed(2)} USDT</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Amount Paid (ETB):</span>
+                    <strong style={{ color: 'var(--gold-light)' }}>
+                      {Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Rate Used:</span>
+                    <strong style={{ color: '#fff' }}>{rate} ETB / $1</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Payment Method:</span>
+                    <strong style={{ color: '#fff' }}>{paymentAccount?.bankName || activeTrade.payment_method}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Timestamp:</span>
+                    <strong style={{ color: '#fff', fontSize: '11px' }}>{new Date(activeTrade.completed_at || activeTrade.created_at).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: 'var(--muted)' }}>Transaction ID:</span>
+                    <strong style={{ color: '#fff', fontSize: '11px', fontFamily: 'JetBrains Mono, monospace' }}>{activeTrade.id}</strong>
+                  </div>
+                </div>
+
+                {/* Authorized Signature Block */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '12px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>Authorized by</div>
+                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '20px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '4px 0' }}>Mrcute</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-3)' }}>Platform Escrow Node</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>Founder, EthioSwap</div>
+                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '20px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '4px 0' }}>Biruk Fikru</div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-3)' }}>Founder & CEO</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button 
+                    className="btn gold-glow-btn" 
+                    style={{ flex: 1, color: '#0B0E1A', fontWeight: 700 }}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }));
+                    }}
+                  >
+                    View in History
+                  </button>
+                  {activeTrade.ratingGiven === null && (
+                    <button 
+                      className="btn btn-outline" 
+                      style={{ border: '1px solid rgba(255,255,255,0.08)' }} 
+                      onClick={() => setShowRating(true)}
+                    >
+                      ⭐ Rate Trade
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {user.id === activeTrade.buyer_id && activeTrade.status === 'payment_pending' && (
-                <button className="btn btn-indigo" onClick={handleMarkPaid}>{t('I Have Sent Payment')}</button>
+          ) : (
+            /* ACTIVE TRADE STATE CONSOLE */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {isBuyer ? (
+                /* BUYER STATES */
+                activeTrade.status === 'payment_pending' ? (
+                  <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ display: 'flex', padding: '4px 10px', background: 'rgba(245, 166, 35, 0.15)', border: '1px solid rgba(245, 166, 35, 0.3)', color: '#FFB800', borderRadius: '8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                          ⏳ Awaiting your payment
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>
+                        ⏱️ Timer: <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{timeRemaining}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.04em' }}>
+                        🏦 Bank Transfer Details (Pay to)
+                      </div>
+                      {paymentAccount ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Bank/Platform:</span>
+                            <strong style={{ fontSize: '13px', color: '#fff' }}>{paymentAccount.bankName}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Account Holder:</span>
+                            <strong style={{ fontSize: '13px', color: '#fff' }}>{paymentAccount.holderName}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Account Number:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong style={{ fontSize: '13.5px', color: 'var(--gold-light)', fontFamily: 'JetBrains Mono, monospace' }}>{paymentAccount.accountNumber}</strong>
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(paymentAccount.accountNumber); alert('Account number copied!'); }}
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '10px', padding: '2px 6px', cursor: 'pointer' }}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>Trade Reference:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong style={{ fontSize: '12px', color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>ES-{activeTrade.id.substring(0,6).toUpperCase()}</strong>
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(`ES-${activeTrade.id.substring(0,6).toUpperCase()}`); alert('Reference copied!'); }}
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'var(--text-2)', fontSize: '10px', padding: '2px 6px', cursor: 'pointer' }}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>Seller payment details: {activeTrade.payment_method}</div>
+                      )}
+                    </div>
+
+                    <div style={{ background: 'rgba(245, 166, 35, 0.05)', border: '1px solid rgba(245, 166, 35, 0.15)', borderRadius: '10px', padding: '12px', fontSize: '11px', color: '#ffd580', lineHeight: '1.4' }}>
+                      ⚠️ <strong>Warning:</strong> Transfer local Birr using your banking app. Once completed, click "I Have Sent Payment". Do NOT close this window.
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button className="btn gold-glow-btn" style={{ flex: 1, color: '#0A0C12', fontWeight: 700 }} onClick={handleMarkPaid}>
+                        Confirm & Transfer Sent
+                      </button>
+                      <button className="btn btn-ghost" style={{ color: '#FF4D4D', textDecoration: 'underline', fontSize: '12px' }} onClick={handleCancel}>
+                        Cancel this trade
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Buyer paid state */
+                  <div style={{ background: '#141827', border: '1px solid rgba(0, 200, 150, 0.2)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="notif-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00C896' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#00C896' }}>Payment Sent</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      Waiting for the seller (@{activeTrade.seller_name}) to verify the ETB transfer and release your USDT.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                      <button className="btn btn-ghost" style={{ color: '#FF4D4D', padding: '6px 12px', fontSize: '12.5px' }} onClick={handleOpenDispute}>Open Dispute</button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                /* SELLER STATES */
+                activeTrade.status === 'payment_pending' ? (
+                  <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <span style={{ display: 'flex', padding: '4px 10px', background: 'rgba(245, 166, 35, 0.15)', border: '1px solid rgba(245, 166, 35, 0.3)', color: '#FFB800', borderRadius: '8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                          ⏳ Awaiting Buyer's Payment
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>
+                        ⏱️ Time Remaining: <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{timeRemaining}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        Receiving account details
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                        Your account receives ETB from <strong style={{ color: '#fff' }}>@{activeTrade.buyer_name}</strong>
+                      </p>
+                      {paymentAccount && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '6px' }}>
+                          Bank: {paymentAccount.bankName} · Acc: {paymentAccount.accountNumber}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ background: 'rgba(0, 200, 150, 0.05)', border: '1px solid rgba(0, 200, 150, 0.15)', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#a0eedb', lineHeight: '1.4' }}>
+                      ℹ️ You'll be notified when the buyer transfers the ETB. Do NOT release USDT until you verify the funds are in your account!
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <button className="btn btn-outline" style={{ border: '1px solid rgba(255,255,255,0.08)', flex: 1 }} disabled>
+                        Waiting for Buyer...
+                      </button>
+                      <button className="btn btn-ghost" style={{ color: '#FF4D4D', textDecoration: 'underline', fontSize: '12px' }} onClick={handleCancel}>
+                        Cancel Trade
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Seller paid state */
+                  <div style={{ background: '#141827', border: '1px solid rgba(0, 200, 150, 0.2)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', padding: '4px 10px', background: 'rgba(0, 200, 150, 0.15)', border: '1px solid rgba(0, 200, 150, 0.3)', color: '#00FFC2', borderRadius: '8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                        ✓ Buyer Marked as Paid
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#fff', fontWeight: 800 }}>Confirm & Release USDT</h3>
+                      <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                        Please verify that you have received <strong>{Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB</strong> in your bank/wallet from <strong>@{activeTrade.buyer_name}</strong>.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <button className="btn gold-glow-btn" style={{ flex: 2, color: '#0B0E1A', fontWeight: 700 }} onClick={handleRelease}>
+                        Release USDT
+                      </button>
+                      <button className="btn btn-ghost" style={{ color: '#FF4D4D', flex: 1 }} onClick={handleOpenDispute}>
+                        Dispute Trade
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
-              {user.id === activeTrade.seller_id && activeTrade.status === 'paid' && (
-                <button className="btn btn-teal" onClick={handleRelease}>{t('I Received Payment')}</button>
-              )}
-              {activeTrade.status !== 'completed' && activeTrade.status !== 'cancelled' && (
-                <>
-                  <button className="btn btn-ghost" style={{ color: '#FF4D4D' }} onClick={handleCancel}>{t('Cancel Trade')}</button>
-                  <button className="btn btn-ghost" style={{ color: '#FF4D4D' }} onClick={handleOpenDispute}>{t('Open Dispute')}</button>
-                </>
+
+              {activeTrade.status === 'disputed' && (
+                <DisputeEvidenceConsole 
+                  trade={activeTrade} 
+                  user={user} 
+                  uploadDisputeEvidence={uploadDisputeEvidence} 
+                  setError={setError} 
+                  setSuccess={setSuccess} 
+                />
               )}
             </div>
-          </div>
-
-          {activeTrade.status === 'disputed' && (
-            <DisputeEvidenceConsole 
-              trade={activeTrade} 
-              user={user} 
-              uploadDisputeEvidence={uploadDisputeEvidence} 
-              setError={setError} 
-              setSuccess={setSuccess} 
-            />
           )}
 
           {/* Chat Component */}

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getNetworkAddress } from '../utils/crypto.js';
 import { supabase } from '../lib/supabase';
+import Logo from './Logo.jsx';
 
 const fmt = (n, d = 2) => (+(n ?? 0)).toFixed(d);
 const fmtEtb = (n) => Math.round(n ?? 0).toLocaleString();
@@ -191,6 +192,9 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     setFoundRecipient(null);
     setLookupError('');
     setSendAmt('');
+    setDepStep(1);
+    setBbStep(1);
+    setWdStep(1);
   }, [initialTab]);
 
   // Deposit/Receive Chain flow
@@ -199,8 +203,10 @@ const WalletCard = ({ initialTab = 'balance' }) => {
   const [depAmt, setDepAmt] = useState('');
   const [depTxId, setDepTxId] = useState('');
   const [depLoading, setDepLoading] = useState(false);
+  const [depTimeRemaining, setDepTimeRemaining] = useState('5:00');
 
   // Binance / Bybit Deposit flow states
+  const [bbStep, setBbStep] = useState(1);
   const [bbAmount, setBbAmount] = useState('');
   const [bbMethod, setBbMethod] = useState('binance'); // 'binance' | 'bybit'
   const [bbScreenshot, setBbScreenshot] = useState(null);
@@ -226,6 +232,25 @@ const WalletCard = ({ initialTab = 'balance' }) => {
   const [receiveType, setReceiveType] = useState(null); // 'user' | 'chain' | null
   const [wdType, setWdType] = useState(null); // 'user' | 'address' | null
   const [selectedWalletTx, setSelectedWalletTx] = useState(null);
+
+  // Countdown timer for Deposit Pending State
+  useEffect(() => {
+    if (depStep !== 2) return;
+    let sec = 300;
+    setDepTimeRemaining('5:00');
+    const interval = setInterval(() => {
+      sec--;
+      if (sec <= 0) {
+        setDepTimeRemaining('Expired');
+        clearInterval(interval);
+      } else {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        setDepTimeRemaining(`${m}:${s < 10 ? '0' : ''}${s}`);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [depStep]);
 
   const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
 
@@ -285,8 +310,8 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     try {
       const res = await createDepositRequest(depAmtNum, depNet.toUpperCase(), depTxId.trim(), '', undefined);
       if (res && res.success) {
-        setDepAmt(''); setDepTxId(''); setDepStep(1);
-        setReceiveType(null); // Back to choice
+        setDepStep(4); // Success Receipt screen!
+        setSuccess('Deposit request submitted successfully!');
       }
     } catch (err) { setError(err.message); }
     finally { setDepLoading(false); }
@@ -316,13 +341,8 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         undefined
       );
       if (res && res.success) {
-        setBbAmount('');
-        setBbSenderEmail('');
-        setBbSenderUsername('');
-        setBbScreenshot(null);
-        setBbScreenshotPreview(null);
-        setBbTxRef('');
-        setReceiveType(null); // Go back to receive choices
+        setBbStep(2); // Success Receipt screen!
+        setSuccess('Deposit request submitted successfully!');
       }
     } catch (err) {
       setError(err.message);
@@ -335,16 +355,27 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     if (wdAmtNum < minWd) { setError(`Minimum withdrawal is $${minWd}`); return; }
     if (wdAmtNum > available) { setError(`Max available: $${fmt(available)}`); return; }
     if (!wdAddr.trim()) { setError('Enter a wallet address'); return; }
+    
+    setWdStep(4); // Show "Processing Withdrawal" pending state
     setWdLoading(true);
-    setSuccess('Processing withdrawal...');
     try {
       const res = await withdrawETH(wdAmtNum, wdAddr, '', wdNet.toUpperCase());
       if (res && res.success) {
-        setWdAmt(''); setWdAddr(''); setWdStep(1);
-        setWdType(null); // Back to choice
+        // Wait 2.5 seconds to simulate processing progress
+        setTimeout(() => {
+          setWdStep(5); // Success Receipt screen!
+          setWdLoading(false);
+          setSuccess('Withdrawal sent successfully!');
+        }, 2500);
+      } else {
+        setWdStep(3);
+        setWdLoading(false);
       }
-    } catch (err) { setError(err.message); }
-    finally { setWdLoading(false); }
+    } catch (err) {
+      setError(err.message);
+      setWdStep(3);
+      setWdLoading(false);
+    }
   };
 
   const handleUserLookup = async () => {
@@ -1112,197 +1143,277 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               </button>
             </div>
           ) : receiveType === 'binance_bybit' ? (
-            <div className="w-card">
-              {/* Back Button & Title */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <button onClick={() => setReceiveType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
-                  <i className="ti ti-arrow-left"></i>
-                </button>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Binance / Bybit Deposit</div>
-              </div>
-
-              {/* Instructions */}
-              <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
-                <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>1. Transfer Payment</div>
-                <div style={{ fontSize: '13px', color: '#fff', lineHeight: 1.5 }}>
-                  Send your USDT deposit using Binance Pay or Bybit Transfer to our designated email account:
-                </div>
-                
-                <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: '#F5A623', fontWeight: 700 }}>birukf37@gmail.com</span>
-                  <button 
-                    onClick={() => handleCopy('birukf37@gmail.com')} 
-                    style={{ background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)', color: '#F5A623', fontSize: '11px', fontWeight: 600, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}
-                  >
-                    📋 Copy
+            bbStep === 1 ? (
+              <div className="w-card">
+                {/* Back Button & Title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <button onClick={() => setReceiveType(null)} className="w-btn-secondary" style={{ padding: '6px 10px', borderRadius: '50px', flex: 'none' }}>
+                    <i className="ti ti-arrow-left"></i>
                   </button>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>Binance / Bybit Deposit</div>
                 </div>
 
-                <div style={{ background: 'rgba(245, 166, 35, 0.05)', border: '1px solid rgba(245, 166, 35, 0.15)', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#FFE082', lineHeight: 1.5 }}>
-                  💡 <strong>Important Note:</strong> Please remember to add the <strong>5% platform fee</strong> to your transfer. E.g., if you want to receive <strong>$100.00</strong> in your balance, you must send exactly <strong>$105.00</strong> to the email.
-                </div>
-              </div>
+                {/* Instructions */}
+                <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                  <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', fontWeight: 600 }}>1. Transfer Payment</div>
+                  <div style={{ fontSize: '13px', color: '#fff', lineHeight: 1.5 }}>
+                    Send your USDT deposit using Binance Pay or Bybit Transfer to our designated email account:
+                  </div>
+                  
+                  <div style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: '#F5A623', fontWeight: 700 }}>birukf37@gmail.com</span>
+                    <button 
+                      onClick={() => handleCopy('birukf37@gmail.com')} 
+                      style={{ background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.2)', color: '#F5A623', fontSize: '11px', fontWeight: 600, padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
 
-              {/* Form Input fields */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Select Transfer Method</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    {['binance', 'bybit'].map(method => {
-                      const isActive = bbMethod === method;
-                      return (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setBbMethod(method)}
-                          className="w-network-card"
-                          style={{
-                            padding: '10px',
-                            borderColor: isActive ? '#F5A623' : '#1E2640',
-                            background: isActive ? 'rgba(245, 166, 35, 0.08)' : '#0B0E1A',
-                            color: isActive ? '#fff' : '#8A9BB8',
-                          }}
-                        >
-                          {method === 'binance' ? '🟡 Binance Pay' : '⚫ Bybit Transfer'}
-                        </button>
-                      );
-                    })}
+                  <div style={{ background: 'rgba(245, 166, 35, 0.05)', border: '1px solid rgba(245, 166, 35, 0.15)', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#FFE082', lineHeight: 1.5 }}>
+                    💡 <strong>Important Note:</strong> Please remember to add the <strong>5% platform fee</strong> to your transfer. E.g., if you want to receive <strong>$100.00</strong> in your balance, you must send exactly <strong>$105.00</strong> to the email.
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Amount Sent (USD)</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                {/* Form Input fields */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Select Transfer Method</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {['binance', 'bybit'].map(method => {
+                        const isActive = bbMethod === method;
+                        return (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => setBbMethod(method)}
+                            className="w-network-card"
+                            style={{
+                              padding: '10px',
+                              borderColor: isActive ? '#F5A623' : '#1E2640',
+                              background: isActive ? 'rgba(245, 166, 35, 0.08)' : '#0B0E1A',
+                              color: isActive ? '#fff' : '#8A9BB8',
+                            }}
+                          >
+                            {method === 'binance' ? '🟡 Binance Pay' : '⚫ Bybit Transfer'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Amount Sent (USD)</label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', fontWeight: 700, color: '#8A9BB8' }}>$</span>
+                      <input
+                        type="number" step="0.01" min={minDep}
+                        value={bbAmount} onChange={e => setBbAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-input"
+                        style={{ padding: '14px 16px 14px 36px', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
+                      />
+                    </div>
+                    {parseFloat(bbAmount) > 0 && (() => {
+                      const amtVal = parseFloat(bbAmount);
+                      const platFee = amtVal * platformFeePercent / 100;
+                      const netCred = Math.max(0, amtVal - platFee);
+                      return (
+                        <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                            <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
+                          </div>
+                          <FeePill label="Deposit Amount" value={`$${fmt(amtVal)} USDT`} color="#fff" />
+                          <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(platFee)} USDT`} color="#FF4D4D" />
+                          <FeePill label="Transfer Fee (Binance/Bybit)" value="FREE" color="#00C896" />
+                          <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
+                          <FeePill label="💰 You Receive in Wallet" value={`$${fmt(netCred)} USDT`} color="#00C896" />
+                          <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(netCred * rate)} ETB</div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Email *</label>
                     <input
-                      type="number" step="0.01" min={minDep}
-                      value={bbAmount} onChange={e => setBbAmount(e.target.value)}
-                      placeholder="0.00"
+                      type="email"
+                      value={bbSenderEmail} onChange={e => setBbSenderEmail(e.target.value)}
+                      placeholder="Enter the email address you sent from"
+                      required
                       className="w-input"
-                      style={{ padding: '14px 16px 14px 36px', fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
+                      style={{ padding: '12px 14px' }}
                     />
                   </div>
-                  {parseFloat(bbAmount) > 0 && (() => {
-                    const amtVal = parseFloat(bbAmount);
-                    const platFee = amtVal * platformFeePercent / 100;
-                    const netCred = Math.max(0, amtVal - platFee);
-                    return (
-                      <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '14px', border: '1px solid #1E2640', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
-                          <i className="ti ti-chart-line" style={{ marginRight: '6px' }}></i>Fee Breakdown
-                        </div>
-                        <FeePill label="Deposit Amount" value={`$${fmt(amtVal)} USDT`} color="#fff" />
-                        <FeePill label={`Platform Fee (${platformFeePercent}%)`} value={`-$${fmt(platFee)} USDT`} color="#FF4D4D" />
-                        <FeePill label="Transfer Fee (Binance/Bybit)" value="FREE" color="#00C896" />
-                        <div style={{ height: '1px', background: '#1E2640', margin: '2px 0' }} />
-                        <FeePill label="💰 You Receive in Wallet" value={`$${fmt(netCred)} USDT`} color="#00C896" />
-                        <div style={{ fontSize: '10px', color: '#8A9BB8', textAlign: 'center', marginTop: '2px' }}>≈ {fmtEtb(netCred * rate)} ETB</div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Username *</label>
+                    <input
+                      type="text"
+                      value={bbSenderUsername} onChange={e => setBbSenderUsername(e.target.value)}
+                      placeholder="Enter the account username you sent from"
+                      required
+                      className="w-input"
+                      style={{ padding: '12px 14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Transaction ID / Reference (Optional)</label>
+                    <input
+                      type="text"
+                      value={bbTxRef} onChange={e => setBbTxRef(e.target.value)}
+                      placeholder="Enter Binance Pay ID or Bybit TxID"
+                      className="w-input"
+                      style={{ padding: '12px 14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Upload Screenshot Proof *</label>
+                    
+                    {bbScreenshotPreview ? (
+                      <div style={{ position: 'relative', borderRadius: '12px', border: '1px solid #1E2640', overflow: 'hidden', height: '140px', background: '#0B0E1A' }}>
+                        <img src={bbScreenshotPreview} alt="Screenshot Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <button 
+                          type="button" 
+                          onClick={() => { setBbScreenshot(null); setBbScreenshotPreview(null); }}
+                          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '6px', color: '#FF4D4D', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}
+                        >
+                          ✕ Remove
+                        </button>
                       </div>
-                    );
-                  })()}
+                    ) : (
+                      <label className="w-upload-zone">
+                        <span style={{ fontSize: '24px' }}>📁</span>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Click to Upload Screenshot</span>
+                        <span style={{ fontSize: '10px', color: '#4E5567' }}>Supports JPG, PNG (Max 5MB)</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          style={{ display: 'none' }} 
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            try {
+                              setBbLoading(true);
+                              const compressed = await compressImage(file);
+                              setBbScreenshot(compressed);
+                              setBbScreenshotPreview(compressed);
+                            } catch (err) {
+                              setError('Failed to compress screenshot: ' + err.message);
+                            } finally {
+                              setBbLoading(false);
+                            }
+                          }} 
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Email *</label>
-                  <input
-                    type="email"
-                    value={bbSenderEmail} onChange={e => setBbSenderEmail(e.target.value)}
-                    placeholder="Enter the email address you sent from"
-                    required
-                    className="w-input"
-                    style={{ padding: '12px 14px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Your Binance/Bybit Username *</label>
-                  <input
-                    type="text"
-                    value={bbSenderUsername} onChange={e => setBbSenderUsername(e.target.value)}
-                    placeholder="Enter the account username you sent from"
-                    required
-                    className="w-input"
-                    style={{ padding: '12px 14px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Transaction ID / Reference (Optional)</label>
-                  <input
-                    type="text"
-                    value={bbTxRef} onChange={e => setBbTxRef(e.target.value)}
-                    placeholder="Enter Binance Pay ID or Bybit TxID"
-                    className="w-input"
-                    style={{ padding: '12px 14px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Upload Screenshot Proof *</label>
-                  
-                  {bbScreenshotPreview ? (
-                    <div style={{ position: 'relative', borderRadius: '12px', border: '1px solid #1E2640', overflow: 'hidden', height: '140px', background: '#0B0E1A' }}>
-                      <img src={bbScreenshotPreview} alt="Screenshot Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                      <button 
-                        type="button" 
-                        onClick={() => { setBbScreenshot(null); setBbScreenshotPreview(null); }}
-                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.8)', border: 'none', borderRadius: '6px', color: '#FF4D4D', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}
-                      >
-                        ✕ Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="w-upload-zone">
-                      <span style={{ fontSize: '24px' }}>📁</span>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8' }}>Click to Upload Screenshot</span>
-                      <span style={{ fontSize: '10px', color: '#4E5567' }}>Supports JPG, PNG (Max 5MB)</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        style={{ display: 'none' }} 
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (!file) return;
-                          try {
-                            setBbLoading(true);
-                            const compressed = await compressImage(file);
-                            setBbScreenshot(compressed);
-                            setBbScreenshotPreview(compressed);
-                          } catch (err) {
-                            setError('Failed to compress screenshot: ' + err.message);
-                          } finally {
-                            setBbLoading(false);
-                          }
-                        }} 
-                      />
-                    </label>
-                  )}
+                {/* Submit / Cancel Buttons */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setReceiveType(null)} 
+                    className="w-btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBinanceBybitSubmit}
+                    disabled={bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim()}
+                    className="w-btn-primary"
+                    style={{ flex: 2 }}
+                  >
+                    {bbLoading ? '⏳ Processing...' : '✓ Submit Deposit Request'}
+                  </button>
                 </div>
               </div>
+            ) : (
+              /* Binance/Bybit Success Receipt */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#141827', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '20px', padding: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                    <CheckCircle size={32} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>✓ Deposit Requested</h3>
+                  <span style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '4px' }}>Processing via admin verification</span>
+                </div>
 
-              {/* Submit / Cancel Buttons */}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setReceiveType(null)} 
-                  className="w-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBinanceBybitSubmit}
-                  disabled={bbLoading || !bbAmount || !bbScreenshot || !bbSenderEmail.trim() || !bbSenderUsername.trim()}
-                  className="w-btn-primary"
-                  style={{ flex: 2 }}
-                >
-                  {bbLoading ? '⏳ Processing...' : '✓ Submit Deposit Request'}
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                  <Logo size={28} />
+                </div>
+
+                <div style={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Deposit Type:</span>
+                    <strong style={{ color: '#fff' }}>Binance/Bybit Transfer</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>From Account:</span>
+                    <strong style={{ color: '#fff' }}>{bbSenderEmail}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Method:</span>
+                    <strong style={{ color: '#fff' }}>{bbMethod.toUpperCase()} Pay</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Amount Sent:</span>
+                    <strong style={{ color: 'var(--gold)' }}>${parseFloat(bbAmount).toFixed(2)} USDT</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Platform Fee ({platformFeePercent}%):</span>
+                    <strong style={{ color: '#FF4D4D' }}>-${(parseFloat(bbAmount) * platformFeePercent / 100).toFixed(2)} USDT</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Net Credited:</span>
+                    <strong style={{ color: '#00C896' }}>${Math.max(0, parseFloat(bbAmount) - (parseFloat(bbAmount) * platformFeePercent / 100)).toFixed(2)} USDT</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Status:</span>
+                    <strong style={{ color: '#F5A623' }}>⏳ Pending Admin Review</strong>
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(245, 166, 35, 0.05)', border: '1px solid rgba(245, 166, 35, 0.15)', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#ffd580', lineHeight: 1.4 }}>
+                  ℹ️ <strong>Note:</strong> Admin will verify the uploaded screenshot and credit your wallet. This process usually takes <strong>5-15 minutes</strong>.
+                </div>
+
+                {/* Co-Signatures */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '4px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Authorized by</div>
+                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Mrcute</div>
+                    <div style={{ fontSize: '8px', color: '#525866' }}>Platform Node</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Founder, EthioSwap</div>
+                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Biruk Fikru</div>
+                    <div style={{ fontSize: '8px', color: '#525866' }}>Founder & CEO</div>
+                  </div>
+                </div>
+
+                <button onClick={() => {
+                  setBbAmount('');
+                  setBbSenderEmail('');
+                  setBbSenderUsername('');
+                  setBbScreenshot(null);
+                  setBbScreenshotPreview(null);
+                  setBbTxRef('');
+                  setBbStep(1);
+                  setReceiveType(null);
+                  setTab('balance');
+                }} className="w-btn-primary" style={{ marginTop: '8px' }}>
+                  View Wallet
                 </button>
               </div>
-            </div>
+            )
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <StepIndicator current={depStep} total={3} />
+              <StepIndicator current={depStep} total={4} />
 
               {/* STEP 1: Pick Network */}
               {depStep === 1 && (
@@ -1373,7 +1484,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                 </div>
               )}
 
-              {/* STEP 3: Deposit Address + TxID */}
+              {/* STEP 3: Deposit Address + TxID (Pending State) */}
               {depStep === 3 && (
                 <div className="w-card" style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -1390,6 +1501,12 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                   <div style={{ background: 'rgba(255, 77, 77, 0.06)', border: '1px solid rgba(255, 77, 77, 0.2)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <i className="ti ti-alert-triangle" style={{ color: '#FF4D4D', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}></i>
                     <span style={{ fontSize: '12px', color: '#FF4D4D', lineHeight: 1.5 }}>{depNetData?.warning}</span>
+                  </div>
+
+                  {/* Pending State Banner */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(245, 166, 35, 0.08)', border: '1px solid rgba(245, 166, 35, 0.25)', borderRadius: '10px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '12.5px', color: '#FFB800', fontWeight: 700 }}>⏳ Waiting for deposit...</span>
+                    <span style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: 700 }}>Expires in: {depTimeRemaining}</span>
                   </div>
 
                   {/* QR + Address */}
@@ -1434,9 +1551,79 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                       <i className="ti ti-arrow-left" style={{ marginRight: '6px' }}></i>Back
                     </button>
                     <button onClick={handleDepositSubmit} disabled={depLoading || !depTxId.trim()} className="w-btn-primary" style={{ flex: 1 }}>
-                      {depLoading ? '⏳ Submitting…' : '✓ Submit Deposit'}
+                      {depLoading ? '⏳ Submitting…' : "I've sent the USDT"}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* STEP 4: Success Receipt */}
+              {depStep === 4 && (
+                <div className="w-card" style={{ padding: '24px', background: '#141827', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                      <CheckCircle size={32} />
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>✓ Deposit received!</h3>
+                    <span style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>
+                      Credited to wallet
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                    <Logo size={28} />
+                  </div>
+
+                  <div style={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>From (My Wallet):</span>
+                      <strong style={{ color: '#fff', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{depTxId}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>To EthioSwap:</span>
+                      <strong style={{ color: '#fff', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{depAddress}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Amount (USDT):</span>
+                      <strong style={{ color: 'var(--gold)' }}>${depAmtNum.toFixed(2)} USDT</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Network:</span>
+                      <strong style={{ color: '#fff' }}>{depNetData?.label} ({depNet.toUpperCase()})</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Confirmation:</span>
+                      <strong style={{ color: '#00C896' }}>1/1 blocks confirmed</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Timestamp:</span>
+                      <strong style={{ color: '#fff', fontSize: '11px' }}>{new Date().toLocaleString()}</strong>
+                    </div>
+                  </div>
+
+                  {/* Co-Signatures */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '4px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Authorized by</div>
+                      <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Mrcute</div>
+                      <div style={{ fontSize: '8px', color: '#525866' }}>Platform Node</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Founder, EthioSwap</div>
+                      <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Biruk Fikru</div>
+                      <div style={{ fontSize: '8px', color: '#525866' }}>Founder & CEO</div>
+                    </div>
+                  </div>
+
+                  <button onClick={() => {
+                    setDepAmt('');
+                    setDepTxId('');
+                    setDepStep(1);
+                    setReceiveType(null);
+                    setTab('balance');
+                  }} className="w-btn-primary" style={{ marginTop: '8px' }}>
+                    View Wallet
+                  </button>
                 </div>
               )}
             </div>
@@ -1459,7 +1646,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <StepIndicator current={wdStep} total={3} />
+              <StepIndicator current={wdStep} total={5} />
 
               {/* STEP 1: Pick Network */}
               {wdStep === 1 && (
@@ -1599,6 +1786,128 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                     </button>
                     <button onClick={handleWithdrawSubmit} disabled={wdLoading} className="w-btn-primary" style={{ flex: 1 }}>
                       {wdLoading ? '⏳ Processing…' : '✓ Confirm Withdrawal'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Processing Pending State */}
+              {wdStep === 4 && (
+                <div className="w-card" style={{ padding: '30px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', border: '4px solid rgba(255,255,255,0.05)', borderTopColor: '#F5A623', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <div>
+                    <span style={{ display: 'inline-flex', padding: '4px 10px', background: 'rgba(245, 166, 35, 0.15)', border: '1px solid rgba(245, 166, 35, 0.3)', color: '#FFB800', borderRadius: '8px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                      ⏳ Processing Withdrawal
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#fff', margin: 0 }}>Sending your USDT...</h3>
+                  <p style={{ fontSize: '12px', color: '#8A9BB8', lineHeight: 1.5, margin: 0, maxWidth: '280px' }}>
+                    Your USDT is being sent on the <strong>{wdNetData?.label}</strong> network. This may take <strong>1–5 minutes</strong>.
+                  </p>
+                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '12px', padding: '12px 16px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#8A9BB8' }}>From:</span>
+                      <span style={{ color: '#fff', fontFamily: 'var(--font-mono)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{address}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#8A9BB8' }}>To:</span>
+                      <span style={{ color: '#fff', fontFamily: 'var(--font-mono)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wdAddr}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#8A9BB8' }}>Amount:</span>
+                      <span style={{ color: 'var(--gold)', fontWeight: 700 }}>${wdAmtNum.toFixed(2)} USDT</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#8A9BB8', fontStyle: 'italic' }}>
+                    🔔 You'll be notified when transaction is fully complete.
+                  </span>
+                </div>
+              )}
+
+              {/* STEP 5: Success Receipt */}
+              {wdStep === 5 && (
+                <div className="w-card" style={{ padding: '24px', background: '#141827', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                      <CheckCircle size={32} />
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>✓ Withdrawal Sent!</h3>
+                    <span style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>
+                      Complete
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                    <Logo size={28} />
+                  </div>
+
+                  <div style={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>From (EthioSwap):</span>
+                      <strong style={{ color: '#fff', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{address}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>To Address:</span>
+                      <strong style={{ color: '#fff', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wdAddr}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Amount Sent:</span>
+                      <strong style={{ color: 'var(--gold)' }}>${wdAmtNum.toFixed(2)} USDT</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Platform Fee:</span>
+                      <strong style={{ color: '#FF4D4D' }}>-${wdPlatFee.toFixed(2)} USDT</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Network Fee:</span>
+                      <strong style={{ color: '#FF4D4D' }}>-${wdChainFee.toFixed(2)} USDT</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Network:</span>
+                      <strong style={{ color: '#fff' }}>{wdNetData?.label} ({wdNet.toUpperCase()})</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Tx Hash:</span>
+                      <strong style={{ color: '#00C896', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>MockHash_{Math.random().toString(36).substring(2, 10)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                      <span style={{ color: '#8A9BB8' }}>Timestamp:</span>
+                      <strong style={{ color: '#fff', fontSize: '11px' }}>{new Date().toLocaleString()}</strong>
+                    </div>
+                  </div>
+
+                  {/* Co-Signatures */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '4px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Authorized by</div>
+                      <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Mrcute</div>
+                      <div style={{ fontSize: '8px', color: '#525866' }}>Platform Node</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#8A9BB8', textTransform: 'uppercase' }}>Founder, EthioSwap</div>
+                      <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '18px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '2px 0' }}>Biruk Fikru</div>
+                      <div style={{ fontSize: '8px', color: '#525866' }}>Founder & CEO</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <a 
+                      href={`https://etherscan.io/address/${wdAddr}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="w-btn-secondary" 
+                      style={{ flex: 1, textDecoration: 'none' }}
+                    >
+                      View Explorer
+                    </a>
+                    <button onClick={() => {
+                      setWdAmt('');
+                      setWdAddr('');
+                      setWdStep(1);
+                      setWdType(null);
+                      setTab('balance');
+                    }} className="w-btn-primary" style={{ flex: 1 }}>
+                      Done
                     </button>
                   </div>
                 </div>

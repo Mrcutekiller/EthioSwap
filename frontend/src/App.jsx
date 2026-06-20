@@ -1037,7 +1037,7 @@ const RecoveryForm = () => {
 
 const PAGE_TITLES = { p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile' };
 
-const DesktopSidebar = ({ page, setPage, user, logout }) => {
+const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setShowNotifications, notifCount }) => {
   const navItems = [
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
@@ -1055,12 +1055,27 @@ const DesktopSidebar = ({ page, setPage, user, logout }) => {
         <span style={{ fontSize: '18px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
       </div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 8px' }}>
-        {navItems.map(item => (
-          <button key={item.id} onClick={() => { setPage(item.id); if (item.id === 'wallet') setWalletInitialTab('balance'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: page === item.id ? '#F5A623' : '#8A9BB8', background: page === item.id ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: page === item.id ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            <i className={item.icon} style={{ fontSize: '20px' }}></i>
-            <span style={{ fontWeight: page === item.id ? 700 : 500 }}>{item.label}</span>
-          </button>
-        ))}
+        {navItems.map(item => {
+          const isSelected = item.id === 'notifications' ? showNotifications : page === item.id;
+          return (
+            <button key={item.id} onClick={() => {
+              if (item.id === 'notifications') {
+                setShowNotifications(prev => !prev);
+              } else {
+                setPage(item.id);
+                if (item.id === 'wallet') setWalletInitialTab('balance');
+              }
+            }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: isSelected ? '#F5A623' : '#8A9BB8', background: isSelected ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: isSelected ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+              <i className={item.icon} style={{ fontSize: '20px' }}></i>
+              <span style={{ fontWeight: isSelected ? 700 : 500, flex: 1 }}>{item.label}</span>
+              {item.id === 'notifications' && notifCount > 0 && (
+                <span style={{ background: '#FF4D4D', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {notifCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
       <div style={{ padding: '16px 20px', borderTop: '1px solid #1E2640', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1115,13 +1130,32 @@ const AppContent = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [sellerId, setSellerId] = useState(null);
-  const notifCount = useNotifCount();
+  const notifCount = useNotifCount(user?.id);
   const [width, setWidth] = useState(window.innerWidth);
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleNavigate = (e) => {
+      const dest = e.detail;
+      if (dest === 'history') {
+        setPage('transactions');
+      } else if (dest === 'trades') {
+        setPage('p2p');
+      } else if (dest === 'wallet') {
+        setPage('wallet');
+      } else if (dest === 'profile') {
+        setPage('profile');
+      } else if (dest === 'notifications') {
+        setPage('notifications');
+      }
+    };
+    window.addEventListener('ethioswap_navigate', handleNavigate);
+    return () => window.removeEventListener('ethioswap_navigate', handleNavigate);
   }, []);
 
   useEffect(() => {
@@ -1162,14 +1196,24 @@ const AppContent = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0E1A' }}>
-      {isDesktop && !is_admin_page && <DesktopSidebar page={page} setPage={setPage} user={user} logout={logout} />}
+      {isDesktop && !is_admin_page && (
+        <DesktopSidebar 
+          page={page} 
+          setPage={setPage} 
+          user={user} 
+          logout={logout} 
+          showNotifications={showNotifications} 
+          setShowNotifications={setShowNotifications} 
+          notifCount={notifCount} 
+        />
+      )}
       {!isDesktop && !is_admin_page && (
         <div style={{ position: 'sticky', top: 0, zIndex: 90, background: 'rgba(13,17,23,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #1E2640', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
             <span style={{ fontSize: '16px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
           </div>
-          <button onClick={() => setPage('notifications')} style={{ padding: '8px', position: 'relative', color: '#E5E7EB', background: 'none', border: 'none' }}>
+          <button onClick={() => setShowNotifications(prev => !prev)} style={{ padding: '8px', position: 'relative', color: '#E5E7EB', background: 'none', border: 'none' }}>
             <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
             {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', border: '2px solid #0D1117' }}></div>}
           </button>
@@ -1192,7 +1236,7 @@ const AppContent = () => {
 
       <TradeRoom />
       <SupportWidget />
-      {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
+      {showNotifications && <NotificationCenter userId={user?.id} isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
       {!isDesktop && !is_admin_page && <MobileBottomNav page={page} setPage={setPage} />}
     </div>
   );
