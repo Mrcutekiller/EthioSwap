@@ -234,6 +234,10 @@ const P2PListings = () => {
       const matchesType = onlyMyAds || (p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy'));
       const matchesPayment = filterPayment === 'All' || l.payment_methods.includes(filterPayment);
       
+      // Filter out non-active listings unless viewing own ads (excluding cancelled ones)
+      const matchesStatus = l.status === 'active' || (onlyMyAds && isOwnListing && l.status !== 'cancelled');
+      if (!matchesStatus) return false;
+      
       let matchesAmount = true;
       if (filterAmountRange === 'under50') {
         matchesAmount = l.amount_eth < 50;

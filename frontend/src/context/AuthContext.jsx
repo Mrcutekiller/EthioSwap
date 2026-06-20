@@ -185,10 +185,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadListings = async () => {
-    const { data } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('status', 'active');
+    let userId = user?.id;
+    if (!userId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      userId = sessionData?.session?.user?.id;
+    }
+
+    let query = supabase.from('listings').select('*');
+    if (userId) {
+      query = query.or(`status.eq.active,seller_id.eq.${userId}`);
+    } else {
+      query = query.eq('status', 'active');
+    }
+
+    const { data } = await query;
 
     if (data) {
       const sellerIds = [...new Set(data.map(l => l.seller_id).filter(Boolean))];
@@ -707,6 +717,7 @@ export const AuthProvider = ({ children }) => {
         max_limit_etb: maxLimitEtb,
         payment_methods: paymentMethods,
         type,
+        status: 'active',
         custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
         payment_accounts: paymentAccounts,
         description: description || null,
