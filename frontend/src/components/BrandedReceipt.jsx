@@ -332,7 +332,7 @@ export default function BrandedReceipt({
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px', fontSize: '11px', color: '#8A9BB8', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '16px' }}>
           <div>This is an official EthioSwap transaction receipt. Keep for your records.</div>
           <div style={{ fontWeight: 600 }}>Questions? Support: <a href="mailto:support@ethioswap.com" style={{ color: '#00C896', textDecoration: 'none' }}>support@ethioswap.com</a></div>
-          <div style={{ color: '#F5A623', fontWeight: 700, letterSpacing: '0.04em', fontSize: '10px', marginTop: '2px' }}>www.ethioswap.com</div>
+          <div style={{ color: '#F5A623', fontWeight: 700, letterSpacing: '0.04em', fontSize: '10px', marginTop: '2px' }}>www.ethioswap.qzz.io</div>
           <div style={{ fontSize: '9.5px', color: '#8A9BB8', marginTop: '2px' }}>© {new Date().getFullYear()} EthioSwap. All rights reserved.</div>
         </div>
 

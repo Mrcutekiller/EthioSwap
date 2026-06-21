@@ -245,7 +245,7 @@ const BillReceipt = ({ trade, user, systemSettings, onClose }) => {
             <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
               EthioSwap · Ethiopia's Premier P2P USDT Exchange Platform<br />
               This is a system-generated receipt. For support, contact us via the app.<br />
-              <span style={{ color: '#F5A623', fontWeight: 600 }}>www.ethioswap.com</span>
+              <span style={{ color: '#F5A623', fontWeight: 600 }}>www.ethioswap.qzz.io</span>
             </div>
           </div>
         </div>
