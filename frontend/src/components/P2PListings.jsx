@@ -1285,7 +1285,7 @@ const P2PListings = () => {
                           onMouseEnter={(e) => e.target.style.color = '#F5A623'}
                           onMouseLeave={(e) => e.target.style.color = '#fff'}
                         >
-                          @{listing.seller_name}
+                          {listing.seller_name ? `@${listing.seller_name}` : '@Anonymous'}
                         </span>
                         {(listing.seller_kyc_status === 'verified' || listing.seller_kyc_status === 'approved') && (
                           <span style={{ 

@@ -195,13 +195,12 @@ export const AuthProvider = ({ children }) => {
       userId = sessionData?.session?.user?.id;
     }
 
-    let query = supabase.from('listings').select('*');
+    let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
     if (userId) {
       query = query.or(`status.eq.active,seller_id.eq.${userId}`);
     } else {
       query = query.eq('status', 'active');
     }
-    query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
     console.log('loadListings data:', data, 'error:', error);
@@ -215,7 +214,7 @@ export const AuthProvider = ({ children }) => {
       if (sellerIds.length > 0) {
         const { data: sellers, error: sellersError } = await supabase
           .from('users')
-          .select('id, profile_pic, is_verified_trader, reputation, kyc_status, total_trades')
+          .select('id, profile_pic, is_verified_trader, reputation, kyc_status, total_trades, username')
           .in('id', sellerIds);
         if (sellersError) {
           console.error('Error loading sellers:', sellersError);
@@ -228,15 +227,14 @@ export const AuthProvider = ({ children }) => {
           data.forEach(l => {
             const s = sellerMap[l.seller_id];
             if (s) {
+              l.seller_name = l.seller_name || s.username;
+              l.seller_profile_pic = l.seller_profile_pic || s.profile_pic;
               l.isSellerVerifiedTrader = s.is_verified_trader || s.kyc_status === 'approved';
               l.seller_kyc_status = s.kyc_status;
               l.sellerReputation = s.reputation ?? 100;
               l.sellerTotalTrades = s.total_trades ?? 0;
               l.sellerAverageRating = 5.0;
               l.sellerPositivePercentage = s.reputation ?? 100;
-              if (!l.seller_profile_pic && s.profile_pic) {
-                l.seller_profile_pic = s.profile_pic;
-              }
             }
           });
         }
