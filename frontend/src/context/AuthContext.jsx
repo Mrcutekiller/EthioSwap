@@ -39,6 +39,10 @@ export const ETH_USD_PRICE = 3000.0;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const userRef = React.useRef(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   const [error, setErrorState] = useState(null);
   const [success, setSuccessState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -185,7 +189,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadListings = async () => {
-    let userId = user?.id;
+    let userId = userRef.current?.id;
     if (!userId) {
       const { data: sessionData } = await supabase.auth.getSession();
       userId = sessionData?.session?.user?.id;
@@ -268,6 +272,10 @@ export const AuthProvider = ({ children }) => {
     if (user?.id) {
       loadTrades(user.id);
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadListings();
   }, [user?.id]);
 
   const isAdmin = user?.role === 'admin';
@@ -704,11 +712,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty) => {
+  const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('listings').insert({
+      const { data, error } = await supabase.from('listings').insert({
         seller_id: user.id,
         seller_name: user.username,
         seller_profile_pic: user.profile_pic || null,
@@ -723,9 +731,24 @@ export const AuthProvider = ({ children }) => {
         description: description || null,
         payment_window: paymentWindow ? Number(paymentWindow) : 15,
         allow_third_party: !!allowThirdParty,
-      });
+        images: images || [],
+      }).select();
       if (error) throw error;
       setSuccess('Listing published!');
+      
+      if (data && data.length > 0) {
+        const newListing = {
+          ...data[0],
+          isSellerVerifiedTrader: user.kyc_status === 'approved' || user.is_verified_trader,
+          seller_kyc_status: user.kyc_status,
+          sellerReputation: user.reputation ?? 100,
+          sellerTotalTrades: user.total_trades ?? 0,
+          sellerAverageRating: 5.0,
+          sellerPositivePercentage: user.reputation ?? 100,
+        };
+        setListings(prev => [newListing, ...prev]);
+      }
+      
       await loadListings();
     } catch (err) {
       setError(err.message);
@@ -734,7 +757,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateListing = async (listingId, amountEth, minLimitEtb, maxLimitEtb, customRateEtb, description, paymentWindow, allowThirdParty) => {
+  const updateListing = async (listingId, amountEth, minLimitEtb, maxLimitEtb, customRateEtb, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
     setLoading(true);
     try {
@@ -748,6 +771,7 @@ export const AuthProvider = ({ children }) => {
           description: description || null,
           payment_window: paymentWindow ? Number(paymentWindow) : 15,
           allow_third_party: !!allowThirdParty,
+          images: images || [],
         })
         .eq('id', listingId)
         .eq('seller_id', user.id);

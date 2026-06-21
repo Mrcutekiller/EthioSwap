@@ -132,6 +132,10 @@ CREATE TABLE listings (
   type TEXT NOT NULL CHECK (type IN ('buy', 'sell')),
   custom_rate_etb DECIMAL,
   payment_accounts JSONB DEFAULT '[]',
+  description TEXT,
+  payment_window INTEGER DEFAULT 15,
+  allow_third_party BOOLEAN DEFAULT FALSE,
+  images JSONB DEFAULT '[]',
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed', 'cancelled')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
