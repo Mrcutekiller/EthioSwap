@@ -360,6 +360,9 @@ const P2PListings = () => {
       }
       return 0;
     });
+  console.log('P2PListings: Listings state:', listings);
+  console.log('P2PListings: Filtered listings:', filtered);
+  console.log('P2PListings: Current filter state:', { p2pTab, filterPayment, filterAmountRange, onlyVerified, onlyKyc, onlyMyAds });
 
   // ── Shared styles ─────────────────────────────────────────
   const overlayStyle = {
