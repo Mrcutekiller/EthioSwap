@@ -285,13 +285,18 @@ const P2PListings = () => {
   // ── Filter and Sort listings ──────────────────────────────
   const filtered = listings
     .filter(l => {
+      console.log('Checking listing:', l.id, l.type, l.status, l.amount_eth);
       const isOwnListing = l.seller_id === user?.id;
       const matchesMyAds = !onlyMyAds || isOwnListing;
-      const matchesType = onlyMyAds || (p2pTab === 'buy' ? (l.type === 'sell' || !l.type) : (l.type === 'buy'));
-      const matchesPayment = filterPayment === 'All' || l.payment_methods.includes(filterPayment);
+      console.log('  matchesMyAds:', matchesMyAds, onlyMyAds, isOwnListing);
+      const matchesType = onlyMyAds || (p2pTab === 'buy' ? (l.type === 'sell') : (l.type === 'buy'));
+      console.log('  matchesType:', matchesType, p2pTab, l.type);
+      const matchesPayment = filterPayment === 'All' || (Array.isArray(l.payment_methods) && l.payment_methods.includes(filterPayment));
+      console.log('  matchesPayment:', matchesPayment, filterPayment, l.payment_methods);
       
       // Filter out non-active listings unless viewing own ads (excluding cancelled ones)
       const matchesStatus = l.status === 'active' || (onlyMyAds && isOwnListing && l.status !== 'cancelled');
+      console.log('  matchesStatus:', matchesStatus, l.status);
       if (!matchesStatus) return false;
       
       let matchesAmount = true;
@@ -301,16 +306,22 @@ const P2PListings = () => {
         matchesAmount = l.amount_eth >= 50 && l.amount_eth <= 200;
       } else if (filterAmountRange === 'over200') {
         matchesAmount = l.amount_eth > 200;
+      } else if (filterAmountRange === 'All') {
+        matchesAmount = true;
       }
+      console.log('  matchesAmount:', matchesAmount, filterAmountRange, l.amount_eth);
 
       // Search matches username or payment method
       const term = searchQuery.toLowerCase().trim();
       const matchesSearch = !term || 
         (l.seller_name || '').toLowerCase().includes(term) ||
-        (l.payment_methods || []).some(p => p.toLowerCase().includes(term));
+        (Array.isArray(l.payment_methods) && l.payment_methods.some(p => p.toLowerCase().includes(term)));
+      console.log('  matchesSearch:', matchesSearch, term);
 
       const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
+      console.log('  matchesVerified:', matchesVerified, onlyVerified, l.isSellerVerifiedTrader);
       const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified' || l.seller_kyc_status === 'approved';
+      console.log('  matchesKyc:', matchesKyc, onlyKyc, l.seller_kyc_status);
 
       // Quick amount filter calculator logic
       let matchesCalc = true;
@@ -327,6 +338,7 @@ const P2PListings = () => {
           matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
         }
       }
+      console.log('  matchesCalc:', matchesCalc, calcAmount, calcUnit);
 
       // Rate range filter logic
       let matchesRate = true;
@@ -340,8 +352,11 @@ const P2PListings = () => {
       if (filterMaxRate && !isNaN(parseFloat(filterMaxRate))) {
         matchesRate = matchesRate && rateVal <= parseFloat(filterMaxRate);
       }
+      console.log('  matchesRate:', matchesRate, filterMinRate, filterMaxRate, rateVal);
 
-      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesRate && matchesMyAds;
+      const passesAll = matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesRate && matchesMyAds;
+      console.log('Listing', l.id, 'passes:', passesAll);
+      return passesAll;
     })
     .sort((a, b) => {
       const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
