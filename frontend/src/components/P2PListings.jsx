@@ -67,9 +67,7 @@ const P2PListings = () => {
   const [onlyMyAds, setOnlyMyAds] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
 
   // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
   React.useEffect(() => {
@@ -107,7 +105,6 @@ const P2PListings = () => {
       setDescription('');
       setPaymentWindow('15');
       setAllowThirdParty(false);
-      setUploadedImages([]);
     } else if (editingListingId) {
       const listingToEdit = listings.find(l => l.id === editingListingId);
       if (listingToEdit) {
@@ -119,14 +116,9 @@ const P2PListings = () => {
         setDescription(listingToEdit.description || '');
         setPaymentWindow((listingToEdit.payment_window ?? 15).toString());
         setAllowThirdParty(!!listingToEdit.allow_third_party);
-        setUploadedImages(listingToEdit.images || []);
       }
     }
   }, [showCreateModal, editingListingId, listings]);
-
-  React.useEffect(() => {
-    setActiveImageIdx(0);
-  }, [selectedListing]);
 
   // Create form state
   const [createType,      setCreateType]      = useState('sell'); // 'sell' | 'buy'
@@ -155,29 +147,7 @@ const P2PListings = () => {
   // ── KYC gate ─────────────────────────────────────────────
   const kycApproved = user?.kyc_status === 'approved' || user?.username === 'biruk';
 
-  // ── Image upload helper (converts to base64 data URLs) ──────
-  const handleImageFileSelect = async (files) => {
-    const fileArray = Array.from(files).slice(0, 3 - uploadedImages.length);
-    if (fileArray.length === 0) return;
-    setIsUploadingImage(true);
-    try {
-      const newImages = await Promise.all(fileArray.map(file => new Promise((resolve, reject) => {
-        if (!file.type.startsWith('image/')) { reject(new Error('Only images are allowed')); return; }
-        if (file.size > 5 * 1024 * 1024) { reject(new Error('Max 5MB per image')); return; }
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      })));
-      setUploadedImages(prev => [...prev, ...newImages].slice(0, 3));
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
 
-  const [imageDragOver, setImageDragOver] = React.useState(false);
 
   // ── Create listing ────────────────────────────────────────
   const handleCreateListing = async (e) => {
@@ -225,7 +195,7 @@ const P2PListings = () => {
         description,
         parseInt(paymentWindow),
         allowThirdParty,
-        uploadedImages
+        []
       );
       setEditingListingId(null);
     } else {
@@ -240,14 +210,13 @@ const P2PListings = () => {
         description,
         parseInt(paymentWindow),
         allowThirdParty,
-        uploadedImages
+        []
       );
     }
     
     setamount_eth(''); setMinLimit(''); setMaxLimit('');
     setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
     setDescription(''); setPaymentWindow('15'); setAllowThirdParty(false);
-    setUploadedImages([]);
     setShowCreateModal(false);
   };
 
@@ -610,7 +579,7 @@ const P2PListings = () => {
       {/* ── Header ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Logo size={36} />
+          <Logo size={36} showText={false} />
           <div>
             <h2 style={{ fontSize: '22px', fontWeight: 600, color: '#ffffff', margin: 0, fontFamily: 'var(--font-heading)' }}>P2P Marketplace</h2>
             <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Safe Peer-to-Peer Trading Terminal</span>
@@ -1408,36 +1377,7 @@ const P2PListings = () => {
                   })}
                 </div>
 
-                {/* Listing images thumbnail strip */}
-                {listing.images && listing.images.length > 0 && (
-                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-                    {listing.images.map((img, imgIdx) => (
-                      <img
-                        key={imgIdx}
-                        src={img}
-                        alt={`Listing image ${imgIdx + 1}`}
-                        style={{
-                          width: '64px',
-                          height: '48px',
-                          objectFit: 'cover',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          transition: 'transform 0.2s ease',
-                        }}
-                        onMouseEnter={e => e.target.style.transform = 'scale(1.06)'}
-                        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-                        onClick={e => {
-                          e.stopPropagation();
-                          setSelectedListing(listing);
-                          setActiveImageIdx(imgIdx);
-                          setShowBuyModal(true);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
+
 
                 {/* Time Window & Third Party Rules */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--muted)', padding: '4px 4px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
@@ -1911,101 +1851,7 @@ const P2PListings = () => {
                 </div>
               </div>
 
-              {/* SECTION 4: LISTING IMAGES (OPTIONAL) */}
-              <div style={{
-                background: 'rgba(255,255,255,0.01)',
-                border: '1px solid rgba(255,255,255,0.04)',
-                borderRadius: '16px',
-                padding: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
-                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>🖼️</span> 4. Listing Images <span style={{ fontWeight: 400, color: 'var(--muted)', textTransform: 'none', fontSize: '10px' }}>(optional, up to 3)</span>
-                </div>
 
-                {/* Drop zone */}
-                <div
-                  onDragOver={e => { e.preventDefault(); setImageDragOver(true); }}
-                  onDragLeave={() => setImageDragOver(false)}
-                  onDrop={e => { e.preventDefault(); setImageDragOver(false); handleImageFileSelect(e.dataTransfer.files); }}
-                  onClick={() => uploadedImages.length < 3 && document.getElementById('listing-image-input').click()}
-                  style={{
-                    border: `2px dashed ${imageDragOver ? '#F5A623' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: '12px',
-                    padding: '16px',
-                    textAlign: 'center',
-                    cursor: uploadedImages.length >= 3 ? 'not-allowed' : 'pointer',
-                    background: imageDragOver ? 'rgba(245,166,35,0.06)' : 'rgba(255,255,255,0.01)',
-                    transition: 'all 0.2s ease',
-                    opacity: uploadedImages.length >= 3 ? 0.5 : 1,
-                  }}
-                >
-                  <input
-                    id="listing-image-input"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={e => handleImageFileSelect(e.target.files)}
-                  />
-                  {isUploadingImage ? (
-                    <div style={{ color: '#F5A623', fontSize: '13px', fontWeight: 600 }}>⏳ Processing images...</div>
-                  ) : (
-                    <>
-                      <div style={{ fontSize: '24px', marginBottom: '6px' }}>📸</div>
-                      <div style={{ fontSize: '12px', color: '#fff', fontWeight: 600 }}>
-                        {uploadedImages.length >= 3 ? 'Maximum 3 images reached' : 'Drop images here or click to upload'}
-                      </div>
-                      <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: '3px' }}>Max 5MB each · JPG, PNG, WebP</div>
-                    </>
-                  )}
-                </div>
-
-                {/* Preview strip */}
-                {uploadedImages.length > 0 && (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {uploadedImages.map((img, idx) => (
-                      <div key={idx} style={{ position: 'relative' }}>
-                        <img
-                          src={img}
-                          alt={`Preview ${idx + 1}`}
-                          style={{
-                            width: '72px',
-                            height: '56px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(245,166,35,0.3)',
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
-                          style={{
-                            position: 'absolute',
-                            top: '-6px',
-                            right: '-6px',
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '50%',
-                            background: '#EF4444',
-                            border: 'none',
-                            color: '#fff',
-                            fontSize: '9px',
-                            fontWeight: 900,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            lineHeight: 1,
-                          }}
-                        >✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* Warning */}
               <div style={{ background: 'var(--status-danger-bg)', border: '1px solid var(--status-danger-border)', borderRadius: '12px', padding: '12px' }}>
@@ -2087,41 +1933,6 @@ const P2PListings = () => {
                   </div>
                 </div>
 
-                {/* Listing images gallery */}
-                {selectedListing.images && selectedListing.images.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    {/* Main image */}
-                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '8px' }}>
-                      <img
-                        src={selectedListing.images[activeImageIdx]}
-                        alt={`Listing image ${activeImageIdx + 1}`}
-                        style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}
-                      />
-                      <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.55)', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', color: '#fff', fontWeight: 600, backdropFilter: 'blur(4px)' }}>
-                        {activeImageIdx + 1} / {selectedListing.images.length}
-                      </div>
-                    </div>
-                    {/* Thumbnail strip */}
-                    {selectedListing.images.length > 1 && (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        {selectedListing.images.map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={img}
-                            alt={`Thumbnail ${idx + 1}`}
-                            onClick={() => setActiveImageIdx(idx)}
-                            style={{
-                              width: '52px', height: '40px', objectFit: 'cover', borderRadius: '6px',
-                              border: `2px solid ${idx === activeImageIdx ? '#F5A623' : 'rgba(255,255,255,0.08)'}`,
-                              cursor: 'pointer', flexShrink: 0, transition: 'border-color 0.15s ease',
-                              opacity: idx === activeImageIdx ? 1 : 0.7,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Steps */}
                 {selectedListing.type === 'buy' ? (
