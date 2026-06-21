@@ -195,12 +195,13 @@ export const AuthProvider = ({ children }) => {
       userId = sessionData?.session?.user?.id;
     }
 
-    let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('listings').select('*');
     if (userId) {
       query = query.or(`status.eq.active,seller_id.eq.${userId}`);
     } else {
       query = query.eq('status', 'active');
     }
+    query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
     console.log('loadListings data:', data, 'error:', error);
@@ -240,6 +241,7 @@ export const AuthProvider = ({ children }) => {
           });
         }
       }
+      console.log('Setting listings state to:', data);
       setListings(data);
     }
   };
@@ -367,11 +369,14 @@ export const AuthProvider = ({ children }) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'listings' },
-        () => {
+        (payload) => {
+          console.log('Realtime listings change received:', payload);
           loadListings();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Listings channel subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -738,6 +743,13 @@ export const AuthProvider = ({ children }) => {
         payment_methods: paymentMethods,
         type,
         status: 'active',
+        seller_profile_pic: user.profile_pic || null,
+        custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
+        payment_accounts: paymentAccounts,
+        description: description || null,
+        payment_window: paymentWindow ? Number(paymentWindow) : 15,
+        allow_third_party: !!allowThirdParty,
+        images: images || [],
       });
       const { data, error } = await supabase.from('listings').insert({
         seller_id: user.id,
@@ -755,14 +767,17 @@ export const AuthProvider = ({ children }) => {
         payment_window: paymentWindow ? Number(paymentWindow) : 15,
         allow_third_party: !!allowThirdParty,
         images: images || [],
-      }).select();
+      }).select().single();
       console.log('createListing result: data:', data, 'error:', error);
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
       setSuccess('Listing published!');
       
-      if (data && data.length > 0) {
+      if (data) {
         const newListing = {
-          ...data[0],
+          ...data,
           isSellerVerifiedTrader: user.kyc_status === 'approved' || user.is_verified_trader,
           seller_kyc_status: user.kyc_status,
           sellerReputation: user.reputation ?? 100,
@@ -770,9 +785,11 @@ export const AuthProvider = ({ children }) => {
           sellerAverageRating: 5.0,
           sellerPositivePercentage: user.reputation ?? 100,
         };
+        console.log('Optimistically updating listings with:', newListing);
         setListings(prev => [newListing, ...prev]);
       }
       
+      // Load listings from DB just to confirm
       await loadListings();
     } catch (err) {
       console.error('Error creating listing:', err);
