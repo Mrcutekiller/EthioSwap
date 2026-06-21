@@ -188,6 +188,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const [listingsChannel, setListingsChannel] = useState(null);
+  const [tradesChannel, setTradesChannel] = useState(null);
+
   const loadListings = async () => {
     let userId = userRef.current?.id;
     if (!userId) {
@@ -242,6 +245,29 @@ export const AuthProvider = ({ children }) => {
       console.log('Setting listings state to:', data);
       setListings(data);
     }
+
+    // Subscribe to realtime listings changes
+    if (listingsChannel) {
+      listingsChannel.unsubscribe();
+    }
+
+    const channel = supabase
+      .channel('public:listings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'listings',
+        },
+        async (payload) => {
+          console.log('Listings change received!', payload);
+          await loadListings();
+        }
+      )
+      .subscribe();
+
+    setListingsChannel(channel);
   };
 
   const loadTrades = async (userId) => {
@@ -274,17 +300,53 @@ export const AuthProvider = ({ children }) => {
       }
       setTrades(data);
     }
+
+    // Subscribe to realtime trades changes
+    if (tradesChannel) {
+      tradesChannel.unsubscribe();
+    }
+
+    const channel = supabase
+      .channel('public:trades')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trades',
+          filter: `buyer_id.eq.${userId},seller_id.eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('Trades change received!', payload);
+          await loadTrades(userId);
+        }
+      )
+      .subscribe();
+
+    setTradesChannel(channel);
   };
 
   useEffect(() => {
     if (user?.id) {
       loadTrades(user.id);
     }
+    return () => {
+      if (tradesChannel) {
+        tradesChannel.unsubscribe();
+        setTradesChannel(null);
+      }
+    };
   }, [user?.id]);
 
   useEffect(() => {
     loadListings();
-  }, [user?.id]);
+    return () => {
+      if (listingsChannel) {
+        listingsChannel.unsubscribe();
+        setListingsChannel(null);
+      }
+    };
+  }, []);
 
   const isAdmin = user?.role === 'admin';
   const [allDepositReqs, setAllDepositReqs] = useState([]);
