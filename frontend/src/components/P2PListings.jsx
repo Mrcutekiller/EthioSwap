@@ -1526,11 +1526,11 @@ const P2PListings = () => {
             {/* Offer type selector */}
             <div style={{ 
               display: 'flex', 
-              background: 'var(--bg-base)', 
-              border: '1px solid var(--border)', 
+              background: '#141827', 
+              border: '1px solid rgba(255,255,255,0.06)', 
               borderRadius: '12px', 
-              padding: '3px', 
-              gap: '2px', 
+              padding: '4px', 
+              gap: '6px', 
               marginBottom: '16px',
               opacity: editingListingId ? 0.6 : 1,
               pointerEvents: editingListingId ? 'none' : 'auto'
@@ -1539,11 +1539,12 @@ const P2PListings = () => {
                 type="button"
                 onClick={() => setCreateType('sell')}
                 style={{
-                  flex: 1, padding: '8px 4px', borderRadius: '9px', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--font)', fontWeight: 700, fontSize: '11px',
-                  background: createType === 'sell' ? 'linear-gradient(135deg,rgba(200,150,44,0.15),rgba(200,150,44,0.05))' : 'transparent',
-                  color: createType === 'sell' ? 'var(--gold-light)' : 'var(--text-3)',
-                  transition: 'all 0.15s ease'
+                  flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 800, fontSize: '12px',
+                  background: createType === 'sell' ? 'linear-gradient(135deg, rgba(245,166,35,0.18), rgba(245,166,35,0.05))' : 'transparent',
+                  color: createType === 'sell' ? '#F5A623' : '#8A9BB8',
+                  transition: 'all 0.2s ease',
+                  boxShadow: createType === 'sell' ? '0 2px 12px rgba(245,166,35,0.12)' : 'none'
                 }}
               >
                 📈 Sell USD Ad
@@ -1552,11 +1553,12 @@ const P2PListings = () => {
                 type="button"
                 onClick={() => setCreateType('buy')}
                 style={{
-                  flex: 1, padding: '8px 4px', borderRadius: '9px', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--font)', fontWeight: 700, fontSize: '11px',
-                  background: createType === 'buy' ? 'linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.05))' : 'transparent',
-                  color: createType === 'buy' ? 'var(--teal-light)' : 'var(--text-3)',
-                  transition: 'all 0.15s ease'
+                  flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 800, fontSize: '12px',
+                  background: createType === 'buy' ? 'linear-gradient(135deg, rgba(0,200,150,0.18), rgba(0,200,150,0.05))' : 'transparent',
+                  color: createType === 'buy' ? '#00C896' : '#8A9BB8',
+                  transition: 'all 0.2s ease',
+                  boxShadow: createType === 'buy' ? '0 2px 12px rgba(0,200,150,0.12)' : 'none'
                 }}
               >
                 📉 Buy USD Ad
@@ -1565,20 +1567,20 @@ const P2PListings = () => {
 
             {/* How it works */}
             <div style={{
-              background: createType === 'buy' ? 'rgba(0,212,170,0.07)' : 'var(--gold-bg)', 
-              border: `1px solid ${createType === 'buy' ? 'rgba(0,212,170,0.2)' : 'rgba(200,150,44,0.2)'}`,
-              borderRadius: '10px', padding: '12px', marginBottom: '20px',
+              background: createType === 'buy' ? 'rgba(0,200,150,0.07)' : 'rgba(245,166,35,0.05)', 
+              border: `1px solid ${createType === 'buy' ? 'rgba(0,200,150,0.2)' : 'rgba(245,166,35,0.2)'}`,
+              borderRadius: '12px', padding: '14px', marginBottom: '20px',
             }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: createType === 'buy' ? 'var(--teal-light)' : 'var(--gold-light)', marginBottom: '6px' }}>📖 How it works:</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: createType === 'buy' ? '#00C896' : '#F5A623', marginBottom: '8px' }}>📖 How it works:</div>
               {createType === 'buy' ? (
-                <ol style={{ fontSize: '12px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
+                <ol style={{ fontSize: '12px', color: '#c8c8c8', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '5px', margin: 0 }}>
                   <li>Enter the USD amount you want to buy & set limits</li>
                   <li>Your USD balance is <strong>NOT locked upfront</strong></li>
                   <li>Sellers will select your ad and lock their USD in escrow</li>
                   <li>Transfer ETB to their bank account and release USD</li>
                 </ol>
               ) : (
-                <ol style={{ fontSize: '12px', color: 'var(--text-2)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
+                <ol style={{ fontSize: '12px', color: '#c8c8c8', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '5px', margin: 0 }}>
                   <li>Enter USD amount & set min/max ETB limits</li>
                   <li>Your USD will be locked in escrow</li>
                   <li>Buyers will contact you and pay ETB</li>
@@ -1599,7 +1601,7 @@ const P2PListings = () => {
                 flexDirection: 'column',
                 gap: '14px'
               }}>
-                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '11px', color: createType === 'buy' ? '#00C896' : '#F5A623', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>💰</span> 1. Ad Volume & Rate
                 </div>
 
@@ -1705,7 +1707,7 @@ const P2PListings = () => {
                 flexDirection: 'column',
                 gap: '14px'
               }}>
-                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '11px', color: createType === 'buy' ? '#00C896' : '#F5A623', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>💳</span> 2. Transaction Limits & Payouts
                 </div>
 
@@ -1724,33 +1726,33 @@ const P2PListings = () => {
                 {/* Personal payment accounts selector */}
                 <div style={{ marginTop: '4px' }}>
                   {createType === 'buy' ? (
-                    <div style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.15)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', marginBottom: '2px' }}>🛡️</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--teal-light)' }}>No Payout Account Required</div>
-                      <p style={{ fontSize: '10.5px', color: 'var(--muted)', margin: '4px 0 0', lineHeight: 1.5 }}>
+                    <div style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '18px', marginBottom: '4px' }}>🛡️</div>
+                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#00C896' }}>No Payout Account Required</div>
+                      <p style={{ fontSize: '10.5px', color: '#8A9BB8', margin: '6px 0 0', lineHeight: 1.6 }}>
                         Since you are buying USD, sellers will transfer Birr directly into your payout accounts upon trade completion. You will configure this when taking sell orders.
                       </p>
                     </div>
                   ) : (
                     <>
-                      <label className="input-label" style={{ marginBottom: '4px', display: 'block', fontSize: '12px', color: 'var(--text-secondary)' }}>Select Receiving Bank/Wallet</label>
-                      <p style={{ fontSize: '10.5px', color: 'var(--muted)', marginBottom: '8px', lineHeight: 1.4 }}>
+                      <label className="input-label" style={{ marginBottom: '6px', display: 'block', fontSize: '12px', color: 'var(--text-secondary)' }}>Select Receiving Bank/Wallet</label>
+                      <p style={{ fontSize: '10.5px', color: '#8A9BB8', marginBottom: '10px', lineHeight: 1.5 }}>
                         Select the saved accounts where you accept ETB local transfers:
                       </p>
                       
                       {(!user.payment_accounts || user.payment_accounts.length === 0) ? (
-                        <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid var(--status-danger-border)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '18px', marginBottom: '2px' }}>⚠️</div>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--status-danger-text)' }}>No Saved Bank Profiles</div>
-                          <p style={{ fontSize: '10.5px', color: 'var(--text-3)', margin: '4px 0 8px', lineHeight: 1.4 }}>
+                        <div style={{ background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '18px', marginBottom: '4px' }}>⚠️</div>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#EF4444' }}>No Saved Bank Profiles</div>
+                          <p style={{ fontSize: '10.5px', color: '#8A9BB8', margin: '6px 0 10px', lineHeight: 1.5 }}>
                             You must add at least one bank account in your Profile first to list USD.
                           </p>
-                          <a href="#profile" style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 700 }}>
+                          <a href="#profile" style={{ fontSize: '11px', color: '#F5A623', fontWeight: 800 }}>
                             Go to Profile & Add Account →
                           </a>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                           {user.payment_accounts.map(acc => {
                             const sel = linkedAccounts.some(la => la.id === acc.id);
                             const matched = ALL_PAYMENT_METHODS.find(m => m.id === acc.bankName);
@@ -1759,28 +1761,28 @@ const P2PListings = () => {
                                 key={acc.id} 
                                 onClick={() => toggleLinkedAccount(acc)}
                                 style={{
-                                  display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-                                  background: sel ? 'var(--gold-bg)' : 'var(--bg-elevated)',
-                                  border: `1px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                                  borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-                                  transition: 'all 0.15s ease',
+                                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
+                                  background: sel ? 'rgba(245,166,35,0.08)' : '#141827',
+                                  border: `1px solid ${sel ? 'rgba(245,166,35,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                                  borderRadius: '12px', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                                  transition: 'all 0.2s ease',
                                 }}
                               >
-                                <span style={{ fontSize: '16px' }}>{matched?.icon || '🏦'}</span>
+                                <span style={{ fontSize: '18px' }}>{matched?.icon || '🏦'}</span>
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ color: sel ? 'var(--gold-light)' : 'var(--text-1)' }}>
+                                  <div style={{ color: sel ? '#F5A623' : '#fff' }}>
                                     {matched?.label || acc.bankName}
                                   </div>
-                                  <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 400 }}>
+                                  <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 400, marginTop: '2px' }}>
                                     Acc: {acc.accountNumber} · Holder: {acc.holderName}
                                   </div>
                                 </div>
                                 <span style={{
-                                  width: '16px', height: '16px', borderRadius: '50%',
-                                  border: `2px solid ${sel ? 'var(--gold)' : 'var(--border-hover)'}`,
+                                  width: '18px', height: '18px', borderRadius: '50%',
+                                  border: `2px solid ${sel ? '#F5A623' : 'rgba(255,255,255,0.15)'}`,
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  background: sel ? 'var(--gold)' : 'transparent',
-                                  color: '#0A0C12', fontSize: '9px', fontWeight: 900
+                                  background: sel ? '#F5A623' : 'transparent',
+                                  color: '#0A0C12', fontSize: '10px', fontWeight: 900
                                 }}>
                                   {sel && '✓'}
                                 </span>
@@ -1804,7 +1806,7 @@ const P2PListings = () => {
                 flexDirection: 'column',
                 gap: '14px'
               }}>
-                <div style={{ fontSize: '11px', color: 'var(--gold-light)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '11px', color: createType === 'buy' ? '#00C896' : '#F5A623', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>🛡️</span> 3. Trade Terms & Rules
                 </div>
 

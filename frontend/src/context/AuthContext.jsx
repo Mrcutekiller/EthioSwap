@@ -202,15 +202,23 @@ export const AuthProvider = ({ children }) => {
       query = query.eq('status', 'active');
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    console.log('loadListings data:', data, 'error:', error);
+
+    if (error) {
+      console.error('Error loading listings:', error);
+    }
 
     if (data) {
       const sellerIds = [...new Set(data.map(l => l.seller_id).filter(Boolean))];
       if (sellerIds.length > 0) {
-        const { data: sellers } = await supabase
+        const { data: sellers, error: sellersError } = await supabase
           .from('users')
           .select('id, profile_pic, is_verified_trader, reputation, kyc_status, total_trades')
           .in('id', sellerIds);
+        if (sellersError) {
+          console.error('Error loading sellers:', sellersError);
+        }
         if (sellers) {
           const sellerMap = {};
           sellers.forEach(s => {
@@ -716,6 +724,16 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
+      console.log('Creating listing with:', {
+        seller_id: user.id,
+        seller_name: user.username,
+        amount_eth: amountEth,
+        min_limit_etb: minLimitEtb,
+        max_limit_etb: maxLimitEtb,
+        payment_methods: paymentMethods,
+        type,
+        status: 'active',
+      });
       const { data, error } = await supabase.from('listings').insert({
         seller_id: user.id,
         seller_name: user.username,
@@ -733,6 +751,7 @@ export const AuthProvider = ({ children }) => {
         allow_third_party: !!allowThirdParty,
         images: images || [],
       }).select();
+      console.log('createListing result: data:', data, 'error:', error);
       if (error) throw error;
       setSuccess('Listing published!');
       
@@ -751,6 +770,7 @@ export const AuthProvider = ({ children }) => {
       
       await loadListings();
     } catch (err) {
+      console.error('Error creating listing:', err);
       setError(err.message);
     } finally {
       setLoading(false);
