@@ -737,35 +737,19 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const insertData = {
+      // Only send the bare minimum required columns first to avoid errors
+      const minimalInsertData = {
         seller_id: user.id,
-        seller_name: user.username,
-        seller_profile_pic: user.profile_pic || null,
         amount_eth: amountEth,
         min_limit_etb: minLimitEtb,
         max_limit_etb: maxLimitEtb,
         payment_methods: paymentMethods,
         type,
         status: 'active',
-        custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
-        payment_accounts: paymentAccounts,
-        description: description || null,
-        payment_window: paymentWindow ? Number(paymentWindow) : 15,
-        allow_third_party: !!allowThirdParty,
-        images: images || [],
       };
-      console.log('Insert data being sent to Supabase:', insertData);
+      console.log('Sending minimal insert data to Supabase:', minimalInsertData);
       
-      // Don't send columns that might not exist yet to avoid errors
-      const safeInsertData = { ...insertData };
-      delete safeInsertData.images;
-      delete safeInsertData.allow_third_party;
-      delete safeInsertData.payment_window;
-      delete safeInsertData.description;
-      delete safeInsertData.custom_rate_etb;
-      delete safeInsertData.payment_accounts;
-      
-      const { data, error } = await supabase.from('listings').insert(safeInsertData).select();
+      const { data, error } = await supabase.from('listings').insert(minimalInsertData).select();
       console.log('createListing response: data:', data, 'error:', error);
       
       if (error) {
