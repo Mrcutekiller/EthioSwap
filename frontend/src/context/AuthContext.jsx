@@ -722,6 +722,11 @@ export const AuthProvider = ({ children }) => {
 
   const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
+    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified) {
+      setError('Please verify your identity first to post ads.');
+      return;
+    }
     setLoading(true);
     try {
       console.log('Creating listing with:', {
@@ -779,6 +784,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateListing = async (listingId, amountEth, minLimitEtb, maxLimitEtb, customRateEtb, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
+    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified) {
+      setError('Please verify your identity first to edit ads.');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase
@@ -807,6 +817,11 @@ export const AuthProvider = ({ children }) => {
 
   const cancelListing = async (listingId) => {
     if (!user) return;
+    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified) {
+      setError('Please verify your identity first to cancel ads.');
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase
@@ -826,6 +841,11 @@ export const AuthProvider = ({ children }) => {
 
   const initiateTrade = async (listingId, amountEth, selectedPaymentAccount) => {
     if (!user) return;
+    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified) {
+      setError('Please verify your identity first to start trades.');
+      return;
+    }
     setLoading(true);
     try {
       const listing = listings.find(l => l.id === listingId);
