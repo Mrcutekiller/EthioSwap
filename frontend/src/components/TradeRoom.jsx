@@ -317,9 +317,9 @@ const AlertBox = ({ icon: Icon, color, children }) => (
 /* ════════════════════════════════════════════════════════
    MAIN TRADE ROOM
 ════════════════════════════════════════════════════════ */
-const TradeRoom = () => {
+const TradeRoom = ({ tradeId, setPage }) => {
   const { user, trades, markTradeAsPaid, releaseEscrow, cancelTrade, openDispute, uploadDisputeEvidence, submitRating, setError, setSuccess } = useAuth();
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(tradeId);
   const [showRating, setShowRating] = useState(false);
   const [skipped, setSkipped] = useState({});
   const [timer, setTimer] = useState('');
@@ -327,10 +327,11 @@ const TradeRoom = () => {
 
   const trade = trades.find(t => t.id === selectedId);
 
-  // Auto-select first
+  // Auto-select first or use passed tradeId
   useEffect(() => {
     if (!selectedId && trades.length > 0) setSelectedId(trades[0].id);
-  }, [trades]);
+    if (tradeId && tradeId !== selectedId) setSelectedId(tradeId);
+  }, [trades, tradeId]);
 
   // Rating prompt
   useEffect(() => {

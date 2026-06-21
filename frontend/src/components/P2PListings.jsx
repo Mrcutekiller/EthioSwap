@@ -34,7 +34,7 @@ const formatTimeAgo = (iso) => {
   return `${days}d ago`;
 };
 
-const P2PListings = () => {
+const P2PListings = ({ onNavigateToSeller, onNavigateToTrade }) => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
   const minP2pListing = 0.01;
 
@@ -267,10 +267,9 @@ const P2PListings = () => {
     setShowBuyModal(false);
     setBuyModalStep(1);
     
-    // Auto redirect to Active Trades tab
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'trades' }));
-    }, 150);
+    if (trade?.id && onNavigateToTrade) {
+      onNavigateToTrade(trade.id);
+    }
   };
 
   const handleFormSubmit = (e) => {

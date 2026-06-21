@@ -1130,6 +1130,7 @@ const AppContent = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [sellerId, setSellerId] = useState(null);
+  const [currentTradeId, setCurrentTradeId] = useState(null);
   const notifCount = useNotifCount(user?.id);
   const [width, setWidth] = useState(window.innerWidth);
 
@@ -1175,6 +1176,7 @@ const AppContent = () => {
   }, [user, page]);
 
   const navigateToSeller = (id) => { setSellerId(id); setPage('sellerProfile'); };
+  const navigateToTrade = (id) => { setCurrentTradeId(id); setPage('tradeRoom'); };
 
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
 
@@ -1222,7 +1224,7 @@ const AppContent = () => {
 
       <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
-          {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} />}
+          {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} onNavigateToTrade={navigateToTrade} />}
           {page === 'wallet' && <WalletCard initialTab={walletInitialTab} />}
           {page === 'profile' && <ProfilePage />}
           {page === 'settings' && <SettingsPage user={user} onLogout={logout} />}
@@ -1231,10 +1233,10 @@ const AppContent = () => {
           {page === 'notifications' && <NotificationsPage setPage={setPage} />}
           {page === 'scan' && <ScanPage setPage={setPage} />}
           {page === 'sellerProfile' && <SellerProfilePage sellerId={sellerId} setPage={setPage} />}
+          {page === 'tradeRoom' && <TradeRoom tradeId={currentTradeId} setPage={setPage} />}
         </div>
       </main>
 
-      <TradeRoom />
       <SupportWidget />
       {showNotifications && <NotificationCenter userId={user?.id} isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
       {!isDesktop && !is_admin_page && <MobileBottomNav page={page} setPage={setPage} />}
