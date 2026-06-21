@@ -915,13 +915,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const { error } = await supabase
         .from('listings')
-        .update({ status: 'cancelled' })
+        .delete()
         .eq('id', listingId)
         .eq('seller_id', user.id);
       if (error) throw error;
-      setSuccess('Listing cancelled!');
+      setSuccess('Listing deleted!');
       await loadListings();
     } catch (err) {
+      console.error('Error deleting listing:', err);
       setError(err.message);
     } finally {
       setLoading(false);
