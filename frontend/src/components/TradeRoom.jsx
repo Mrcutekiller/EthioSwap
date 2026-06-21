@@ -404,103 +404,41 @@ const TradeRoom = () => {
 
           {activeTrade.status === 'completed' ? (
             /* COMPLETED RECEIPT VIEW */
-            <div className="card glass-card" style={{ padding: '24px', background: '#141827', border: '1px solid rgba(0, 200, 150, 0.25)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-                  <CheckCircle size={32} />
-                </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: 0 }}>
-                  {isBuyer ? 'USDT Received' : 'USDT Released'}
-                </h2>
-                <span style={{ fontSize: '12px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>
-                  ✓ Trade Completed Successfully
-                </span>
-              </div>
-
-              {/* Universal Receipt details */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                  <Logo size={28} />
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', marginBottom: '12px' }}>
-                  Official P2P Transaction Receipt
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Transaction Type:</span>
-                    <strong style={{ color: '#fff' }}>{isBuyer ? 'P2P USDT Purchase' : 'P2P USDT Sale'}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>From (Seller):</span>
-                    <strong style={{ color: '#fff' }}>@{activeTrade.seller_name}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>To (Buyer):</span>
-                    <strong style={{ color: '#fff' }}>@{activeTrade.buyer_name}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Amount (USDT):</span>
-                    <strong style={{ color: 'var(--gold)' }}>${activeTrade.amount_eth.toFixed(2)} USDT</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Amount Paid (ETB):</span>
-                    <strong style={{ color: 'var(--gold-light)' }}>
-                      {Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Rate Used:</span>
-                    <strong style={{ color: '#fff' }}>{rate} ETB / $1</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Payment Method:</span>
-                    <strong style={{ color: '#fff' }}>{paymentAccount?.bankName || activeTrade.payment_method}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Timestamp:</span>
-                    <strong style={{ color: '#fff', fontSize: '11px' }}>{new Date(activeTrade.completed_at || activeTrade.created_at).toLocaleString()}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <span style={{ color: 'var(--muted)' }}>Transaction ID:</span>
-                    <strong style={{ color: '#fff', fontSize: '11px', fontFamily: 'JetBrains Mono, monospace' }}>{activeTrade.id}</strong>
-                  </div>
-                </div>
-
-                {/* Authorized Signature Block */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '12px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>Authorized by</div>
-                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '20px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '4px 0' }}>Mrcute</div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-3)' }}>Platform Escrow Node</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>Founder, EthioSwap</div>
-                    <div style={{ fontFamily: '"Great Vibes", cursive, "Brush Script MT", sans-serif', fontSize: '20px', color: 'var(--gold-light)', fontStyle: 'italic', margin: '4px 0' }}>Biruk Fikru</div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-3)' }}>Founder & CEO</div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+              <BrandedReceipt
+                txType={isBuyer ? 'BUY USDT' : 'SELL USDT'}
+                status="COMPLETED"
+                dateTime={activeTrade.completed_at || activeTrade.created_at}
+                refId={activeTrade.id}
+                fromName={activeTrade.seller_name}
+                fromId={activeTrade.seller_id}
+                toName={activeTrade.buyer_name}
+                toId={activeTrade.buyer_id}
+                amountSent={`$${activeTrade.amount_eth.toFixed(2)} USDT`}
+                amountReceived={`${Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB`}
+                rate={`${rate} ETB / $1`}
+                paymentMethod={paymentAccount?.bankName || activeTrade.payment_method}
+                showActions={true}
+              />
+              <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '520px', margin: '0 auto' }}>
+                <button 
+                  className="btn gold-glow-btn" 
+                  style={{ flex: 1, color: '#0B0E1A', fontWeight: 700, height: '42px', borderRadius: '10px' }}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }));
+                  }}
+                >
+                  View in History
+                </button>
+                {activeTrade.ratingGiven === null && (
                   <button 
-                    className="btn gold-glow-btn" 
-                    style={{ flex: 1, color: '#0B0E1A', fontWeight: 700 }}
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }));
-                    }}
+                    className="btn btn-outline" 
+                    style={{ border: '1px solid rgba(255,255,255,0.08)', flex: 1, height: '42px', borderRadius: '10px' }} 
+                    onClick={() => setShowRating(true)}
                   >
-                    View in History
+                    ⭐ Rate Trade
                   </button>
-                  {activeTrade.ratingGiven === null && (
-                    <button 
-                      className="btn btn-outline" 
-                      style={{ border: '1px solid rgba(255,255,255,0.08)' }} 
-                      onClick={() => setShowRating(true)}
-                    >
-                      ⭐ Rate Trade
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           ) : (

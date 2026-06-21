@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { getNetworkAddress } from '../utils/crypto.js';
 import { supabase } from '../lib/supabase';
 import Logo from './Logo.jsx';
+import BrandedReceipt from './BrandedReceipt.jsx';
 
 const fmt = (n, d = 2) => (+(n ?? 0)).toFixed(d);
 const fmtEtb = (n) => Math.round(n ?? 0).toLocaleString();
@@ -878,87 +879,35 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         ) : (user?.full_name || user?.username || 'My Wallet');
         const toStr = isDep ? (user?.full_name || user?.username || 'My Wallet') : (item.address || item.destination_address || item.wallet_type || 'External');
         const statusLabel = item.status || 'pending';
+
+        let normalizedStatus = 'PENDING';
+        if (statusLabel === 'completed' || statusLabel === 'approved' || statusLabel === 'success') {
+          normalizedStatus = 'COMPLETED';
+        } else if (statusLabel === 'failed' || statusLabel === 'cancelled' || statusLabel === 'rejected') {
+          normalizedStatus = 'CANCELLED';
+        }
+
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(12px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedWalletTx(null)}>
-            <div style={{ background: '#fff', color: '#1c1917', maxWidth: '380px', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,166,35,0.25)', fontFamily: "'Inter', sans-serif" }} onClick={e => e.stopPropagation()}>
-              <div style={{ background: 'linear-gradient(135deg, #0a0c18 0%, #141827 100%)', padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(245,166,35,0.08)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-                <button onClick={() => setSelectedWalletTx(null)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,255,255,0.08)', border: 'none', width: '26px', height: '26px', borderRadius: '50%', color: '#fff', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '10px', background: 'rgba(245,166,35,0.15)', border: '1px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🛡️</div>
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: '17px', color: '#F5A623', letterSpacing: '-0.02em' }}>EthioSwap</div>
-                    <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.12em' }}>OFFICIAL TRANSACTION RECEIPT</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
-              </div>
-
-              <div style={{ padding: '18px 22px 22px' }}>
-                <div style={{ borderBottom: '2px dashed #e7e5e4', paddingBottom: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#44403c' }}>
-                  {[
-                    ['Receipt No', `REC-${(item.id || '00000000').substring(0, 8).toUpperCase()}`],
-                    ['Date & Time', item.created_at ? new Date(item.created_at).toLocaleString() : 'Pending'],
-                    ['Account Name', user?.full_name || user?.username || 'User'],
-                    ['Type', isDep ? 'DEPOSIT' : 'WITHDRAWAL'],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#78716c' }}>{k}</span>
-                      <span style={{ fontWeight: 700, fontFamily: k === 'Receipt No' ? 'monospace' : 'inherit', fontSize: k === 'Receipt No' ? '10px' : '12px' }}>{v}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#78716c' }}>Status</span>
-                    <span style={{ fontWeight: 800, fontSize: '9px', color: statusLabel === 'approved' || statusLabel === 'completed' ? '#047857' : '#d97706', background: statusLabel === 'approved' || statusLabel === 'completed' ? '#d1fae5' : '#fef3c7', padding: '2px 8px', borderRadius: '99px', textTransform: 'uppercase' }}>{statusLabel}</span>
-                  </div>
-                </div>
-
-                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '10px 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#78716c', fontWeight: 600 }}>FROM</span>
-                    <span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fromStr}</span>
-                  </div>
-                  <div style={{ height: 1, background: '#e7e5e4' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#78716c', fontWeight: 600 }}>TO</span>
-                    <span style={{ fontWeight: 700, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toStr}</span>
-                  </div>
-                </div>
-
-                <div style={{ background: '#f5f5f4', borderRadius: '12px', padding: '10px 12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#78716c' }}>Amount</span>
-                    <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>${fmt(amt)} USDT</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#78716c' }}>Platform Fee</span>
-                    {isInternal ? (
-                      <span style={{ fontWeight: 700, color: '#059669' }}>FREE ✓</span>
-                    ) : (
-                      <span style={{ fontWeight: 600, color: '#FF4D4D', fontFamily: 'monospace' }}>-${fmt(amt * platformFeePercent / 100)} USDT ({platformFeePercent}%)</span>
-                    )}
-                  </div>
-                  <div style={{ height: 1, background: '#e7e5e4' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px', color: '#1c1917' }}>
-                    <span>{isDep ? 'TOTAL NET CREDIT' : 'TOTAL NET DEDUCTED'}</span>
-                    <span style={{ color: '#047857', fontFamily: 'monospace' }}>
-                      ${fmt(isDep ? (isInternal ? amt : amt * (1 - platformFeePercent / 100)) : (isInternal ? amt : amt * (1 + platformFeePercent / 100)))} USDT
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '12px', borderTop: '2px dashed #e7e5e4', marginBottom: '18px' }}>
-                  <div style={{ border: '2px solid #059669', borderRadius: '8px', padding: '4px 8px', color: '#059669', fontSize: '8px', fontWeight: 900, letterSpacing: '0.06em', height: 'fit-content' }}>SECURED ✓</div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: "'Georgia', serif", fontSize: '17px', color: '#1d4ed8', fontStyle: 'italic', lineHeight: 1, marginBottom: '4px' }}>Biruk Fikru</div>
-                    <div style={{ height: '1px', background: '#d1d5db', marginBottom: '3px', width: '110px' }} />
-                    <div style={{ fontSize: '8px', color: '#78716c', fontWeight: 600 }}>CEO & Founder, EthioSwap</div>
-                    <div style={{ fontSize: '7px', color: '#a8a29e' }}>MrCute Finance Platform</div>
-                  </div>
-                </div>
-
-                <button onClick={() => setSelectedWalletTx(null)} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #F5A623, #FFD966)', color: '#1c1917', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Close</button>
-              </div>
+          <div 
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(10px)', padding: '20px', overflowY: 'auto' }} 
+            onClick={() => setSelectedWalletTx(null)}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '520px' }}>
+              <BrandedReceipt
+                txType={isDep ? 'DEPOSIT' : 'WITHDRAWAL'}
+                status={normalizedStatus}
+                dateTime={item.created_at}
+                refId={item.id}
+                fromName={fromStr}
+                toName={toStr}
+                amountSent={`$${fmt(amt)} USDT`}
+                amountReceived={`$${fmt(isDep ? (isInternal ? amt : amt * (1 - platformFeePercent / 100)) : (isInternal ? amt : amt * (1 + platformFeePercent / 100)))} USDT`}
+                fee={isInternal ? '0.00 USDT' : `$${fmt(amt * platformFeePercent / 100)} USDT (${platformFeePercent}%)`}
+                paymentMethod={isInternal ? 'EthioSwap Internal Transfer' : 'External Wallet Transfer'}
+                network={isInternal ? 'Internal Node' : (item.network || 'Ethereum (ERC-20)')}
+                txHash={item.tx_hash || item.transaction_hash || ''}
+                onClose={() => setSelectedWalletTx(null)}
+              />
             </div>
           </div>
         );

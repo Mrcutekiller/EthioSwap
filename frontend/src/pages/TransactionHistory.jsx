@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { ArrowDownLeft, ArrowUpRight, Repeat, Send, Download, Search, Calendar, FileText, Star, TrendingUp, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import EmptyState from '../components/EmptyState.jsx';
+import BrandedReceipt from '../components/BrandedReceipt.jsx';
 
 const parsePaymentMethod = (pm) => {
   if (!pm) return { type: 'N/A' };
@@ -699,7 +700,6 @@ const TransactionHistory = () => {
         const typeLabel = selectedTx.type === 'buy' ? 'P2P USDT PURCHASE' :
                           selectedTx.type === 'sell' ? 'P2P USDT SALE' :
                           selectedTx.type === 'deposit' ? 'WALLET DEPOSIT' : 'WALLET WITHDRAWAL';
-        const statusInfo = getStatusDetails(selectedTx.status);
 
         let fromAddr = '';
         let toAddr = '';
@@ -721,111 +721,47 @@ const TransactionHistory = () => {
           }
         }
 
+        let normalizedStatus = 'PENDING';
+        const s = selectedTx.status?.toLowerCase() || '';
+        if (s === 'completed' || s === 'approved' || s === 'success') {
+          normalizedStatus = 'COMPLETED';
+        } else if (s === 'failed' || s === 'cancelled' || s === 'rejected') {
+          normalizedStatus = 'CANCELLED';
+        }
+
+        const isBuy = selectedTx.type === 'buy';
+        const isSell = selectedTx.type === 'sell';
+
+        const amountSentStr = isBuy 
+          ? `${selectedTx.amountEtb.toLocaleString()} ETB` 
+          : `$${selectedTx.amountUsdt.toFixed(2)} USDT`;
+
+        const amountReceivedStr = isSell 
+          ? `${selectedTx.amountEtb.toLocaleString()} ETB` 
+          : `$${selectedTx.amountUsdt.toFixed(2)} USDT`;
+
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,14,26,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px', overflowY: 'auto' }} onClick={() => setSelectedTx(null)}>
-            <div style={{ background: '#141827', border: '1px solid #1E2640', color: '#fff', maxWidth: '440px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,166,35,0.25)', fontFamily: "inherit" }} onClick={e => e.stopPropagation()}>
-              
-              {/* Header Band */}
-              <div style={{ background: '#0D1117', borderBottom: '1px solid #1E2640', padding: '24px 24px 20px', position: 'relative' }}>
-                <button onClick={() => setSelectedTx(null)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.05)', border: 'none', width: '28px', height: '28px', borderRadius: '50%', color: '#8A9BB8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <X size={16} />
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '15px' }}>E</div>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '18px', color: '#F5A623', letterSpacing: '-0.02em' }}>EthioSwap</div>
-                    <div style={{ fontSize: '9px', color: '#8A9BB8', fontWeight: 600, letterSpacing: '0.12em' }}>OFFICIAL TRANSACTION RECEIPT</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '4px' }}>ethioswap.qzz.io  ·  MrCute Finance Platform</div>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: '20px 24px 24px' }}>
-                {/* Details Table */}
-                <div style={{ borderBottom: '1px dashed #1E2640', paddingBottom: '14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                  {[
-                    ['Receipt ID', selectedTx.realId.substring(0, 12).toUpperCase() + '...'],
-                    ['Date & Time', new Date(selectedTx.createdAt).toLocaleString()],
-                    ['Type', typeLabel],
-                    ['From', fromAddr],
-                    ['To', toAddr]
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#8A9BB8' }}>{k}</span>
-                      <span style={{ fontWeight: 700, color: '#fff' }}>{v}</span>
-                    </div>
-                  ))}
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#8A9BB8' }}>Status</span>
-                    <span style={{ fontWeight: 800, fontSize: '10px', color: statusInfo.color, background: statusInfo.bg, padding: '3px 10px', borderRadius: '99px' }}>
-                      {statusInfo.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Amounts */}
-                <div style={{ background: '#0D1117', border: '1px solid #1E2640', borderRadius: '16px', padding: '14px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#8A9BB8' }}>Amount (USDT)</span>
-                    <span style={{ fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: '#00C896' }}>
-                      ${selectedTx.amountUsdt.toFixed(2)} USDT
-                    </span>
-                  </div>
-                  {isP2p && (
-                    <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#8A9BB8' }}>Exchange Rate</span>
-                        <span style={{ fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: '#fff' }}>
-                          {selectedTx.rate} ETB / $1
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#8A9BB8' }}>Total Paid (ETB)</span>
-                        <span style={{ fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: '#F5A623' }}>
-                          {selectedTx.amountEtb.toFixed(2)} ETB
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#8A9BB8' }}>Payment Method</span>
-                    <span style={{ fontWeight: 700, color: '#fff', fontSize: '12px', textAlign: 'right', maxWidth: '65%' }}>
-                      {paymentText}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Signature footer */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '14px', borderTop: '1px dashed #1E2640', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600 }}>AUTHORIZED BY:</span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: "'Georgia', serif", fontSize: '18px', color: '#F5A623', fontStyle: 'italic', lineHeight: 1, marginBottom: '2px' }}>Mrcute</div>
-                      <div style={{ fontSize: '9px', color: '#8A9BB8' }}>Platform Administrator</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: "'Georgia', serif", fontSize: '18px', color: '#00C896', fontStyle: 'italic', lineHeight: 1, marginBottom: '2px' }}>Biruk Fikru</div>
-                      <div style={{ fontSize: '9px', color: '#8A9BB8' }}>Founder, EthioSwap</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => downloadReceipt(selectedTx)} style={{ flex: 1, padding: '12px', background: '#F5A623', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease', fontFamily: 'inherit' }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                  >
-                    <Download size={14} /> Download PDF
-                  </button>
-                  <button onClick={() => setSelectedTx(null)} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid #1E2640', color: '#8A9BB8', borderRadius: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Close
-                  </button>
-                </div>
-              </div>
-
+          <div 
+            style={{ position: 'fixed', inset: 0, background: 'rgba(11,14,26,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '20px', overflowY: 'auto' }} 
+            onClick={() => setSelectedTx(null)}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '520px' }}>
+              <BrandedReceipt
+                txType={typeLabel}
+                status={normalizedStatus}
+                dateTime={selectedTx.createdAt}
+                refId={selectedTx.realId}
+                fromName={fromAddr}
+                toName={toAddr}
+                amountSent={amountSentStr}
+                amountReceived={amountReceivedStr}
+                rate={isP2p ? `${selectedTx.rate} ETB / $1` : ''}
+                fee={!isP2p && selectedTx.original?.wallet_type !== 'INTERNAL' ? 'Network Fee Applicable' : ''}
+                paymentMethod={paymentText}
+                network={!isP2p ? (selectedTx.original?.network || 'Ethereum (ERC-20)') : ''}
+                txHash={selectedTx.original?.tx_hash || selectedTx.original?.transaction_hash || ''}
+                onClose={() => setSelectedTx(null)}
+              />
             </div>
           </div>
         );
