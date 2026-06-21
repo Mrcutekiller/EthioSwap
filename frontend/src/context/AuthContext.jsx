@@ -735,20 +735,46 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      // Only send the bare minimum required columns first to avoid errors
-      const minimalInsertData = {
+      // First try inserting all columns, if that fails (missing columns) fall back to minimal
+      const fullInsertData = {
         seller_id: user.id,
+        seller_name: user.username,
+        seller_profile_pic: user.profile_pic || null,
         amount_eth: amountEth,
         min_limit_etb: minLimitEtb,
         max_limit_etb: maxLimitEtb,
         payment_methods: paymentMethods,
         type,
         status: 'active',
+        custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
+        payment_accounts: paymentAccounts,
+        description: description || null,
+        payment_window: paymentWindow ? Number(paymentWindow) : 15,
+        allow_third_party: !!allowThirdParty,
+        images: images || [],
       };
-      console.log('Sending minimal insert data to Supabase:', minimalInsertData);
       
-      const { data, error } = await supabase.from('listings').insert(minimalInsertData).select();
-      console.log('createListing response: data:', data, 'error:', error);
+      console.log('Trying to insert full listing data:', fullInsertData);
+      
+      let { data, error } = await supabase.from('listings').insert(fullInsertData).select();
+      if (error) {
+        console.warn('Failed to insert full data, falling back to minimal columns:', error);
+        // Fallback to minimal insert
+        const minimalInsertData = {
+          seller_id: user.id,
+          amount_eth: amountEth,
+          min_limit_etb: minLimitEtb,
+          max_limit_etb: maxLimitEtb,
+          payment_methods: paymentMethods,
+          type,
+          status: 'active',
+        };
+        const fallbackResult = await supabase.from('listings').insert(minimalInsertData).select();
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
+      
+      console.log('createListing final response: data:', data, 'error:', error);
       
       if (error) {
         console.error('Supabase insert error details:', error);
@@ -760,6 +786,8 @@ export const AuthProvider = ({ children }) => {
       if (data && data.length > 0) {
         const newListing = {
           ...data[0],
+          seller_name: data[0].seller_name || user.username,
+          seller_profile_pic: data[0].seller_profile_pic || user.profile_pic,
           isSellerVerifiedTrader: user.kyc_status === 'approved' || user.is_verified_trader,
           seller_kyc_status: user.kyc_status,
           sellerReputation: user.reputation ?? 100,
