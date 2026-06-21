@@ -6,6 +6,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import P2PListings from './components/P2PListings.jsx';
 import WalletCard from './components/WalletCard.jsx';
 import TradeRoom from './components/TradeRoom.jsx';
+import TradeDetailPage from './components/TradeDetailPage.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import TransactionHistory from './pages/TransactionHistory.jsx';
 import AppLockScreen from './components/AppLockScreen.jsx';
@@ -1131,6 +1132,7 @@ const AppContent = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [sellerId, setSellerId] = useState(null);
   const [currentTradeId, setCurrentTradeId] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
   const notifCount = useNotifCount(user?.id);
   const [width, setWidth] = useState(window.innerWidth);
 
@@ -1177,6 +1179,15 @@ const AppContent = () => {
 
   const navigateToSeller = (id) => { setSellerId(id); setPage('sellerProfile'); };
   const navigateToTrade = (id) => { setCurrentTradeId(id); setPage('tradeRoom'); };
+  const navigateToTradeDetail = (listing) => { setSelectedListing(listing); setPage('tradeDetail'); };
+  
+  const { initiateTrade } = useAuth();
+  const handleStartTrade = async (listingId, amount, paymentAccount) => {
+    const trade = await initiateTrade(listingId, amount, paymentAccount);
+    if (trade?.id) {
+      navigateToTrade(trade.id);
+    }
+  };
 
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
 
@@ -1222,9 +1233,9 @@ const AppContent = () => {
         </div>
       )}
 
-      <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '16px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
+      <main style={{ marginLeft: isDesktop && !is_admin_page ? 'var(--sidebar-w)' : 0, minHeight: '100vh', padding: isDesktop ? '32px' : '0px', paddingBottom: !isDesktop && !is_admin_page ? 'calc(var(--bottom-nav-h) + 24px)' : '32px' }}>
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
-          {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} onNavigateToTrade={navigateToTrade} />}
+          {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} onNavigateToTradeDetail={navigateToTradeDetail} />}
           {page === 'wallet' && <WalletCard initialTab={walletInitialTab} />}
           {page === 'profile' && <ProfilePage />}
           {page === 'settings' && <SettingsPage user={user} onLogout={logout} />}
@@ -1234,6 +1245,13 @@ const AppContent = () => {
           {page === 'scan' && <ScanPage setPage={setPage} />}
           {page === 'sellerProfile' && <SellerProfilePage sellerId={sellerId} setPage={setPage} />}
           {page === 'tradeRoom' && <TradeRoom tradeId={currentTradeId} setPage={setPage} />}
+          {page === 'tradeDetail' && selectedListing && (
+            <TradeDetailPage 
+              listing={selectedListing} 
+              onBack={() => setPage('p2p')} 
+              onStartTrade={handleStartTrade}
+            />
+          )}
         </div>
       </main>
 

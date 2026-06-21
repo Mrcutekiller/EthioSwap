@@ -34,7 +34,7 @@ const formatTimeAgo = (iso) => {
   return `${days}d ago`;
 };
 
-const P2PListings = ({ onNavigateToSeller, onNavigateToTrade }) => {
+const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
   const minP2pListing = 0.01;
 
@@ -1493,7 +1493,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTrade }) => {
                         alert('Please verify your identity first. Go to Profile to start KYC verification.');
                         return;
                       }
-                      setSelectedListing(listing); setShowBuyModal(true); setTradeamount_eth(''); setTradeError('');
+                      onNavigateToTradeDetail(listing);
                     }}
                     disabled={!kycApproved}
                     className={isBuyType ? "teal-glow-btn" : "gold-glow-btn"}

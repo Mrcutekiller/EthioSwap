@@ -325,6 +325,8 @@ const TradeRoom = ({ tradeId, setPage }) => {
   const [timer, setTimer] = useState('');
   const [releasing, setReleasing] = useState(false);
 
+  const isDirectTrade = !!tradeId; // Came directly from trade detail page
+
   const trade = trades.find(t => t.id === selectedId);
 
   // Auto-select first or use passed tradeId
