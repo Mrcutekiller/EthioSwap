@@ -729,29 +729,15 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
     if (!isVerified) {
-      setError('Please verify your identity first to post ads.');
+      const errMsg = 'Please verify your identity first to post ads.';
+      console.error(errMsg);
+      setError(errMsg);
+      alert(errMsg);
       return;
     }
     setLoading(true);
     try {
-      console.log('Creating listing with:', {
-        seller_id: user.id,
-        seller_name: user.username,
-        amount_eth: amountEth,
-        min_limit_etb: minLimitEtb,
-        max_limit_etb: maxLimitEtb,
-        payment_methods: paymentMethods,
-        type,
-        status: 'active',
-        seller_profile_pic: user.profile_pic || null,
-        custom_rate_etb: customRateEtb ? Number(customRateEtb) : null,
-        payment_accounts: paymentAccounts,
-        description: description || null,
-        payment_window: paymentWindow ? Number(paymentWindow) : 15,
-        allow_third_party: !!allowThirdParty,
-        images: images || [],
-      });
-      const { data, error } = await supabase.from('listings').insert({
+      const insertData = {
         seller_id: user.id,
         seller_name: user.username,
         seller_profile_pic: user.profile_pic || null,
@@ -767,17 +753,22 @@ export const AuthProvider = ({ children }) => {
         payment_window: paymentWindow ? Number(paymentWindow) : 15,
         allow_third_party: !!allowThirdParty,
         images: images || [],
-      }).select().single();
-      console.log('createListing result: data:', data, 'error:', error);
+      };
+      console.log('Insert data being sent to Supabase:', insertData);
+      
+      const { data, error } = await supabase.from('listings').insert(insertData).select();
+      console.log('createListing response: data:', data, 'error:', error);
+      
       if (error) {
-        console.error('Supabase insert error:', error);
+        console.error('Supabase insert error details:', error);
+        alert(`Error creating listing: ${error.message}`);
         throw error;
       }
       setSuccess('Listing published!');
       
-      if (data) {
+      if (data && data.length > 0) {
         const newListing = {
-          ...data,
+          ...data[0],
           isSellerVerifiedTrader: user.kyc_status === 'approved' || user.is_verified_trader,
           seller_kyc_status: user.kyc_status,
           sellerReputation: user.reputation ?? 100,
@@ -792,7 +783,7 @@ export const AuthProvider = ({ children }) => {
       // Load listings from DB just to confirm
       await loadListings();
     } catch (err) {
-      console.error('Error creating listing:', err);
+      console.error('Error creating listing (full):', err);
       setError(err.message);
     } finally {
       setLoading(false);
