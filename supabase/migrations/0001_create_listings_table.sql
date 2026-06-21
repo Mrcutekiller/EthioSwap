@@ -29,36 +29,57 @@ CREATE INDEX IF NOT EXISTS listings_seller_id_idx ON public.listings(seller_id);
 CREATE INDEX IF NOT EXISTS listings_type_idx ON public.listings(type);
 CREATE INDEX IF NOT EXISTS listings_created_at_idx ON public.listings(created_at DESC);
 
--- Enable Row Level Security
+-- Enable Row Level Security (safe even if already enabled)
 ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
 
--- Create the 4 policies as requested!
--- Policy 1: Anyone can see active listings
-CREATE POLICY "Anyone can view active listings"
-ON public.listings
-FOR SELECT
-USING (status = 'active');
+-- Create policies safely (check if they exist first)
+DO $$
+BEGIN
+    -- Policy 1: Anyone can see active listings
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'listings' AND policyname = 'Anyone can view active listings'
+    ) THEN
+        CREATE POLICY "Anyone can view active listings"
+        ON public.listings
+        FOR SELECT
+        USING (status = 'active');
+    END IF;
 
--- Policy 2: Users can create their own listings
-CREATE POLICY "Users can create their own listings"
-ON public.listings
-FOR INSERT
-WITH CHECK (seller_id = auth.uid());
+    -- Policy 2: Users can create their own listings
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'listings' AND policyname = 'Users can create their own listings'
+    ) THEN
+        CREATE POLICY "Users can create their own listings"
+        ON public.listings
+        FOR INSERT
+        WITH CHECK (seller_id = auth.uid());
+    END IF;
 
--- Policy 3: Users can update their own listings
-CREATE POLICY "Users can update their own listings"
-ON public.listings
-FOR UPDATE
-USING (seller_id = auth.uid())
-WITH CHECK (seller_id = auth.uid());
+    -- Policy 3: Users can update their own listings
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'listings' AND policyname = 'Users can update their own listings'
+    ) THEN
+        CREATE POLICY "Users can update their own listings"
+        ON public.listings
+        FOR UPDATE
+        USING (seller_id = auth.uid())
+        WITH CHECK (seller_id = auth.uid());
+    END IF;
 
--- Policy 4: Users can delete their own listings
-CREATE POLICY "Users can delete their own listings"
-ON public.listings
-FOR DELETE
-USING (seller_id = auth.uid());
+    -- Policy 4: Users can delete their own listings
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'listings' AND policyname = 'Users can delete their own listings'
+    ) THEN
+        CREATE POLICY "Users can delete their own listings"
+        ON public.listings
+        FOR DELETE
+        USING (seller_id = auth.uid());
+    END IF;
+END
+$$;
 
--- Add a trigger to auto-update updated_at
+-- Drop trigger first if it exists, then create or replace function
+DROP TRIGGER IF EXISTS update_listings_updated_at ON public.listings;
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
