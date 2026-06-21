@@ -195,7 +195,7 @@ export const AuthProvider = ({ children }) => {
       userId = sessionData?.session?.user?.id;
     }
 
-    let query = supabase.from('listings').select('*');
+    let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
     if (userId) {
       query = query.or(`status.eq.active,seller_id.eq.${userId}`);
     } else {
