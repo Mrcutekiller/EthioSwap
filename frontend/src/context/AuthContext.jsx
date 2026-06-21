@@ -756,7 +756,16 @@ export const AuthProvider = ({ children }) => {
       };
       console.log('Insert data being sent to Supabase:', insertData);
       
-      const { data, error } = await supabase.from('listings').insert(insertData).select();
+      // Don't send columns that might not exist yet to avoid errors
+      const safeInsertData = { ...insertData };
+      delete safeInsertData.images;
+      delete safeInsertData.allow_third_party;
+      delete safeInsertData.payment_window;
+      delete safeInsertData.description;
+      delete safeInsertData.custom_rate_etb;
+      delete safeInsertData.payment_accounts;
+      
+      const { data, error } = await supabase.from('listings').insert(safeInsertData).select();
       console.log('createListing response: data:', data, 'error:', error);
       
       if (error) {
