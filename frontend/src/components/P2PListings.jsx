@@ -526,7 +526,7 @@ const P2PListings = () => {
         .premium-p2p-badge-buy {
           background: linear-gradient(135deg, rgba(0, 200, 150, 0.15), rgba(0, 200, 150, 0.05));
           border: 1px solid rgba(0, 200, 150, 0.3);
-          color: #00FFC2;
+          color: #00C896;
           font-size: 10px;
           font-weight: 700;
           padding: 4px 10px;
@@ -538,7 +538,7 @@ const P2PListings = () => {
         .premium-p2p-badge-sell {
           background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(245, 166, 35, 0.05));
           border: 1px solid rgba(245, 166, 35, 0.3);
-          color: #FFB800;
+          color: #F5A623;
           font-size: 10px;
           font-weight: 700;
           padding: 4px 10px;
@@ -1354,7 +1354,7 @@ const P2PListings = () => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '9px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>EXCHANGE RATE</div>
-                    <div style={{ fontSize: '20px', marginTop: '4px', color: isBuyType ? '#00FFC2' : '#FFB800', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+                    <div style={{ fontSize: '20px', marginTop: '4px', color: isBuyType ? '#00C896' : '#F5A623', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
                       {effectiveRate.toFixed(2)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500, fontFamily: 'var(--font)' }}>ETB/$</span>
                     </div>
                   </div>
