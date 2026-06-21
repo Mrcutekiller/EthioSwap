@@ -1,65 +1,65 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTranslation } from 'react-i18next';
 import TradeChat from './TradeChat.jsx';
-import { Star, Shield, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Upload, FileImage, Copy, ChevronRight, ArrowRight, Lock, Unlock, MessageSquare, AlertCircle } from 'lucide-react';
+import {
+  Star, CheckCircle, AlertTriangle, XCircle, Clock,
+  Upload, Lock, Unlock, MessageSquare, AlertCircle, Copy, CreditCard, Shield,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import Logo from './Logo.jsx';
 
-// ─── Animated Copy Button ─────────────────────────────────────
-const CopyButton = ({ text, label }) => {
+/* ─── Copy Button ──────────────────────────────────────── */
+const CopyBtn = ({ text, label = 'Copy' }) => {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const copy = () => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
-    <button
-      onClick={handleCopy}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: '4px',
-        background: copied ? 'rgba(0,200,150,0.15)' : 'rgba(255,255,255,0.06)',
-        border: `1px solid ${copied ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.1)'}`,
-        borderRadius: '6px', color: copied ? '#00C896' : '#a0aec0',
-        fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
-        transition: 'all 0.2s ease', fontWeight: 600,
-        fontFamily: 'var(--font)',
-      }}
-    >
+    <button onClick={copy} style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      background: copied ? 'rgba(0,200,150,0.12)' : 'rgba(255,255,255,0.05)',
+      border: `1px solid ${copied ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
+      borderRadius: '6px', color: copied ? 'var(--teal)' : 'var(--muted)',
+      fontSize: '10px', padding: '3px 8px', cursor: 'pointer',
+      transition: 'all 0.2s', fontWeight: 600, fontFamily: 'var(--font)',
+    }}>
       {copied ? <CheckCircle size={10} /> : <Copy size={10} />}
-      {copied ? 'Copied!' : (label || 'Copy')}
+      {copied ? 'Copied!' : label}
     </button>
   );
 };
 
-// ─── Step Indicator ───────────────────────────────────────────
-const StepIndicator = ({ steps, currentStep }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: '20px' }}>
-    {steps.map((step, idx) => {
-      const isActive = idx === currentStep;
-      const isDone = idx < currentStep;
+/* ─── Step Progress Bar ────────────────────────────────── */
+const StepBar = ({ steps, current }) => (
+  <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
+    {steps.map((step, i) => {
+      const done = i < current;
+      const active = i === current;
       return (
-        <React.Fragment key={idx}>
+        <React.Fragment key={i}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
             <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: isDone ? '#00C896' : isActive ? 'rgba(245,166,35,0.15)' : 'rgba(255,255,255,0.04)',
-              border: `2px solid ${isDone ? '#00C896' : isActive ? '#F5A623' : 'rgba(255,255,255,0.1)'}`,
+              width: '30px', height: '30px', borderRadius: '50%',
+              background: done ? 'var(--teal)' : active ? 'rgba(245,166,35,0.12)' : 'var(--surface2)',
+              border: `2px solid ${done ? 'var(--teal)' : active ? 'var(--gold)' : 'var(--border)'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: isDone ? '#fff' : isActive ? '#F5A623' : '#5a6375',
+              color: done ? '#fff' : active ? 'var(--gold)' : 'var(--muted)',
               fontSize: '11px', fontWeight: 700,
-              transition: 'all 0.3s ease',
-              boxShadow: isActive ? '0 0 16px rgba(245,166,35,0.25)' : isDone ? '0 0 12px rgba(0,200,150,0.2)' : 'none'
+              boxShadow: active ? '0 0 14px rgba(245,166,35,0.2)' : done ? '0 0 10px rgba(0,200,150,0.15)' : 'none',
+              transition: 'all 0.3s',
             }}>
-              {isDone ? <CheckCircle size={14} /> : idx + 1}
+              {done ? <CheckCircle size={13} /> : i + 1}
             </div>
-            <span style={{ fontSize: '9px', color: isActive ? '#F5A623' : isDone ? '#00C896' : '#5a6375', marginTop: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>
-              {step}
-            </span>
+            <span style={{
+              fontSize: '9px', marginTop: '4px', fontWeight: 600,
+              color: active ? 'var(--gold)' : done ? 'var(--teal)' : 'var(--muted)',
+              textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center',
+            }}>{step}</span>
           </div>
-          {idx < steps.length - 1 && (
-            <div style={{ height: '2px', flex: 1, background: isDone ? 'linear-gradient(90deg, #00C896, rgba(245,166,35,0.4))' : 'rgba(255,255,255,0.06)', marginBottom: '14px', transition: 'all 0.3s ease' }} />
+          {i < steps.length - 1 && (
+            <div style={{
+              height: '2px', flex: 1, marginBottom: '14px',
+              background: done ? 'var(--teal)' : 'var(--border)',
+              transition: 'all 0.3s',
+            }} />
           )}
         </React.Fragment>
       );
@@ -67,125 +67,107 @@ const StepIndicator = ({ steps, currentStep }) => (
   </div>
 );
 
-// ─── Trade Status Badge ───────────────────────────────────────
+/* ─── Status Badge ─────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
-  const cfg = {
-    payment_pending: { label: 'Awaiting Payment', color: '#FFB800', bg: 'rgba(245,166,35,0.12)', border: 'rgba(245,166,35,0.25)', icon: '⏳' },
-    payment_sent: { label: 'Payment Sent', color: '#00C896', bg: 'rgba(0,200,150,0.12)', border: 'rgba(0,200,150,0.25)', icon: '✓' },
-    completed: { label: 'Completed', color: '#00C896', bg: 'rgba(0,200,150,0.12)', border: 'rgba(0,200,150,0.25)', icon: '🏆' },
-    disputed: { label: 'Disputed', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)', icon: '⚠️' },
-    cancelled: { label: 'Cancelled', color: '#8A9BB8', bg: 'rgba(138,155,184,0.08)', border: 'rgba(138,155,184,0.2)', icon: '✕' },
-  }[status] || { label: status, color: '#8A9BB8', bg: 'transparent', border: 'rgba(255,255,255,0.1)', icon: '•' };
+  const map = {
+    payment_pending: { label: 'Awaiting Payment', color: 'var(--gold)',   bg: 'rgba(245,166,35,0.1)',  border: 'rgba(245,166,35,0.25)',  icon: '⏳' },
+    payment_sent:    { label: 'Payment Sent',     color: 'var(--teal)',   bg: 'rgba(0,200,150,0.1)',   border: 'rgba(0,200,150,0.25)',   icon: '✓' },
+    completed:       { label: 'Completed',        color: 'var(--teal)',   bg: 'rgba(0,200,150,0.1)',   border: 'rgba(0,200,150,0.25)',   icon: '🏆' },
+    disputed:        { label: 'Disputed',         color: 'var(--danger)', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.25)',   icon: '⚠️' },
+    cancelled:       { label: 'Cancelled',        color: 'var(--muted)',  bg: 'var(--surface2)',       border: 'var(--border)',          icon: '✕' },
+  };
+  const c = map[status] || map.cancelled;
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '5px',
       padding: '4px 12px', borderRadius: '999px',
-      background: cfg.bg, border: `1px solid ${cfg.border}`,
-      color: cfg.color, fontSize: '11px', fontWeight: 700,
+      background: c.bg, border: `1px solid ${c.border}`,
+      color: c.color, fontSize: '11px', fontWeight: 700,
       textTransform: 'uppercase', letterSpacing: '0.04em',
     }}>
-      {cfg.icon} {cfg.label}
+      {c.icon} {c.label}
     </span>
   );
 };
 
-// ─── Rating Modal ─────────────────────────────────────────────
+/* ─── Rating Modal ─────────────────────────────────────── */
 const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
   const [stars, setStars] = useState(5);
   const [hovered, setHovered] = useState(0);
   const [review, setReview] = useState('');
-  const [lowRatingReason, setLowRatingReason] = useState('');
+  const [reason, setReason] = useState('');
+  const partnerName = trade.buyer_id === ratedUserId ? trade.buyer_name : trade.seller_name;
 
-  const handleRatingSubmit = () => {
-    if (stars < 3 && !lowRatingReason) {
-      alert("Please select a reason for the low rating.");
-      return;
-    }
-    onSubmit(stars, review, lowRatingReason);
+  const submit = () => {
+    if (stars < 3 && !reason) { alert('Please select a reason for the low rating.'); return; }
+    onSubmit(stars, review, reason);
   };
 
-  const partnerName = trade.buyer_id === ratedUserId ? trade.buyer_name : trade.seller_name;
+  const starLabel = ['', '👎 Terrible', '😕 Poor', '😐 Average', '👍 Good', '⭐ Excellent!'];
 
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      background: 'rgba(0,0,0,0.85)',
-      backdropFilter: 'blur(16px)',
+      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: '16px',
-      animation: 'fadeIn 0.2s ease-out',
+      zIndex: 1000, padding: '16px', animation: 'fadeIn 0.2s ease',
     }}>
       <div style={{
-        maxWidth: '440px', width: '100%', padding: '32px',
-        background: 'linear-gradient(135deg, rgba(22,28,41,0.98) 0%, rgba(10,12,18,0.99) 100%)',
-        borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.08)',
+        maxWidth: '420px', width: '100%', padding: '32px',
+        background: 'var(--surface)', borderRadius: '20px',
+        border: '1px solid var(--border)',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-        textAlign: 'center',
-        animation: 'slideUp 0.3s cubic-bezier(0.32, 0.94, 0.6, 1)',
+        textAlign: 'center', animation: 'slideUp 0.3s cubic-bezier(0.32,0.94,0.6,1)',
       }}>
-        {/* Success Icon */}
         <div style={{
-          width: '64px', height: '64px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,200,150,0.2) 0%, rgba(0,200,150,0.05) 70%)',
-          border: '2px solid rgba(0,200,150,0.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 20px', boxShadow: '0 0 32px rgba(0,200,150,0.15)',
+          width: '60px', height: '60px', borderRadius: '50%',
+          background: 'rgba(0,200,150,0.1)', border: '2px solid rgba(0,200,150,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+          boxShadow: '0 0 24px rgba(0,200,150,0.12)',
         }}>
-          <CheckCircle size={30} color="#00C896" />
+          <CheckCircle size={28} color="var(--teal)" />
         </div>
 
-        <h3 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', color: '#fff' }}>Trade Complete! 🎉</h3>
-        <p style={{ fontSize: '14px', color: '#8A9BB8', marginBottom: '28px' }}>
-          Rate your experience with <strong style={{ color: '#F5A623' }}>@{partnerName}</strong>
+        <h3 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', margin: '0 0 6px' }}>Trade Complete! 🎉</h3>
+        <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '24px' }}>
+          Rate your experience with <strong style={{ color: 'var(--gold)' }}>@{partnerName}</strong>
         </p>
 
-        {/* Trader Avatar */}
+        {/* Avatar */}
         <div style={{
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05))',
-          border: '2px solid rgba(245,166,35,0.3)',
+          width: '52px', height: '52px', borderRadius: '50%',
+          background: 'rgba(245,166,35,0.1)', border: '2px solid rgba(245,166,35,0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '20px', fontWeight: 800, color: '#F5A623',
-          margin: '0 auto 20px',
+          fontSize: '20px', fontWeight: 800, color: 'var(--gold)', margin: '0 auto 20px',
         }}>
           {partnerName ? partnerName.charAt(0).toUpperCase() : 'U'}
         </div>
 
         {/* Stars */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
           {[1, 2, 3, 4, 5].map(s => (
-            <Star
-              key={s}
-              size={38}
+            <Star key={s} size={36}
               fill={s <= (hovered || stars) ? '#F5A623' : 'none'}
-              color={s <= (hovered || stars) ? '#F5A623' : 'rgba(255,255,255,0.15)'}
-              style={{ cursor: 'pointer', transition: 'all 0.15s ease', filter: s <= (hovered || stars) ? 'drop-shadow(0 0 6px rgba(245,166,35,0.5))' : 'none' }}
+              color={s <= (hovered || stars) ? '#F5A623' : 'var(--border)'}
+              style={{ cursor: 'pointer', transition: 'all 0.15s', filter: s <= (hovered || stars) ? 'drop-shadow(0 0 5px rgba(245,166,35,0.45))' : 'none' }}
               onClick={() => setStars(s)}
               onMouseEnter={() => setHovered(s)}
               onMouseLeave={() => setHovered(0)}
             />
           ))}
         </div>
-
-        <div style={{ fontSize: '12px', color: '#F5A623', fontWeight: 600, marginBottom: '20px' }}>
-          {stars === 5 ? '⭐ Excellent!' : stars === 4 ? '👍 Good' : stars === 3 ? '😐 Average' : stars === 2 ? '😕 Poor' : '👎 Terrible'}
-        </div>
+        <div style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: 600, marginBottom: '20px' }}>{starLabel[hovered || stars]}</div>
 
         {stars < 3 && (
-          <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#EF4444', display: 'block', marginBottom: '8px' }}>
+          <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--danger)', display: 'block', marginBottom: '6px' }}>
               Why the low rating? (Required)
             </label>
-            <select
-              value={lowRatingReason}
-              onChange={e => setLowRatingReason(e.target.value)}
-              style={{
-                width: '100%', padding: '10px 14px', borderRadius: '10px',
-                background: '#0d1117', border: '1px solid rgba(239,68,68,0.3)',
-                color: '#f0f2f8', fontSize: '13px', outline: 'none', fontFamily: 'var(--font)',
-              }}
-            >
+            <select value={reason} onChange={e => setReason(e.target.value)} style={{
+              width: '100%', padding: '10px 14px', borderRadius: '10px',
+              background: 'var(--bg)', border: '1px solid rgba(255,77,77,0.3)',
+              color: 'var(--text)', fontSize: '13px', outline: 'none', fontFamily: 'var(--font)',
+            }}>
               <option value="">-- Select a reason --</option>
               <option value="Slow response or payment delay">Extremely slow response / payment delay</option>
               <option value="Unprofessional or rude communication">Unprofessional or rude communication</option>
@@ -193,72 +175,39 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
               <option value="Suspicious behavior or payment mismatch">Suspicious behavior / payment mismatch</option>
               <option value="Other">Other</option>
             </select>
-            {lowRatingReason === 'Other' && (
-              <input
-                type="text"
-                placeholder="Specify reason..."
-                onChange={e => setLowRatingReason(e.target.value)}
+            {reason === 'Other' && (
+              <input type="text" placeholder="Specify reason..." onChange={e => setReason(e.target.value)}
                 style={{
-                  width: '100%', padding: '10px 14px', borderRadius: '10px',
-                  background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#f0f2f8', fontSize: '13px', marginTop: '8px', outline: 'none',
-                  fontFamily: 'var(--font)',
+                  width: '100%', padding: '10px 14px', borderRadius: '10px', marginTop: '8px',
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: '13px', outline: 'none', fontFamily: 'var(--font)',
                 }}
               />
             )}
           </div>
         )}
 
-        <textarea
-          placeholder="Write a review (optional, max 200 chars)..."
-          maxLength={200}
+        <textarea placeholder="Write a review (optional, max 200 chars)..." maxLength={200}
+          value={review} onChange={e => setReview(e.target.value)}
           style={{
-            width: '100%', height: '80px', padding: '12px', borderRadius: '10px',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)',
-            color: '#fff', fontSize: '13px', resize: 'none', outline: 'none',
+            width: '100%', height: '76px', padding: '12px', borderRadius: '10px',
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: '13px', resize: 'none', outline: 'none',
             fontFamily: 'var(--font)', marginBottom: '20px', boxSizing: 'border-box',
           }}
-          value={review}
-          onChange={e => setReview(e.target.value)}
         />
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1, height: '44px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: '#8A9BB8', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'var(--font)', transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.04)'}
-          >
-            Skip
-          </button>
-          <button
-            onClick={handleRatingSubmit}
-            style={{
-              flex: 2, height: '44px', borderRadius: '12px',
-              background: 'linear-gradient(135deg, #F5A623, #e8971a)',
-              border: 'none', color: '#0B0E1A', fontSize: '14px',
-              fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)',
-              boxShadow: '0 4px 16px rgba(245,166,35,0.25)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 6px 20px rgba(245,166,35,0.35)'; }}
-            onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 16px rgba(245,166,35,0.25)'; }}
-          >
-            ⭐ Submit Rating
-          </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={onClose} className="btn btn-ghost" style={{ flex: 1, height: '44px', borderRadius: '12px', fontSize: '14px' }}>Skip</button>
+          <button onClick={submit} className="btn btn-gold" style={{ flex: 2, height: '44px', borderRadius: '12px', fontSize: '14px', fontWeight: 700 }}>⭐ Submit Rating</button>
         </div>
       </div>
     </div>
   );
 };
 
-// ─── Dispute Evidence Console ─────────────────────────────────
-const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, setSuccess }) => {
+/* ─── Dispute Evidence Console ─────────────────────────── */
+const DisputeConsole = ({ trade, user, uploadDisputeEvidence, setError, setSuccess }) => {
   const [dispute, setDispute] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -270,92 +219,71 @@ const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, 
   if (!dispute) return null;
 
   const isBuyer = user.id === trade.buyer_id;
-  const myEvidence = isBuyer ? (dispute.buyer_evidence || []) : (dispute.seller_evidence || []);
-  const theirEvidence = isBuyer ? (dispute.seller_evidence || []) : (dispute.buyer_evidence || []);
+  const mine = isBuyer ? (dispute.buyer_evidence || []) : (dispute.seller_evidence || []);
+  const theirs = isBuyer ? (dispute.seller_evidence || []) : (dispute.buyer_evidence || []);
 
-  const handleFileUpload = async (e) => {
+  const onFile = async e => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('File size must be less than 5MB'); return; }
-    if (myEvidence.length >= 3) { setError('You can upload a maximum of 3 evidence files.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Max 5 MB per file'); return; }
+    if (mine.length >= 3) { setError('Max 3 evidence files'); return; }
     setUploading(true);
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = async (event) => {
-      try {
-        await uploadDisputeEvidence(trade.id, event.target.result);
-        setSuccess('Dispute evidence uploaded successfully!');
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setUploading(false);
-      }
+    reader.onload = async ev => {
+      try { await uploadDisputeEvidence(trade.id, ev.target.result); setSuccess('Evidence uploaded!'); }
+      catch (err) { setError(err.message); }
+      finally { setUploading(false); }
     };
-    reader.onerror = () => { setError('File reading failed'); setUploading(false); };
+    reader.onerror = () => { setError('File read failed'); setUploading(false); };
   };
+
+  const thumbStyle = { width: '50px', height: '50px', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden', display: 'block' };
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(239,68,68,0.02) 100%)',
-      border: '1px solid rgba(239,68,68,0.2)',
-      borderRadius: '16px', padding: '20px',
-      display: 'flex', flexDirection: 'column', gap: '16px',
+      background: 'rgba(255,77,77,0.04)', border: '1px solid rgba(255,77,77,0.18)',
+      borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{
-          width: '40px', height: '40px', borderRadius: '50%',
-          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+          background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <AlertTriangle size={18} color="#EF4444" />
+          <AlertTriangle size={17} color="var(--danger)" />
         </div>
         <div>
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#fff' }}>Escrow Dispute Active</h3>
-          <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#8b92a8', lineHeight: 1.4 }}>
-            Escrow is frozen. Upload proof of payment (receipt screenshot) for admin review.
-          </p>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>Escrow Dispute Active</div>
+          <div style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '2px', lineHeight: 1.4 }}>
+            Upload proof of payment (receipt screenshot) for admin review.
+          </div>
         </div>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        {/* My Evidence */}
-        <div style={{ background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>My Evidence ({myEvidence.length}/3)</span>
-            {myEvidence.length < 3 && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#F5A623', cursor: 'pointer', fontWeight: 600 }}>
+        {/* Mine */}
+        <div style={{ background: 'var(--surface2)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>My Evidence ({mine.length}/3)</span>
+            {mine.length < 3 && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--gold)', cursor: 'pointer', fontWeight: 600 }}>
                 <Upload size={11} /> Upload
-                <input type="file" hidden accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                <input type="file" hidden accept="image/*" onChange={onFile} disabled={uploading} />
               </label>
             )}
           </div>
-          {uploading && <div style={{ fontSize: '11px', color: '#8A9BB8', marginBottom: '8px' }}>Uploading...</div>}
+          {uploading && <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>Uploading…</div>}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {myEvidence.map((src, idx) => (
-              <a href={src} target="_blank" rel="noopener noreferrer" key={idx}
-                style={{ width: '50px', height: '50px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'block' }}>
-                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="evidence" />
-              </a>
-            ))}
-            {myEvidence.length === 0 && !uploading && (
-              <span style={{ fontSize: '11px', color: '#525866' }}>No evidence uploaded yet</span>
-            )}
+            {mine.map((src, i) => <a href={src} target="_blank" rel="noopener noreferrer" key={i} style={thumbStyle}><img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="ev" /></a>)}
+            {mine.length === 0 && !uploading && <span style={{ fontSize: '11px', color: 'var(--muted)' }}>No evidence uploaded yet</span>}
           </div>
         </div>
-
-        {/* Counterparty Evidence */}
-        <div style={{ background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>Counterparty Evidence ({theirEvidence.length}/3)</div>
+        {/* Theirs */}
+        <div style={{ background: 'var(--surface2)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)', marginBottom: '10px' }}>Counterparty ({theirs.length}/3)</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {theirEvidence.map((src, idx) => (
-              <a href={src} target="_blank" rel="noopener noreferrer" key={idx}
-                style={{ width: '50px', height: '50px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', display: 'block' }}>
-                <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="evidence" />
-              </a>
-            ))}
-            {theirEvidence.length === 0 && (
-              <span style={{ fontSize: '11px', color: '#525866' }}>No evidence uploaded by partner</span>
-            )}
+            {theirs.map((src, i) => <a href={src} target="_blank" rel="noopener noreferrer" key={i} style={thumbStyle}><img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="ev" /></a>)}
+            {theirs.length === 0 && <span style={{ fontSize: '11px', color: 'var(--muted)' }}>No evidence from partner</span>}
           </div>
         </div>
       </div>
@@ -363,157 +291,122 @@ const DisputeEvidenceConsole = ({ trade, user, uploadDisputeEvidence, setError, 
   );
 };
 
-// ─── Payment Detail Row ───────────────────────────────────────
-const PaymentRow = ({ label, value, mono }) => (
-  <div style={{
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
-  }}>
-    <span style={{ fontSize: '12px', color: '#8A9BB8', fontWeight: 500 }}>{label}</span>
-    <span style={{
-      fontSize: '13px', color: '#fff', fontWeight: 700,
-      fontFamily: mono ? 'JetBrains Mono, monospace' : 'var(--font)',
-    }}>{value}</span>
+/* ─── Info Row (payment detail) ────────────────────────── */
+const InfoRow = ({ label, value, mono, children }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+    <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {value && <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 700, fontFamily: mono ? 'JetBrains Mono, monospace' : 'var(--font)' }}>{value}</span>}
+      {children}
+    </div>
   </div>
 );
 
-// ─── Main TradeRoom Component ─────────────────────────────────
+/* ─── Alert Box ────────────────────────────────────────── */
+const AlertBox = ({ icon: Icon, color, children }) => (
+  <div style={{
+    background: `${color}0d`, border: `1px solid ${color}28`,
+    borderRadius: '10px', padding: '12px 16px',
+    display: 'flex', gap: '10px', alignItems: 'flex-start',
+  }}>
+    {Icon && <Icon size={14} color={color} style={{ flexShrink: 0, marginTop: '1px' }} />}
+    <div style={{ fontSize: '11.5px', color: `${color}cc`, lineHeight: 1.5 }}>{children}</div>
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   MAIN TRADE ROOM
+════════════════════════════════════════════════════════ */
 const TradeRoom = () => {
   const { user, trades, markTradeAsPaid, releaseEscrow, cancelTrade, openDispute, uploadDisputeEvidence, submitRating, setError, setSuccess } = useAuth();
-  const [selectedTradeId, setSelectedTradeId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [showRating, setShowRating] = useState(false);
-  const [skippedTrades, setSkippedTrades] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState('');
-  const [isReleasing, setIsReleasing] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  const [skipped, setSkipped] = useState({});
+  const [timer, setTimer] = useState('');
+  const [releasing, setReleasing] = useState(false);
 
-  const activeTrade = trades.find(t => t.id === selectedTradeId);
+  const trade = trades.find(t => t.id === selectedId);
 
-  // Auto-select first trade
+  // Auto-select first
   useEffect(() => {
-    if (!selectedTradeId && trades.length > 0) {
-      setSelectedTradeId(trades[0].id);
-    }
+    if (!selectedId && trades.length > 0) setSelectedId(trades[0].id);
   }, [trades]);
 
+  // Rating prompt
   useEffect(() => {
-    if (activeTrade && activeTrade.status === 'completed' && activeTrade.ratingGiven === null) {
-      if (skippedTrades[activeTrade.id]) { setShowRating(false); return; }
-      const completedTime = activeTrade.completed_at ? new Date(activeTrade.completed_at).getTime() : Date.now();
-      const expired = Date.now() - completedTime > 48 * 60 * 60 * 1000;
-      setShowRating(!expired);
+    if (trade?.status === 'completed' && trade.ratingGiven === null && !skipped[trade.id]) {
+      const age = Date.now() - (trade.completed_at ? new Date(trade.completed_at).getTime() : Date.now());
+      setShowRating(age < 48 * 60 * 60 * 1000);
     } else {
       setShowRating(false);
     }
-  }, [activeTrade?.id, activeTrade?.status, activeTrade?.ratingGiven, skippedTrades]);
+  }, [trade?.id, trade?.status, trade?.ratingGiven, skipped]);
 
+  // Countdown timer
   useEffect(() => {
-    if (!activeTrade || activeTrade.status === 'completed' || activeTrade.status === 'cancelled') {
-      setTimeRemaining(''); return;
-    }
-    const interval = setInterval(() => {
-      const created = new Date(activeTrade.created_at).getTime();
-      const expires = created + (30 * 60 * 1000);
-      const now = Date.now();
-      const diff = expires - now;
-      if (diff <= 0) { setTimeRemaining('Expired'); clearInterval(interval); }
+    if (!trade || trade.status === 'completed' || trade.status === 'cancelled') { setTimer(''); return; }
+    const id = setInterval(() => {
+      const diff = new Date(trade.created_at).getTime() + 30 * 60000 - Date.now();
+      if (diff <= 0) { setTimer('Expired'); clearInterval(id); }
       else {
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeRemaining(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimer(`${m}:${s < 10 ? '0' : ''}${s}`);
       }
     }, 1000);
-    return () => clearInterval(interval);
-  }, [activeTrade]);
+    return () => clearInterval(id);
+  }, [trade]);
 
-  const handleMarkPaid = async () => {
-    if (!window.confirm("Confirm that you have sent the payment?")) return;
-    await markTradeAsPaid(activeTrade.id);
-  };
-
+  const handlePaid    = async () => { if (!window.confirm('Confirm you have sent the payment?')) return; await markTradeAsPaid(trade.id); };
   const handleRelease = async () => {
-    if (!window.confirm("Confirm that you have received the payment? This will release the USDT to the buyer.")) return;
-    setIsReleasing(true);
-    try {
-      await releaseEscrow(activeTrade.id);
-      setSuccess("USDT released successfully!");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setTimeout(() => setIsReleasing(false), 1500);
-    }
+    if (!window.confirm('Confirm you received the ETB? This releases USDT to the buyer.')) return;
+    setReleasing(true);
+    try { await releaseEscrow(trade.id); setSuccess('USDT released successfully!'); }
+    catch (e) { setError(e.message); }
+    finally { setTimeout(() => setReleasing(false), 1500); }
+  };
+  const handleCancel  = async () => { if (!window.confirm('Cancel this trade?')) return; await cancelTrade(trade.id); };
+  const handleDispute = async () => {
+    const elapsed = Date.now() - new Date(trade.created_at).getTime();
+    if (elapsed < 30 * 60000) { alert(`Wait ${Math.ceil((30 * 60000 - elapsed) / 60000)} more min(s) before disputing.`); return; }
+    const r = prompt('Reason for dispute?');
+    if (r) await openDispute(trade.id, r);
+  };
+  const handleRate = async (stars, review, lowRatingReason) => {
+    try { await submitRating(trade.id, stars, review, lowRatingReason); setShowRating(false); }
+    catch (e) { setError(e.message); }
   };
 
-  const handleCancel = async () => {
-    if (!window.confirm("Are you sure you want to cancel this trade?")) return;
-    await cancelTrade(activeTrade.id);
-  };
-
-  const handleOpenDispute = async () => {
-    const created = new Date(activeTrade.created_at).getTime();
-    const elapsed = Date.now() - created;
-    if (elapsed < 30 * 60 * 1000) {
-      const remainingMins = Math.ceil((30 * 60 * 1000 - elapsed) / (60 * 1000));
-      alert(`You must wait 30 minutes since trade start before opening a dispute. Please wait another ${remainingMins} minute(s).`);
-      return;
-    }
-    const reason = prompt("Why are you opening a dispute?");
-    if (reason) await openDispute(activeTrade.id, reason);
-  };
-
-  const handleRatingSubmit = async (stars, review, lowRatingReason) => {
-    try {
-      await submitRating(activeTrade.id, stars, review, lowRatingReason);
-      setShowRating(false);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const rate = activeTrade?.rate_etb || 190;
-  const isBuyer = activeTrade ? user.id === activeTrade.buyer_id : false;
-
-  let paymentAccount = null;
-  if (activeTrade?.payment_method) {
-    try { paymentAccount = JSON.parse(activeTrade.payment_method); }
-    catch { paymentAccount = { bankName: activeTrade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' }; }
+  const rate = trade?.rate_etb || 190;
+  const isBuyer = trade ? user.id === trade.buyer_id : false;
+  let paymentAcc = null;
+  if (trade?.payment_method) {
+    try { paymentAcc = JSON.parse(trade.payment_method); }
+    catch { paymentAcc = { bankName: trade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' }; }
   }
 
-  // Determine step for progress indicator
-  const getStepIndex = (status) => {
-    if (status === 'payment_pending') return 0;
-    if (status === 'payment_sent') return 1;
-    if (status === 'completed') return 3;
-    return 0;
-  };
+  const stepIndex = { payment_pending: 0, payment_sent: 1, completed: 3 }[trade?.status] ?? 0;
 
+  /* ── Card shared style ─────────────────────────────────── */
+  const card = (extra = {}) => ({
+    background: 'var(--surface)', borderRadius: '16px',
+    border: '1px solid var(--border)', ...extra,
+  });
+
+  /* ── Empty state ─────────────────────────────────────── */
   if (trades.length === 0) {
     return (
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        height: '400px', textAlign: 'center', gap: '16px',
-        background: 'linear-gradient(135deg, rgba(22,28,41,0.5) 0%, rgba(10,12,18,0.8) 100%)',
-        borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)',
+        ...card(), padding: '48px 24px', textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
       }}>
-        <div style={{
-          width: '64px', height: '64px', borderRadius: '50%',
-          background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.15)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px',
-        }}>📋</div>
+        <div style={{ fontSize: '40px' }}>📋</div>
         <div>
-          <h3 style={{ color: '#fff', margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>No Active Trades</h3>
-          <p style={{ color: '#8A9BB8', margin: 0, fontSize: '13px' }}>Go to the P2P Marketplace to start trading</p>
+          <h3 style={{ color: 'var(--text)', margin: '0 0 6px', fontSize: '18px', fontWeight: 700 }}>No Active Trades</h3>
+          <p style={{ color: 'var(--muted)', margin: 0, fontSize: '13px' }}>Go to the P2P Marketplace to start trading</p>
         </div>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'p2p' }))}
-          style={{
-            padding: '10px 24px', borderRadius: '12px',
-            background: 'linear-gradient(135deg, #F5A623, #e8971a)',
-            border: 'none', color: '#0B0E1A', fontWeight: 700, fontSize: '14px',
-            cursor: 'pointer', fontFamily: 'var(--font)',
-            boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
-          }}
-        >
+        <button className="btn btn-gold" style={{ borderRadius: '12px', padding: '10px 24px' }}
+          onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'p2p' }))}>
           Browse P2P Marketplace →
         </button>
       </div>
@@ -523,124 +416,64 @@ const TradeRoom = () => {
   return (
     <>
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
-
-        .trade-sidebar-item { transition: all 0.2s ease; }
-        .trade-sidebar-item:hover { background: rgba(245,166,35,0.04) !important; border-color: rgba(245,166,35,0.2) !important; }
-        
-        .trade-action-btn { transition: all 0.2s ease; }
-        .trade-action-btn:hover { transform: translateY(-1px); }
-
-        .trade-room-layout {
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 20px;
-          min-height: calc(100vh - 140px);
-        }
-
-        @media (max-width: 768px) {
-          .trade-room-layout {
-            grid-template-columns: 1fr;
-            min-height: auto;
-          }
-          .trade-sidebar-mobile-hidden {
-            display: none;
-          }
-          .trade-sidebar-mobile-visible {
-            display: flex;
-          }
-        }
-
-        .escrow-lock-badge {
-          background: linear-gradient(135deg, rgba(245,166,35,0.12) 0%, rgba(245,166,35,0.04) 100%);
-          border: 1px solid rgba(245,166,35,0.25);
-          border-radius: 12px;
-          padding: 14px 18px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
+        @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes blink   { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .tr-card-btn { transition: all 0.18s; }
+        .tr-card-btn:hover { transform: translateY(-1px); }
+        .tr-sidebar-item { transition: all 0.18s; cursor: pointer; }
+        .tr-sidebar-item:hover { border-color: rgba(245,166,35,0.25) !important; background: rgba(245,166,35,0.03) !important; }
+        .trade-room-grid { display: grid; grid-template-columns: 272px 1fr; gap: 16px; min-height: calc(100vh - 140px); }
+        @media (max-width: 768px) { .trade-room-grid { grid-template-columns: 1fr; } }
       `}</style>
 
-      <div className="trade-room-layout">
-        {/* ── Left Sidebar: Trade List ─────────────────────────── */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(22,28,41,0.7) 0%, rgba(10,12,18,0.9) 100%)',
-          borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.06)',
-          padding: '16px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          backdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#fff', margin: 0 }}>My Trades</h3>
+      <div className="trade-room-grid">
+
+        {/* ── SIDEBAR ─────────────────────────────────────── */}
+        <div style={{ ...card(), padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>My Trades</span>
             <span style={{
-              background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.2)',
-              color: '#F5A623', fontSize: '10px', fontWeight: 700,
+              background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)',
+              color: 'var(--gold)', fontSize: '10px', fontWeight: 700,
               padding: '2px 8px', borderRadius: '99px',
-            }}>
-              {trades.length} Active
-            </span>
+            }}>{trades.length}</span>
           </div>
 
-          {trades.map(trade => {
-            const partnerPic = user.id === trade.buyer_id ? trade.seller_profile_pic : trade.buyer_profile_pic;
-            const partnerName = user.id === trade.buyer_id ? trade.seller_name : trade.buyer_name;
-            const isSelected = selectedTradeId === trade.id;
-            const statusColor = trade.status === 'completed' ? '#00C896' : trade.status === 'disputed' ? '#EF4444' : '#F5A623';
+          {trades.map(tr => {
+            const sel = selectedId === tr.id;
+            const partnerPic = user.id === tr.buyer_id ? tr.seller_profile_pic : tr.buyer_profile_pic;
+            const partnerName = user.id === tr.buyer_id ? tr.seller_name : tr.buyer_name;
+            const dotColor = tr.status === 'completed' ? 'var(--teal)' : tr.status === 'disputed' ? 'var(--danger)' : 'var(--gold)';
+            const shortStatus = { payment_pending: 'Pending', payment_sent: 'Paid', completed: 'Done', disputed: 'Dispute', cancelled: 'Cancelled' }[tr.status] || tr.status;
             return (
-              <div
-                key={trade.id}
-                className="trade-sidebar-item"
-                onClick={() => setSelectedTradeId(trade.id)}
+              <div key={tr.id} className="tr-sidebar-item" onClick={() => setSelectedId(tr.id)}
                 style={{
-                  padding: '12px', borderRadius: '14px', cursor: 'pointer',
-                  background: isSelected ? 'rgba(245,166,35,0.08)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${isSelected ? 'rgba(245,166,35,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                  boxShadow: isSelected ? '0 4px 20px rgba(245,166,35,0.08)' : 'none',
-                }}
-              >
+                  padding: '11px 12px', borderRadius: '12px',
+                  background: sel ? 'rgba(245,166,35,0.06)' : 'var(--surface2)',
+                  border: `1px solid ${sel ? 'rgba(245,166,35,0.3)' : 'var(--border)'}`,
+                  boxShadow: sel ? '0 4px 16px rgba(245,166,35,0.06)' : 'none',
+                }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
-                    overflow: 'hidden', flexShrink: 0,
+                    width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
                     background: 'rgba(245,166,35,0.08)',
-                    border: `2px solid ${isSelected ? 'rgba(245,166,35,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    border: `2px solid ${sel ? 'rgba(245,166,35,0.4)' : 'var(--border)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '13px', fontWeight: 700, color: '#F5A623',
+                    fontSize: '13px', fontWeight: 700, color: 'var(--gold)', overflow: 'hidden',
                   }}>
-                    {partnerPic ? (
-                      <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      (partnerName || 'U').charAt(0).toUpperCase()
-                    )}
+                    {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (partnerName || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       @{partnerName}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '2px' }}>
-                      ${trade.amount_eth.toFixed(2)} USDT
-                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>${tr.amount_eth.toFixed(2)} USDT</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                    <div style={{
-                      width: '8px', height: '8px', borderRadius: '50%',
-                      background: statusColor,
-                      boxShadow: `0 0 6px ${statusColor}`,
-                    }} />
-                    <span style={{ fontSize: '9px', color: statusColor, fontWeight: 700, textTransform: 'uppercase' }}>
-                      {trade.status === 'payment_pending' ? 'Pending' : trade.status === 'payment_sent' ? 'Paid' : trade.status}
-                    </span>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}` }} />
+                    <span style={{ fontSize: '9px', color: dotColor, fontWeight: 700, textTransform: 'uppercase' }}>{shortStatus}</span>
                   </div>
                 </div>
               </div>
@@ -648,561 +481,325 @@ const TradeRoom = () => {
           })}
         </div>
 
-        {/* ── Main Trade Area ──────────────────────────────────── */}
-        {activeTrade ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: '16px',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            {/* Releasing Overlay */}
-            {isReleasing && (
+        {/* ── MAIN PANEL ─────────────────────────────────── */}
+        {trade ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', overflow: 'hidden' }}>
+
+            {/* Releasing overlay */}
+            {releasing && (
               <div style={{
-                position: 'absolute', inset: 0,
-                background: 'rgba(10,12,18,0.96)',
+                position: 'absolute', inset: 0, background: 'rgba(11,14,26,0.97)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                zIndex: 100, borderRadius: '20px', backdropFilter: 'blur(8px)',
-                animation: 'fadeIn 0.2s ease-out',
+                zIndex: 50, borderRadius: '16px', backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s',
               }}>
-                <div style={{
-                  width: '64px', height: '64px',
-                  border: '4px solid rgba(245,166,35,0.1)',
-                  borderTopColor: '#F5A623', borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  marginBottom: '20px',
-                }} />
-                <span style={{ fontSize: '18px', fontWeight: 800, color: '#F5A623' }}>Releasing USDT...</span>
-                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#8A9BB8' }}>Unlocking escrow safe node</p>
+                <div style={{ width: '52px', height: '52px', border: '4px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '16px' }} />
+                <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--gold)' }}>Releasing USDT…</span>
+                <span style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '6px' }}>Unlocking escrow node</span>
               </div>
             )}
 
-            {/* ── Trade Header Card ── */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(22,28,41,0.7) 0%, rgba(10,12,18,0.9) 100%)',
-              borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)',
-              padding: '20px 24px',
-              backdropFilter: 'blur(16px)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-              animation: 'slideInRight 0.3s ease-out',
-            }}>
-              {/* Partner + Status Row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {/* ── Trade header ── */}
+            <div style={{ ...card(), padding: '20px 22px' }}>
+              {/* Partner + status */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '48px', height: '48px', borderRadius: '50%',
-                    background: 'rgba(245,166,35,0.1)',
-                    border: '2px solid rgba(245,166,35,0.3)',
+                    width: '46px', height: '46px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                    background: 'rgba(245,166,35,0.08)', border: '2px solid rgba(245,166,35,0.25)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px', fontWeight: 800, color: '#F5A623',
-                    boxShadow: '0 0 16px rgba(245,166,35,0.15)',
-                    overflow: 'hidden', flexShrink: 0,
+                    fontSize: '17px', fontWeight: 800, color: 'var(--gold)',
                   }}>
-                    {(isBuyer ? activeTrade.seller_profile_pic : activeTrade.buyer_profile_pic) ? (
-                      <img src={isBuyer ? activeTrade.seller_profile_pic : activeTrade.buyer_profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      (isBuyer ? activeTrade.seller_name : activeTrade.buyer_name || 'U').charAt(0).toUpperCase()
-                    )}
+                    {(isBuyer ? trade.seller_profile_pic : trade.buyer_profile_pic)
+                      ? <img src={isBuyer ? trade.seller_profile_pic : trade.buyer_profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (isBuyer ? trade.seller_name : trade.buyer_name || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      Trading with
+                    <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Trading with</div>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)', marginTop: '2px' }}>
+                      @{isBuyer ? trade.seller_name : trade.buyer_name}
                     </div>
-                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
-                      @{isBuyer ? activeTrade.seller_name : activeTrade.buyer_name}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '2px' }}>
-                      {isBuyer ? 'Seller (has USD)' : 'Buyer (sending ETB)'}
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
+                      {isBuyer ? 'Seller (has USDT)' : 'Buyer (sending ETB)'}
                     </div>
                   </div>
                 </div>
-                <StatusBadge status={activeTrade.status} />
+                <StatusBadge status={trade.status} />
               </div>
 
-              {/* Progress Steps */}
-              <StepIndicator
-                steps={['Awaiting Payment', 'Payment Sent', 'Confirming', 'Complete']}
-                currentStep={getStepIndex(activeTrade.status)}
-              />
+              {/* Step bar */}
+              <StepBar steps={['Awaiting Payment', 'Payment Sent', 'Confirming', 'Complete']} current={stepIndex} />
 
-              {/* Trade Summary Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              {/* Trade summary */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                 {[
-                  { label: 'USD Amount', value: `$${activeTrade.amount_eth.toFixed(2)}`, color: '#F5A623' },
-                  { label: 'ETB Amount', value: `${Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB`, color: '#00C896' },
-                  { label: 'Rate Used', value: `${rate} ETB/$`, color: '#8A9BB8' },
+                  { label: 'USD Amount', value: `$${trade.amount_eth.toFixed(2)}`, color: 'var(--gold)' },
+                  { label: 'ETB Amount', value: `${Math.round(trade.amount_eth * rate).toLocaleString()} ETB`, color: 'var(--teal)' },
+                  { label: 'Rate Used',  value: `${rate} ETB/$`, color: 'var(--muted)' },
                 ].map(({ label, value, color }) => (
-                  <div key={label} style={{
-                    background: 'rgba(0,0,0,0.2)', borderRadius: '12px',
-                    padding: '12px 16px', border: '1px solid rgba(255,255,255,0.04)',
-                  }}>
-                    <div style={{ fontSize: '9px', color: '#5a6375', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{label}</div>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color, marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{value}</div>
+                  <div key={label} style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '11px 14px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '9px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{label}</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color, marginTop: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{value}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Timer (if active) */}
-              {timeRemaining && activeTrade.status !== 'completed' && activeTrade.status !== 'cancelled' && (
+              {/* Timer */}
+              {timer && trade.status !== 'completed' && trade.status !== 'cancelled' && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginTop: '16px', padding: '10px 16px', borderRadius: '10px',
-                  background: timeRemaining === 'Expired' ? 'rgba(239,68,68,0.08)' : 'rgba(245,166,35,0.06)',
-                  border: `1px solid ${timeRemaining === 'Expired' ? 'rgba(239,68,68,0.2)' : 'rgba(245,166,35,0.15)'}`,
+                  marginTop: '14px', padding: '10px 14px', borderRadius: '10px',
+                  background: timer === 'Expired' ? 'rgba(255,77,77,0.06)' : 'rgba(245,166,35,0.05)',
+                  border: `1px solid ${timer === 'Expired' ? 'rgba(255,77,77,0.2)' : 'rgba(245,166,35,0.15)'}`,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#8A9BB8' }}>
-                    <Clock size={14} color={timeRemaining === 'Expired' ? '#EF4444' : '#F5A623'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--muted)' }}>
+                    <Clock size={13} color={timer === 'Expired' ? 'var(--danger)' : 'var(--gold)'} />
                     Payment Window Remaining
                   </div>
-                  <span style={{
-                    fontFamily: 'JetBrains Mono, monospace', fontSize: '16px', fontWeight: 800,
-                    color: timeRemaining === 'Expired' ? '#EF4444' : '#F5A623',
-                  }}>
-                    {timeRemaining}
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '15px', fontWeight: 800, color: timer === 'Expired' ? 'var(--danger)' : 'var(--gold)' }}>
+                    {timer}
                   </span>
                 </div>
               )}
 
-              {/* Trade ID & Ref */}
+              {/* Trade ref */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                <span style={{ fontSize: '11px', color: '#5a6375' }}>Trade ID:</span>
-                <span style={{ fontSize: '11px', color: '#8A9BB8', fontFamily: 'JetBrains Mono, monospace' }}>
-                  ES-{activeTrade.id.substring(0, 8).toUpperCase()}
-                </span>
-                <CopyButton text={`ES-${activeTrade.id.substring(0, 8).toUpperCase()}`} label="Copy" />
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Trade ID:</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace' }}>ES-{trade.id.substring(0, 8).toUpperCase()}</span>
+                <CopyBtn text={`ES-${trade.id.substring(0, 8).toUpperCase()}`} />
               </div>
             </div>
 
-            {/* ── COMPLETED STATE ── */}
-            {activeTrade.status === 'completed' ? (
+            {/* ── Escrow badge ── */}
+            {trade.status !== 'completed' && trade.status !== 'cancelled' && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(0,200,150,0.06) 0%, rgba(10,12,18,0.9) 100%)',
-                borderRadius: '20px', border: '1px solid rgba(0,200,150,0.2)',
-                padding: '28px', textAlign: 'center',
-                backdropFilter: 'blur(16px)',
-                animation: 'slideInRight 0.3s ease-out',
+                background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.18)',
+                borderRadius: '12px', padding: '12px 16px',
+                display: 'flex', alignItems: 'center', gap: '12px',
               }}>
-                <div style={{
-                  width: '72px', height: '72px', borderRadius: '50%', margin: '0 auto 20px',
-                  background: 'radial-gradient(circle, rgba(0,200,150,0.2) 0%, rgba(0,200,150,0.04) 70%)',
-                  border: '2px solid rgba(0,200,150,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 0 32px rgba(0,200,150,0.15)',
-                  fontSize: '28px',
-                }}>
-                  🏆
+                <Lock size={15} color="var(--gold)" />
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>Escrow Protected</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
+                    ${trade.amount_eth.toFixed(2)} USDT locked until trade completes
+                  </div>
                 </div>
-                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>Trade Completed!</h3>
-                <p style={{ color: '#8A9BB8', fontSize: '14px', margin: '0 0 24px' }}>
-                  {isBuyer
-                    ? `You received $${activeTrade.amount_eth.toFixed(2)} USDT`
-                    : `You received ${Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB`}
+              </div>
+            )}
+
+            {/* ── COMPLETED VIEW ── */}
+            {trade.status === 'completed' && (
+              <div style={{ ...card({ background: 'rgba(0,200,150,0.04)', border: '1px solid rgba(0,200,150,0.2)' }), padding: '32px', textAlign: 'center' }}>
+                <div style={{ fontSize: '40px', marginBottom: '14px' }}>🏆</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', margin: '0 0 6px' }}>Trade Completed!</h3>
+                <p style={{ color: 'var(--muted)', fontSize: '13px', margin: '0 0 24px' }}>
+                  {isBuyer ? `You received $${trade.amount_eth.toFixed(2)} USDT` : `You received ${Math.round(trade.amount_eth * rate).toLocaleString()} ETB`}
                 </p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }))}
-                    style={{
-                      padding: '12px 24px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #F5A623, #e8971a)',
-                      border: 'none', color: '#0B0E1A', fontWeight: 700,
-                      fontSize: '14px', cursor: 'pointer', fontFamily: 'var(--font)',
-                      boxShadow: '0 4px 14px rgba(245,166,35,0.25)',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={e => { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 6px 20px rgba(245,166,35,0.35)'; }}
-                    onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 14px rgba(245,166,35,0.25)'; }}
-                  >
+                  <button className="btn btn-gold tr-card-btn" style={{ borderRadius: '12px' }}
+                    onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }))}>
                     View in History
                   </button>
-                  {activeTrade.ratingGiven === null && (
-                    <button
-                      onClick={() => setShowRating(true)}
-                      style={{
-                        padding: '12px 24px', borderRadius: '12px',
-                        background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)',
-                        color: '#F5A623', fontWeight: 700, fontSize: '14px',
-                        cursor: 'pointer', fontFamily: 'var(--font)', transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={e => { e.target.style.background = 'rgba(245,166,35,0.14)'; }}
-                      onMouseLeave={e => { e.target.style.background = 'rgba(245,166,35,0.08)'; }}
-                    >
+                  {trade.ratingGiven === null && (
+                    <button className="btn btn-ghost tr-card-btn" style={{ borderRadius: '12px' }} onClick={() => setShowRating(true)}>
                       ⭐ Rate Trade
                     </button>
                   )}
                 </div>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'slideInRight 0.3s ease-out' }}>
+            )}
 
-                {/* ── Escrow Lock Banner ── */}
-                <div className="escrow-lock-badge">
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    <Lock size={16} color="#F5A623" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623' }}>Escrow Protected</div>
-                    <div style={{ fontSize: '11px', color: '#8A9BB8', marginTop: '2px' }}>
-                      ${activeTrade.amount_eth.toFixed(2)} USDT is safely locked until trade completes
-                    </div>
-                  </div>
-                </div>
+            {/* ── ACTIVE STATES ── */}
+            {trade.status !== 'completed' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                {/* ── BUYER: Payment Pending ── */}
-                {isBuyer && activeTrade.status === 'payment_pending' && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(22,28,41,0.8) 0%, rgba(10,12,18,0.95) 100%)',
-                    borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)',
-                    padding: '24px', backdropFilter: 'blur(16px)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F5A623', animation: 'pulse 1.5s infinite' }} />
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Send Payment to Seller</span>
+                {/* BUYER — payment_pending */}
+                {isBuyer && trade.status === 'payment_pending' && (
+                  <div style={{ ...card(), padding: '22px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', animation: 'blink 1.6s infinite' }} />
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>Send Payment to Seller</span>
                     </div>
 
-                    {/* Payment Details Card */}
-                    <div style={{
-                      background: 'rgba(0,0,0,0.3)', borderRadius: '14px',
-                      padding: '18px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '16px',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                        <CreditCard size={14} color="#F5A623" />
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          Bank Transfer Details (Pay To)
-                        </span>
+                    {/* Payment card */}
+                    <div style={{ background: 'var(--surface2)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px' }}>
+                        <CreditCard size={13} color="var(--gold)" />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bank Transfer Details</span>
                       </div>
-                      {paymentAccount ? (
-                        <div>
-                          <PaymentRow label="Bank / Platform" value={paymentAccount.bankName} />
-                          <PaymentRow label="Account Holder" value={paymentAccount.holderName} />
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                            <span style={{ fontSize: '12px', color: '#8A9BB8', fontWeight: 500 }}>Account Number</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '15px', color: '#F5A623', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>
-                                {paymentAccount.accountNumber}
-                              </span>
-                              <CopyButton text={paymentAccount.accountNumber} />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-                            <span style={{ fontSize: '12px', color: '#8A9BB8', fontWeight: 500 }}>Amount to Send</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '16px', color: '#00C896', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>
-                                {Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB
-                              </span>
-                              <CopyButton text={Math.round(activeTrade.amount_eth * rate).toString()} label="Copy" />
-                            </div>
-                          </div>
-                        </div>
+                      {paymentAcc ? (
+                        <>
+                          <InfoRow label="Bank / Platform" value={paymentAcc.bankName} />
+                          <InfoRow label="Account Holder" value={paymentAcc.holderName} />
+                          <InfoRow label="Account Number" mono>
+                            <span style={{ fontSize: '15px', color: 'var(--gold)', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>{paymentAcc.accountNumber}</span>
+                            <CopyBtn text={paymentAcc.accountNumber} />
+                          </InfoRow>
+                          <InfoRow label="Amount to Send">
+                            <span style={{ fontSize: '15px', color: 'var(--teal)', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>
+                              {Math.round(trade.amount_eth * rate).toLocaleString()} ETB
+                            </span>
+                            <CopyBtn text={Math.round(trade.amount_eth * rate).toString()} />
+                          </InfoRow>
+                        </>
                       ) : (
-                        <div style={{ fontSize: '13px', color: '#8A9BB8' }}>
-                          Payment to: {activeTrade.payment_method}
-                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Payment to: {trade.payment_method}</div>
                       )}
                     </div>
 
-                    {/* Warning */}
-                    <div style={{
-                      background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.15)',
-                      borderRadius: '10px', padding: '12px 16px',
-                      display: 'flex', gap: '10px', marginBottom: '20px',
-                    }}>
-                      <AlertCircle size={14} color="#FFB800" style={{ flexShrink: 0, marginTop: '1px' }} />
-                      <div style={{ fontSize: '11.5px', color: '#ffd580', lineHeight: 1.5 }}>
-                        <strong>Important:</strong> Transfer exactly <strong>{Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB</strong> using your banking app.
-                        Only click "I Have Sent Payment" after the transfer is confirmed. Do NOT close this window.
-                      </div>
-                    </div>
+                    <AlertBox icon={AlertCircle} color="#F5A623">
+                      <strong>Important:</strong> Transfer exactly <strong>{Math.round(trade.amount_eth * rate).toLocaleString()} ETB</strong> using your banking app.
+                      Click "I Have Sent Payment" only after the transfer is confirmed. Do NOT close this window.
+                    </AlertBox>
 
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <button
-                        className="trade-action-btn"
-                        onClick={handleMarkPaid}
-                        style={{
-                          flex: 1, height: '50px', borderRadius: '14px', border: 'none',
-                          background: 'linear-gradient(135deg, #F5A623, #e8971a)',
-                          color: '#0A0C12', fontWeight: 800, fontSize: '14px',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          boxShadow: '0 4px 20px rgba(245,166,35,0.3)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        }}
-                      >
-                        <CheckCircle size={16} /> I Have Sent Payment
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                      <button className="btn btn-gold tr-card-btn" onClick={handlePaid}
+                        style={{ flex: 1, height: '48px', borderRadius: '12px', fontSize: '14px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <CheckCircle size={15} /> I Have Sent Payment
                       </button>
-                      <button
-                        className="trade-action-btn"
-                        onClick={handleCancel}
-                        style={{
-                          padding: '0 18px', height: '50px', borderRadius: '14px',
-                          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-                          color: '#EF4444', fontWeight: 600, fontSize: '13px',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                        }}
-                      >
-                        <XCircle size={14} /> Cancel
+                      <button className="tr-card-btn" onClick={handleCancel}
+                        style={{ padding: '0 16px', height: '48px', borderRadius: '12px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', color: 'var(--danger)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <XCircle size={13} /> Cancel
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* ── BUYER: Payment Sent (waiting) ── */}
-                {isBuyer && activeTrade.status === 'payment_sent' && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(0,200,150,0.05) 0%, rgba(10,12,18,0.95) 100%)',
-                    borderRadius: '20px', border: '1px solid rgba(0,200,150,0.2)',
-                    padding: '28px', backdropFilter: 'blur(16px)',
-                    textAlign: 'center',
-                  }}>
-                    <div style={{
-                      width: '60px', height: '60px', borderRadius: '50%', margin: '0 auto 20px',
-                      background: 'rgba(0,200,150,0.1)', border: '2px solid rgba(0,200,150,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 0 24px rgba(0,200,150,0.15)',
-                    }}>
-                      <CheckCircle size={26} color="#00C896" />
+                {/* BUYER — payment_sent */}
+                {isBuyer && trade.status === 'payment_sent' && (
+                  <div style={{ ...card({ border: '1px solid rgba(0,200,150,0.2)' }), padding: '28px', textAlign: 'center' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px', background: 'rgba(0,200,150,0.08)', border: '2px solid rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CheckCircle size={24} color="var(--teal)" />
                     </div>
-                    <h3 style={{ color: '#fff', margin: '0 0 8px', fontSize: '18px', fontWeight: 800 }}>Payment Sent!</h3>
-                    <p style={{ color: '#8A9BB8', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
-                      Waiting for <strong style={{ color: '#fff' }}>@{activeTrade.seller_name}</strong> to verify the ETB transfer and release your USDT.
+                    <h3 style={{ color: 'var(--text)', margin: '0 0 6px', fontSize: '17px', fontWeight: 800 }}>Payment Sent!</h3>
+                    <p style={{ color: 'var(--muted)', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                      Waiting for <strong style={{ color: 'var(--text)' }}>@{trade.seller_name}</strong> to verify the ETB and release your USDT.
                     </p>
-                    <div style={{
-                      background: 'rgba(0,200,150,0.05)', border: '1px solid rgba(0,200,150,0.15)',
-                      borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#a0eedb',
-                      marginBottom: '20px',
-                    }}>
-                      ⏳ Seller will release escrow once payment is verified. This may take a few minutes.
+                    <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '11px 14px', fontSize: '12px', color: 'var(--muted)', marginBottom: '18px' }}>
+                      ⏳ Seller will release escrow once payment is confirmed. This may take a few minutes.
                     </div>
-                    <button
-                      className="trade-action-btn"
-                      onClick={handleOpenDispute}
-                      style={{
-                        padding: '10px 20px', borderRadius: '10px',
-                        background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-                        color: '#EF4444', fontWeight: 600, fontSize: '13px',
-                        cursor: 'pointer', fontFamily: 'var(--font)',
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      }}
-                    >
+                    <button className="tr-card-btn" onClick={handleDispute}
+                      style={{ padding: '9px 18px', borderRadius: '10px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', color: 'var(--danger)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <AlertTriangle size={13} /> Open Dispute
                     </button>
                   </div>
                 )}
 
-                {/* ── SELLER: Payment Pending ── */}
-                {!isBuyer && activeTrade.status === 'payment_pending' && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(22,28,41,0.8) 0%, rgba(10,12,18,0.95) 100%)',
-                    borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)',
-                    padding: '24px', backdropFilter: 'blur(16px)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F5A623', animation: 'pulse 2s infinite' }} />
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Waiting for Buyer's Payment</span>
+                {/* SELLER — payment_pending */}
+                {!isBuyer && trade.status === 'payment_pending' && (
+                  <div style={{ ...card(), padding: '22px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', animation: 'blink 2s infinite' }} />
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>Waiting for Buyer's Payment</span>
                     </div>
 
-                    <div style={{
-                      background: 'rgba(0,0,0,0.25)', borderRadius: '14px',
-                      padding: '18px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px',
-                    }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
-                        Your Receiving Account
-                      </div>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#8A9BB8' }}>
-                        Buyer (<strong style={{ color: '#fff' }}>@{activeTrade.buyer_name}</strong>) will send{' '}
-                        <strong style={{ color: '#00C896', fontFamily: 'JetBrains Mono, monospace' }}>
-                          {Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB
-                        </strong>{' '}
-                        to your account below.
+                    <div style={{ background: 'var(--surface2)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Your Receiving Account</div>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                        Buyer <strong style={{ color: 'var(--text)' }}>@{trade.buyer_name}</strong> will send{' '}
+                        <strong style={{ color: 'var(--teal)', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {Math.round(trade.amount_eth * rate).toLocaleString()} ETB
+                        </strong>{' '}to your account.
                       </p>
-                      {paymentAccount && (
-                        <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', fontSize: '12px', color: '#8A9BB8' }}>
-                          <span style={{ color: '#fff', fontWeight: 700 }}>{paymentAccount.bankName}</span> · {paymentAccount.accountNumber}
+                      {paymentAcc && (
+                        <div style={{ marginTop: '10px', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg, #0B0E1A)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--muted)' }}>
+                          <strong style={{ color: 'var(--text)' }}>{paymentAcc.bankName}</strong> · {paymentAcc.accountNumber}
                         </div>
                       )}
                     </div>
 
-                    <div style={{
-                      background: 'rgba(0,200,150,0.04)', border: '1px solid rgba(0,200,150,0.12)',
-                      borderRadius: '10px', padding: '12px 16px',
-                      display: 'flex', gap: '10px', marginBottom: '20px',
-                    }}>
-                      <Shield size={14} color="#00C896" style={{ flexShrink: 0, marginTop: '1px' }} />
-                      <div style={{ fontSize: '11.5px', color: '#a0eedb', lineHeight: 1.5 }}>
-                        You'll be notified when the buyer sends the ETB. <strong>Do NOT release USDT</strong> until you verify funds in your account!
-                      </div>
-                    </div>
+                    <AlertBox icon={Shield} color="#00C896">
+                      You'll be notified when the buyer sends ETB. <strong>Do NOT release USDT</strong> until you verify funds in your account!
+                    </AlertBox>
 
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <div style={{
-                        flex: 1, height: '50px', borderRadius: '14px',
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '13px', color: '#5a6375', fontWeight: 600,
-                        gap: '8px',
-                      }}>
-                        <Clock size={14} /> Waiting for Buyer...
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                      <div style={{ flex: 1, height: '48px', borderRadius: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'var(--muted)', gap: '7px' }}>
+                        <Clock size={13} /> Waiting for Buyer…
                       </div>
-                      <button
-                        className="trade-action-btn"
-                        onClick={handleCancel}
-                        style={{
-                          padding: '0 18px', height: '50px', borderRadius: '14px',
-                          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-                          color: '#EF4444', fontWeight: 600, fontSize: '13px',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                        }}
-                      >
-                        <XCircle size={14} /> Cancel
+                      <button className="tr-card-btn" onClick={handleCancel}
+                        style={{ padding: '0 16px', height: '48px', borderRadius: '12px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', color: 'var(--danger)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <XCircle size={13} /> Cancel
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* ── SELLER: Payment Sent (confirm & release) ── */}
-                {!isBuyer && activeTrade.status === 'payment_sent' && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(0,200,150,0.07) 0%, rgba(10,12,18,0.95) 100%)',
-                    borderRadius: '20px', border: '1px solid rgba(0,200,150,0.25)',
-                    padding: '24px', backdropFilter: 'blur(16px)',
-                    boxShadow: '0 8px 32px rgba(0,200,150,0.08)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '50%',
-                        background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <CheckCircle size={16} color="#00C896" />
+                {/* SELLER — payment_sent */}
+                {!isBuyer && trade.status === 'payment_sent' && (
+                  <div style={{ ...card({ border: '1px solid rgba(0,200,150,0.2)' }), padding: '22px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CheckCircle size={15} color="var(--teal)" />
                       </div>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Buyer Marked as Paid</div>
-                        <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Verify the ETB has arrived in your account</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>Buyer Marked as Paid</div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>Verify ETB has arrived in your account</div>
                       </div>
                     </div>
 
-                    <div style={{
-                      background: 'rgba(0,0,0,0.25)', borderRadius: '14px',
-                      padding: '18px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px',
-                    }}>
-                      <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: '#fff', fontWeight: 800 }}>
-                        Verify & Release USDT
-                      </h3>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#8A9BB8', lineHeight: 1.5 }}>
-                        Check your bank/wallet that you've received{' '}
-                        <strong style={{ color: '#00C896', fontFamily: 'JetBrains Mono, monospace' }}>
-                          {Math.round(activeTrade.amount_eth * rate).toLocaleString()} ETB
-                        </strong>{' '}
-                        from <strong style={{ color: '#fff' }}>@{activeTrade.buyer_name}</strong>.
+                    <div style={{ background: 'var(--surface2)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)', marginBottom: '14px' }}>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>Verify & Release USDT</h3>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                        Check your bank/wallet for{' '}
+                        <strong style={{ color: 'var(--teal)', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {Math.round(trade.amount_eth * rate).toLocaleString()} ETB
+                        </strong>{' '}from <strong style={{ color: 'var(--text)' }}>@{trade.buyer_name}</strong>.
                       </p>
                     </div>
 
-                    <div style={{
-                      background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
-                      borderRadius: '10px', padding: '12px 16px',
-                      display: 'flex', gap: '10px', marginBottom: '20px',
-                    }}>
-                      <AlertTriangle size={14} color="#EF4444" style={{ flexShrink: 0, marginTop: '1px' }} />
-                      <div style={{ fontSize: '11.5px', color: '#fca5a5', lineHeight: 1.5 }}>
-                        Only release USDT after you physically see the ETB in your account. Once released, it <strong>cannot be reversed</strong>.
-                      </div>
-                    </div>
+                    <AlertBox icon={AlertTriangle} color="#FF4D4D">
+                      Only release USDT after you <strong>physically see the ETB</strong> in your account. Once released, it <strong>cannot be reversed</strong>.
+                    </AlertBox>
 
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <button
-                        className="trade-action-btn"
-                        onClick={handleRelease}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                      <button className="tr-card-btn" onClick={handleRelease}
                         style={{
-                          flex: 2, height: '50px', borderRadius: '14px', border: 'none',
-                          background: 'linear-gradient(135deg, #00C896, #00a87d)',
-                          color: '#023026', fontWeight: 800, fontSize: '14px',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          boxShadow: '0 4px 20px rgba(0,200,150,0.3)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        }}
-                      >
-                        <Unlock size={16} /> Release USDT to Buyer
+                          flex: 2, height: '48px', borderRadius: '12px', border: 'none', fontFamily: 'var(--font)',
+                          background: 'var(--teal)', color: '#023026', fontWeight: 800, fontSize: '14px', cursor: 'pointer',
+                          boxShadow: '0 4px 18px rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        }}>
+                        <Unlock size={15} /> Release USDT to Buyer
                       </button>
-                      <button
-                        className="trade-action-btn"
-                        onClick={handleOpenDispute}
-                        style={{
-                          flex: 1, height: '50px', borderRadius: '14px',
-                          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-                          color: '#EF4444', fontWeight: 600, fontSize: '13px',
-                          cursor: 'pointer', fontFamily: 'var(--font)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        }}
-                      >
+                      <button className="tr-card-btn" onClick={handleDispute}
+                        style={{ flex: 1, height: '48px', borderRadius: '12px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', color: 'var(--danger)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                         <AlertTriangle size={13} /> Dispute
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* ── Dispute Console ── */}
-                {activeTrade.status === 'disputed' && (
-                  <DisputeEvidenceConsole
-                    trade={activeTrade}
-                    user={user}
-                    uploadDisputeEvidence={uploadDisputeEvidence}
-                    setError={setError}
-                    setSuccess={setSuccess}
-                  />
+                {/* Dispute console */}
+                {trade.status === 'disputed' && (
+                  <DisputeConsole trade={trade} user={user} uploadDisputeEvidence={uploadDisputeEvidence} setError={setError} setSuccess={setSuccess} />
                 )}
               </div>
             )}
 
-            {/* ── Chat Section ── */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(22,28,41,0.7) 0%, rgba(10,12,18,0.9) 100%)',
-              borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)',
-              overflow: 'hidden', backdropFilter: 'blur(16px)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-              minHeight: '340px',
-            }}>
-              <div style={{
-                padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-                display: 'flex', alignItems: 'center', gap: '8px',
-              }}>
-                <MessageSquare size={15} color="#8A9BB8" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Trade Chat</span>
-                <span style={{ fontSize: '11px', color: '#8A9BB8' }}>• Secure encrypted channel</span>
+            {/* ── Chat ── */}
+            <div style={{ ...card(), overflow: 'hidden', minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface2)' }}>
+                <MessageSquare size={14} color="var(--muted)" />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Trade Chat</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>· Secure encrypted channel</span>
               </div>
-              <TradeChat
-                tradeId={activeTrade.id}
-                sellerId={activeTrade.seller_id}
-                buyerId={activeTrade.buyer_id}
-                tradeStatus={activeTrade.status}
-              />
+              <div style={{ flex: 1 }}>
+                <TradeChat tradeId={trade.id} sellerId={trade.seller_id} buyerId={trade.buyer_id} tradeStatus={trade.status} />
+              </div>
             </div>
           </div>
         ) : (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(135deg, rgba(22,28,41,0.6) 0%, rgba(10,12,18,0.8) 100%)',
-            borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)',
-            color: '#5a6375', fontSize: '14px',
-          }}>
+          <div style={{ ...card(), display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '14px' }}>
             Select a trade to view details
           </div>
         )}
       </div>
 
-      {/* Rating Modal */}
-      {showRating && activeTrade && (
+      {/* Rating modal */}
+      {showRating && trade && (
         <RatingModal
-          trade={activeTrade}
-          ratedUserId={user.id === activeTrade.buyer_id ? activeTrade.seller_id : activeTrade.buyer_id}
-          onClose={() => {
-            setSkippedTrades(prev => ({ ...prev, [activeTrade.id]: true }));
-            setShowRating(false);
-          }}
-          onSubmit={handleRatingSubmit}
+          trade={trade}
+          ratedUserId={user.id === trade.buyer_id ? trade.seller_id : trade.buyer_id}
+          onClose={() => { setSkipped(p => ({ ...p, [trade.id]: true })); setShowRating(false); }}
+          onSubmit={handleRate}
         />
       )}
     </>
