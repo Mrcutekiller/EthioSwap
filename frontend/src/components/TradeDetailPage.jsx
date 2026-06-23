@@ -262,13 +262,19 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>
-                    {acc.method}
+                  <div style={{ color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }} onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopy(acc.bankName || acc.method);
+                  }}>
+                    🏦 {acc.bankName || acc.method} (tap to copy)
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
-                    {acc.holder || 'Account Holder'}
+                  <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', cursor: 'pointer' }} onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopy(acc.holderName || acc.holder || 'Account Holder');
+                  }}>
+                    👤 {acc.holderName || acc.holder || 'Account Holder'} (tap to copy)
                   </div>
-                  {acc.account && (
+                  {(acc.accountNumber || acc.account) && (
                     <div style={{
                       fontSize: '12px',
                       color: '#F5A623',
@@ -276,9 +282,9 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
                       cursor: 'pointer'
                     }} onClick={(e) => {
                       e.stopPropagation();
-                      handleCopy(acc.account);
+                      handleCopy(acc.accountNumber || acc.account);
                     }}>
-                      📋 {acc.account} (tap to copy)
+                      📋 {acc.accountNumber || acc.account} (tap to copy)
                     </div>
                   )}
                 </div>

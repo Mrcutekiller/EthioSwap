@@ -140,7 +140,7 @@ const RatingModal = ({ trade, ratedUserId, onClose, onSubmit }) => {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '20px', fontWeight: 800, color: 'var(--gold)', margin: '0 auto 20px',
         }}>
-          {partnerName ? partnerName.charAt(0).toUpperCase() : 'U'}
+          {typeof partnerName === 'string' && partnerName.trim() ? partnerName.trim().charAt(0).toUpperCase() : 'U'}
         </div>
 
         {/* Stars */}
@@ -384,8 +384,17 @@ const TradeRoom = ({ tradeId, setPage }) => {
   const isBuyer = trade ? user.id === trade.buyer_id : false;
   let paymentAcc = null;
   if (trade?.payment_method) {
-    try { paymentAcc = JSON.parse(trade.payment_method); }
-    catch { paymentAcc = { bankName: trade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' }; }
+    try {
+      const parsed = JSON.parse(trade.payment_method);
+      paymentAcc = {
+        bankName: parsed.bankName || parsed.method || 'N/A',
+        holderName: parsed.holderName || parsed.holder || 'Seller Account',
+        accountNumber: parsed.accountNumber || parsed.account || 'N/A'
+      };
+    }
+    catch {
+      paymentAcc = { bankName: trade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' };
+    }
   }
 
   const stepIndex = { payment_pending: 0, payment_sent: 1, completed: 3 }[trade?.status] ?? 0;
@@ -466,7 +475,7 @@ const TradeRoom = ({ tradeId, setPage }) => {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '13px', fontWeight: 700, color: 'var(--gold)', overflow: 'hidden',
                   }}>
-                    {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (partnerName || 'U').charAt(0).toUpperCase()}
+                    {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (typeof partnerName === 'string' && partnerName.trim() ? partnerName.trim().charAt(0).toUpperCase() : 'U')}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -514,7 +523,7 @@ const TradeRoom = ({ tradeId, setPage }) => {
                   }}>
                     {(isBuyer ? trade.seller_profile_pic : trade.buyer_profile_pic)
                       ? <img src={isBuyer ? trade.seller_profile_pic : trade.buyer_profile_pic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : (isBuyer ? trade.seller_name : trade.buyer_name || 'U').charAt(0).toUpperCase()}
+                      : (typeof (isBuyer ? trade.seller_name : trade.buyer_name) === 'string' && (isBuyer ? trade.seller_name : trade.buyer_name).trim() ? (isBuyer ? trade.seller_name : trade.buyer_name).trim().charAt(0).toUpperCase() : 'U')}
                   </div>
                   <div>
                     <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Trading with</div>
@@ -631,8 +640,12 @@ const TradeRoom = ({ tradeId, setPage }) => {
                       </div>
                       {paymentAcc ? (
                         <>
-                          <InfoRow label="Bank / Platform" value={paymentAcc.bankName} />
-                          <InfoRow label="Account Holder" value={paymentAcc.holderName} />
+                          <InfoRow label="Bank / Platform" value={paymentAcc.bankName}>
+                            <CopyBtn text={paymentAcc.bankName} />
+                          </InfoRow>
+                          <InfoRow label="Account Holder" value={paymentAcc.holderName}>
+                            <CopyBtn text={paymentAcc.holderName} />
+                          </InfoRow>
                           <InfoRow label="Account Number" mono>
                             <span style={{ fontSize: '15px', color: 'var(--gold)', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace' }}>{paymentAcc.accountNumber}</span>
                             <CopyBtn text={paymentAcc.accountNumber} />
