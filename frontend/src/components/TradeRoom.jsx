@@ -451,63 +451,10 @@ const TradeRoom = ({ tradeId, setPage }) => {
         .tr-card-btn:hover { transform: translateY(-1px); }
         .tr-sidebar-item { transition: all 0.18s; cursor: pointer; }
         .tr-sidebar-item:hover { border-color: rgba(245,166,35,0.25) !important; background: rgba(245,166,35,0.03) !important; }
-        .trade-room-grid { display: grid; grid-template-columns: 272px 1fr; gap: 16px; min-height: calc(100vh - 140px); }
-        @media (max-width: 768px) { .trade-room-grid { grid-template-columns: 1fr; } }
+        .trade-room-grid { display: block; max-width: 900px; margin: 0 auto; min-height: calc(100vh - 140px); }
       `}</style>
 
       <div className="trade-room-grid">
-
-        {/* ── SIDEBAR ─────────────────────────────────────── */}
-        <div style={{ ...card(), padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>My Trades</span>
-            <span style={{
-              background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)',
-              color: 'var(--gold)', fontSize: '10px', fontWeight: 700,
-              padding: '2px 8px', borderRadius: '99px',
-            }}>{trades.length}</span>
-          </div>
-
-          {trades.map(tr => {
-            const sel = selectedId === tr.id;
-            const partnerPic = user.id === tr.buyer_id ? tr.seller_profile_pic : tr.buyer_profile_pic;
-            const partnerName = user.id === tr.buyer_id ? tr.seller_name : tr.buyer_name;
-            const dotColor = tr.status === 'completed' ? 'var(--teal)' : tr.status === 'disputed' ? 'var(--danger)' : 'var(--gold)';
-            const shortStatus = { payment_pending: 'Pending', payment_sent: 'Paid', completed: 'Done', disputed: 'Dispute', cancelled: 'Cancelled' }[tr.status] || tr.status;
-            return (
-              <div key={tr.id} className="tr-sidebar-item" onClick={() => setSelectedId(tr.id)}
-                style={{
-                  padding: '11px 12px', borderRadius: '12px',
-                  background: sel ? 'rgba(245,166,35,0.06)' : 'var(--surface2)',
-                  border: `1px solid ${sel ? 'rgba(245,166,35,0.3)' : 'var(--border)'}`,
-                  boxShadow: sel ? '0 4px 16px rgba(245,166,35,0.06)' : 'none',
-                }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                    background: 'rgba(245,166,35,0.08)',
-                    border: `2px solid ${sel ? 'rgba(245,166,35,0.4)' : 'var(--border)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '13px', fontWeight: 700, color: 'var(--gold)', overflow: 'hidden',
-                  }}>
-                    {partnerPic ? <img src={partnerPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (typeof partnerName === 'string' && partnerName.trim() ? partnerName.trim().charAt(0).toUpperCase() : 'U')}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      @{partnerName}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>${tr.amount_eth.toFixed(2)} USDT</div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}` }} />
-                    <span style={{ fontSize: '9px', color: dotColor, fontWeight: 700, textTransform: 'uppercase' }}>{shortStatus}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
         {/* ── MAIN PANEL ─────────────────────────────────── */}
         {trade ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', overflow: 'hidden' }}>

@@ -40,7 +40,7 @@ export async function requestPermission() {
 }
 
 export function showBrowserNotification(title, options = {}) {
-  if (!isNotificationSupported() || !canUseConstructor()) {
+  if (!isNotificationSupported()) {
     showInPageNotification(title, options.body, options);
     return null;
   }

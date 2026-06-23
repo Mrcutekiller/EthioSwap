@@ -27,3 +27,42 @@ CREATE POLICY "Anyone can view user profiles" ON public.users
 ALTER TABLE public.notifications 
   ADD COLUMN IF NOT EXISTS trade_id UUID REFERENCES public.trades(id) ON DELETE CASCADE;
 
+-- Step 6: Enable Realtime safely for notifications, deposit_requests, withdraw_requests, trades, messages
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+  
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'deposit_requests'
+  ) then
+    alter publication supabase_realtime add table public.deposit_requests;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'withdraw_requests'
+  ) then
+    alter publication supabase_realtime add table public.withdraw_requests;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'trades'
+  ) then
+    alter publication supabase_realtime add table public.trades;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+end $$;
+

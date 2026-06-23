@@ -1186,7 +1186,7 @@ const AppContent = () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (isNotificationSupported()) {
       requestPermission().catch(err => console.error('Notification permission request error:', err));
     }
   }, [user]);
