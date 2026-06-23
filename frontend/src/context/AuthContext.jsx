@@ -392,7 +392,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     loadSystemSettings();
-    loadListings();
 
     const channel = supabase
       .channel('system_settings_changes')
@@ -424,23 +423,8 @@ export const AuthProvider = ({ children }) => {
       )
       .subscribe();
 
-    const listingsChannel = supabase
-      .channel('listings_realtime_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'listings' },
-        (payload) => {
-          console.log('Realtime listings change received:', payload);
-          loadListings();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Listings channel subscription status:', status);
-      });
-
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(listingsChannel);
     };
   }, []);
 
@@ -794,6 +778,18 @@ export const AuthProvider = ({ children }) => {
       setError(errMsg);
       alert(errMsg);
       return;
+    }
+
+    // Check if selling and no payment accounts saved
+    if (type === 'sell') {
+      const userPaymentAccounts = user?.payment_accounts || [];
+      if (!Array.isArray(userPaymentAccounts) || userPaymentAccounts.length === 0) {
+        const errMsg = 'Please add your payment account details first in your profile before posting a sell listing.';
+        console.error(errMsg);
+        setError(errMsg);
+        alert(errMsg);
+        return;
+      }
     }
     setLoading(true);
     try {
