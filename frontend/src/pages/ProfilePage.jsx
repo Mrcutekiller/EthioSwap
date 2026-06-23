@@ -127,6 +127,7 @@ const ProfilePage = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSecurityLock, setShowSecurityLock] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [securityAction, setSecurityAction] = useState(null);
 
   useEffect(() => {
@@ -267,10 +268,9 @@ const ProfilePage = () => {
   const handleSecurityVerify = () => {
     setShowSecurityLock(false);
     if (securityAction === 'view_docs') {
-      setIsFlipped(true);
-      // In a real app, this would also decrypt/reveal the ID images
+      setIsUnlocked(true);
     } else if (securityAction === 'withdraw') {
-      // Trigger withdrawal flow
+      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'wallet', tab: 'withdraw' } }));
     }
     setSecurityAction(null);
   };
@@ -659,16 +659,24 @@ const ProfilePage = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {user.payment_accounts.map(acc => {
               const matched = SUPPORTED_BANKS.find(b => b.id === acc.bankName);
+              const isCbe = acc.bankName === 'CBE';
+              const isTelebirr = acc.bankName === 'Telebirr';
+              const cardBg = isCbe ? 'linear-gradient(135deg, rgba(103,58,183,0.12) 0%, rgba(103,58,183,0.04) 100%)'
+                           : isTelebirr ? 'linear-gradient(135deg, rgba(0,188,212,0.12) 0%, rgba(0,188,212,0.04) 100%)'
+                           : 'rgba(255,255,255,0.03)';
+              const borderClr = isCbe ? 'rgba(103, 58, 183, 0.35)'
+                              : isTelebirr ? 'rgba(0, 188, 212, 0.35)'
+                              : 'var(--border)';
               return (
                 <div key={acc.id} style={{ 
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
+                  background: cardBg, border: `1px solid ${borderClr}`, 
                   borderRadius: '12px', padding: '12px 14px', display: 'flex', 
                   justifyContent: 'space-between', alignItems: 'center' 
                 }}>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
                       <span>{matched?.icon || '🏦'}</span>
-                      <span>{matched?.label || acc.bankName}</span>
+                      <span style={{ color: isCbe ? '#D1C4E9' : isTelebirr ? '#B2EBF2' : '#fff' }}>{matched?.label || acc.bankName}</span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
                       Acc: <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{acc.accountNumber}</span> · Holder: <span style={{ color: '#fff' }}>{acc.holderName}</span>
@@ -697,7 +705,7 @@ const ProfilePage = () => {
 
       {/* ─── QUICK ACTIONS ─────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: '12px' }}>
-        <button className="action-btn" onClick={() => {/* handle deposit */}}>
+        <button className="action-btn" onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'wallet', tab: 'deposit' } }))}>
           <div style={{ background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', padding: '10px', borderRadius: '12px' }}>
             <Plus size={24} />
           </div>
@@ -709,7 +717,7 @@ const ProfilePage = () => {
           </div>
           <span>Withdraw</span>
         </button>
-        <button className="action-btn" onClick={() => {/* navigate to trades */}}>
+        <button className="action-btn" onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'p2p' }))}>
           <div style={{ background: 'rgba(0, 200, 150, 0.1)', color: '#00C896', padding: '10px', borderRadius: '12px' }}>
             <ChevronRight size={24} />
           </div>
@@ -869,24 +877,71 @@ const ProfilePage = () => {
 
       {/* ─── SECURITY SECTION: ID DOCUMENTS ──────────────────── */}
       <div className="card" style={{ padding: '20px', border: '1px dashed var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Lock size={20} style={{ color: 'var(--muted)' }} />
+        {isUnlocked ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#00C896' }}>🔓</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Decrypted Documents</span>
+              </div>
+              <button onClick={() => setIsUnlocked(false)} style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#8A9BB8', padding: '4px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>Hide</button>
             </div>
-            <div>
-              <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Confidential ID Data</h4>
-              <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Protected by security lock</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '10px' }}>
+              {user.kyc_selfie && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#8A9BB8' }}>Selfie Photo</span>
+                  <img src={getImageUrl(user.kyc_selfie)} onClick={() => setActiveLightboxImage(getImageUrl(user.kyc_selfie))} alt="Selfie" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1.5px solid #1E2640' }} />
+                </div>
+              )}
+              {user.kyc_id_front && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#8A9BB8' }}>ID Front</span>
+                  <img src={getImageUrl(user.kyc_id_front)} onClick={() => setActiveLightboxImage(getImageUrl(user.kyc_id_front))} alt="ID Front" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1.5px solid #1E2640' }} />
+                </div>
+              )}
+              {user.kyc_id_back && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#8A9BB8' }}>ID Back</span>
+                  <img src={getImageUrl(user.kyc_id_back)} onClick={() => setActiveLightboxImage(getImageUrl(user.kyc_id_back))} alt="ID Back" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1.5px solid #1E2640' }} />
+                </div>
+              )}
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '10px', border: '1px solid #1E2640', fontSize: '11.5px', color: '#8A9BB8', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>ID Number:</span>
+                <strong style={{ color: '#fff' }}>{user.kyc_data?.idNumber || user.kyc_data?.documentNumber || '—'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>ID Type:</span>
+                <strong style={{ color: '#fff' }}>{user.kyc_data?.idType || user.kyc_data?.documentType || '—'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Nationality:</span>
+                <strong style={{ color: '#fff' }}>{user.kyc_data?.country || '—'}</strong>
+              </div>
             </div>
           </div>
-          <button 
-            onClick={() => triggerSecurity('view_docs')}
-            className="btn btn-sm btn-ghost"
-            style={{ padding: '8px 16px', borderRadius: '8px' }}
-          >
-            🪪 View Documents
-          </button>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Lock size={20} style={{ color: 'var(--muted)' }} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Confidential ID Data</h4>
+                <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Protected by security lock</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={() => triggerSecurity('view_docs')}
+              className="btn btn-sm btn-ghost"
+              style={{ padding: '8px 16px', borderRadius: '8px' }}
+            >
+              🪪 View Documents
+            </button>
+          </div>
+        )}
       </div>
 
 

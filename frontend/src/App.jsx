@@ -1168,6 +1168,9 @@ const AppContent = () => {
         if (dest.page === 'tradeRoom' && dest.tradeId) {
           setCurrentTradeId(dest.tradeId);
           setPage('tradeRoom');
+        } else if (dest.page === 'wallet') {
+          if (dest.tab) setWalletInitialTab(dest.tab);
+          setPage('wallet');
         }
       } else if (dest === 'history') {
         setPage('transactions');

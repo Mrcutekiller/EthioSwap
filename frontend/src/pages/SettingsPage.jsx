@@ -3,6 +3,46 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Globe, Shield, Smartphone, Mail } from 'lucide-react';
 
+const PremiumSwitch = ({ checked, onChange, disabled }) => {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={disabled}
+      style={{
+        width: '46px',
+        height: '24px',
+        borderRadius: '15px',
+        background: checked ? 'linear-gradient(135deg, #00C896 0%, #00B487 100%)' : '#1E2640',
+        border: 'none',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        position: 'relative',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        padding: 0,
+        boxShadow: checked ? '0 0 10px rgba(0, 200, 150, 0.3)' : 'inset 0 2px 4px rgba(0,0,0,0.3)',
+        flexShrink: 0
+      }}
+    >
+      <div style={{
+        width: '18px',
+        height: '18px',
+        borderRadius: '50%',
+        background: '#fff',
+        position: 'absolute',
+        top: '3px',
+        left: checked ? '25px' : '3px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {checked && <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#00C896' }} />}
+      </div>
+    </button>
+  );
+};
+
 const SettingsPage = ({ user, onLogout }) => {
   const { t, i18n } = useTranslation();
   const { updateUser } = useAuth();
@@ -79,15 +119,13 @@ const SettingsPage = ({ user, onLogout }) => {
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>Enable 2FA</div>
                 <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Extra security for withdrawals and login</div>
               </div>
-              <div
-                onClick={async () => {
+              <PremiumSwitch
+                checked={!!user.two_fa_enabled}
+                onChange={async () => {
                   const newState = !user.two_fa_enabled;
                   await updateUser({ two_fa_enabled: newState });
                 }}
-                style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.two_fa_enabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.two_fa_enabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.two_fa_enabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
-              </div>
+              />
             </div>
             
             {user.two_fa_enabled && (
@@ -119,14 +157,12 @@ const SettingsPage = ({ user, onLogout }) => {
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>Email Alerts</div>
               <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Receive trade alerts on {user.email || 'your email'}</div>
             </div>
-            <div
-              onClick={async () => {
+            <PremiumSwitch
+              checked={!!user.email_enabled}
+              onChange={async () => {
                 await updateUser({ email_enabled: !user.email_enabled });
               }}
-              style={{ width: '44px', height: '24px', borderRadius: '12px', background: user.email_enabled ? '#00C896' : '#1A1F32', border: `1px solid ${user.email_enabled ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease' }}
-            >
-              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: user.email_enabled ? '22px' : '2px', transition: 'left 0.2s ease' }} />
-            </div>
+            />
           </div>
         </div>
       </div>
@@ -141,12 +177,10 @@ const SettingsPage = ({ user, onLogout }) => {
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{n.label}</div>
                 <div style={{ fontSize: '11px', color: '#8A9BB8' }}>{n.desc}</div>
               </div>
-              <div
-                onClick={() => toggleNotif(n.key)}
-                style={{ width: '44px', height: '24px', borderRadius: '12px', background: notifPrefs[n.key] !== false ? '#00C896' : '#1A1F32', border: `1px solid ${notifPrefs[n.key] !== false ? '#00C896' : '#1E2640'}`, cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease', flexShrink: 0 }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: notifPrefs[n.key] !== false ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
-              </div>
+              <PremiumSwitch
+                checked={notifPrefs[n.key] !== false}
+                onChange={() => toggleNotif(n.key)}
+              />
             </div>
           ))}
         </div>

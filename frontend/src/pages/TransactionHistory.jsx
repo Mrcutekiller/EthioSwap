@@ -20,27 +20,102 @@ const parsePaymentMethod = (pm) => {
   return { type: pm };
 };
 
+const renderPaymentBadge = (item) => {
+  let label = item.type.toUpperCase();
+  let icon = '💵';
+  let badgeColor = '#F5A623';
+  let badgeBg = 'rgba(245, 166, 35, 0.08)';
+  let border = '1px solid rgba(245, 166, 35, 0.2)';
+
+  if (item.source === 'p2p') {
+    const pm = parsePaymentMethod(item.paymentMethod);
+    const bank = String(pm.bankName || pm.type || '').toLowerCase();
+    if (bank.includes('cbe') || bank.includes('commercial')) {
+      label = '🏦 CBE';
+      icon = '🏦';
+      badgeColor = '#D1C4E9';
+      badgeBg = 'rgba(103, 58, 183, 0.15)';
+      border = '1px solid rgba(103, 58, 183, 0.3)';
+    } else if (bank.includes('telebirr')) {
+      label = '📱 Telebirr';
+      icon = '📱';
+      badgeColor = '#B2EBF2';
+      badgeBg = 'rgba(0, 188, 212, 0.15)';
+      border = '1px solid rgba(0, 188, 212, 0.3)';
+    } else if (bank.includes('dashen')) {
+      label = '🏦 Dashen';
+      icon = '🏦';
+      badgeColor = '#FFE082';
+      badgeBg = 'rgba(255, 193, 7, 0.15)';
+      border = '1px solid rgba(255, 193, 7, 0.3)';
+    } else if (bank.includes('abyssinia')) {
+      label = '🏦 Abyssinia';
+      icon = '🏦';
+      badgeColor = '#FFE082';
+      badgeBg = 'rgba(255, 193, 7, 0.15)';
+      border = '1px solid rgba(255, 193, 7, 0.3)';
+    }
+  } else {
+    const wallet = String(item.paymentMethod || '').toLowerCase();
+    if (wallet.includes('binance')) {
+      label = '🟡 Binance';
+      icon = '🟡';
+      badgeColor = '#F0B90B';
+      badgeBg = 'rgba(240, 185, 11, 0.12)';
+      border = '1px solid rgba(240, 185, 11, 0.25)';
+    } else if (wallet.includes('bybit')) {
+      label = '⚫ Bybit';
+      icon = '⚫';
+      badgeColor = '#fff';
+      badgeBg = 'rgba(255, 255, 255, 0.08)';
+      border = '1px solid rgba(255, 255, 255, 0.2)';
+    } else if (wallet.includes('internal')) {
+      label = '🔄 Internal';
+      icon = '🔄';
+      badgeColor = '#00C896';
+      badgeBg = 'rgba(0, 200, 150, 0.12)';
+      border = '1px solid rgba(0, 200, 150, 0.25)';
+    }
+  }
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px',
+      color: badgeColor, background: badgeBg, border: border, textTransform: 'uppercase',
+      marginTop: '2px', width: 'fit-content'
+    }}>
+      <span style={{ fontSize: '10px' }}>{icon}</span> {label}
+    </span>
+  );
+};
+
 const getStatusDetails = (status) => {
   const s = String(status).toLowerCase();
   if (s === 'completed' || s === 'approved') {
     return {
-      label: '✓ Completed',
-      color: '#F5A623', // Gold
-      bg: 'rgba(245, 166, 35, 0.12)'
+      label: 'Completed',
+      color: '#00C896',
+      bg: 'rgba(0, 200, 150, 0.08)',
+      borderColor: 'rgba(0, 200, 150, 0.25)',
+      dotColor: '#00C896'
     };
   }
   if (s === 'cancelled' || s === 'rejected' || s === 'failed') {
     return {
-      label: '✗ Cancelled',
-      color: '#FF4D4D', // Red
-      bg: 'rgba(255, 77, 77, 0.12)'
+      label: 'Cancelled',
+      color: '#FF4D4D',
+      bg: 'rgba(255, 77, 77, 0.08)',
+      borderColor: 'rgba(255, 77, 77, 0.25)',
+      dotColor: '#FF4D4D'
     };
   }
-  // Pending / Paid / Disputed
   return {
-    label: '⏳ Pending',
-    color: '#FFC107', // Yellow
-    bg: 'rgba(255, 193, 7, 0.12)'
+    label: s.toUpperCase(),
+    color: '#F5A623',
+    bg: 'rgba(245, 166, 35, 0.08)',
+    borderColor: 'rgba(245, 166, 35, 0.25)',
+    dotColor: '#F5A623'
   };
 };
 
@@ -520,7 +595,7 @@ const TransactionHistory = () => {
                   const isIncoming = item.type === 'buy' || item.type === 'deposit';
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid #1E2640' }}>
-                      <td style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <td style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ 
                           width: '32px', 
                           height: '32px', 
@@ -533,9 +608,12 @@ const TransactionHistory = () => {
                         }}>
                           {isIncoming ? <ArrowDownLeft color="#00C896" size={16} /> : <ArrowUpRight color="#FF4D4D" size={16} />}
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>
-                          {item.type}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1 }}>
+                            {item.type}
+                          </span>
+                          {renderPaymentBadge(item)}
+                        </div>
                       </td>
                       <td style={{ padding: '16px', fontSize: '13px', color: '#8A9BB8' }}>
                         {new Date(item.createdAt).toLocaleString()}
@@ -558,10 +636,20 @@ const TransactionHistory = () => {
                       </td>
                       <td style={{ padding: '16px' }}>
                         <span style={{
-                          fontWeight: 800, fontSize: '10px', padding: '3px 8px', borderRadius: '12px', textTransform: 'uppercase',
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          fontWeight: 700, fontSize: '10px', padding: '4px 10px', borderRadius: '20px', textTransform: 'uppercase',
                           color: statusInfo.color,
-                          background: statusInfo.bg
-                        }}>{statusInfo.label}</span>
+                          background: statusInfo.bg,
+                          border: `1px solid ${statusInfo.borderColor}`
+                        }}>
+                          <span style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: statusInfo.dotColor,
+                            boxShadow: `0 0 6px ${statusInfo.dotColor}`,
+                            animation: statusInfo.dotColor === '#F5A623' ? 'wPulse 2s infinite' : 'none'
+                          }} />
+                          {statusInfo.label}
+                        </span>
                       </td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -618,15 +706,28 @@ const TransactionHistory = () => {
                         }}>
                           {isIncoming ? <ArrowDownLeft color="#00C896" size={14} /> : <ArrowUpRight color="#FF4D4D" size={14} />}
                         </div>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>
-                          {item.type}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', lineHeight: 1 }}>
+                            {item.type}
+                          </span>
+                          {renderPaymentBadge(item)}
+                        </div>
                       </div>
                       <span style={{
-                        fontWeight: 800, fontSize: '9px', padding: '2px 6px', borderRadius: '8px', textTransform: 'uppercase',
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        fontWeight: 700, fontSize: '9px', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase',
                         color: statusInfo.color,
-                        background: statusInfo.bg
-                      }}>{statusInfo.label}</span>
+                        background: statusInfo.bg,
+                        border: `1px solid ${statusInfo.borderColor}`
+                      }}>
+                        <span style={{
+                          width: '5px', height: '5px', borderRadius: '50%',
+                          background: statusInfo.dotColor,
+                          boxShadow: `0 0 5px ${statusInfo.dotColor}`,
+                          animation: statusInfo.dotColor === '#F5A623' ? 'wPulse 2s infinite' : 'none'
+                        }} />
+                        {statusInfo.label}
+                      </span>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
