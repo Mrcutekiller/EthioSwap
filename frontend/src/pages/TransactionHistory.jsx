@@ -140,7 +140,11 @@ const TransactionHistory = () => {
     const fetchTrades = async () => {
       const { data } = await supabase
         .from('trades')
-        .select('*')
+        .select(`
+          *,
+          buyer:buyer_id ( username, full_name ),
+          seller:seller_id ( username, full_name )
+        `)
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
       setP2pTradesRaw(data || []);
@@ -182,12 +186,16 @@ const TransactionHistory = () => {
     // 1. P2P Trades mapping
     const p2pList = p2pTradesRaw.map(t => {
       const isBuyer = user?.id === t.buyer_id;
+      const buyerName = t.buyer?.username || 'Unknown';
+      const sellerName = t.seller?.username || 'Unknown';
       return {
         id: `p2p-${t.id}`,
         realId: t.id,
         source: 'p2p',
         type: isBuyer ? 'buy' : 'sell',
-        counterparty: isBuyer ? t.seller_name : t.buyer_name,
+        counterparty: isBuyer ? sellerName : buyerName,
+        buyerName,
+        sellerName,
         amountUsdt: t.amount_eth || 0,
         rate: t.rate || 0,
         amountEtb: (t.amount_eth || 0) * (t.rate || 0),
@@ -399,8 +407,8 @@ const TransactionHistory = () => {
     let fromAddr = '';
     let toAddr = '';
     if (isP2p) {
-      fromAddr = item.type === 'buy' ? `@${item.original.seller_name}` : `@${item.original.buyer_name}`;
-      toAddr = item.type === 'buy' ? `@${item.original.buyer_name}` : `@${item.original.seller_name}`;
+      fromAddr = item.type === 'buy' ? `@${item.sellerName}` : `@${item.buyerName}`;
+      toAddr = item.type === 'buy' ? `@${item.buyerName}` : `@${item.sellerName}`;
     } else {
       fromAddr = item.type === 'deposit' ? 'External Source' : 'EthioSwap Wallet';
       toAddr = item.type === 'deposit' ? 'EthioSwap Wallet' : (item.original.destination_address || 'External Address');
@@ -821,8 +829,8 @@ const TransactionHistory = () => {
         let fromAddr = '';
         let toAddr = '';
         if (isP2p) {
-          fromAddr = selectedTx.type === 'buy' ? `@${selectedTx.original.seller_name}` : `@${selectedTx.original.buyer_name}`;
-          toAddr = selectedTx.type === 'buy' ? `@${selectedTx.original.buyer_name}` : `@${selectedTx.original.seller_name}`;
+          fromAddr = selectedTx.type === 'buy' ? `@${selectedTx.sellerName}` : `@${selectedTx.buyerName}`;
+          toAddr = selectedTx.type === 'buy' ? `@${selectedTx.buyerName}` : `@${selectedTx.sellerName}`;
         } else {
           fromAddr = selectedTx.type === 'deposit' ? 'External Source' : 'EthioSwap Wallet';
           toAddr = selectedTx.type === 'deposit' ? 'EthioSwap Wallet' : (selectedTx.original.destination_address || 'External Address');
