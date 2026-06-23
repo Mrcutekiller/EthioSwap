@@ -12,3 +12,7 @@ SELECT column_name, data_type, is_nullable
 FROM information_schema.columns
 WHERE table_name = 'system_settings'
   AND column_name = 'max_custom_rate_etb';
+
+-- Step 3: Drop welcome email trigger to prevent signup distributed deadlocks/timeouts
+DROP TRIGGER IF EXISTS on_auth_user_welcome_email ON auth.users;
+DROP FUNCTION IF EXISTS public.send_welcome_email();

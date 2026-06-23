@@ -58,6 +58,7 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
   const [isForgotMode, setIsForgotMode] = useState(false);
   const [resetLinkSent, setResetLinkSent] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [otpState, setOtpState] = useState(null);
   const [otpCode, setOtpCode] = useState('');
   const [otpRefs] = useState(() => Array.from({ length: 6 }, () => React.createRef()));
@@ -79,19 +80,33 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
     return () => clearInterval(interval);
   }, [otpState]);
 
+  // Reset local signing state whenever the auth loading flag drops
+  useEffect(() => {
+    if (!loading) setIsSigningIn(false);
+  }, [loading]);
+
   const formatCountdown = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
     if (!email || !password) { setLocalError('Please enter both email and password.'); return; }
+    setIsSigningIn(true);
+    // Safety fallback: if after 11s we're still "signing in", reset and show error
+    const safetyTimer = setTimeout(() => {
+      setIsSigningIn(false);
+      setLocalError('Sign in is taking too long. Please check your connection and try again.');
+    }, 11000);
     const result = await login(email, password);
+    clearTimeout(safetyTimer);
+    setIsSigningIn(false);
     if (result?.status === 'otp_required') {
       setOtpState(result);
       setOtpCode('');
       setTimeout(() => otpRefs[0]?.current?.focus(), 150);
     }
   };
+
 
   const handleOtpInput = (index, value) => {
     const digit = value.replace(/\D/g, '').slice(-1);
@@ -269,7 +284,11 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
                 <button type="button" onClick={() => { setIsForgotMode(true); setLocalError(''); setResetLinkSent(false); }} style={{ background: 'none', border: 'none', color: '#F5A623', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: '4px 0' }}>Forgot Password?</button>
               </div>
               {displayError && (<div style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}><i className="ti ti-alert-triangle" style={{ fontSize: '15px' }}></i><span>{displayError}</span></div>)}
-              <button type="submit" disabled={loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>{loading ? 'Signing in...' : 'Sign In'}</button>
+              <button type="submit" disabled={isSigningIn || loading} style={{ height: '52px', fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, #F5A623 0%, #FFE082 100%)', color: '#0A0C12', border: 'none', borderRadius: '14px', cursor: (isSigningIn || loading) ? 'not-allowed' : 'pointer', opacity: (isSigningIn || loading) ? 0.75 : 1 }}>
+                {(isSigningIn || loading) ? (
+                  <><span style={{ width: '16px', height: '16px', border: '2px solid rgba(10,12,18,0.3)', borderTopColor: '#0A0C12', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />&nbsp;Signing in...</>
+                ) : 'Sign In'}
+              </button>
             </form>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />

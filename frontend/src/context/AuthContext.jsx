@@ -294,10 +294,10 @@ export const AuthProvider = ({ children }) => {
             if (p.username) nameMap[p.id] = p.username;
           });
           data.forEach(t => {
-            if (!t.buyer_profile_pic && picMap[t.buyer_id]) t.buyer_profile_pic = picMap[t.buyer_id];
-            if (!t.seller_profile_pic && picMap[t.seller_id]) t.seller_profile_pic = picMap[t.seller_id];
-            if (!t.buyer_name && nameMap[t.buyer_id]) t.buyer_name = nameMap[t.buyer_id];
-            if (!t.seller_name && nameMap[t.seller_id]) t.seller_name = nameMap[t.seller_id];
+            if (picMap[t.buyer_id]) t.buyer_profile_pic = picMap[t.buyer_id];
+            if (picMap[t.seller_id]) t.seller_profile_pic = picMap[t.seller_id];
+            if (nameMap[t.buyer_id]) t.buyer_name = nameMap[t.buyer_id];
+            if (nameMap[t.seller_id]) t.seller_name = nameMap[t.seller_id];
           });
         }
       }
@@ -519,27 +519,30 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // Step 1: Verify credentials with Supabase Auth
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Wrap sign-in in a 10-second timeout so it never hangs forever
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign in timed out. Please check your connection and try again.')), 10000)
+      );
+
+      // Step 1: Verify credentials with Supabase Auth (race against timeout)
+      const { data, error: authError } = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        timeoutPromise,
+      ]);
 
       if (authError) throw authError;
+      if (!data?.user) throw new Error('Sign in failed. No user returned from server.');
 
       const userId = data.user.id;
-      const userEmail = data.user.email;
-      const userName = data.user.user_metadata?.full_name ||
-        data.user.user_metadata?.username ||
-        userEmail.split('@')[0];
 
       // Load profile and log in immediately — no OTP
       const profile = await loadUserProfile(userId, data.user);
-      if (!profile) throw new Error('User profile not found');
+      if (!profile) throw new Error('User profile not found. Please try again or contact support.');
       setSuccess(`Welcome back, ${profile.username}!`);
       return { status: 'success', user: profile };
     } catch (err) {
-      setError(err.message);
+      const msg = err.message || 'Sign in failed. Please check your connection and try again.';
+      setError(msg);
       return null;
     } finally {
       setLoading(false);
@@ -774,18 +777,7 @@ export const AuthProvider = ({ children }) => {
 
   const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
-
-    // Check if selling and no payment accounts saved
-    if (type === 'sell') {
-      const userPaymentAccounts = user?.payment_accounts || [];
-      if (!Array.isArray(userPaymentAccounts) || userPaymentAccounts.length === 0) {
-        const errMsg = 'Please add your payment account details first in your profile before posting a sell listing.';
-        console.error(errMsg);
-        setError(errMsg);
-        alert(errMsg);
-        return;
-      }
-    }
+    // paymentAccounts are passed directly from the form — no pre-check on profile accounts needed
     setLoading(true);
     try {
       // Enforce admin-set maximum custom rate before inserting

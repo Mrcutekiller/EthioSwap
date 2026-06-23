@@ -159,19 +159,9 @@ const TraderProfileModal = ({ traderId, onClose }) => {
                       <span style={{ fontSize: 10, color: '#8b92a8' }}>{new Date(rev.createdAt).toLocaleDateString()}</span>
                     </div>
                     {rev.comment && <p style={{ margin: '0 0 4px', fontSize: 12.5, fontStyle: 'italic', color: '#e5e5e5' }}>"{rev.comment}"</p>}
-                    <div style={{ fontSize: 11, color: '#8b92a8' }}>By @{rev.raterName}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
+    // ── Create Listing Form ──────────────────────────────────────────
+const ALL_PAYMENT_METHOD_IDS = ['CBE', 'Telebirr', 'Dashen Bank', 'Bank of Abyssinia', 'Awash Bank', 'Wegagen Bank', 'Nib Bank', 'Amhara Bank', 'HelloCash', 'M-Pesa'];
 
-// ── Create Listing Form ──────────────────────────────────────────
 const CreateListingForm = ({ onClose, onSubmit, isDesktop = false, initialType = 'sell', listings = [], editingId = null, wallet, systemSettings }) => {
   const { user } = useAuth();
   const rate = systemSettings?.etbRatePerDollar ?? 190;
@@ -187,28 +177,80 @@ const CreateListingForm = ({ onClose, onSubmit, isDesktop = false, initialType =
   const [description, setDescription] = useState(editTarget?.description ?? '');
   const [paymentWindow, setPaymentWindow] = useState(editTarget?.payment_window?.toString() ?? '15');
   const [allowThirdParty, setAllowThirdParty] = useState(!!editTarget?.allow_third_party);
-  const [linkedAccounts, setLinkedAccounts] = useState([]);
+
+  // Inline payment details for sell listings
+  // Pre-fill from profile's first saved account if available
+  const firstSavedAccount = user?.payment_accounts?.[0];
+  const [payBank, setPayBank] = useState(() => {
+    if (editTarget?.payment_accounts?.[0]?.bankName) return editTarget.payment_accounts[0].bankName;
+    return firstSavedAccount?.bankName || 'CBE';
+  });
+  const [payHolder, setPayHolder] = useState(() => {
+    if (editTarget?.payment_accounts?.[0]?.holderName) return editTarget.payment_accounts[0].holderName;
+    return firstSavedAccount?.holderName || '';
+  });
+  const [payNumber, setPayNumber] = useState(() => {
+    if (editTarget?.payment_accounts?.[0]?.accountNumber) return editTarget.payment_accounts[0].accountNumber;
+    return firstSavedAccount?.accountNumber || '';
+  });
+  const [payNote, setPayNote] = useState('');
+
+  // If user has multiple saved accounts, let them pick one to pre-fill
+  const [selectedProfileAccount, setSelectedProfileAccount] = useState(null);
 
   const effRate = useCustomRate && customRate ? parseFloat(customRate) : rate;
 
-  const toggleAccount = (acc) => {
-    setLinkedAccounts(prev =>
-      prev.some(a => a.id === acc.id) ? prev.filter(a => a.id !== acc.id) : [...prev, acc]
-    );
+  const handleSelectProfileAccount = (acc) => {
+    setSelectedProfileAccount(acc.id);
+    setPayBank(acc.bankName || 'CBE');
+    setPayHolder(acc.holderName || '');
+    setPayNumber(acc.accountNumber || '');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!amount || !minLimit || !maxLimit) { alert('Please fill in all required fields.'); return; }
     if (parseFloat(amount) < 0.01) { alert('Minimum amount is $0.01'); return; }
-    if (createType === 'sell' && linkedAccounts.length === 0 && user?.username !== 'biruk') {
-      alert('Please link at least one saved payment account.'); return;
+
+    // For sell listings, account holder name and account number are required
+    if (createType === 'sell') {
+      if (!payHolder.trim()) { alert('Account holder name is required for sell listings.'); return; }
+      if (!payNumber.trim()) { alert('Account number / phone number is required for sell listings.'); return; }
     }
+
+    // Build payment account object for sell listings
+    const inlineAccount = createType === 'sell' ? [{
+      id: `inline_${Date.now()}`,
+      bankName: payBank,
+      holderName: payHolder.trim(),
+      accountNumber: payNumber.trim(),
+      note: payNote.trim() || null,
+    }] : [];
+
     const selectedPayments = createType === 'sell'
-      ? linkedAccounts.map(a => a.bankName)
+      ? [payBank]
       : ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
 
-    onSubmit({ editingId, createType, amount: parseFloat(amount), minLimit: parseFloat(minLimit), maxLimit: parseFloat(maxLimit), selectedPayments, useCustomRate, customRate: useCustomRate && customRate ? parseFloat(customRate) : undefined, linkedAccounts: createType === 'sell' ? linkedAccounts : [], description, paymentWindow: parseInt(paymentWindow), allowThirdParty });
+    onSubmit({
+      editingId,
+      createType,
+      amount: parseFloat(amount),
+      minLimit: parseFloat(minLimit),
+      maxLimit: parseFloat(maxLimit),
+      selectedPayments,
+      useCustomRate,
+      customRate: useCustomRate && customRate ? parseFloat(customRate) : undefined,
+      linkedAccounts: inlineAccount,
+      description,
+      paymentWindow: parseInt(paymentWindow),
+      allowThirdParty,
+    });
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff',
+    fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif',
   };
 
   const formBody = (
@@ -234,9 +276,9 @@ const CreateListingForm = ({ onClose, onSubmit, isDesktop = false, initialType =
           </ol>
         ) : (
           <ol className="p2p-how-list">
-            <li>Enter USD amount & set ETB limits</li>
+            <li>Enter USD amount &amp; set ETB limits</li>
             <li>Your USD gets locked in escrow</li>
-            <li>Buyers pay ETB to your account</li>
+            <li>Buyers pay ETB to your account below</li>
             <li>Confirm receipt → release USD</li>
           </ol>
         )}
@@ -301,17 +343,93 @@ const CreateListingForm = ({ onClose, onSubmit, isDesktop = false, initialType =
         </select>
       </div>
 
-      {/* Payment accounts (sell only) */}
-      {createType === 'sell' && user?.payment_accounts?.length > 0 && (
-        <div className="p2p-field">
-          <label className="p2p-field-label">Your Payment Accounts</label>
-          <div className="p2p-pay-grid">
-            {user.payment_accounts.map(acc => (
-              <div key={acc.id} className={`p2p-pay-option ${linkedAccounts.some(a => a.id === acc.id) ? 'selected' : ''}`} onClick={() => toggleAccount(acc)}>
-                <i className="ti ti-building-bank" style={{ fontSize: 14 }} />
-                <span>{acc.bankName}</span>
+      {/* ── Seller Payment Details (sell listings only) ─────────── */}
+      {createType === 'sell' && (
+        <div className="p2p-field" style={{ background: 'rgba(245,166,35,0.04)', border: '1px solid rgba(245,166,35,0.18)', borderRadius: 14, padding: '16px 14px' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#F5A623', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <i className="ti ti-building-bank" style={{ fontSize: 16 }} />
+            Your Payment Details <span style={{ color: '#EF4444', fontSize: 11 }}>*required</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#8b92a8', marginBottom: 12, lineHeight: 1.5 }}>
+            Buyers will send ETB to this account. Make sure it is correct.
+          </div>
+
+          {/* Quick-fill from saved profile accounts */}
+          {user?.payment_accounts?.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: '#8b92a8', marginBottom: 7, fontWeight: 600 }}>Quick-fill from saved accounts:</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {user.payment_accounts.map(acc => (
+                  <button key={acc.id} type="button"
+                    onClick={() => handleSelectProfileAccount(acc)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      background: selectedProfileAccount === acc.id ? 'rgba(245,166,35,0.2)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${selectedProfileAccount === acc.id ? 'rgba(245,166,35,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      color: selectedProfileAccount === acc.id ? '#F5A623' : '#8b92a8',
+                    }}>
+                    {acc.bankName}
+                  </button>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Payment method selector */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 11, color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: 5 }}>
+              Payment Method <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <select value={payBank} onChange={e => setPayBank(e.target.value)}
+              style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
+              {ALL_PAYMENT_METHOD_IDS.map(id => (
+                <option key={id} value={id} style={{ background: '#141827' }}>{id}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Account holder name */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 11, color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: 5 }}>
+              Account Holder Name <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Full name exactly as on your bank account"
+              value={payHolder}
+              onChange={e => setPayHolder(e.target.value)}
+              required
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Account number */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 11, color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: 5 }}>
+              Account Number / Phone Number <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 0912345678 or 1000123456789"
+              value={payNumber}
+              onChange={e => setPayNumber(e.target.value)}
+              required
+              style={{ ...inputStyle, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.04em' }}
+            />
+          </div>
+
+          {/* Optional note */}
+          <div>
+            <label style={{ fontSize: 11, color: '#8b92a8', fontWeight: 600, display: 'block', marginBottom: 5 }}>
+              Note for Buyer <span style={{ fontSize: 10, color: '#5a6275' }}>(optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Send from personal account only"
+              value={payNote}
+              onChange={e => setPayNote(e.target.value)}
+              style={inputStyle}
+            />
           </div>
         </div>
       )}
@@ -331,7 +449,7 @@ const CreateListingForm = ({ onClose, onSubmit, isDesktop = false, initialType =
 
       {/* Description */}
       <div className="p2p-field">
-        <label className="p2p-field-label">Terms & Notes</label>
+        <label className="p2p-field-label">Terms &amp; Notes</label>
         <textarea className="p2p-input" rows={3} placeholder="e.g. Only personal accounts. Fast release." value={description} onChange={e => setDescription(e.target.value)} style={{ resize: 'none', lineHeight: 1.5 }} />
       </div>
 
