@@ -309,20 +309,13 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
   // ── Filter and Sort listings ──────────────────────────────
   const filtered = listings
     .filter(l => {
-      console.log('Checking listing:', l.id, l.type, l.status, l.amount_eth);
       const isOwnListing = l.seller_id === user?.id;
       const matchesMyAds = !onlyMyAds || isOwnListing;
-      console.log('  matchesMyAds:', matchesMyAds, onlyMyAds, isOwnListing);
       const matchesType = onlyMyAds || (p2pTab === 'buy' ? (l.type === 'sell') : (l.type === 'buy'));
-      console.log('  matchesType:', matchesType, p2pTab, l.type);
       const matchesPayment = filterPayment === 'All' || (Array.isArray(l.payment_methods) && l.payment_methods.includes(filterPayment));
-      console.log('  matchesPayment:', matchesPayment, filterPayment, l.payment_methods);
-      
-      // Filter out non-active listings unless viewing own ads (excluding cancelled ones)
       const matchesStatus = l.status === 'active' || (onlyMyAds && isOwnListing && l.status !== 'cancelled');
-      console.log('  matchesStatus:', matchesStatus, l.status);
       if (!matchesStatus) return false;
-      
+
       let matchesAmount = true;
       if (filterAmountRange === 'under50') {
         matchesAmount = l.amount_eth < 50;
@@ -330,24 +323,16 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
         matchesAmount = l.amount_eth >= 50 && l.amount_eth <= 200;
       } else if (filterAmountRange === 'over200') {
         matchesAmount = l.amount_eth > 200;
-      } else if (filterAmountRange === 'All') {
-        matchesAmount = true;
       }
-      console.log('  matchesAmount:', matchesAmount, filterAmountRange, l.amount_eth);
 
-      // Search matches username or payment method
       const term = searchQuery.toLowerCase().trim();
-      const matchesSearch = !term || 
+      const matchesSearch = !term ||
         (l.seller_name || '').toLowerCase().includes(term) ||
         (Array.isArray(l.payment_methods) && l.payment_methods.some(p => p.toLowerCase().includes(term)));
-      console.log('  matchesSearch:', matchesSearch, term);
 
       const matchesVerified = !onlyVerified || l.isSellerVerifiedTrader;
-      console.log('  matchesVerified:', matchesVerified, onlyVerified, l.isSellerVerifiedTrader);
       const matchesKyc = !onlyKyc || l.seller_kyc_status === 'verified' || l.seller_kyc_status === 'approved';
-      console.log('  matchesKyc:', matchesKyc, onlyKyc, l.seller_kyc_status);
 
-      // Quick amount filter calculator logic
       let matchesCalc = true;
       if (calcAmount && !isNaN(parseFloat(calcAmount))) {
         const amtVal = parseFloat(calcAmount);
@@ -362,9 +347,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
           matchesCalc = l.min_limit_etb <= etbEquiv && l.max_limit_etb >= etbEquiv && l.amount_eth >= amtVal;
         }
       }
-      console.log('  matchesCalc:', matchesCalc, calcAmount, calcUnit);
 
-      // Rate range filter logic
       let matchesRate = true;
       const standardRate = l.type === 'buy'
         ? (systemSettings?.etbRatePerDollarSell ?? rate)
@@ -376,11 +359,8 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
       if (filterMaxRate && !isNaN(parseFloat(filterMaxRate))) {
         matchesRate = matchesRate && rateVal <= parseFloat(filterMaxRate);
       }
-      console.log('  matchesRate:', matchesRate, filterMinRate, filterMaxRate, rateVal);
 
-      const passesAll = matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesRate && matchesMyAds;
-      console.log('Listing', l.id, 'passes:', passesAll);
-      return passesAll;
+      return matchesType && matchesPayment && matchesAmount && matchesSearch && matchesVerified && matchesKyc && matchesCalc && matchesRate && matchesMyAds;
     })
     .sort((a, b) => {
       const standardRateA = a.type === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
@@ -399,9 +379,6 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
       }
       return 0;
     });
-  console.log('P2PListings: Listings state:', listings);
-  console.log('P2PListings: Filtered listings:', filtered);
-  console.log('P2PListings: Current filter state:', { p2pTab, filterPayment, filterAmountRange, onlyVerified, onlyKyc, onlyMyAds });
 
   // ── Shared styles ─────────────────────────────────────────
   const overlayStyle = {
@@ -771,8 +748,8 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
         </div>
         <div className="premium-dashboard-card" style={{ background: '#141827', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
           <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>Platform Fee</div>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#00C896', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-            0% <span className="notif-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896' }} />
+          <div style={{ fontSize: '16px', fontWeight: 600, color: systemSettings?.flat_fee_percent > 0 ? '#F5A623' : '#00C896', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            {systemSettings?.commission_value ?? systemSettings?.flat_fee_percent ?? 0}% <span className="notif-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896' }} />
           </div>
         </div>
       </div>
