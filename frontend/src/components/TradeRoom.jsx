@@ -71,7 +71,7 @@ const StepBar = ({ steps, current }) => (
 const StatusBadge = ({ status }) => {
   const map = {
     payment_pending: { label: 'Awaiting Payment', color: 'var(--gold)',   bg: 'rgba(245,166,35,0.1)',  border: 'rgba(245,166,35,0.25)',  icon: '⏳' },
-    payment_sent:    { label: 'Payment Sent',     color: 'var(--teal)',   bg: 'rgba(0,200,150,0.1)',   border: 'rgba(0,200,150,0.25)',   icon: '✓' },
+    paid:            { label: 'Payment Sent',     color: 'var(--teal)',   bg: 'rgba(0,200,150,0.1)',   border: 'rgba(0,200,150,0.25)',   icon: '✓' },
     completed:       { label: 'Completed',        color: 'var(--teal)',   bg: 'rgba(0,200,150,0.1)',   border: 'rgba(0,200,150,0.25)',   icon: '🏆' },
     disputed:        { label: 'Disputed',         color: 'var(--danger)', bg: 'rgba(255,77,77,0.1)',   border: 'rgba(255,77,77,0.25)',   icon: '⚠️' },
     cancelled:       { label: 'Cancelled',        color: 'var(--muted)',  bg: 'var(--surface2)',       border: 'var(--border)',          icon: '✕' },
@@ -412,7 +412,12 @@ const TradeRoom = ({ tradeId, setPage }) => {
     }
   }
 
-  const stepIndex = { payment_pending: 0, payment_sent: 1, completed: 3 }[trade?.status] ?? 0;
+  const stepIndex = {
+    payment_pending: 0,
+    paid: 1,
+    disputed: 2,
+    completed: 3
+  }[trade?.status] ?? -1;
 
   /* ── Card shared style ─────────────────────────────────── */
   const card = (extra = {}) => ({
@@ -708,8 +713,8 @@ const TradeRoom = ({ tradeId, setPage }) => {
                   </div>
                 )}
 
-                {/* BUYER — payment_sent */}
-                {isBuyer && trade.status === 'payment_sent' && (
+                {/* BUYER — paid */}
+                {isBuyer && trade.status === 'paid' && (
                   <div style={{ ...card({ border: '1px solid rgba(0,200,150,0.2)' }), padding: '28px', textAlign: 'center' }}>
                     <div style={{ width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px', background: 'rgba(0,200,150,0.08)', border: '2px solid rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <CheckCircle size={24} color="var(--teal)" />
@@ -756,9 +761,14 @@ const TradeRoom = ({ tradeId, setPage }) => {
                     </AlertBox>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                      <div style={{ flex: 1, height: '48px', borderRadius: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'var(--muted)', gap: '7px' }}>
-                        <Clock size={13} /> Waiting for Buyer…
-                      </div>
+                      <button className="tr-card-btn" onClick={handleRelease}
+                        style={{
+                          flex: 2, height: '48px', borderRadius: '12px', border: 'none', fontFamily: 'var(--font)',
+                          background: 'var(--teal)', color: '#023026', fontWeight: 800, fontSize: '14px', cursor: 'pointer',
+                          boxShadow: '0 4px 18px rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        }}>
+                        <Unlock size={15} /> I Received Payment (Release)
+                      </button>
                       <button className="tr-card-btn" onClick={handleCancel}
                         style={{ padding: '0 16px', height: '48px', borderRadius: '12px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', color: 'var(--danger)', fontWeight: 600, fontSize: '13px', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <XCircle size={13} /> Cancel
@@ -767,8 +777,8 @@ const TradeRoom = ({ tradeId, setPage }) => {
                   </div>
                 )}
 
-                {/* SELLER — payment_sent */}
-                {!isBuyer && trade.status === 'payment_sent' && (
+                {/* SELLER — paid */}
+                {!isBuyer && trade.status === 'paid' && (
                   <div style={{ ...card({ border: '1px solid rgba(0,200,150,0.2)' }), padding: '22px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
                       <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -847,6 +857,40 @@ const TradeRoom = ({ tradeId, setPage }) => {
                 {/* Dispute console */}
                 {trade.status === 'disputed' && (
                   <DisputeConsole trade={trade} user={user} uploadDisputeEvidence={uploadDisputeEvidence} setError={setError} setSuccess={setSuccess} />
+                )}
+
+                {/* Cancelled trade banner */}
+                {trade.status === 'cancelled' && (
+                  <div style={{ ...card({ border: '1px solid rgba(255,77,77,0.2)', background: 'rgba(255,77,77,0.04)' }), padding: '28px', textAlign: 'center' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px', background: 'rgba(255,77,77,0.08)', border: '2px solid rgba(255,77,77,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <XCircle size={24} color="var(--danger)" />
+                    </div>
+                    <h3 style={{ color: 'var(--text)', margin: '0 0 6px', fontSize: '17px', fontWeight: 800 }}>Trade Cancelled</h3>
+                    <p style={{ color: 'var(--muted)', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                      This trade has been cancelled and the escrowed funds have been returned to the seller.
+                    </p>
+                    <button className="btn btn-gold tr-card-btn" style={{ borderRadius: '12px' }}
+                      onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }))}>
+                      Go to Transaction History
+                    </button>
+                  </div>
+                )}
+
+                {/* Expired trade banner */}
+                {trade.status === 'expired' && (
+                  <div style={{ ...card({ border: '1px solid rgba(255,77,77,0.2)', background: 'rgba(255,77,77,0.04)' }), padding: '28px', textAlign: 'center' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px', background: 'rgba(255,77,77,0.08)', border: '2px solid rgba(255,77,77,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <XCircle size={24} color="var(--danger)" />
+                    </div>
+                    <h3 style={{ color: 'var(--text)', margin: '0 0 6px', fontSize: '17px', fontWeight: 800 }}>Trade Expired</h3>
+                    <p style={{ color: 'var(--muted)', fontSize: '13px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                      The payment window for this trade has expired.
+                    </p>
+                    <button className="btn btn-gold tr-card-btn" style={{ borderRadius: '12px' }}
+                      onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'history' }))}>
+                      Go to Transaction History
+                    </button>
+                  </div>
                 )}
               </div>
             )}

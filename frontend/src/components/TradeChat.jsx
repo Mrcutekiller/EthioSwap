@@ -41,24 +41,30 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const isActive = ['payment_pending', 'paid', 'disputed'].includes(tradeStatus);
   const isFinished = ['completed', 'cancelled'].includes(tradeStatus);
 
+  const loadMessages = useCallback(async () => {
+    if (!tradeId || !user?.id) return;
+    const { data, error } = await supabase.from('messages').select('*').eq('trade_id', tradeId).order('created_at', { ascending: true });
+    if (error) {
+      console.error('Error loading messages:', error);
+      return;
+    }
+    setMessages((data || []).map(m => ({
+      id: m.id,
+      sender_id: m.sender_id,
+      message_text: m.message_text,
+      message_type: m.message_type,
+      created_at: m.created_at,
+      is_read: m.is_read,
+      sender: { username: m.sender_username || 'User', selected_avatar: null }
+    })));
+  }, [tradeId, user?.id]);
+
   useEffect(() => {
     if (!tradeId || !user?.id) return;
-    const loadMessages = async () => {
-      const { data } = await supabase.from('messages').select('*').eq('trade_id', tradeId).order('created_at', { ascending: true });
-      setMessages((data || []).map(m => ({
-        id: m.id,
-        sender_id: m.sender_id,
-        message_text: m.message_text,
-        message_type: m.message_type,
-        created_at: m.created_at,
-        is_read: m.is_read,
-        sender: { username: m.sender_username || 'User', selected_avatar: null }
-      })));
-    };
     loadMessages();
     const channel = supabase.channel(`messages:${tradeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `trade_id=eq.${tradeId}` }, loadMessages).subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [tradeId, user?.id]);
+  }, [tradeId, user?.id, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -81,14 +87,19 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
     setNewMessage('');
 
     try {
-      await supabase.from('messages').insert({
+      const { error } = await supabase.from('messages').insert({
         trade_id: tradeId,
         sender_id: user.id,
-        sender_username: user.username,
+        sender_username: user.username || user.email?.split('@')[0] || 'User',
         message_text: msgText,
         message_type: 'text',
         is_read: false
       });
+      if (error) {
+        setError(error.message);
+      } else {
+        await loadMessages();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error sending message');
     }
@@ -112,14 +123,19 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Data = reader.result;
-        await supabase.from('messages').insert({
+        const { error } = await supabase.from('messages').insert({
           trade_id: tradeId,
           sender_id: user.id,
-          sender_username: user.username,
+          sender_username: user.username || user.email?.split('@')[0] || 'User',
           message_text: base64Data,
           message_type: 'image',
           is_read: false
         });
+        if (error) {
+          setError(error.message);
+        } else {
+          await loadMessages();
+        }
       };
       reader.onerror = () => {
         setError('Error reading file');
@@ -134,13 +150,23 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
 
   const sendSystemMessage = async (text) => {
     if (!user) return;
-    await sendMessageMutation({
-      tradeId,
-      senderId: 'system',
-      senderUsername: 'System',
-      messageText: text,
-      messageType: 'system',
-    });
+    try {
+      const { error } = await supabase.from('messages').insert({
+        trade_id: tradeId,
+        sender_id: 'system',
+        sender_username: 'System',
+        message_text: text,
+        message_type: 'system',
+        is_read: false
+      });
+      if (error) {
+        console.error('Error sending system message:', error);
+      } else {
+        await loadMessages();
+      }
+    } catch (err) {
+      console.error('Error sending system message:', err);
+    }
   };
 
   const handleMarkPaid = async () => {
@@ -187,7 +213,7 @@ const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
               <Shield size={14} /> {t('Mark Payment Sent')}
             </button>
           )}
-          {!isBuyer && tradeStatus === 'paid' && (
+          {!isBuyer && (tradeStatus === 'paid' || tradeStatus === 'payment_pending') && (
             <button onClick={handleConfirmReceived} style={{ flex: 1, minWidth: '120px', padding: '10px 12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #059669, #10b981)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <Shield size={14} /> {t('Confirm Payment Received')}
             </button>

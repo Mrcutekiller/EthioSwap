@@ -178,7 +178,7 @@ const TransactionHistory = () => {
     } else if (activeHistoryTab === 'withdrawals') {
       list = list.filter(item => item.type === 'withdrawal');
     } else if (activeHistoryTab === 'pending') {
-      list = list.filter(item => item.source === 'p2p' && ['payment_pending', 'payment_sent', 'disputed'].includes(item.status));
+      list = list.filter(item => item.source === 'p2p' && ['payment_pending', 'paid', 'disputed'].includes(item.status));
     }
 
     // 2. Search filters
