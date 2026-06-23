@@ -794,43 +794,60 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                         const isDep = item._kind === 'dep';
                         const amt = item.amount_usd ?? item.amount_usd_legacy ?? 0;
                         const date = item.created_at ?? '';
+                        const isP2P = item.wallet_type === 'P2P';
+                        const isInternal = item.wallet_type === 'INTERNAL';
+                        const txColor = isDep ? '#F5A623' : '#FF4D4D';
+                        const txBg = isDep ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 77, 77, 0.1)';
+                        const txIcon = isP2P ? 'ti ti-arrows-exchange' : isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up';
+                        const txIconColor = isP2P ? '#00C896' : txColor;
+                        const txBgColor = isP2P ? 'rgba(0,200,150,0.1)' : txBg;
+
+                        const txLabel = (() => {
+                          if (isP2P) return isDep ? '🤝 P2P Trade Received' : '🤝 P2P Trade Sent';
+                          if (isInternal) return isDep ? '↙ Received (Internal)' : '↗ Sent (Internal)';
+                          return isDep ? 'Deposit' : 'Withdrawal';
+                        })();
+
+                        const txSubLabel = (() => {
+                          if (isDep) {
+                            if (item.sender_reference && item.sender_reference.startsWith('{')) {
+                              try {
+                                const parsed = JSON.parse(item.sender_reference);
+                                return `From ${parsed.email || parsed.username || 'Binance/Bybit'}`;
+                              } catch(e) {}
+                            }
+                            return `From ${item.sender_reference || 'Chain'}`;
+                          }
+                          return `To ${item.address || 'Chain'}`;
+                        })();
+
                         return (
                           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)', transition: 'all 0.2s ease' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: isDep ? 'rgba(245, 166, 35, 0.1)' : 'rgba(255, 77, 77, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
-                                <i className={isDep ? 'ti ti-arrow-down' : 'ti ti-arrow-up'} style={{ color: isDep ? '#F5A623' : '#FF4D4D' }}></i>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: txBgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                                <i className={txIcon} style={{ color: txIconColor }} />
                               </div>
                               <div>
                                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
-                                  {isDep ? (item.wallet_type === 'INTERNAL' ? 'Received (Internal)' : 'Deposit') : (item.wallet_type === 'INTERNAL' ? 'Sent (Internal)' : 'Withdrawal')}
+                                  {txLabel}
                                 </div>
                                 <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '1px' }}>
-                                  {isDep ? (
-                                    (() => {
-                                      if (item.sender_reference && item.sender_reference.startsWith('{')) {
-                                        try {
-                                          const parsed = JSON.parse(item.sender_reference);
-                                          return `From ${parsed.email || parsed.username || 'Binance/Bybit'}`;
-                                        } catch(e) {}
-                                      }
-                                      return `From ${item.sender_reference || 'Chain'}`;
-                                    })()
-                                  ) : `To ${item.address || 'Chain'}`} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                                  {txSubLabel} · {date ? new Date(date).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                                 </div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '14px', fontWeight: 700, color: isDep ? '#F5A623' : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
+                                <div style={{ fontSize: '14px', fontWeight: 700, color: isDep ? (isP2P ? '#00C896' : '#F5A623') : '#FF4D4D', fontFamily: 'var(--font-mono)' }}>{isDep ? '+' : '-'}${fmt(amt)}</div>
                                 <span style={{
                                   fontSize: '8.5px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
                                   textTransform: 'uppercase', display: 'inline-block', marginTop: '2px',
                                   background: item.status === 'approved' ? 'rgba(0,200,150,0.1)' : item.status === 'pending' ? 'rgba(138,155,184,0.1)' : 'rgba(255,77,77,0.1)',
                                   color: item.status === 'approved' ? '#00C896' : item.status === 'pending' ? '#8A9BB8' : '#FF4D4D',
-                                }}>{item.status}</span>
+                                }}>{item.status === 'approved' ? 'completed' : item.status}</span>
                               </div>
                               <button
                                 onClick={() => setSelectedWalletTx({ ...item, isDep, amt })}
@@ -838,7 +855,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
                                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.15)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}
                               >
-                                <i className="ti ti-file-text" style={{ fontSize: '12px' }}></i> View
+                                <i className="ti ti-file-text" style={{ fontSize: '12px' }} /> View
                               </button>
                             </div>
                           </div>

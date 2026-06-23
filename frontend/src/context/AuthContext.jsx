@@ -1593,85 +1593,25 @@ export const AuthProvider = ({ children }) => {
 
   const releaseEscrow = async (tradeId) => {
     try {
-      const { data: trade } = await supabase
-        .from('trades')
-        .select('buyer_id, seller_id, amount_eth, listing_id')
-        .eq('id', tradeId)
-        .single();
-      if (!trade) throw new Error('Trade not found');
+      // Use the atomic server-side function: deducts seller, credits buyer,
+      // logs history for BOTH parties, sends notifications to both.
+      const { error: rpcErr } = await supabase.rpc('complete_p2p_trade', {
+        p_trade_id: tradeId,
+      });
+      if (rpcErr) throw new Error(rpcErr.message);
 
-      // 1. Verify and update seller's balance
-      const { data: sellerUser } = await supabase
-        .from('users')
-        .select('eth_balance, total_trades')
-        .eq('id', trade.seller_id)
-        .single();
-      const sellerBalance = sellerUser?.eth_balance || 0;
-      if (sellerBalance < trade.amount_eth) {
-        throw new Error('Seller does not have enough balance to release escrow.');
-      }
+      setSuccess('USDT released to buyer! Trade complete.');
 
-      const { error: sellerErr } = await supabase
-        .from('users')
-        .update({ 
-          eth_balance: sellerBalance - trade.amount_eth,
-          total_trades: (sellerUser?.total_trades || 0) + 1
-        })
-        .eq('id', trade.seller_id);
-      if (sellerErr) throw sellerErr;
-
-      // 2. Update buyer's balance
-      const { data: buyerUser } = await supabase
-        .from('users')
-        .select('eth_balance, total_trades')
-        .eq('id', trade.buyer_id)
-        .single();
-      const buyerBalance = buyerUser?.eth_balance || 0;
-
-      const { error: buyerErr } = await supabase
-        .from('users')
-        .update({ 
-          eth_balance: buyerBalance + trade.amount_eth,
-          total_trades: (buyerUser?.total_trades || 0) + 1
-        })
-        .eq('id', trade.buyer_id);
-      if (buyerErr) throw buyerErr;
-
-      // 3. Update the listing available balance
-      if (trade.listing_id) {
-        const { data: listing } = await supabase
-          .from('listings')
-          .select('amount_eth')
-          .eq('id', trade.listing_id)
-          .single();
-        if (listing) {
-          const newAmount = Math.max(0, (listing.amount_eth || 0) - trade.amount_eth);
-          await supabase
-            .from('listings')
-            .update({
-              amount_eth: newAmount,
-              status: newAmount <= 0.001 ? 'completed' : 'active'
-            })
-            .eq('id', trade.listing_id);
-        }
-      }
-
-      // 4. Update the trade status to completed
-      const { error: tradeErr } = await supabase
-        .from('trades')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', tradeId);
-      if (tradeErr) throw tradeErr;
-
-      // 5. Send notification to buyer
-      if (trade.buyer_id && trade.buyer_id !== user.id) {
-        createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.', tradeId);
-      }
-
-      setSuccess('ETH released to buyer!');
-      
-      // 6. Reload current user's profile state to show updated balance
+      // Refresh sender's (seller's) balance and history
       await loadUserProfile(user.id);
+      if (isAdmin) {
+        loadAllDepositRequests();
+        loadAllWithdrawalRequests();
+      } else {
+        loadUserDeposits(user.id);
+        loadUserWithdrawals(user.id);
+      }
+      await loadTrades(user.id);
     } catch (err) {
       setError(err.message);
     }
@@ -1884,14 +1824,16 @@ export const AuthProvider = ({ children }) => {
 
   const createNotification = async (userId, type, title, message, tradeId = null) => {
     try {
-      await supabase.from('notifications').insert({
+      const payload = {
         user_id: userId,
         type,
         title,
         message,
-        trade_id: tradeId,
         is_read: false,
-      });
+      };
+      // trade_id column may or may not exist depending on migration state
+      if (tradeId) payload.trade_id = tradeId;
+      await supabase.from('notifications').insert(payload);
     } catch (err) { /* silent fail */ }
   };
 

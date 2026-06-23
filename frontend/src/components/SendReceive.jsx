@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Send, QrCode, Search, Copy, CheckCircle, User, ArrowRight } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const SendReceive = ({ onClose }) => {
   const { user, sendInternalTransfer, createPaymentRequest } = useAuth();
@@ -19,12 +20,14 @@ const SendReceive = ({ onClose }) => {
   const handleSearch = async (query) => {
     setSearchQuery(query);
     if (query.length < 2) { setSearchResults([]); return; }
-    const { data } = // await // supabase.from('users')
-      .select('id, username, full_name, selected_avatar, avg_rating')
-      .ilike('username', `%${query}%`)
-      .neq('id', user.id)
-      .limit(5);
-    setSearchResults(data || []);
+    try {
+      const { data } = await supabase.rpc('get_user_by_username_or_email', {
+        search_query: query.replace(/^@/, ''),
+      });
+      setSearchResults(data || []);
+    } catch (e) {
+      setSearchResults([]);
+    }
   };
 
   const handleSend = async () => {
