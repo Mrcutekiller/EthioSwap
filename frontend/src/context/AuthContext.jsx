@@ -57,7 +57,8 @@ export const AuthProvider = ({ children }) => {
     maxFeeUSD: 0.5,
     commissionType: 'percentage',
     commissionValue: 5.0,
-    isP2pFreePeriod: false
+    isP2pFreePeriod: false,
+    maxCustomRateEtb: null,  // admin-set maximum allowed custom rate
   });
   const [listings, setListings] = useState([]);
   const [trades, setTrades] = useState([]);
@@ -184,6 +185,7 @@ export const AuthProvider = ({ children }) => {
         minP2pListingUsd: data.min_p2p_listing_usd ?? 1.0,
         maxDailyWithdrawalUsd: data.max_daily_withdrawal_usd ?? 1000,
         collectedFeesETH: data.collected_fees_eth ?? 0,
+        maxCustomRateEtb: data.max_custom_rate_etb ?? null,  // admin-set max rate
       });
     }
   };
@@ -230,8 +232,9 @@ export const AuthProvider = ({ children }) => {
           data.forEach(l => {
             const s = sellerMap[l.seller_id];
             if (s) {
-              l.seller_name = l.seller_name || s.username;
-              l.seller_profile_pic = l.seller_profile_pic || s.profile_pic;
+              // Always use fresh live data from the users table — never fall back to stale stored values
+              l.seller_name = s.username;
+              l.seller_profile_pic = s.profile_pic || null;
               l.isSellerVerifiedTrader = s.is_verified_trader || s.kyc_status === 'approved';
               l.seller_kyc_status = s.kyc_status;
               l.sellerReputation = s.reputation ?? 100;
@@ -771,14 +774,6 @@ export const AuthProvider = ({ children }) => {
 
   const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
-    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
-    if (!isVerified) {
-      const errMsg = 'Please verify your identity first to post ads.';
-      console.error(errMsg);
-      setError(errMsg);
-      alert(errMsg);
-      return;
-    }
 
     // Check if selling and no payment accounts saved
     if (type === 'sell') {
@@ -793,6 +788,19 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(true);
     try {
+      // Enforce admin-set maximum custom rate before inserting
+      if (customRateEtb) {
+        const { data: latestSettings } = await supabase
+          .from('system_settings')
+          .select('max_custom_rate_etb')
+          .limit(1)
+          .single();
+        const adminMaxRate = latestSettings?.max_custom_rate_etb ?? null;
+        if (adminMaxRate !== null && parseFloat(customRateEtb) > parseFloat(adminMaxRate)) {
+          throw new Error(`Rate cannot exceed the current maximum of ${adminMaxRate} ETB per USDT set by EthioSwap.`);
+        }
+      }
+
       // First try inserting all columns, if that fails (missing columns) fall back to minimal
       const fullInsertData = {
         seller_id: user.id,

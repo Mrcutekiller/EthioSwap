@@ -170,6 +170,17 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
     }
     const currentStandardRate = createType === 'buy' ? (systemSettings?.etbRatePerDollarSell ?? rate) : (systemSettings?.etbRatePerDollar ?? rate);
     const effectiveRate = useCustomRate && customRate ? parseFloat(customRate) : currentStandardRate;
+
+    // ── Frontend admin-max-rate validation ────────────────────
+    if (useCustomRate && customRate) {
+      const enteredRate = parseFloat(customRate);
+      const adminMax = systemSettings?.maxCustomRateEtb ?? null;
+      if (adminMax !== null && enteredRate > parseFloat(adminMax)) {
+        alert(`Rate cannot exceed the current maximum of ${adminMax} ETB per USDT set by EthioSwap.`);
+        return;
+      }
+    }
+
     const minUSD = parseFloat(minLimit) / effectiveRate;
     if (minUSD < (minP2pListing - 0.01)) {
       alert(`Minimum transaction limit must be at least $${minP2pListing.toFixed(2)} USD equivalent (≈ ${Math.round(minP2pListing * effectiveRate)} ETB).`);
@@ -184,40 +195,44 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
     if (createType === 'sell' && user?.username === 'biruk' && linkedAccounts.length === 0) {
       selectedPayments = ['CBE', 'Telebirr', 'Dashen Bank', 'Awash Bank', 'Bank of Abyssinia'];
     }
-      
-    if (editingListingId) {
-      await updateListing(
-        editingListingId,
-        parseFloat(amount_eth), 
-        parseFloat(minLimit), 
-        parseFloat(maxLimit), 
-        useCustomRate && customRate ? parseFloat(customRate) : undefined, 
-        description,
-        parseInt(paymentWindow),
-        allowThirdParty,
-        []
-      );
-      setEditingListingId(null);
-    } else {
-      await createListing(
-        parseFloat(amount_eth), 
-        parseFloat(minLimit), 
-        parseFloat(maxLimit), 
-        selectedPayments, 
-        useCustomRate && customRate ? parseFloat(customRate) : undefined, 
-        createType === 'sell' ? linkedAccounts : [], 
-        createType,
-        description,
-        parseInt(paymentWindow),
-        allowThirdParty,
-        []
-      );
+
+    try {
+      if (editingListingId) {
+        await updateListing(
+          editingListingId,
+          parseFloat(amount_eth),
+          parseFloat(minLimit),
+          parseFloat(maxLimit),
+          useCustomRate && customRate ? parseFloat(customRate) : undefined,
+          description,
+          parseInt(paymentWindow),
+          allowThirdParty,
+          []
+        );
+        setEditingListingId(null);
+      } else {
+        await createListing(
+          parseFloat(amount_eth),
+          parseFloat(minLimit),
+          parseFloat(maxLimit),
+          selectedPayments,
+          useCustomRate && customRate ? parseFloat(customRate) : undefined,
+          createType === 'sell' ? linkedAccounts : [],
+          createType,
+          description,
+          parseInt(paymentWindow),
+          allowThirdParty,
+          []
+        );
+      }
+
+      setamount_eth(''); setMinLimit(''); setMaxLimit('');
+      setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
+      setDescription(''); setPaymentWindow('15'); setAllowThirdParty(false);
+      setShowCreateModal(false);
+    } catch (err) {
+      if (err?.message) alert(err.message);
     }
-    
-    setamount_eth(''); setMinLimit(''); setMaxLimit('');
-    setLinkedAccounts([]); setUseCustomRate(false); setCustomRate('');
-    setDescription(''); setPaymentWindow('15'); setAllowThirdParty(false);
-    setShowCreateModal(false);
   };
 
   // ── Open trade ────────────────────────────────────────────
@@ -1698,15 +1713,33 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
                         <input
                           type="number" step="0.01" required={useCustomRate}
                           className="input"
-                          placeholder={`Standard: ${rate} ETB`}
+                          placeholder={
+                            systemSettings?.maxCustomRateEtb
+                              ? `Max allowed: ${systemSettings.maxCustomRateEtb} ETB`
+                              : `Standard: ${rate} ETB`
+                          }
                           value={customRate}
                           onChange={e => setCustomRate(e.target.value)}
-                          style={{ height: '40px', borderRadius: '8px' }}
+                          style={{
+                            height: '40px', borderRadius: '8px',
+                            borderColor: (
+                              systemSettings?.maxCustomRateEtb &&
+                              customRate &&
+                              parseFloat(customRate) > parseFloat(systemSettings.maxCustomRateEtb)
+                            ) ? '#EF4444' : undefined
+                          }}
                         />
                       </div>
-                      {customRate && parseFloat(customRate) > rate && (
-                        <div style={{ fontSize: '10.5px', color: '#EF4444', marginTop: '4px', paddingLeft: '2px' }}>
-                          ⚠️ Your rate is higher than standard ({rate} ETB). Users usually prefer lower rates.
+                      {/* Admin max rate exceeded warning */}
+                      {systemSettings?.maxCustomRateEtb && customRate && parseFloat(customRate) > parseFloat(systemSettings.maxCustomRateEtb) && (
+                        <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '5px', paddingLeft: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🚫 Rate cannot exceed the current maximum of <strong>{systemSettings.maxCustomRateEtb} ETB</strong> set by EthioSwap.
+                        </div>
+                      )}
+                      {/* Mild advisory for rates above standard but within admin limit */}
+                      {!(systemSettings?.maxCustomRateEtb && customRate && parseFloat(customRate) > parseFloat(systemSettings.maxCustomRateEtb)) && customRate && parseFloat(customRate) > rate && (
+                        <div style={{ fontSize: '10.5px', color: '#F5A623', marginTop: '4px', paddingLeft: '2px' }}>
+                          ⚠️ Your rate is above the standard ({rate} ETB). Buyers usually prefer lower rates.
                         </div>
                       )}
                     </div>

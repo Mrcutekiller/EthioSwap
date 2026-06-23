@@ -444,6 +444,7 @@ const AdminPanel = ({ user }) => {
   const [minP2pListing,    setMinP2pListing]    = useState('1');
   const [maxDailyWithdraw, setMaxDailyWithdraw] = useState('1000');
   const [isP2pFreePeriod,  setIsP2pFreePeriod]  = useState(false);
+  const [maxCustomRateEtb, setMaxCustomRateEtb] = useState('');
   
   const [adminAptosAddress, setAdminAptosAddress] = useState('');
   const [adminBep20Address, setAdminBep20Address] = useState('');
@@ -462,6 +463,7 @@ const AdminPanel = ({ user }) => {
       setMinP2pListing(settings.min_p2p_listing_usd?.toString() || '1');
       setMaxDailyWithdraw(settings.max_daily_withdrawal_usd?.toString() || '1000');
       setIsP2pFreePeriod(settings.is_p2p_free_period ?? false);
+      setMaxCustomRateEtb(settings.max_custom_rate_etb != null ? settings.max_custom_rate_etb.toString() : '');
 
       const master = settings.master_wallet_address || '';
       try {
@@ -720,6 +722,7 @@ const AdminPanel = ({ user }) => {
         max_daily_withdrawal_usd: parseFloat(maxDailyWithdraw) || 1000,
         is_p2p_free_period: isP2pFreePeriod,
         master_wallet_address: packagedAddresses,
+        max_custom_rate_etb: maxCustomRateEtb !== '' ? parseFloat(maxCustomRateEtb) : null,
       };
 
       const oldBuyRate = settings?.etb_rate_per_dollar;
@@ -4263,6 +4266,23 @@ const AdminPanel = ({ user }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: '#8b92a8' }}>Max Daily Withdraw ($)</label>
                     <input type="number" className="input-premium" value={maxDailyWithdraw} onChange={e => setMaxDailyWithdraw(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#F5A623', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🚫 Max P2P Custom Rate (ETB per USDT)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="input-premium"
+                      value={maxCustomRateEtb}
+                      onChange={e => setMaxCustomRateEtb(e.target.value)}
+                      placeholder="e.g. 200 — leave blank to allow any rate"
+                      style={{ borderColor: maxCustomRateEtb ? 'rgba(245,166,35,0.5)' : undefined }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#8b92a8', marginTop: '2px' }}>
+                      Users cannot post a custom rate higher than this. Leave blank to remove the limit.
+                    </span>
                   </div>
 
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', marginTop: '12px' }}>🪙 USDT Deposit Wallets (Admin)</div>
