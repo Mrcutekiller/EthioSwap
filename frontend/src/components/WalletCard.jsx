@@ -167,8 +167,6 @@ const WalletCard = ({ initialTab = 'balance' }) => {
 
   // ── Dashboard states ────────────────────────────────────
   const [showBalance, setShowBalance] = useState(true);
-  const [selectedNet, setSelectedNet] = useState('trc20');
-  const [showQR, setShowQR] = useState(false);
   const [txFilter, setTxFilter] = useState('all');
 
   // ── Deposit (Binance/Bybit) state ───────────────────────
@@ -251,9 +249,8 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     return adminEmail;
   }, [adminEmail, depMethod]);
 
-  // Derive user specific address based on selected network
+  // Derive user specific address
   const userAddress = wallet?.eth_address || wallet?.ethAddress || '';
-  const activeAddress = useMemo(() => getNetworkAddress(selectedNet, userAddress, systemSettings), [selectedNet, userAddress, systemSettings]);
 
   // Asset allocation percentages
   const totalUSDT = available + locked;
@@ -389,12 +386,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     { id: 'send',     icon: 'ti ti-send',        label: 'Send' },
   ];
 
-  const NETWORKS = [
-    { id: 'trc20', label: 'TRC-20', coin: 'USDT', color: '#E83564' },
-    { id: 'bep20', label: 'BSC',    coin: 'USDT', color: '#F0B90B' },
-    { id: 'erc20', label: 'ERC-20', coin: 'USDT', color: '#627EEA' },
-    { id: 'aptos', label: 'Aptos',  coin: 'USDT', color: '#4EEAA6' },
-  ];
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0', fontFamily: 'var(--font)' }}>
@@ -563,58 +555,12 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               ))}
             </div>
 
-            {/* Network Deposit Address Selector Widget */}
+            {/* Internal Transfer Info Widget */}
             <div className="wc-panel">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="ti ti-qrcode" style={{ color: '#F5A623' }} /> Receive Crypto / USDT Addresses
-                </div>
-                <button 
-                  onClick={() => setShowQR(true)}
-                  style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)', color: '#F5A623', fontSize: '10.5px', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <i className="ti ti-qrcode" /> QR Code
-                </button>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="ti ti-arrows-left-right" style={{ color: '#F5A623' }} /> Internal Transfer Details
               </div>
-
-              {/* Address selector tabs */}
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                {NETWORKS.map(net => (
-                  <button 
-                    key={net.id} 
-                    onClick={() => setSelectedNet(net.id)} 
-                    style={{
-                      padding: '6px 12px', borderRadius: '8px',
-                      border: `1.5px solid ${selectedNet === net.id ? net.color : 'rgba(255,255,255,0.05)'}`,
-                      background: selectedNet === net.id ? 'rgba(255,255,255,0.02)' : 'transparent',
-                      color: selectedNet === net.id ? '#fff' : '#8A9BB8',
-                      fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: net.color }} />
-                    {net.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Address content */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: '#0B0E1A', borderRadius: '12px', border: '1px solid #1E2640', width: '100%', boxSizing: 'border-box' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '9px', color: '#4A5568', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>USDT Address ({selectedNet.toUpperCase()})</div>
-                  <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#8A9BB8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {activeAddress || 'No address assigned'}
-                  </div>
-                </div>
-                <button 
-                  onClick={() => handleCopy(activeAddress, 'netaddr')} 
-                  style={{ padding: '6px', color: '#00C896', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <i className={copied === 'netaddr' ? 'ti ti-check' : 'ti ti-copy'} style={{ fontSize: '16px' }} />
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '8px 12px' }}>
                   <div style={{ fontSize: '9px', color: '#4A5568', fontWeight: 600 }}>UID / Account ID</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
@@ -1240,47 +1186,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         </div>
       )}
 
-      {/* ══ QR CODE DEPOSIT MODAL ══════════════════════════════════════════════ */}
-      {showQR && (
-        <div 
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }} 
-          onClick={() => setShowQR(false)}
-        >
-          <div 
-            style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '18px', padding: '32px', maxWidth: '340px', width: '100%', textAlign: 'center', boxShadow: '0 12px 48px rgba(0,0,0,0.6)' }} 
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Scan to Deposit</div>
-            <div style={{ fontSize: '11px', color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '22px' }}>USDT · {selectedNet.toUpperCase()} Network</div>
-            
-            <div style={{ background: '#fff', borderRadius: '14px', padding: '16px', display: 'inline-block', marginBottom: '22px', border: '2px solid #1E2640' }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180&data=${activeAddress || 'ethioswap'}`} alt="QR Code" style={{ width: 180, height: 180, display: 'block' }} />
-            </div>
 
-            <div style={{ fontSize: '11px', color: '#4A5568', textAlign: 'left', marginBottom: '4px', fontWeight: 600 }}>DEPOSIT ADDRESS</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#0B0E1A', border: '1.5px solid #1E2640', borderRadius: '10px', marginBottom: '24px' }}>
-              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#8A9BB8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
-                {activeAddress || 'No address assigned'}
-              </span>
-              <button 
-                onClick={() => handleCopy(activeAddress, 'qraddr')}
-                style={{ border: 'none', background: 'none', color: '#00C896', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-              >
-                <i className={copied === 'qraddr' ? 'ti ti-check' : 'ti ti-copy'} style={{ fontSize: '14px' }} />
-              </button>
-            </div>
-
-            <button 
-              onClick={() => setShowQR(false)} 
-              style={{ width: '100%', padding: '12px', background: '#1E2640', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#283254'}
-              onMouseLeave={e => e.currentTarget.style.background = '#1E2640'}
-            >
-              Close Window
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ══ TRANSACTION RECEIPT MODAL ═══════════════════════════════════════════ */}
       {selectedTx && (() => {
