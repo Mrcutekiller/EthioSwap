@@ -325,6 +325,7 @@ const TradeRoom = ({ tradeId, setPage }) => {
   const [timer, setTimer] = useState('');
   const [releasing, setReleasing] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = useState(null);
 
   const isDirectTrade = !!tradeId; // Came directly from trade detail page
 
@@ -361,7 +362,19 @@ const TradeRoom = ({ tradeId, setPage }) => {
     return () => clearInterval(id);
   }, [trade]);
 
-  const handlePaid    = async () => { if (!window.confirm('Confirm you have sent the payment?')) return; await markTradeAsPaid(trade.id); };
+  const handlePaid = async () => {
+    if (!paymentScreenshot) {
+      alert('Please upload a screenshot proof of payment.');
+      return;
+    }
+    if (!window.confirm('Confirm you have sent the payment?')) return;
+    try {
+      await markTradeAsPaid(trade.id, paymentScreenshot);
+      setPaymentScreenshot(null);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
   const handleRelease = async () => {
     if (!window.confirm('Confirm you received the ETB? This releases USDT to the buyer.')) return;
     setReleasing(true);
@@ -390,11 +403,12 @@ const TradeRoom = ({ tradeId, setPage }) => {
       paymentAcc = {
         bankName: parsed.bankName || parsed.method || 'N/A',
         holderName: parsed.holderName || parsed.holder || 'Seller Account',
-        accountNumber: parsed.accountNumber || parsed.account || 'N/A'
+        accountNumber: parsed.accountNumber || parsed.account || 'N/A',
+        screenshot: parsed.screenshot || null
       };
     }
     catch {
-      paymentAcc = { bankName: trade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A' };
+      paymentAcc = { bankName: trade.payment_method, holderName: 'Seller Account', accountNumber: 'N/A', screenshot: null };
     }
   }
 
@@ -681,8 +695,58 @@ const TradeRoom = ({ tradeId, setPage }) => {
 
                     <AlertBox icon={AlertCircle} color="#F5A623">
                       <strong>Important:</strong> Transfer exactly <strong>{Math.round(trade.amount_eth * rate).toLocaleString()} ETB</strong> using your banking app.
-                      Click "I Have Sent Payment" only after the transfer is confirmed. Do NOT close this window.
+                      Please upload a screenshot of your payment receipt below before clicking "I Have Sent Payment".
                     </AlertBox>
+
+                    {/* Screenshot Upload Container */}
+                    <div style={{ marginTop: '16px', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+                        Upload Payment Screenshot *
+                      </label>
+                      <div style={{
+                        border: '1.5px dashed var(--border)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        textAlign: 'center',
+                        background: 'rgba(255,255,255,0.02)',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--gold)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                      >
+                        {paymentScreenshot ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <img src={paymentScreenshot} style={{ maxHeight: '120px', borderRadius: '8px', objectFit: 'contain' }} alt="Receipt preview" />
+                            <button 
+                              type="button" 
+                              onClick={(e) => { e.stopPropagation(); setPaymentScreenshot(null); }}
+                              style={{ background: 'rgba(255,77,77,0.1)', border: 'none', color: '#FF4D4D', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Remove Image
+                            </button>
+                          </div>
+                        ) : (
+                          <label style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'block' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Click to Upload Screenshot</span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              style={{ display: 'none' }} 
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                if (file.size > 5 * 1024 * 1024) { alert('File is too large. Max 5MB.'); return; }
+                                const reader = new FileReader();
+                                reader.onload = () => setPaymentScreenshot(reader.result);
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                       <button className="btn btn-gold tr-card-btn" onClick={handlePaid}
@@ -778,6 +842,39 @@ const TradeRoom = ({ tradeId, setPage }) => {
                         </strong>{' '}from <strong style={{ color: 'var(--text)' }}>@{trade.buyer_name}</strong>.
                       </p>
                     </div>
+
+                    {paymentAcc?.screenshot && (
+                      <div style={{ background: 'var(--surface2)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border)', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Payment Receipt Screenshot
+                          </span>
+                          <a 
+                            href={paymentAcc.screenshot} 
+                            download={`Receipt-ES-${trade.id.substring(0,8)}.png`}
+                            style={{ 
+                              background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.25)', 
+                              borderRadius: '6px', color: '#F5A623', padding: '4px 10px', 
+                              fontSize: '10px', fontWeight: 700, textDecoration: 'none', cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center'
+                            }}
+                          >
+                            Save Image
+                          </a>
+                        </div>
+                        <img 
+                          src={paymentAcc.screenshot} 
+                          style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '8px', cursor: 'pointer' }} 
+                          alt="Receipt" 
+                          onClick={() => {
+                            const w = window.open();
+                            if (w) {
+                              w.document.write(`<img src="${paymentAcc.screenshot}" style="max-width:100%; max-height:100vh; display:block; margin:auto;" />`);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
 
                     <AlertBox icon={AlertTriangle} color="#FF4D4D">
                       Only release USDT after you <strong>physically see the ETB</strong> in your account. Once released, it <strong>cannot be reversed</strong>.

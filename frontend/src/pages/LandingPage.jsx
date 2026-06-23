@@ -436,11 +436,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       const [usersRes, depositsRes, tradesRes, reviewsRes] = await Promise.all([
         supabase.from('users').select('id', { count: 'exact', head: true }),
         supabase.from('deposit_requests').select('amount_usd').eq('status', 'approved'),
-        supabase.from('trades').select('amount_usd').eq('status', 'completed'),
+        supabase.from('trades').select('amount_eth, amount_usd').eq('status', 'completed'),
         supabase.from('reviews').select('*').eq('is_approved', true),
       ]);
       const totalDeposited = (depositsRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
-      const totalTraded = (tradesRes.data || []).reduce((s, r) => s + (r.amount_usd || 0), 0);
+      const totalTraded = (tradesRes.data || []).reduce((s, r) => s + (r.amount_eth || r.amount_usd || 0), 0);
       setStats({
         traders: usersRes.count || 0,
         deposited: totalDeposited,
@@ -450,7 +450,30 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       });
       setReviews(reviewsRes.data || []);
     };
+
     loadData();
+
+    // Set up real-time listeners for instant statistics updates
+    const tradesChannel = supabase
+      .channel('landing-page-trades')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, loadData)
+      .subscribe();
+
+    const depositsChannel = supabase
+      .channel('landing-page-deposits')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deposit_requests' }, loadData)
+      .subscribe();
+
+    const usersChannel = supabase
+      .channel('landing-page-users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, loadData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(tradesChannel);
+      supabase.removeChannel(depositsChannel);
+      supabase.removeChannel(usersChannel);
+    };
   }, []);
 
   const buyRate = systemSettings?.etbRatePerDollar ?? 190.00;

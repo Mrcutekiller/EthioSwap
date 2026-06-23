@@ -1547,14 +1547,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const markTradeAsPaid = async (tradeId) => {
+  const markTradeAsPaid = async (tradeId, screenshotBase64 = null) => {
     try {
-      const { data: trade } = await supabase.from('trades').select('seller_id, buyer_id').eq('id', tradeId).single();
+      const { data: trade } = await supabase.from('trades').select('seller_id, buyer_id, payment_method').eq('id', tradeId).single();
+      
+      let updatedPaymentMethod = trade?.payment_method;
+      if (screenshotBase64) {
+        try {
+          const parsed = trade?.payment_method ? JSON.parse(trade.payment_method) : {};
+          parsed.screenshot = screenshotBase64;
+          updatedPaymentMethod = JSON.stringify(parsed);
+        } catch {
+          updatedPaymentMethod = JSON.stringify({ method: trade?.payment_method, screenshot: screenshotBase64 });
+        }
+      }
+
       const { error } = await supabase
         .from('trades')
-        .update({ status: 'paid' })
+        .update({ 
+          status: 'paid',
+          payment_method: updatedPaymentMethod
+        })
         .eq('id', tradeId);
       if (error) throw error;
+
+      if (screenshotBase64) {
+        await supabase.from('messages').insert({
+          trade_id: tradeId,
+          sender_id: user.id,
+          sender_username: user.username,
+          message_text: screenshotBase64,
+          message_type: 'image',
+          is_read: false
+        });
+      }
+
       if (trade?.seller_id && trade.seller_id !== user.id) {
         createNotification(trade.seller_id, 'trade_paid', 'Payment Confirmed', 'Buyer has marked the payment as sent. Please verify and release funds.', tradeId);
       }

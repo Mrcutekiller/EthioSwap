@@ -4,14 +4,30 @@ import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Check, CheckCheck, AlertCircle, X, ZoomIn, Clock, Shield, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-const ImageZoomModal = ({ src, onClose }) => (
-  <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-    <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-      <X size={20} />
-    </button>
-    <img src={src} style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '12px', objectFit: 'contain' }} alt="Zoomed view" />
-  </div>
-);
+const ImageZoomModal = ({ src, onClose }) => {
+  const download = (e) => {
+    e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'EthioSwap-Attachment.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', gap: '10px' }}>
+        <button onClick={download} style={{ background: 'rgba(0,200,150,0.2)', border: '1px solid rgba(0,200,150,0.3)', color: '#00C896', borderRadius: '20px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          Save Image
+        </button>
+        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <X size={20} />
+        </button>
+      </div>
+      <img src={src} style={{ maxWidth: '90vw', maxHeight: '80vh', borderRadius: '12px', objectFit: 'contain' }} alt="Zoomed view" />
+    </div>
+  );
+};
 
 const TradeChat = ({ tradeId, sellerId, buyerId, tradeStatus }) => {
   const { user, markTradeAsPaid, releaseEscrow, openDispute, setError, setSuccess } = useAuth();
