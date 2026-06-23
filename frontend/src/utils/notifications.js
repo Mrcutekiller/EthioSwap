@@ -41,13 +41,13 @@ export async function requestPermission() {
 
 export function showBrowserNotification(title, options = {}) {
   if (!isNotificationSupported() || !canUseConstructor()) {
-    showInPageNotification(title, options.body);
+    showInPageNotification(title, options.body, options);
     return null;
   }
 
   try {
     if (Notification.permission !== 'granted') {
-      showInPageNotification(title, options.body);
+      showInPageNotification(title, options.body, options);
       return null;
     }
 
@@ -58,14 +58,24 @@ export function showBrowserNotification(title, options = {}) {
       renotify: true,
     });
 
+    notification.onclick = () => {
+      window.focus();
+      if (options.data && options.data.tradeId) {
+        window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'tradeRoom', tradeId: options.data.tradeId } }));
+      } else {
+        window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'notifications' }));
+      }
+      notification.close();
+    };
+
     notification.onerror = () => {
-      showInPageNotification(title, options.body);
+      showInPageNotification(title, options.body, options);
     };
 
     setTimeout(() => notification.close(), 8000);
     return notification;
   } catch (e) {
-    showInPageNotification(title, options.body);
+    showInPageNotification(title, options.body, options);
     return null;
   }
 }
@@ -86,13 +96,13 @@ function ensureToastContainer() {
   return toastContainer;
 }
 
-export function showInPageNotification(title, body) {
+export function showInPageNotification(title, body, options = {}) {
   const container = ensureToastContainer();
 
   const toast = document.createElement('div');
   toast.style.cssText = `
     pointer-events: auto; background: #1a1a2e; color: #e0e0e0;
-    border-left: 4px solid #6c63ff; border-radius: 8px;
+    border-left: 4px solid #F5A623; border-radius: 8px;
     padding: 12px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px; line-height: 1.4; animation: slideIn 0.3s ease;
@@ -110,7 +120,7 @@ export function showInPageNotification(title, body) {
   }
 
   const titleEl = document.createElement('div');
-  titleEl.style.cssText = 'font-weight: 700; margin-bottom: 4px; color: #6c63ff;';
+  titleEl.style.cssText = 'font-weight: 700; margin-bottom: 4px; color: #F5A623;';
   titleEl.textContent = title;
 
   toast.appendChild(titleEl);
@@ -123,6 +133,11 @@ export function showInPageNotification(title, body) {
   }
 
   toast.addEventListener('click', () => {
+    if (options.data && options.data.tradeId) {
+      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'tradeRoom', tradeId: options.data.tradeId } }));
+    } else {
+      window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'notifications' }));
+    }
     toast.style.animation = 'slideOut 0.3s ease forwards';
     setTimeout(() => toast.remove(), 300);
   });

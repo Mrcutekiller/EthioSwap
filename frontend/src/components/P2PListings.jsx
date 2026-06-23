@@ -67,6 +67,8 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
   const [onlyMyAds, setOnlyMyAds] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
+  const [isStartingTrade, setIsStartingTrade] = useState(false);
+
 
 
   // Sync selected listing's first payment account as default (only for Sell Listings where maker is seller)
@@ -275,15 +277,23 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
 
   const handleOpenTrade = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    const amt = parseFloat(tradeamount_eth);
-    const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
-    setSelectedListing(null); 
-    setTradeamount_eth(''); 
-    setShowBuyModal(false);
-    setBuyModalStep(1);
-    
-    if (trade?.id && onNavigateToTrade) {
-      onNavigateToTrade(trade.id);
+    if (isStartingTrade) return;
+    setIsStartingTrade(true);
+    try {
+      const amt = parseFloat(tradeamount_eth);
+      const trade = await initiateTrade(selectedListing.id, amt, chosenPaymentAccount);
+      setSelectedListing(null); 
+      setTradeamount_eth(''); 
+      setShowBuyModal(false);
+      setBuyModalStep(1);
+      
+      if (trade?.id && onNavigateToTrade) {
+        onNavigateToTrade(trade.id);
+      }
+    } catch (err) {
+      setTradeError(err.message || 'Failed to open trade');
+    } finally {
+      setIsStartingTrade(false);
     }
   };
 

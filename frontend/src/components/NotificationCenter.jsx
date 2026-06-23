@@ -327,6 +327,26 @@ export const useNotifCount = (userId) => {
       setCount(data?.length || 0);
     };
     fetchCount();
+
+    const channel = supabase
+      .channel(`public:notifications-count:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, [userId]);
   return count;
 };

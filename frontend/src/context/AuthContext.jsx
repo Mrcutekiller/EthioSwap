@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { ethers } from 'ethers';
+import { showBrowserNotification } from '../utils/notifications';
 
 const AuthContext = createContext();
 
@@ -280,7 +281,7 @@ export const AuthProvider = ({ children }) => {
       .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
 
     if (data) {
-      const partyIds = [...new Set(data.flatMap(t => [t.buyer_id, t.seller_id]).filter(id => id && id !== userId))];
+      const partyIds = [...new Set(data.flatMap(t => [t.buyer_id, t.seller_id]).filter(Boolean))];
       if (partyIds.length > 0) {
         const { data: parties } = await supabase
           .from('users')
@@ -317,11 +318,17 @@ export const AuthProvider = ({ children }) => {
           event: '*',
           schema: 'public',
           table: 'trades',
-          filter: `buyer_id.eq.${userId},seller_id.eq.${userId}`,
         },
         async (payload) => {
-          console.log('Trades change received!', payload);
-          await loadTrades(userId);
+          const newTrade = payload.new;
+          const oldTrade = payload.old;
+          if (
+            (newTrade && (newTrade.buyer_id === userId || newTrade.seller_id === userId)) ||
+            (oldTrade && (oldTrade.buyer_id === userId || oldTrade.seller_id === userId))
+          ) {
+            console.log('Trades change received!', payload);
+            await loadTrades(userId);
+          }
         }
       )
       .subscribe();
@@ -338,6 +345,37 @@ export const AuthProvider = ({ children }) => {
         tradesChannel.unsubscribe();
         setTradesChannel(null);
       }
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`public:notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Realtime notification received:', payload);
+          const notif = payload.new;
+          if (notif) {
+            showBrowserNotification(notif.title || 'New Notification', {
+              body: notif.message,
+              data: { tradeId: notif.trade_id }
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
     };
   }, [user?.id]);
 
@@ -954,7 +992,7 @@ export const AuthProvider = ({ children }) => {
         payment_method: selectedPaymentAccount ? JSON.stringify(selectedPaymentAccount) : null,
       }).select().single();
       if (error) throw error;
-      createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${amountEth.toFixed(2)} USD.`);
+      createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${amountEth.toFixed(2)} USD.`, newTrade.id);
       setSuccess('Trade initiated!');
       await loadTrades(user.id);
       return newTrade;
@@ -1490,7 +1528,7 @@ export const AuthProvider = ({ children }) => {
         .eq('id', tradeId);
       if (error) throw error;
       if (trade?.seller_id && trade.seller_id !== user.id) {
-        createNotification(trade.seller_id, 'trade_paid', 'Payment Confirmed', 'Buyer has marked the payment as sent. Please verify and release funds.');
+        createNotification(trade.seller_id, 'trade_paid', 'Payment Confirmed', 'Buyer has marked the payment as sent. Please verify and release funds.', tradeId);
       }
       setSuccess('Trade marked as paid!');
     } catch (err) {
@@ -1518,7 +1556,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (trade?.buyer_id && trade.buyer_id !== user.id) {
-        createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.');
+        createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.', tradeId);
       }
       setSuccess('ETH released to buyer!');
     } catch (err) {
@@ -1536,7 +1574,7 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
       const otherPartyId = trade?.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
       if (otherPartyId) {
-        createNotification(otherPartyId, 'trade_cancelled', 'Trade Cancelled', 'The trade has been cancelled by the other party. Funds have been unlocked.');
+        createNotification(otherPartyId, 'trade_cancelled', 'Trade Cancelled', 'The trade has been cancelled by the other party. Funds have been unlocked.', tradeId);
       }
       setSuccess('Trade cancelled and ETH unlocked.');
     } catch (err) {
@@ -1603,13 +1641,13 @@ export const AuthProvider = ({ children }) => {
 
       const otherPartyId = trade?.buyer_id === user.id ? trade.seller_id : trade.buyer_id;
       if (otherPartyId) {
-        createNotification(otherPartyId, 'dispute_opened', 'Dispute Opened', 'A dispute has been opened on your trade. Support will review shortly.');
+        createNotification(otherPartyId, 'dispute_opened', 'Dispute Opened', 'A dispute has been opened on your trade. Support will review shortly.', tradeId);
       }
 
       const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
       if (admins) {
         for (const admin of admins) {
-          createNotification(admin.id, 'dispute_opened', 'New Dispute', `A dispute has been opened on trade #${tradeId.slice(0, 8)}. Reason: ${reason}`);
+          createNotification(admin.id, 'dispute_opened', 'New Dispute', `A dispute has been opened on trade #${tradeId.slice(0, 8)}. Reason: ${reason}`, tradeId);
         }
       }
 
@@ -1640,8 +1678,8 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
 
       if (trade) {
-        createNotification(trade.buyer_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`);
-        createNotification(trade.seller_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`);
+        createNotification(trade.buyer_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`, dispute.trade_id);
+        createNotification(trade.seller_id, 'dispute_resolved', 'Dispute Resolved', `Your dispute has been resolved. Resolution: ${resolution}`, dispute.trade_id);
       }
 
       setSuccess('Dispute resolved successfully.');
@@ -1731,13 +1769,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const createNotification = async (userId, type, title, message) => {
+  const createNotification = async (userId, type, title, message, tradeId = null) => {
     try {
       await supabase.from('notifications').insert({
         user_id: userId,
         type,
         title,
         message,
+        trade_id: tradeId,
         is_read: false,
       });
     } catch (err) { /* silent fail */ }

@@ -1164,9 +1164,14 @@ const AppContent = () => {
   useEffect(() => {
     const handleNavigate = (e) => {
       const dest = e.detail;
-      if (dest === 'history') {
+      if (typeof dest === 'object' && dest !== null) {
+        if (dest.page === 'tradeRoom' && dest.tradeId) {
+          setCurrentTradeId(dest.tradeId);
+          setPage('tradeRoom');
+        }
+      } else if (dest === 'history') {
         setPage('transactions');
-      } else if (dest === 'trades') {
+      } else if (dest === 'trades' || dest === 'p2p') {
         setPage('p2p');
       } else if (dest === 'wallet') {
         setPage('wallet');
@@ -1179,6 +1184,12 @@ const AppContent = () => {
     window.addEventListener('ethioswap_navigate', handleNavigate);
     return () => window.removeEventListener('ethioswap_navigate', handleNavigate);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      requestPermission().catch(err => console.error('Notification permission request error:', err));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (window.location.hash) {

@@ -177,6 +177,8 @@ const TransactionHistory = () => {
       list = list.filter(item => item.type === 'deposit');
     } else if (activeHistoryTab === 'withdrawals') {
       list = list.filter(item => item.type === 'withdrawal');
+    } else if (activeHistoryTab === 'pending') {
+      list = list.filter(item => item.source === 'p2p' && ['payment_pending', 'payment_sent', 'disputed'].includes(item.status));
     }
 
     // 2. Search filters
@@ -425,7 +427,7 @@ const TransactionHistory = () => {
 
       {/* ── Tabs Navigation ── */}
       <div style={{ display: 'flex', gap: '6px', borderBottom: '1px solid #1E2640', paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        {['all', 'buys', 'sells', 'deposits', 'withdrawals'].map(tab => (
+        {['all', 'pending', 'buys', 'sells', 'deposits', 'withdrawals'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveHistoryTab(tab)}
@@ -446,6 +448,7 @@ const TransactionHistory = () => {
             }}
           >
             {tab === 'all' && 'All History'}
+            {tab === 'pending' && '⏳ Pending'}
             {tab === 'buys' && '📥 Buys'}
             {tab === 'sells' && '📤 Sells'}
             {tab === 'deposits' && '💳 Deposits'}
@@ -562,6 +565,14 @@ const TransactionHistory = () => {
                       </td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          {isP2p && (
+                            <button onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'tradeRoom', tradeId: item.realId } }))} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: 'rgba(0, 200, 150, 0.1)', border: '1px solid rgba(0, 200, 150, 0.2)', borderRadius: '8px', color: '#00C896', fontSize: '11px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease', fontFamily: 'inherit' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0, 200, 150, 0.18)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0, 200, 150, 0.1)'; }}
+                            >
+                              Open Trade
+                            </button>
+                          )}
                           <button onClick={() => setSelectedTx(item)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '8px', color: '#F5A623', fontSize: '11px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease', fontFamily: 'inherit' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.16)'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.08)'; }}
@@ -639,6 +650,11 @@ const TransactionHistory = () => {
                         {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {isP2p && (
+                          <button onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: { page: 'tradeRoom', tradeId: item.realId } }))} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: 'rgba(0, 200, 150, 0.1)', border: '1px solid rgba(0, 200, 150, 0.2)', borderRadius: '8px', color: '#00C896', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Open Trade
+                          </button>
+                        )}
                         <button onClick={() => setSelectedTx(item)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '8px', color: '#F5A623', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           <FileText size={11} /> View
                         </button>

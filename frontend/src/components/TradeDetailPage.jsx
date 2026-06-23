@@ -7,6 +7,7 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
   const [tradeAmount, setTradeAmount] = useState('');
   const [selectedPaymentAccount, setSelectedPaymentAccount] = useState(null);
   const [error, setError] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
 
   const isBuyType = listing.type === 'sell';
   const standardRate = listing.type === 'buy'
@@ -30,7 +31,8 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
     });
   };
 
-  const handleStartTrade = () => {
+  const handleStartTrade = async () => {
+    if (isStarting) return;
     setError('');
     const amt = parseFloat(tradeAmount);
     if (isNaN(amt) || amt < 0.01) {
@@ -54,8 +56,15 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
       return;
     }
 
-    onStartTrade(listing.id, amt, selectedPaymentAccount);
+    setIsStarting(true);
+    try {
+      await onStartTrade(listing.id, amt, selectedPaymentAccount);
+    } catch (e) {
+      setError(e.message || 'Failed to start trade');
+      setIsStarting(false);
+    }
   };
+
 
   return (
     <div style={{
@@ -355,19 +364,20 @@ const TradeDetailPage = ({ listing, onBack, onStartTrade }) => {
         </button>
         <button
           onClick={handleStartTrade}
+          disabled={isStarting}
           style={{
             flex: 2,
             height: '50px',
             borderRadius: '12px',
             border: 'none',
-            background: 'linear-gradient(135deg, #F5A623, #FFE082)',
-            color: '#0a0e1a',
+            background: isStarting ? '#4A4A4A' : 'linear-gradient(135deg, #F5A623, #FFE082)',
+            color: isStarting ? '#888' : '#0a0e1a',
             fontSize: '14px',
             fontWeight: 800,
-            cursor: 'pointer'
+            cursor: isStarting ? 'not-allowed' : 'pointer'
           }}
         >
-          {isBuyType ? 'Buy Now' : 'Sell Now'}
+          {isStarting ? 'Starting...' : (isBuyType ? 'Buy Now' : 'Sell Now')}
         </button>
       </div>
     </div>
