@@ -289,19 +289,9 @@ const NotificationsPage = ({ setPage }) => {
   });
 
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto', paddingBottom: '60px' }}>
+    <div className="np-container">
       {/* Header Panel */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        marginBottom: '20px',
-        background: '#0D1117',
-        border: '1px solid #1E2640',
-        borderRadius: '16px',
-        padding: '16px 20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-      }}>
+      <div className="np-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ 
             width: '42px', 
@@ -337,7 +327,7 @@ const NotificationsPage = ({ setPage }) => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="np-header-actions">
           {/* Refresh Button */}
           <button 
             onClick={handleRefresh}
@@ -428,22 +418,13 @@ const NotificationsPage = ({ setPage }) => {
       </div>
 
       {/* Filter Bars Panel */}
-      <div style={{ 
-        background: '#0D1117', 
-        border: '1px solid #1E2640', 
-        borderRadius: '16px', 
-        padding: '12px 16px', 
-        marginBottom: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}>
+      <div className="np-filters-card">
         {/* Status Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="np-filter-row">
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Filter size={12} /> Status:
           </span>
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="np-filter-buttons">
             {[
               { id: 'all', label: 'All', count: totalCount },
               { id: 'unread', label: 'Unread', count: unreadCount },
@@ -488,11 +469,11 @@ const NotificationsPage = ({ setPage }) => {
         <div style={{ height: '1px', background: '#1E2640' }} />
 
         {/* Type Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="np-filter-row">
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#8A9BB8', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <TrendingUp size={12} /> Category:
           </span>
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="np-filter-buttons">
             {[
               { id: 'all', label: 'All Types' },
               { id: 'trades', label: 'Trades' },
@@ -550,19 +531,12 @@ const NotificationsPage = ({ setPage }) => {
               <div
                 key={n.id}
                 onClick={() => handleNotifClick(n)}
+                className="np-card"
                 style={{
                   background: config.gradient,
                   border: `1px solid ${config.border}`,
                   borderLeft: `4px solid ${config.color}`,
-                  borderRadius: '16px',
-                  padding: '16px 20px',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: n.is_read ? 'none' : config.glow,
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'flex-start'
+                  boxShadow: n.is_read ? 'none' : config.glow
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
@@ -646,14 +620,14 @@ const NotificationsPage = ({ setPage }) => {
                   </p>
 
                   {/* Footer Actions inside card */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div className="np-card-footer">
                     {n.trade_id ? (
-                      <span style={{ fontSize: '11px', color: '#8A9BB8', background: '#1A1F32', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                      <span style={{ fontSize: '11px', color: '#8A9BB8', background: '#1A1F32', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', alignSelf: 'flex-start' }}>
                         Trade: #{n.trade_id.slice(0, 8)}
                       </span>
                     ) : <div />}
 
-                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                    <div className="np-card-actions">
                       {/* Mark Read/Unread */}
                       <button
                         onClick={(e) => toggleRead(e, n)}
@@ -707,8 +681,8 @@ const NotificationsPage = ({ setPage }) => {
                           e.currentTarget.style.borderColor = '#FF4D4D';
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.background = 'rgba(255, 77, 77, 0.05)';
-                          e.currentTarget.style.borderColor = 'rgba(255, 77, 77, 0.15)';
+                          e.currentTarget.style.background = 'rgba(255, 77, 77, 0.05)',
+                          e.currentTarget.style.borderColor = 'rgba(255, 77, 77, 0.15)'
                         }}
                         title="Dismiss Notification"
                       >
@@ -723,6 +697,30 @@ const NotificationsPage = ({ setPage }) => {
           })}
         </div>
       )}
+
+      <style>{`
+        .np-container { max-width: 680px; margin: 0 auto; padding: 0 16px 60px 16px; }
+        .np-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: #0D1117; border: 1px solid #1E2640; border-radius: 16px; padding: 16px 20px; boxShadow: 0 4px 20px rgba(0, 0, 0, 0.15); }
+        .np-header-actions { display: flex; align-items: center; gap: 8px; }
+        .np-filters-card { background: #0D1117; border: 1px solid #1E2640; border-radius: 16px; padding: 12px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .np-filter-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .np-filter-buttons { display: flex; gap: 4px; }
+        .np-card { border-radius: 16px; padding: 16px 20px; cursor: pointer; position: relative; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; gap: 16px; align-items: flex-start; }
+        .np-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .np-card-actions { display: flex; gap: 6px; }
+
+        @media (max-width: 640px) {
+          .np-container { padding: 0 8px 40px 8px; }
+          .np-header { flex-direction: column; align-items: stretch; gap: 14px; padding: 14px 16px; }
+          .np-header-actions { justify-content: flex-end; }
+          .np-filter-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+          .np-filter-buttons { width: 100%; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+          .np-filter-buttons::-webkit-scrollbar { display: none; }
+          .np-card { padding: 12px 14px; gap: 10px; }
+          .np-card-footer { flex-direction: column; align-items: stretch; gap: 8px; }
+          .np-card-actions { width: 100%; justify-content: flex-end; }
+        }
+      `}</style>
     </div>
   );
 };

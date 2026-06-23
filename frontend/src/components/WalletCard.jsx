@@ -435,6 +435,17 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         .wc-sub-tab { padding: 6px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #8A9BB8; font-size: 12px; fontWeight: 600; cursor: pointer; transition: all 0.2s; }
         .wc-sub-tab:hover { color: #fff; }
         .wc-sub-tab.active { background: #1E2640; color: #fff; border-color: rgba(255,255,255,0.06); }
+
+        .wc-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .wc-methods-container { display: flex; gap: 12px; }
+        @media (max-width: 480px) {
+          .wc-tabs-nav { overflow-x: auto; white-space: nowrap; display: flex; scrollbar-width: none; }
+          .wc-tabs-nav::-webkit-scrollbar { display: none; }
+          .wc-tab-nav-btn { flex: 0 0 auto; padding: 10px 14px; }
+          .wc-actions-bar { grid-template-columns: repeat(2, 1fr)!important; gap: 8px!important; }
+          .wc-grid-2col { grid-template-columns: 1fr; }
+          .wc-methods-container { flex-direction: column; }
+        }
       `}</style>
 
       {/* ══ HEADER NAVIGATION TABS ═════════════════════════════════════════════ */}
@@ -525,7 +536,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             </div>
 
             {/* Quick Actions Bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+            <div className="wc-actions-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
               {[
                 { label: 'Deposit', icon: 'ti-arrow-down-circle', color: '#F5A623', tab: 'deposit' },
                 { label: 'Withdraw', icon: 'ti-arrow-up-circle', color: '#8A9BB8', tab: 'withdraw' },
@@ -739,7 +750,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               {/* Method selection */}
               <div>
                 <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '10px' }}>Transfer Method</label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="wc-methods-container">
                   {[
                     { id: 'binance', label: 'Binance Pay', icon: '🟡', desc: 'Instant verification' },
                     { id: 'bybit',   label: 'Bybit Pay',   icon: '⚫', desc: 'Verification 5-15m' },
@@ -806,7 +817,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               </div>
 
               {/* Exchange Username/Email */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="wc-grid-2col">
                 <div>
                   <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Your {depMethod === 'binance' ? 'Binance' : 'Bybit'} Email *</label>
                   <input
@@ -915,7 +926,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
               {/* Method */}
               <div>
                 <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '10px' }}>Withdrawal Network</label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="wc-methods-container">
                   {[
                     { id: 'binance', label: 'Binance', icon: '🟡', desc: 'No network fee' },
                     { id: 'bybit',   label: 'Bybit',   icon: '⚫', desc: 'Direct exchange UID' },
