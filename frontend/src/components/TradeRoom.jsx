@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useTranslation } from 'react-i18next';
 import TradeChat from './TradeChat.jsx';
 import {
-  Star, CheckCircle, AlertTriangle, XCircle, Clock,
+  Star, CheckCircle, AlertTriangle, XCircle, Clock, X,
   Upload, Lock, Unlock, MessageSquare, AlertCircle, Copy, CreditCard, Shield,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -324,6 +324,7 @@ const TradeRoom = ({ tradeId, setPage }) => {
   const [skipped, setSkipped] = useState({});
   const [timer, setTimer] = useState('');
   const [releasing, setReleasing] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const isDirectTrade = !!tradeId; // Came directly from trade detail page
 
@@ -533,9 +534,25 @@ const TradeRoom = ({ tradeId, setPage }) => {
                     <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '1px' }}>
                       {isBuyer ? 'Seller (has USDT)' : 'Buyer (sending ETB)'}
                     </div>
-                  </div>
                 </div>
-                <StatusBadge status={trade.status} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  onClick={() => setShowChatModal(true)} 
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '6px', 
+                      background: 'rgba(245, 166, 35, 0.1)', border: '1px solid rgba(245, 166, 35, 0.25)', 
+                      borderRadius: '10px', color: '#F5A623', padding: '8px 14px', 
+                      fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                      transition: 'all 0.2s ease', fontFamily: 'inherit'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245, 166, 35, 0.18)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245, 166, 35, 0.1)'; }}
+                  >
+                    <MessageSquare size={14} /> Messages
+                  </button>
+                  <StatusBadge status={trade.status} />
+                </div>
               </div>
 
               {/* Step bar */}
@@ -789,18 +806,6 @@ const TradeRoom = ({ tradeId, setPage }) => {
                 )}
               </div>
             )}
-
-            {/* ── Chat ── */}
-            <div style={{ ...card(), overflow: 'hidden', minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface2)' }}>
-                <MessageSquare size={14} color="var(--muted)" />
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Trade Chat</span>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>· Secure encrypted channel</span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <TradeChat tradeId={trade.id} sellerId={trade.seller_id} buyerId={trade.buyer_id} tradeStatus={trade.status} />
-              </div>
-            </div>
           </div>
         ) : (
           <div style={{ ...card(), display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '14px' }}>
@@ -817,6 +822,60 @@ const TradeRoom = ({ tradeId, setPage }) => {
           onClose={() => { setSkipped(p => ({ ...p, [trade.id]: true })); setShowRating(false); }}
           onSubmit={handleRate}
         />
+      )}
+
+      {/* Chat modal overlay */}
+      {showChatModal && trade && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(11, 14, 26, 0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#141827', border: '1px solid #1E2640',
+            borderRadius: '20px', width: '600px', maxWidth: '100%',
+            height: '80vh', display: 'flex', flexDirection: 'column',
+            overflow: 'hidden', boxShadow: '0 24px 48px rgba(0,0,0,0.6)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid #1E2640',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: '#0D1117'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquare size={16} color="#F5A623" />
+                <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>
+                  Chat with @{isBuyer ? trade.seller_name : trade.buyer_name}
+                </span>
+              </div>
+              <button 
+                onClick={() => setShowChatModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)', border: 'none',
+                  color: '#8A9BB8', padding: '6px', borderRadius: '50%',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                onMouseLeave={e => e.currentTarget.style.color = '#8A9BB8'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+              <TradeChat 
+                tradeId={trade.id} 
+                sellerId={trade.seller_id} 
+                buyerId={trade.buyer_id} 
+                tradeStatus={trade.status} 
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

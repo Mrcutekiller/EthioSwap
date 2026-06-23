@@ -980,9 +980,29 @@ export const AuthProvider = ({ children }) => {
         : systemSettings.etbRatePerDollar;
       const rateToUse = listing.custom_rate_etb || standardRate;
 
+      const isListingBuy = listing.type === 'buy';
+      const tradeBuyerId = isListingBuy ? listing.seller_id : user.id;
+      const tradeSellerId = isListingBuy ? user.id : listing.seller_id;
+
+      // Check seller's balance
+      const { data: sellerUser } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', tradeSellerId)
+        .single();
+      
+      const sellerBalance = sellerUser?.eth_balance || 0;
+      if (sellerBalance < amountEth) {
+        throw new Error(
+          isListingBuy
+            ? `You have insufficient balance to sell this amount. You need $${amountEth.toFixed(2)} USDT, but have $${sellerBalance.toFixed(2)} USDT.`
+            : `Seller has insufficient balance. Seller needs at least $${amountEth.toFixed(2)} USDT to fulfill this trade.`
+        );
+      }
+
       const { data: newTrade, error } = await supabase.from('trades').insert({
-        buyer_id: user.id,
-        seller_id: listing.seller_id,
+        buyer_id: tradeBuyerId,
+        seller_id: tradeSellerId,
         listing_id: listingId,
         amount_eth: amountEth,
         amount_etb: Math.round(amountEth * rateToUse),
@@ -992,7 +1012,15 @@ export const AuthProvider = ({ children }) => {
         payment_method: selectedPaymentAccount ? JSON.stringify(selectedPaymentAccount) : null,
       }).select().single();
       if (error) throw error;
-      createNotification(listing.seller_id, 'trade_opened', 'New Trade', `${user.username || 'A buyer'} initiated a trade for $${amountEth.toFixed(2)} USD.`, newTrade.id);
+      createNotification(
+        listing.seller_id, 
+        'trade_opened', 
+        'New Trade', 
+        isListingBuy
+          ? `${user.username || 'A seller'} wants to sell you $${amountEth.toFixed(2)} USD.`
+          : `${user.username || 'A buyer'} initiated a trade for $${amountEth.toFixed(2)} USD.`, 
+        newTrade.id
+      );
       setSuccess('Trade initiated!');
       await loadTrades(user.id);
       return newTrade;
@@ -1538,27 +1566,85 @@ export const AuthProvider = ({ children }) => {
 
   const releaseEscrow = async (tradeId) => {
     try {
-      const { data: trade } = await supabase.from('trades').select('buyer_id, seller_id').eq('id', tradeId).single();
-      const { error } = await supabase
+      const { data: trade } = await supabase
+        .from('trades')
+        .select('buyer_id, seller_id, amount_eth, listing_id')
+        .eq('id', tradeId)
+        .single();
+      if (!trade) throw new Error('Trade not found');
+
+      // 1. Verify and update seller's balance
+      const { data: sellerUser } = await supabase
+        .from('users')
+        .select('eth_balance, total_trades')
+        .eq('id', trade.seller_id)
+        .single();
+      const sellerBalance = sellerUser?.eth_balance || 0;
+      if (sellerBalance < trade.amount_eth) {
+        throw new Error('Seller does not have enough balance to release escrow.');
+      }
+
+      const { error: sellerErr } = await supabase
+        .from('users')
+        .update({ 
+          eth_balance: sellerBalance - trade.amount_eth,
+          total_trades: (sellerUser?.total_trades || 0) + 1
+        })
+        .eq('id', trade.seller_id);
+      if (sellerErr) throw sellerErr;
+
+      // 2. Update buyer's balance
+      const { data: buyerUser } = await supabase
+        .from('users')
+        .select('eth_balance, total_trades')
+        .eq('id', trade.buyer_id)
+        .single();
+      const buyerBalance = buyerUser?.eth_balance || 0;
+
+      const { error: buyerErr } = await supabase
+        .from('users')
+        .update({ 
+          eth_balance: buyerBalance + trade.amount_eth,
+          total_trades: (buyerUser?.total_trades || 0) + 1
+        })
+        .eq('id', trade.buyer_id);
+      if (buyerErr) throw buyerErr;
+
+      // 3. Update the listing available balance
+      if (trade.listing_id) {
+        const { data: listing } = await supabase
+          .from('listings')
+          .select('amount_eth')
+          .eq('id', trade.listing_id)
+          .single();
+        if (listing) {
+          const newAmount = Math.max(0, (listing.amount_eth || 0) - trade.amount_eth);
+          await supabase
+            .from('listings')
+            .update({
+              amount_eth: newAmount,
+              status: newAmount <= 0.001 ? 'completed' : 'active'
+            })
+            .eq('id', trade.listing_id);
+        }
+      }
+
+      // 4. Update the trade status to completed
+      const { error: tradeErr } = await supabase
         .from('trades')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', tradeId);
-      if (error) throw error;
+      if (tradeErr) throw tradeErr;
 
-      if (trade) {
-        // Increment buyer's total trades
-        const { data: buyerUser } = await supabase.from('users').select('total_trades').eq('id', trade.buyer_id).single();
-        await supabase.from('users').update({ total_trades: (buyerUser?.total_trades || 0) + 1 }).eq('id', trade.buyer_id);
-
-        // Increment seller's total trades
-        const { data: sellerUser } = await supabase.from('users').select('total_trades').eq('id', trade.seller_id).single();
-        await supabase.from('users').update({ total_trades: (sellerUser?.total_trades || 0) + 1 }).eq('id', trade.seller_id);
-      }
-
-      if (trade?.buyer_id && trade.buyer_id !== user.id) {
+      // 5. Send notification to buyer
+      if (trade.buyer_id && trade.buyer_id !== user.id) {
         createNotification(trade.buyer_id, 'trade_completed', 'Trade Completed', 'ETH has been released to your wallet. The trade is now complete.', tradeId);
       }
+
       setSuccess('ETH released to buyer!');
+      
+      // 6. Reload current user's profile state to show updated balance
+      await loadUserProfile(user.id);
     } catch (err) {
       setError(err.message);
     }
