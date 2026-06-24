@@ -657,6 +657,7 @@ const P2PTradePage = () => {
   const { user, listings, wallet, createListing, initiateTrade, systemSettings, cancelListing, updateListing } = useAuth();
   const rate = systemSettings?.etbRatePerDollar ?? 190;
   const kycApproved = user?.kyc_status === 'approved' || user?.username === 'biruk';
+  const kycLevel2Approved = user?.kyc_level_2_status === 'approved' || user?.username === 'biruk';
 
   const [tab, setTab] = useState(() => localStorage.getItem(`ethioswap_p2p_tab_${user?.id}`) || 'buy');
   const [filterPayment, setFilterPayment] = useState('All');
@@ -677,7 +678,8 @@ const P2PTradePage = () => {
   };
 
   const openCreate = (type) => {
-    if (!kycApproved) { alert('Please verify your identity first. Go to Profile → Verify Identity.'); return; }
+    if (!kycApproved) { alert('Please complete Level 1 KYC verification in Profile first.'); return; }
+    if (!kycLevel2Approved) { alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.'); return; }
     setCreateInitialType(type);
     setEditingId(null);
     setShowCreate(true);
@@ -842,7 +844,18 @@ const P2PTradePage = () => {
                       isBuy={isBuy}
                       effRate={effRate}
                       kycApproved={kycApproved}
-                      onTrade={() => { if (!kycApproved) { alert('Please verify your identity first.'); return; } setTradeListing(listing); }}
+                      kycLevel2Approved={kycLevel2Approved}
+                      onTrade={() => {
+                        if (!kycApproved) {
+                          alert('Please complete Level 1 KYC verification in Profile first.');
+                          return;
+                        }
+                        if (!kycLevel2Approved) {
+                          alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
+                          return;
+                        }
+                        setTradeListing(listing);
+                      }}
                       onViewTrader={() => setViewingTraderId(listing.seller_id)}
                     />
                   );
@@ -923,7 +936,7 @@ const P2PTradePage = () => {
 };
 
 // ── Listing Card ─────────────────────────────────────────────────
-const ListingCard = ({ listing, idx, isOwn, isBuy, effRate, kycApproved, onTrade, onEdit, onCancel, onViewTrader }) => {
+const ListingCard = ({ listing, idx, isOwn, isBuy, effRate, kycApproved, kycLevel2Approved, onTrade, onEdit, onCancel, onViewTrader }) => {
   const avgRating = listing.sellerAverageRating || 5.0;
   const completionPct = listing.sellerPositivePercentage || 100;
   const totalTrades = listing.sellerTotalTrades || 0;
@@ -1019,7 +1032,9 @@ const ListingCard = ({ listing, idx, isOwn, isBuy, effRate, kycApproved, onTrade
           onClick={onTrade}
         >
           {kycApproved
-            ? (isBuy ? '💵 Sell USD Now →' : '🪙 Buy USD Now →')
+            ? (kycLevel2Approved
+                ? (isBuy ? '💵 Sell USD Now →' : '🪙 Buy USD Now →')
+                : '🛡️ Verify Level 2 to Trade')
             : '🛡️ Complete KYC to Trade'}
         </button>
       )}

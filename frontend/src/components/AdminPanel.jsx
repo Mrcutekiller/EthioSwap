@@ -255,6 +255,8 @@ const AdminPanel = ({ user }) => {
   const [settings, setSettings] = useState(null);
   const [allUsersList, setAllUsersList] = useState([]);
   const [kycQueue, setKycQueue] = useState([]);
+  const [selectedKycLevel2DetailId, setSelectedKycLevel2DetailId] = useState(null);
+  const [kycQueueTab, setKycQueueTab] = useState('level1'); // 'level1' | 'level2'
   const [auditLogs, setAuditLogs] = useState([]);
   const [adminAnalytics, setAdminAnalytics] = useState(null);
   const [disputes, setDisputes] = useState([]);
@@ -400,7 +402,7 @@ const AdminPanel = ({ user }) => {
         volume: todayVolume,
         newSignups: todaySignups,
         openDisputes: disputes.length,
-        pendingKyc: kycQueue.length,
+        pendingKyc: (allUsersList || []).filter(u => u.kyc_status === 'pending' || u.kyc_status === 'resubmit' || u.kyc_level_2_status === 'pending').length,
       },
       charts: {
         dailyVolume: Object.entries(dailyVolume).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, vol]) => ({ date, volume: vol })),
@@ -412,7 +414,7 @@ const AdminPanel = ({ user }) => {
       highlyDisputedUsers: [],
       recentTrades: (allTrades || []).slice(0, 10).map(r => ({ id: r.id, buyer_name: r.buyer_name, seller_name: r.seller_name, amount_eth: r.amount_eth, amount_etb: r.amount_etb, status: r.status, created_at: r.created_at })),
     });
-  }, [allUsersList, allDepositReqs, disputes, kycQueue, allTrades]);
+  }, [allUsersList, allDepositReqs, disputes, allTrades]);
 
   useEffect(() => {
     if (!selectedUserDetailId) return;
@@ -499,13 +501,14 @@ const AdminPanel = ({ user }) => {
   // ── Nav tabs definition ──────────────────────────────────────
   const pendingDeposits = (allDepositReqs || []).filter(r => r.status === 'pending');
   const pendingWithdrawals = (allWithdrawalReqs || []).filter(r => r.status === 'pending');
+  const pendingKycCount = (allUsersList || []).filter(u => u.kyc_status === 'pending' || u.kyc_status === 'resubmit' || u.kyc_level_2_status === 'pending').length;
 
   const navTabs = [
     { id: 'overview',   icon: 'ti-layout-dashboard', title: 'Dashboard',    badge: 0 },
     { id: 'deposits',   icon: 'ti-download',         title: 'Deposits',     badge: pendingDeposits.length },
     { id: 'withdrawals',icon: 'ti-upload',           title: 'Withdrawals',  badge: pendingWithdrawals.length },
     { id: 'users',      icon: 'ti-users',            title: 'Users',        badge: 0 },
-    { id: 'kyc',        icon: 'ti-id-badge',         title: 'KYC',          badge: kycQueue.length },
+    { id: 'kyc',        icon: 'ti-id-badge',         title: 'KYC',          badge: pendingKycCount },
     { id: 'trades',     icon: 'ti-arrows-right-left',title: 'Trades',       badge: 0 },
     { id: 'listings',   icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
     { id: 'reviews',    icon: 'ti-star',             title: 'Reviews',      badge: 0 },
@@ -611,6 +614,26 @@ const AdminPanel = ({ user }) => {
         showAlert('KYC submission has been rejected.');
       }
       setSelectedKycDetailId(null);
+      const { data: updatedUsers } = await supabase.from('users').select('*');
+      setAllUsersList(updatedUsers || []);
+    } catch (e) { showAlert(e.message, 'error'); }
+  };
+
+  const handleKYCLevel2 = async (userId, approve) => {
+    try {
+      if (approve) {
+        await supabase.from('users').update({ kyc_level_2_status: 'approved', kyc_level_2_rejection_reason: null }).eq('id', userId);
+        await supabase.from('notifications').insert({ user_id: userId, type: 'kyc_level_2_approved', title: 'KYC Level 2 Approved!', message: 'Your Level 2 verification (Student ID / Proof of Work) has been approved. Trading features are now fully unlocked.', is_read: false });
+        showAlert('KYC Level 2 verification has been approved!');
+      } else {
+        const reason = prompt('Please specify rejection reason:');
+        if (reason === null) return;
+        if (!reason.trim()) { showAlert('Rejection reason is required.', 'error'); return; }
+        await supabase.from('users').update({ kyc_level_2_status: 'rejected', kyc_level_2_rejection_reason: reason }).eq('id', userId);
+        await supabase.from('notifications').insert({ user_id: userId, type: 'kyc_level_2_rejected', title: 'KYC Level 2 Rejected', message: `Your KYC Level 2 document was rejected. Reason: ${reason}. Please resubmit.`, is_read: false });
+        showAlert('KYC Level 2 submission has been rejected.');
+      }
+      setSelectedKycLevel2DetailId(null);
       const { data: updatedUsers } = await supabase.from('users').select('*');
       setAllUsersList(updatedUsers || []);
     } catch (e) { showAlert(e.message, 'error'); }
@@ -792,21 +815,29 @@ const AdminPanel = ({ user }) => {
   };
   const handleApproveDeposit = async (id, requestedAmount) => {
     const feePercent = settings?.deposit_fee_percent ?? 5.0;
-    const defaultCredit = (requestedAmount * (1 - feePercent / 100)).toFixed(2);
+    const defaultGross = requestedAmount;
     const amountStr = window.prompt(
-      `User sent/reported: $${requestedAmount.toFixed(2)} USD\nEstimated credit (excl. ${feePercent}% fee): $${defaultCredit} USD\n\nEnter the final USD ($) amount to credit to the user's balance:`,
-      defaultCredit
+      `User reported sending: $${requestedAmount.toFixed(2)} USD\n\nEnter the actual gross USD ($) amount received by the platform:`,
+      defaultGross.toFixed(2)
     );
     if (amountStr === null) return;
-    const finalAmount = parseFloat(amountStr);
-    if (isNaN(finalAmount) || finalAmount < 0) {
+    const grossAmount = parseFloat(amountStr);
+    if (isNaN(grossAmount) || grossAmount < 0) {
       showAlert("Please enter a valid amount.", "error");
       return;
     }
+    
+    const fee = grossAmount * (feePercent / 100);
+    const netCredit = Math.max(0, grossAmount - fee);
+    const confirmApprove = window.confirm(
+      `Gross Received: $${grossAmount.toFixed(2)} USD\nPlatform Fee (${feePercent}%): $${fee.toFixed(2)} USD\nNet Credit to User: $${netCredit.toFixed(2)} USD\n\nApprove this deposit request?`
+    );
+    if (!confirmApprove) return;
+
     setProcessingDepositId(id);
     showAlert('Processing deposit...');
     try {
-      await approveDepositRequest(id, finalAmount);
+      await approveDepositRequest(id, grossAmount);
       showAlert('✓ Deposit approved! Balance credited to user wallet.');
     } catch (err) { showAlert(err.message, 'error'); }
     finally { setProcessingDepositId(null); setSelectedDepositDetailId(null); }
@@ -3262,14 +3293,21 @@ const AdminPanel = ({ user }) => {
                 u.full_name?.toLowerCase().includes(kycSearchQuery.toLowerCase()) ||
                 u.email?.toLowerCase().includes(kycSearchQuery.toLowerCase());
               
-              const matchesStatus = kycFilterStatus === 'all' ||
-                (kycFilterStatus === 'pending' && u.kyc_status === 'pending') ||
-                (kycFilterStatus === 'approved' && u.kyc_status === 'approved') ||
-                (kycFilterStatus === 'rejected' && u.kyc_status === 'rejected');
-              
-              const hasUploaded = u.kyc_status && u.kyc_status !== 'none';
-              
-              return matchesSearch && matchesStatus && hasUploaded;
+              if (kycQueueTab === 'level1') {
+                const matchesStatus = kycFilterStatus === 'all' ||
+                  (kycFilterStatus === 'pending' && u.kyc_status === 'pending') ||
+                  (kycFilterStatus === 'approved' && u.kyc_status === 'approved') ||
+                  (kycFilterStatus === 'rejected' && u.kyc_status === 'rejected');
+                const hasUploaded = u.kyc_status && u.kyc_status !== 'none';
+                return matchesSearch && matchesStatus && hasUploaded;
+              } else {
+                const matchesStatus = kycFilterStatus === 'all' ||
+                  (kycFilterStatus === 'pending' && u.kyc_level_2_status === 'pending') ||
+                  (kycFilterStatus === 'approved' && u.kyc_level_2_status === 'approved') ||
+                  (kycFilterStatus === 'rejected' && u.kyc_level_2_status === 'rejected');
+                const hasUploaded = u.kyc_level_2_status && u.kyc_level_2_status !== 'none' && u.kyc_level_2_status !== null;
+                return matchesSearch && matchesStatus && hasUploaded;
+              }
             });
 
             return (
@@ -3278,6 +3316,44 @@ const AdminPanel = ({ user }) => {
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Identity Verification Center (KYC)</h3>
                   <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#8b92a8' }}>Validate user registration forms, check side-by-side uploads, or reset KYC credentials</p>
+                </div>
+
+                {/* Sub-Queue Tabs */}
+                <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
+                  <button
+                    onClick={() => setKycQueueTab('level1')}
+                    className={`btn-tab ${kycQueueTab === 'level1' ? 'active' : ''}`}
+                    style={{
+                      background: kycQueueTab === 'level1' ? 'rgba(0, 200, 150, 0.15)' : 'transparent',
+                      border: '1px solid',
+                      borderColor: kycQueueTab === 'level1' ? '#00C896' : 'rgba(255,255,255,0.08)',
+                      color: kycQueueTab === 'level1' ? '#00C896' : '#8b92a8',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Level 1 Queue ({allUsersList.filter(u => u.kyc_status === 'pending' || u.kyc_status === 'resubmit').length})
+                  </button>
+                  <button
+                    onClick={() => setKycQueueTab('level2')}
+                    className={`btn-tab ${kycQueueTab === 'level2' ? 'active' : ''}`}
+                    style={{
+                      background: kycQueueTab === 'level2' ? 'rgba(0, 200, 150, 0.15)' : 'transparent',
+                      border: '1px solid',
+                      borderColor: kycQueueTab === 'level2' ? '#00C896' : 'rgba(255,255,255,0.08)',
+                      color: kycQueueTab === 'level2' ? '#00C896' : '#8b92a8',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Level 2 Queue ({allUsersList.filter(u => u.kyc_level_2_status === 'pending').length})
+                  </button>
                 </div>
 
                 {/* Filters */}
@@ -3307,26 +3383,36 @@ const AdminPanel = ({ user }) => {
                 <div style={{ overflowX: 'auto' }}>
                   <table className="table-premium">
                     <thead>
-                      <tr>
-                        <th>User Profile</th>
-                        <th>Full Name</th>
-                        <th>Age</th>
-                        <th>Document ID Number</th>
-                        <th>Submission Status</th>
-                        <th>Actions</th>
-                      </tr>
+                      {kycQueueTab === 'level1' ? (
+                        <tr>
+                          <th>User Profile</th>
+                          <th>Full Name</th>
+                          <th>Age</th>
+                          <th>Document ID Number</th>
+                          <th>Submission Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      ) : (
+                        <tr>
+                          <th>User Profile</th>
+                          <th>Full Name</th>
+                          <th>Document Type</th>
+                          <th>Verification Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      )}
                     </thead>
                     <tbody>
                       {filteredKyc.length === 0 ? (
                         <tr>
-                          <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
-                            No identity verification submissions matching criteria
+                          <td colSpan={kycQueueTab === 'level1' ? "6" : "5"} style={{ textAlign: 'center', padding: '30px', color: '#4e5567' }}>
+                            No verification submissions matching criteria
                           </td>
                         </tr>
                       ) : filteredKyc.map(u => (
                         <tr
                           key={u.id}
-                          onClick={() => setSelectedKycDetailId(u.id)}
+                          onClick={() => kycQueueTab === 'level1' ? setSelectedKycDetailId(u.id) : setSelectedKycLevel2DetailId(u.id)}
                           className="table-row-clickable"
                         >
                           <td>
@@ -3344,18 +3430,32 @@ const AdminPanel = ({ user }) => {
                               </div>
                             </div>
                           </td>
-                          <td style={{ fontWeight: 500 }}>{u.kyc_data?.name || u.full_name || 'Not Specified'}</td>
-                          <td style={{ color: '#8b92a8' }}>{u.kyc_data?.age || 'N/A'}</td>
-                          <td>
-                            <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
-                              {u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}
-                            </span>
-                          </td>
-                          <td>
-                            <StatusBadge status={u.kyc_status} />
-                          </td>
+                          {kycQueueTab === 'level1' ? (
+                            <>
+                              <td style={{ fontWeight: 500 }}>{u.kyc_data?.name || u.full_name || 'Not Specified'}</td>
+                              <td style={{ color: '#8b92a8' }}>{u.kyc_data?.age || 'N/A'}</td>
+                              <td>
+                                <span style={{ fontSize: '12px', fontFamily: 'monospace', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '6px' }}>
+                                  {u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}
+                                </span>
+                              </td>
+                              <td>
+                                <StatusBadge status={u.kyc_status} />
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td style={{ fontWeight: 500 }}>{u.full_name || 'Not Specified'}</td>
+                              <td style={{ color: '#8b92a8', textTransform: 'capitalize' }}>
+                                {(u.kyc_level_2_type || '').replace('_', ' ')}
+                              </td>
+                              <td>
+                                <StatusBadge status={u.kyc_level_2_status} />
+                              </td>
+                            </>
+                          )}
                           <td onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setSelectedKycDetailId(u.id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                            <button onClick={() => kycQueueTab === 'level1' ? setSelectedKycDetailId(u.id) : setSelectedKycLevel2DetailId(u.id)} className="btn-premium-ghost" style={{ padding: '6px 12px', fontSize: '12px' }}>
                               Visual Checking →
                             </button>
                           </td>
@@ -5269,6 +5369,133 @@ const user = await ctx.db
         );
       })()}
 
+      {/* ── 3.1. KYC LEVEL 2 DETAILS DRAWER ── */}
+      {selectedKycLevel2DetailId && (() => {
+        const u = allUsersList?.find(userRecord => userRecord.id === selectedKycLevel2DetailId);
+        if (!u) return null;
+        return (
+          <>
+            <div className="drawer-backdrop" onClick={() => setSelectedKycLevel2DetailId(null)} />
+            <div className="drawer-content">
+              {/* Header */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>🛡️ Level 2 Verification Checking</h3>
+                  <span style={{ fontSize: '11px', color: '#8b92a8' }}>User Account ID: {u.id}</span>
+                </div>
+                <button onClick={() => setSelectedKycLevel2DetailId(null)} className="btn-premium-ghost" style={{ padding: '6px' }}>✕</button>
+              </div>
+
+              {/* Scrollable container */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* Visual image */}
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>📁 Uploaded ID / Work Document</div>
+                  {u.kyc_level_2_doc ? (
+                    <div 
+                      onClick={() => setActiveLightboxImage(u.kyc_level_2_doc)}
+                      style={{ 
+                        width: '100%', 
+                        maxHeight: '300px', 
+                        borderRadius: '8px', 
+                        overflow: 'hidden', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        cursor: 'pointer',
+                        background: '#0a0c12',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <img src={u.kyc_level_2_doc} style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }} alt="Level 2 document" />
+                    </div>
+                  ) : (
+                    <div style={{ padding: '20px', background: '#0a0c12', borderRadius: '8px', textAlign: 'center', color: '#8b92a8' }}>
+                      No document uploaded.
+                    </div>
+                  )}
+                </div>
+
+                {/* Form fields section */}
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '6px' }}>
+                    📝 Verification Details
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Full Name:</span>
+                    <strong style={{ color: '#f0f2f8' }}>{u.full_name || 'Not Specified'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Document Type:</span>
+                    <strong style={{ color: '#f0f2f8', textTransform: 'capitalize' }}>{(u.kyc_level_2_type || '').replace('_', ' ')}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#8b92a8' }}>Level 2 Status:</span>
+                    <StatusBadge status={u.kyc_level_2_status} />
+                  </div>
+                  {u.kyc_level_2_status === 'rejected' && u.kyc_level_2_rejection_reason && (
+                    <div style={{ background: 'rgba(244,63,94,0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                      <span style={{ color: '#f43f5e', fontSize: '11px', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Rejection Reason:</span>
+                      <p style={{ color: '#f43f5e', margin: '4px 0 0 0', fontSize: '12px' }}>{u.kyc_level_2_rejection_reason}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile contact card */}
+                <div className="card-premium" style={{ background: '#0a0c12', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>📞 Member Profile Contact</div>
+                  <div style={{ fontSize: '13px' }}><span style={{ color: '#8b92a8' }}>Email:</span> <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.email || 'N/A'}</span></div>
+                  <div style={{ fontSize: '13px' }}><span style={{ color: '#8b92a8' }}>Phone:</span> <span style={{ color: '#f0f2f8', fontWeight: 600 }}>{u.phone}</span></div>
+                </div>
+
+                {/* Administrative Actions toolbar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛠️ Direct Moderation Commands</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setMessageComposerUserId(u.id);
+                        setMessageComposerUsername(u.username);
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid #1E2640' }}
+                    >
+                      💬 Send Message
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedUserDetailId(u.id);
+                        setSelectedKycLevel2DetailId(null);
+                        setUserDrawerTab('activity');
+                      }}
+                      className="btn-premium-ghost"
+                      style={{ border: '1px solid #1E2640' }}
+                    >
+                      🕒 User Activity
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* KYC Decisions Toolbar */}
+              <div style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => handleKYCLevel2(u.id, true)} className="btn-premium-primary" style={{ flex: 1 }}>
+                    ✓ Approve Level 2
+                  </button>
+                  <button onClick={() => handleKYCLevel2(u.id, false)} className="btn-premium-danger" style={{ flex: 1 }}>
+                    ✗ Reject Level 2
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </>
+        );
+      })()}
+
       {/* ── 4. COMPLETE USER DIRECTORY & MODERATION DRAWER ── */}
       {selectedUserDetailId && (() => {
         const u = allUsersList?.find(userRecord => userRecord.id === selectedUserDetailId);
@@ -5463,29 +5690,76 @@ const user = await ctx.db
                 {userDrawerTab === 'kyc' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Identity Documents Verification Check</div>
-                    {u.kyc_status === 'none' ? (
-                      <div style={{ textAlign: 'center', padding: '40px', color: '#4e5567', background: '#0a0c12', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.06)' }}>
-                        🪪 Identity files have not been uploaded by this user yet.
+                    
+                    {/* Level 1 Block */}
+                    <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.01)' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Level 1 Verification</span>
+                        <StatusBadge status={u.kyc_status} />
                       </div>
-                    ) : (
-                      <>
-                        <KycImages 
-                          userId={u.id} 
-                          getImageUrl={getImageUrl} 
-                          onImageClick={setActiveLightboxImage} 
-                          kycIdFront={u.kyc_id_front}
-                          kycIdBack={u.kyc_id_back}
-                          kycSelfie={u.kyc_selfie}
-                          kycDocument={u.kyc_document}
-                        />
-                        <div className="card-premium" style={{ background: '#0a0c12', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.idType || 'ID Card'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.name || u.full_name || 'Not specified'}</strong></div>
-                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}</strong></div>
+                      {u.kyc_status === 'none' ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', background: '#0a0c12', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.06)' }}>
+                          🪪 Identity files have not been uploaded by this user yet.
                         </div>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <KycImages 
+                            userId={u.id} 
+                            getImageUrl={getImageUrl} 
+                            onImageClick={setActiveLightboxImage} 
+                            kycIdFront={u.kyc_id_front}
+                            kycIdBack={u.kyc_id_back}
+                            kycSelfie={u.kyc_selfie}
+                            kycDocument={u.kyc_document}
+                          />
+                          <div className="card-premium" style={{ background: '#0a0c12', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                            <span style={{ fontSize: '11px', color: '#8b92a8', fontWeight: 700, textTransform: 'uppercase' }}>Verification fields</span>
+                            <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.idType || 'ID Card'}</strong></div>
+                            <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID card fields name:</span> <strong style={{ color: '#f0f2f8' }}>{u.kyc_data?.name || u.full_name || 'Not specified'}</strong></div>
+                            <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>ID number fields:</span> <strong style={{ color: '#00C896', fontFamily: 'monospace' }}>{u.kyc_data?.idNumber || 'ETH-' + u.id.substring(0, 8).toUpperCase()}</strong></div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Level 2 Block */}
+                    <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '14px', background: 'rgba(255,255,255,0.01)' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Level 2 Verification</span>
+                        <StatusBadge status={u.kyc_level_2_status} />
+                      </div>
+                      {u.kyc_level_2_status === 'none' || !u.kyc_level_2_status ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#4e5567', background: '#0a0c12', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.06)' }}>
+                          🎓 Student ID / Proof of Work has not been uploaded yet.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ fontSize: '12px' }}><span style={{ color: '#8b92a8' }}>Document Type:</span> <strong style={{ color: '#f0f2f8', textTransform: 'capitalize' }}>{(u.kyc_level_2_type || '').replace('_', ' ')}</strong></div>
+                          {u.kyc_level_2_doc ? (
+                            <div 
+                              onClick={() => setActiveLightboxImage(u.kyc_level_2_doc)}
+                              style={{ 
+                                width: '100%', 
+                                maxHeight: '180px', 
+                                borderRadius: '8px', 
+                                overflow: 'hidden', 
+                                border: '1px solid rgba(255,255,255,0.08)', 
+                                cursor: 'pointer',
+                                background: '#0a0c12',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <img src={u.kyc_level_2_doc} style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain' }} alt="Level 2 document" />
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '12px', color: '#8b92a8', fontStyle: 'italic' }}>No document file attached</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                   </div>
                 )}
 
@@ -5817,7 +6091,7 @@ const user = await ctx.db
           { id: 'overview',   icon: 'ti-layout-dashboard', label: 'Dashboard', badge: 0 },
           { id: 'deposits',   icon: 'ti-download',         label: 'Deposits',  badge: pendingDeposits.length },
           { id: 'withdrawals',icon: 'ti-upload',           label: 'Withdraw',  badge: pendingWithdrawals.length },
-          { id: 'kyc',        icon: 'ti-id-badge',         label: 'KYC',       badge: kycQueue.length },
+          { id: 'kyc',        icon: 'ti-id-badge',         label: 'KYC',       badge: pendingKycCount },
         ].map(tab => (
           <button
             key={tab.id}

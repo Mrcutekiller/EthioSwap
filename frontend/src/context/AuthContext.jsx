@@ -815,7 +815,12 @@ export const AuthProvider = ({ children }) => {
 
   const createListing = async (amountEth, minLimitEtb, maxLimitEtb, paymentMethods, customRateEtb, paymentAccounts, type, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
-    // paymentAccounts are passed directly from the form — no pre-check on profile accounts needed
+    const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
+    const isLevel2 = user?.kyc_level_2_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified || !isLevel2) {
+      setError('Please complete Level 2 verification (Student ID / Proof of Work) in Profile to create ads.');
+      return;
+    }
     setLoading(true);
     try {
       // Enforce admin-set maximum custom rate before inserting
@@ -908,8 +913,9 @@ export const AuthProvider = ({ children }) => {
   const updateListing = async (listingId, amountEth, minLimitEtb, maxLimitEtb, customRateEtb, description, paymentWindow, allowThirdParty, images = []) => {
     if (!user) return;
     const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
-    if (!isVerified) {
-      setError('Please verify your identity first to edit ads.');
+    const isLevel2 = user?.kyc_level_2_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified || !isLevel2) {
+      setError('Please complete Level 2 verification to edit ads.');
       return;
     }
     setLoading(true);
@@ -966,8 +972,9 @@ export const AuthProvider = ({ children }) => {
   const initiateTrade = async (listingId, amountEth, selectedPaymentAccount) => {
     if (!user) return;
     const isVerified = user?.kyc_status === 'approved' || user?.username === 'biruk';
-    if (!isVerified) {
-      setError('Please verify your identity first to start trades.');
+    const isLevel2 = user?.kyc_level_2_status === 'approved' || user?.username === 'biruk';
+    if (!isVerified || !isLevel2) {
+      setError('Please complete Level 2 verification (Student ID / Proof of Work) in Profile to start trades.');
       return;
     }
     setLoading(true);
@@ -1069,6 +1076,16 @@ export const AuthProvider = ({ children }) => {
         reviewed_at: isInternal ? new Date().toISOString() : null,
       });
       if (insertErr) throw insertErr;
+
+      if (!isInternal) {
+        // Notify admin
+        const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+        if (admins) {
+          for (const admin of admins) {
+            await createNotification(admin.id, 'deposit_new', 'New Deposit Request', `@${user.username} has submitted a deposit request of $${amountUSD.toFixed(2)} USD for review.`);
+          }
+        }
+      }
 
       if (isInternal) {
         const { data: userData, error: userErr } = await supabase
@@ -1318,8 +1335,13 @@ export const AuthProvider = ({ children }) => {
 
       const platformFeePercent = systemSettings?.deposit_fee_percent ?? 5.0;
       const approvedAmount = typeof finalAmountUsd === 'number' ? finalAmountUsd : (req.amount_usd || 0);
-      const netCredit = approvedAmount;
-      const platformFee = netCredit * platformFeePercent / 100;
+      const platformFee = approvedAmount * platformFeePercent / 100;
+      const netCredit = Math.max(0, approvedAmount - platformFee);
+
+      const isEdited = Math.abs(approvedAmount - (req.amount_usd || 0)) > 0.01;
+      const notifMsg = isEdited
+        ? `Your deposit request was approved with an adjusted gross amount of $${approvedAmount.toFixed(2)} USD. Net credit: $${netCredit.toFixed(2)} USD (after ${platformFeePercent}% fee).`
+        : `Your deposit request of $${approvedAmount.toFixed(2)} USD was approved. Net credit: $${netCredit.toFixed(2)} USD (after ${platformFeePercent}% fee).`;
 
       const { error: updateErr } = await supabase
         .from('deposit_requests')
@@ -1354,8 +1376,8 @@ export const AuthProvider = ({ children }) => {
       await createNotification(
         req.user_id,
         'deposit_approved',
-        'Deposit Successfully',
-        `Your deposit of $${netCredit.toFixed(2)} USD was completed successfully.`
+        'Deposit Successful',
+        notifMsg
       );
 
       await loadAllDepositRequests();
@@ -1822,6 +1844,61 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const submitKycLevel2Details = async (docType, docImage) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          kyc_level_2_status: 'pending',
+          kyc_level_2_type: docType,
+          kyc_level_2_doc: docImage,
+        })
+        .eq('id', user.id);
+      if (error) throw error;
+      setSuccess('Level 2 KYC submitted successfully! Awaiting admin review.');
+      await updateUser({ kyc_level_2_status: 'pending', kyc_level_2_type: docType, kyc_level_2_doc: docImage });
+      
+      // Notify admin
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          await createNotification(admin.id, 'kyc_level_2_new', 'New Level 2 Submission', `@${user.username} has submitted Level 2 documents for review.`);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const approveKycLevel2Request = async (userId) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ kyc_level_2_status: 'approved', kyc_level_2_rejection_reason: null })
+        .eq('id', userId);
+      if (error) throw error;
+      setSuccess('Level 2 KYC request approved.');
+      await createNotification(userId, 'kyc_level_2_approved', 'Level 2 Verified', 'Your Level 2 verification has been approved. P2P trading is now fully unlocked!');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const rejectKycLevel2Request = async (userId, reason) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ kyc_level_2_status: 'rejected', kyc_level_2_rejection_reason: reason })
+        .eq('id', userId);
+      if (error) throw error;
+      setSuccess('Level 2 KYC request rejected.');
+      await createNotification(userId, 'kyc_level_2_rejected', 'Level 2 Rejected', `Your Level 2 verification was rejected. Reason: ${reason}. Please resubmit.`);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const createNotification = async (userId, type, title, message, tradeId = null) => {
     try {
       const payload = {
@@ -1908,6 +1985,7 @@ export const AuthProvider = ({ children }) => {
       markTradeAsPaid, releaseEscrow, cancelTrade, submitRating,
       openDispute, resolveDispute, uploadDisputeEvidence,
       submitKycDetails, approveKycRequest, rejectKycRequest,
+      submitKycLevel2Details, approveKycLevel2Request, rejectKycLevel2Request,
       updateUser, acknowledgeWarning, unlock, switchUser,
       updateSensitiveDetails, updateListing, cancelListing,
       signInWithGoogle, sendPasswordResetEmail, updatePassword,

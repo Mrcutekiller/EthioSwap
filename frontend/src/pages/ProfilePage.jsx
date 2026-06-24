@@ -118,7 +118,56 @@ const SecurityLock = ({ onVerify, onClose }) => {
 };
 
 const ProfilePage = () => {
-  const { user, wallet, savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, updateUser } = useAuth();
+  const { user, wallet, savePaymentAccounts, submitReview, updateReview, deleteReview, logout, submitKycDetails, updateUser, submitKycLevel2Details } = useAuth();
+  
+  const [l2DocType, setL2DocType] = useState('student_id');
+  const [l2DocPreview, setL2DocPreview] = useState(null);
+  const [l2DocFile, setL2DocFile] = useState(null);
+  const [l2Loading, setL2Loading] = useState(false);
+  const [l2Error, setL2Error] = useState('');
+
+  const handleL2FileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setL2Error('File size must be under 5MB');
+      return;
+    }
+    setL2Loading(true);
+    setL2Error('');
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setL2DocPreview(reader.result);
+        setL2DocFile(reader.result);
+        setL2Loading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setL2Error('Failed to read file.');
+      setL2Loading(false);
+    }
+  };
+
+  const handleL2Submit = async (e) => {
+    e.preventDefault();
+    if (!l2DocFile) {
+      setL2Error('Please select or upload a document.');
+      return;
+    }
+    setL2Loading(true);
+    setL2Error('');
+    try {
+      await submitKycLevel2Details(l2DocType, l2DocFile);
+      setL2DocFile(null);
+      setL2DocPreview(null);
+      alert('✓ Level 2 verification submitted!');
+    } catch (err) {
+      setL2Error(err.message || 'Submission failed.');
+    } finally {
+      setL2Loading(false);
+    }
+  };
   
 
   const [showKYC, setShowKYC] = useState(false);
@@ -727,23 +776,134 @@ const ProfilePage = () => {
 
       {/* ─── IDENTITY VERIFICATION (KYC) ──────────────────────── */}
       {user.kyc_status === 'approved' ? (
-        <div style={{
-          borderRadius: '20px', padding: '20px',
-          background: 'linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(0,180,135,0.04) 100%)',
-          border: '1.5px solid rgba(0,200,150,0.3)',
-          display: 'flex', alignItems: 'center', gap: '16px',
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Level 1 approved banner */}
           <div style={{
-            width: 52, height: 52, borderRadius: '16px', flexShrink: 0,
-            background: 'rgba(0,200,150,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 26,
-          }}>✅</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '15px', fontWeight: 600, color: '#00C896', marginBottom: '2px' }}>Identity Verified</div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
-              Your KYC is approved. You can trade freely on EthioSwap.
+            borderRadius: '20px', padding: '20px',
+            background: 'linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(0,180,135,0.04) 100%)',
+            border: '1.5px solid rgba(0,200,150,0.3)',
+            display: 'flex', alignItems: 'center', gap: '16px',
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '16px', flexShrink: 0,
+              background: 'rgba(0,200,150,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 26,
+            }}>✅</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#00C896', marginBottom: '2px' }}>Level 1 Verified</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                Your identity verification is approved.
+              </div>
             </div>
           </div>
+
+          {/* Level 2 Status check */}
+          {user.kyc_level_2_status === 'approved' ? (
+            <div style={{
+              borderRadius: '20px', padding: '20px',
+              background: 'linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(0,180,135,0.04) 100%)',
+              border: '1.5px solid rgba(0,200,150,0.3)',
+              display: 'flex', alignItems: 'center', gap: '16px',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '16px', flexShrink: 0,
+                background: 'rgba(0,200,150,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 26,
+              }}>🛡️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#00C896', marginBottom: '2px' }}>Level 2 Verified (Student ID / Proof of Work)</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                  Your Level 2 verification is approved. Full P2P trading is unlocked.
+                </div>
+              </div>
+            </div>
+          ) : user.kyc_level_2_status === 'pending' ? (
+            <div style={{
+              borderRadius: '20px', padding: '20px',
+              background: 'linear-gradient(135deg, rgba(245,166,35,0.08) 0%, rgba(200,150,0,0.04) 100%)',
+              border: '1.5px solid rgba(245,166,35,0.3)',
+              display: 'flex', alignItems: 'center', gap: '16px',
+            }}>
+              <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,166,35,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>⏳</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#F5A623', marginBottom: '2px' }}>Level 2 Under Review</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                  Your Student ID / Proof of Work document is under review by admin. P2P trading will be unlocked upon approval.
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Level 2 submission required */
+            <div style={{
+              borderRadius: '20px', padding: '20px',
+              background: 'linear-gradient(135deg, #141827 0%, rgba(245,166,35,0.03) 100%)',
+              border: '1.5px solid rgba(245,166,35,0.25)',
+              display: 'flex', flexDirection: 'column', gap: '16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: 52, height: 52, borderRadius: '16px', flexShrink: 0, background: 'rgba(245,166,35,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🔓</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#F5A623', marginBottom: '2px' }}>Level 2 Verification Required</div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', lineHeight: 1.4 }}>
+                    To trade on EthioSwap, you must upload your Level 2 proof of work or student ID.
+                  </div>
+                </div>
+              </div>
+
+              {user.kyc_level_2_status === 'rejected' && (
+                <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,77,77,0.06)', border: '1px solid rgba(255,77,77,0.2)', fontSize: '12px', color: '#ff7676' }}>
+                  ❌ Previous submission rejected. Reason: <strong>{user.kyc_level_2_rejection_reason}</strong>. Please upload a valid document to retry.
+                </div>
+              )}
+
+              <form onSubmit={handleL2Submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-3)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase' }}>Document Type *</label>
+                  <select 
+                    value={l2DocType} 
+                    onChange={e => setL2DocType(e.target.value)} 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '13px', fontFamily: 'var(--font)' }}
+                  >
+                    <option value="student_id">🎓 Student ID Card</option>
+                    <option value="proof_of_work">💼 Proof of Work (Employment ID, Paystub, Contract)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-3)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase' }}>Upload Document *</label>
+                  {l2DocPreview ? (
+                    <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', height: '140px', border: '1px solid var(--border)' }}>
+                      <img src={l2DocPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0a0c12' }} />
+                      <button 
+                        type="button" 
+                        onClick={() => { setL2DocFile(null); setL2DocPreview(null); }} 
+                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#ff4d4d', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', height: '100px', border: '2px dashed var(--border)', borderRadius: '10px', cursor: 'pointer', background: 'var(--bg-elevated)' }}>
+                      <span style={{ fontSize: '24px' }}>📁</span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Select document image</span>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleL2FileChange} />
+                    </label>
+                  )}
+                </div>
+
+                {l2Error && <div style={{ fontSize: '11.5px', color: '#ff4d4d' }}>⚠ {l2Error}</div>}
+
+                <button 
+                  type="submit" 
+                  disabled={l2Loading || !l2DocFile} 
+                  className="btn btn-gold" 
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {l2Loading ? '⏳ Uploading...' : '📤 Submit Level 2 Review'}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       ) : user.kyc_status === 'pending' ? (
         <div style={{
@@ -903,6 +1063,12 @@ const ProfilePage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '10px', color: '#8A9BB8' }}>ID Back</span>
                   <img src={getImageUrl(user.kyc_id_back)} onClick={() => setActiveLightboxImage(getImageUrl(user.kyc_id_back))} alt="ID Back" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1.5px solid #1E2640' }} />
+                </div>
+              )}
+              {user.kyc_level_2_doc && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#8A9BB8' }}>Level 2 Doc ({user.kyc_level_2_type === 'student_id' ? 'Student ID' : 'Proof of Work'})</span>
+                  <img src={getImageUrl(user.kyc_level_2_doc)} onClick={() => setActiveLightboxImage(getImageUrl(user.kyc_level_2_doc))} alt="Level 2 Doc" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', border: '1.5px solid #1E2640' }} />
                 </div>
               )}
             </div>

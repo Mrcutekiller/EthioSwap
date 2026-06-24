@@ -148,6 +148,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
 
   // ── KYC gate ─────────────────────────────────────────────
   const kycApproved = user?.kyc_status === 'approved' || user?.username === 'biruk';
+  const kycLevel2Approved = user?.kyc_level_2_status === 'approved' || user?.username === 'biruk';
 
 
 
@@ -155,7 +156,11 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
   const handleCreateListing = async (e) => {
     e.preventDefault();
     if (!kycApproved) {
-      alert('Please verify your identity first. Go to Profile to start KYC verification.');
+      alert('Please complete Level 1 KYC verification in Profile first.');
+      return;
+    }
+    if (!kycLevel2Approved) {
+      alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
       return;
     }
     if (createType === 'sell' && linkedAccounts.length === 0 && user?.username !== 'biruk') {
@@ -241,7 +246,11 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
   const handleNextConfirm = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!kycApproved) {
-      alert('Please verify your identity first. Go to Profile to start KYC verification.');
+      alert('Please complete Level 1 KYC verification in Profile first.');
+      return;
+    }
+    if (!kycLevel2Approved) {
+      alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
       return;
     }
     setTradeError('');
@@ -616,7 +625,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
             </button>
           )}
 
-          {kycApproved ? (
+          {kycApproved && kycLevel2Approved ? (
             <button 
               onClick={() => { setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true); }} 
               className="btn btn-gold" 
@@ -628,10 +637,12 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
             <button 
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'profile' }));
-                setTimeout(() => {
-                  window.history.pushState({}, '', '/profile?openKyc=true');
-                  window.dispatchEvent(new Event('popstate'));
-                }, 100);
+                if (!kycApproved) {
+                  setTimeout(() => {
+                    window.history.pushState({}, '', '/profile?openKyc=true');
+                    window.dispatchEvent(new Event('popstate'));
+                  }, 100);
+                }
               }}
               style={{
                 background: 'transparent',
@@ -648,7 +659,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
                 gap: '6px'
               }}
             >
-              🛡️ Verify ID to trade
+              {kycApproved ? '🛡️ Verify Level 2 to trade' : '🛡️ Verify ID to trade'}
             </button>
           )}
         </div>
@@ -811,7 +822,11 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
         <button
           onClick={() => {
             if (!kycApproved) {
-              alert('Please verify your identity first. Go to Profile to start KYC verification.');
+              alert('Please complete Level 1 KYC verification in Profile first.');
+              return;
+            }
+            if (!kycLevel2Approved) {
+              alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
               return;
             }
             setCreateType(p2pTab === 'buy' ? 'sell' : 'buy');
@@ -1218,7 +1233,11 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
           ctaText="Post a Listing"
           ctaAction={() => {
             if (!kycApproved) {
-              alert('Please verify your identity first. Go to Profile to start KYC verification.');
+              alert('Please complete Level 1 KYC verification in Profile first.');
+              return;
+            }
+            if (!kycLevel2Approved) {
+              alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
               return;
             }
             setCreateType(p2pTab === 'buy' ? 'sell' : 'buy'); setShowCreateModal(true);
@@ -1492,7 +1511,11 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
                   <button
                     onClick={() => {
                       if (!kycApproved) {
-                        alert('Please verify your identity first. Go to Profile to start KYC verification.');
+                        alert('Please complete Level 1 KYC verification in Profile first.');
+                        return;
+                      }
+                      if (!kycLevel2Approved) {
+                        alert('Please upload your Level 2 verification (Student ID / Proof of Work) in Profile first to unlock trading.');
                         return;
                       }
                       onNavigateToTradeDetail(listing);
@@ -1515,7 +1538,7 @@ const P2PListings = ({ onNavigateToSeller, onNavigateToTradeDetail }) => {
                       marginTop: '4px',
                     }}
                   >
-                    {kycApproved ? (!isBuyType ? 'Buy USD Now ➔' : 'Sell USD Now ➔') : '🛡️ Complete KYC to Trade'}
+                    {kycApproved ? (kycLevel2Approved ? (!isBuyType ? 'Buy USD Now ➔' : 'Sell USD Now ➔') : '🛡️ Verify Level 2 to Trade') : '🛡️ Complete KYC to Trade'}
                   </button>
                 )}
               </div>
