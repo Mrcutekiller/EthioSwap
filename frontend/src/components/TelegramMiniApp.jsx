@@ -546,7 +546,7 @@ export default function TelegramMiniApp() {
               EthioSwap <span style={{ color: '#F5A623', fontSize: '11px', padding: '2px 6px', background: 'rgba(245, 166, 35, 0.15)', borderRadius: '6px' }}>P2P</span>
             </div>
             <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
-              1 USD ≈ {buyRate} ETB
+              Secure P2P Escrow
             </div>
           </div>
         </div>
@@ -700,8 +700,8 @@ export default function TelegramMiniApp() {
             boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF' }}>Live Currency Swap</span>
-              <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>1 USD = {buyRate} ETB</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF' }}>Currency Calculator</span>
+              <span style={{ fontSize: '11px', color: '#F5A623', fontWeight: 700 }}>P2P Protected</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'center' }}>

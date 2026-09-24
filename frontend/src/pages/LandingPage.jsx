@@ -971,7 +971,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 { id: 'trade', label: 'Trade', target: '#hero' },
                 { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
                 { id: 'features', label: 'Features', target: '#features' },
-                { id: 'rates', label: 'Live Rates', target: '#market' },
                 { id: 'funded', label: 'Funded Accounts', target: '#funded-accounts', isNew: true },
                 { id: 'security', label: 'Security', target: '#security' },
                 { id: 'reviews', label: 'Reviews', target: '#reviews' },
@@ -1066,7 +1065,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               { label: 'Telegram Bot (@EthioSwap_bot)', target: 'https://t.me/EthioSwap_bot', icon: 'ti-brand-telegram', isExternal: true, isNew: true },
               { label: 'How It Works', target: '#how-it-works', icon: 'ti-list-numbers' }, 
               { label: 'Features & Security', target: '#features', icon: 'ti-shield-check' }, 
-              { label: 'Live Rates & Calculator', target: '#market', icon: 'ti-calculator' }, 
               { label: 'Funded Accounts & Brokers', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true }, 
               { label: 'Trust & Escrow', target: '#security', icon: 'ti-lock' }, 
               { label: 'Trader Reviews', target: '#reviews', icon: 'ti-star' }, 
@@ -1173,9 +1171,9 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 >
                   <span style={{ fontSize: '18px' }}>✈️</span> Trade on Telegram (@EthioSwap_bot)
                 </a>
-                <button onClick={() => document.getElementById('market')?.scrollIntoView({ behavior: 'smooth' })} 
+                <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} 
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 28px' : '18px 36px', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}>
-                  View live rates
+                  How It Works
                 </button>
               </div>
 
@@ -1433,25 +1431,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       {/* Visual Connector: Features -> Market */}
 
 
-      {/* ── LIVE CALCULATOR SECTION ── */}
-      <section id="market" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 10 }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span className="badge-live-pulse" />
-              <span style={{ fontSize: '11px', color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>LIVE EXCHANGE RATE</span>
-            </div>
-            <h2 className="serif-title" style={{ fontSize: '42px', color: '#fff', margin: '8px 0 16px 0', fontWeight: 400 }}>USDT ↔ ETB Calculator</h2>
-            <p style={{ fontSize: '14px', color: '#c8c8c8', lineHeight: 1.7 }}>
-              Convert between USDT and Ethiopian Birr at the live market rate. See how much you'll get instantly.
-            </p>
-          </div>
 
-          <div style={{ background: '#141827', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '32px' }}>
-            <MarketRates isLoggedIn={false} onSelectOffer={() => onGetStarted()} />
-          </div>
-        </div>
-      </section>
 
       {/* ── TRUST & SECURITY ── */}
       <section id="security" style={{ padding: '80px 24px', background: '#0d0d0d', borderTop: '1px solid rgba(255,255,255,0.05)' }}>

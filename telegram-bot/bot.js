@@ -565,16 +565,14 @@ bot.onText(/👤 Account & Profile/, async (msg) => {
 });
 
 // ========================================================
-// EXCHANGE RATES & INFO
+// PLATFORM INFO & POLICY
 // ========================================================
 
-bot.onText(/ℹ️ Exchange Rates & Info/, async (msg) => {
+bot.onText(/ℹ️ Platform Info & Policy|ℹ️ Exchange Rates & Info/, async (msg) => {
   const chatId = msg.chat.id;
   const text =
-    `ℹ️ *EthioSwap Market Rates & Platform Policy*\n` +
+    `ℹ️ *EthioSwap P2P Platform Policy*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `🟢 *Buy USD Rate:* ~190.00 ETB / $\n` +
-    `🔴 *Sell USD Rate:* ~186.00 ETB / $\n\n` +
     `🛡 *Escrow Protection:* 100% Guaranteed\n` +
     `⚡️ *Min P2P Order:* $5.00 USD\n` +
     `⚡️ *Deposit Processing:* Automatic on-chain\n` +

@@ -805,53 +805,7 @@ const WalletCard = ({ initialTab = 'balance' }) => {
 
           {/* Right Column: Rates ticker and recent activities */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* Live rates ticker */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(20,24,39,0.8) 0%, rgba(20,24,39,0.95) 100%)',
-              border: '1px solid #1E2640',
-              borderRadius: '18px',
-              padding: '20px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896', boxShadow: '0 0 8px #00C896' }} />
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#8A9BB8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Live Market Rate</span>
-                </div>
-                <span style={{ fontSize: '11px', color: '#00C896', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>ETB/USDT</span>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Buy Rate</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>{rate.toLocaleString()}</div>
-                  <div style={{ fontSize: '9px', color: '#4A5568', marginTop: '1px' }}>ETB</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '10px', color: '#FF4D4D', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Sell Rate</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>{(rate - 4).toLocaleString()}</div>
-                  <div style={{ fontSize: '9px', color: '#4A5568', marginTop: '1px' }}>ETB</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '10px', color: '#F5A623', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Spread</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#F5A623', fontFamily: 'var(--font-mono)' }}>4</div>
-                  <div style={{ fontSize: '9px', color: '#4A5568', marginTop: '1px' }}>ETB</div>
-                </div>
-              </div>
-
-              {/* Small Market Stats and Sparkline */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0B0E1A', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                <div>
-                  <div style={{ fontSize: '9px', color: '#4A5568', fontWeight: 600 }}>P2P Volume (7D)</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>${fmt(totalVolume)}</div>
-                </div>
-                <div style={{ opacity: 0.85 }}>
-                  <Sparkline data={mockRateData} color="#00C896" width={75} height={26} />
-                </div>
-              </div>
-            </div>
 
             {/* Transaction panel */}
             <div className="wc-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
