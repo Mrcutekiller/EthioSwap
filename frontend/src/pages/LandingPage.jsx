@@ -538,7 +538,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     return () => observer.disconnect();
   }, []);
 
-  // Smooth scroll for anchor links
+  // Smooth scroll for anchor links with offset for fixed navbar
   useEffect(() => {
     const handleAnchorClick = (e) => {
       const href = e.currentTarget.getAttribute('href');
@@ -547,9 +547,12 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         const targetId = href.slice(1);
         const targetElement = document.getElementById(targetId);
         if (targetElement) {
-          targetElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
+          const navHeight = width < 768 ? 70 : 85;
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - navHeight;
+          window.scrollTo({
+            top: Math.max(0, offsetPosition),
+            behavior: 'smooth'
           });
         }
       }
@@ -564,7 +567,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         anchor.removeEventListener('click', handleAnchorClick);
       });
     };
-  }, []);
+  }, [width]);
 
   // Sync live rate with database configuration
   useEffect(() => {
@@ -952,29 +955,64 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
       {/* ── NAVBAR ── */}
       <nav style={{
         position: 'fixed', top: width < 768 ? '10px' : '20px', left: '50%', transform: 'translateX(-50%)',
-        width: width < 768 ? 'calc(100% - 24px)' : 'calc(100% - 48px)', maxWidth: '1200px', height: width < 768 ? '60px' : '72px',
-        background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        width: width < 768 ? 'calc(100% - 24px)' : 'calc(100% - 48px)', maxWidth: '1360px', height: width < 768 ? '60px' : '72px',
+        background: 'rgba(10, 10, 10, 0.82)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
         border: '1px solid var(--border)', borderRadius: width < 768 ? '16px' : '24px', zIndex: 1000, transition: 'all 0.3s ease',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: width < 768 ? '0 16px' : '0 32px'
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: width < 768 ? '0 16px' : '0 28px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <Logo size={width < 768 ? 28 : 34} showText={true} />
         </div>
         
-        {width > 1024 ? (
+        {width > 1080 ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
               {[
-                { id: 'trade', label: 'Trade', target: '#market' },
-                { id: 'p2p', label: 'P2P', target: '#market' },
-                { id: 'rates', label: 'Rates', target: '#market' },
+                { id: 'trade', label: 'Trade', target: '#hero' },
+                { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
+                { id: 'features', label: 'Features', target: '#features' },
+                { id: 'rates', label: 'Live Rates', target: '#market' },
+                { id: 'funded', label: 'Funded Accounts', target: '#funded-accounts', isNew: true },
+                { id: 'security', label: 'Security', target: '#security' },
+                { id: 'reviews', label: 'Reviews', target: '#reviews' },
+                { id: 'faq', label: 'FAQ', target: '#faq' },
               ].map(link => (
-                <a key={link.id} href={link.target} className="nav-item-saas">{link.label}</a>
+                <a
+                  key={link.id}
+                  href={link.target}
+                  className="nav-item-saas"
+                  style={{
+                    fontSize: '13.5px',
+                    padding: '7px 11px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    position: 'relative'
+                  }}
+                >
+                  {link.label}
+                  {link.isNew && (
+                    <span style={{
+                      background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+                      color: '#0A0C12',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      padding: '2px 5px',
+                      borderRadius: '5px',
+                      lineHeight: 1,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase'
+                    }}>
+                      NEW
+                    </span>
+                  )}
+                </a>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '10px 20px', fontSize: '15px' }}>Log in</button>
-              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '12px 24px', fontSize: '15px', borderRadius: '12px' }}>Get Started</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '8px 16px', fontSize: '14px' }}>Log in</button>
+              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '10px 22px', fontSize: '14px', borderRadius: '12px' }}>Get Started</button>
             </div>
           </>
         ) : (
@@ -994,32 +1032,52 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           display: 'flex', 
           flexDirection: 'column', 
           padding: '24px', 
+          overflowY: 'auto',
           animation: 'slideDownMenu 250ms ease-out' 
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-            <Logo size={36} showText={true} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <Logo size={34} showText={true} />
             <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#F5A623', fontSize: '28px', cursor: 'pointer' }}>✕</button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
             {[
-              { label: 'Features', target: '#features' }, 
-              { label: 'How It Works', target: '#how-it-works' }, 
-              { label: 'Live Rates', target: '#market' }, 
-              { label: 'Why Us', target: '#why-us' }, 
-              { label: 'FAQ', target: '#faq' }
+              { label: 'Trade & P2P', target: '#hero', icon: 'ti-arrows-left-right' },
+              { label: 'How It Works', target: '#how-it-works', icon: 'ti-list-numbers' }, 
+              { label: 'Features & Security', target: '#features', icon: 'ti-shield-check' }, 
+              { label: 'Live Rates & Calculator', target: '#market', icon: 'ti-calculator' }, 
+              { label: 'Funded Accounts & Brokers', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true }, 
+              { label: 'Trust & Escrow', target: '#security', icon: 'ti-lock' }, 
+              { label: 'Trader Reviews', target: '#reviews', icon: 'ti-star' }, 
+              { label: 'FAQ', target: '#faq', icon: 'ti-help' }
             ].map((link, idx, arr) => (
               <div key={link.label}>
                 <a href={link.target} onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'block', color: '#c8c8c8', textDecoration: 'none', fontSize: '20px', fontWeight: 600, padding: '20px 0', textAlign: 'center', transition: 'color 0.2s' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#c8c8c8', textDecoration: 'none', fontSize: '17px', fontWeight: 600, padding: '15px 8px', transition: 'color 0.2s' }}
                   onMouseOver={e => e.currentTarget.style.color = '#F5A623'} onMouseOut={e => e.currentTarget.style.color = '#c8c8c8'}>
-                  {link.label}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className={`ti ${link.icon}`} style={{ color: '#F5A623', fontSize: '18px' }} />
+                    <span>{link.label}</span>
+                  </div>
+                  {link.isNew && (
+                    <span style={{
+                      background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+                      color: '#0A0C12',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '3px 7px',
+                      borderRadius: '6px'
+                    }}>
+                      NEW
+                    </span>
+                  )}
                 </a>
-                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(245, 166, 35, 0.15)', width: '100%' }} />}
+                {idx < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.05)', width: '100%' }} />}
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 'auto', paddingBottom: '20px' }}>
+          <div style={{ marginTop: '24px', paddingBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button onClick={() => { setMobileMenuOpen(false); onSignIn(); }} className="cta-btn-gold" style={{ width: '100%', height: '48px', fontSize: '16px', borderRadius: '10px' }}>Sign In</button>
+            <button onClick={() => { setMobileMenuOpen(false); onGetStarted(); }} style={{ width: '100%', height: '44px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', color: '#fff', fontSize: '15px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Get Started</button>
           </div>
         </div>
       )}
@@ -1380,7 +1438,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
 
 
       {/* ── TESTIMONIALS / REVIEWS (Item 3) ── */}
-      <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section id="reviews" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 10 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '11px', color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700 }}>REVIEWS</span>
