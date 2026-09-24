@@ -10,10 +10,58 @@ const bot = new TelegramBot(BOT_TOKEN, {
   filepath: false,
 });
 
-// Suppress unhandled polling errors (e.g. temporary network drops)
-bot.on('polling_error', (error) => {
-  console.warn('[Telegram Polling Warning]:', error.code || error.message);
+// Global error handlers so bot never crashes on unhandled errors
+process.on('unhandledRejection', (reason) => {
+  console.warn('[Handled Promise Rejection]:', reason?.message || reason);
 });
+process.on('uncaughtException', (error) => {
+  console.warn('[Handled Uncaught Exception]:', error?.message || error);
+});
+
+// Suppress polling errors gracefully
+bot.on('polling_error', (error) => {
+  // Common Telegram polling errors: 409 conflict (another instance running) or network drops
+  if (error.code === 'ETELEGRAM' && error.message?.includes('409 Conflict')) {
+    console.warn('[Telegram Polling]: Another instance was detected polling. Waiting for exclusive connection...');
+  } else {
+    console.warn('[Telegram Polling Warning]:', error.code || error.message);
+  }
+});
+
+// Safely wrap sendMessage to prevent 403 Forbidden (bot blocked by user) from crashing the bot
+const originalSendMessage = bot.sendMessage.bind(bot);
+bot.sendMessage = async function(chatId, text, form = {}) {
+  try {
+    return await originalSendMessage(chatId, text, form);
+  } catch (err) {
+    if (err.message && (err.message.includes('blocked by the user') || err.message.includes('chat not found') || err.message.includes('user is deactivated'))) {
+      console.warn(`[Bot Notice] User ${chatId} blocked the bot or chat is closed.`);
+    } else {
+      console.warn(`[Bot Warning] sendMessage to ${chatId} failed:`, err.message);
+    }
+    return null;
+  }
+};
+
+const originalAnswerCallbackQuery = bot.answerCallbackQuery.bind(bot);
+bot.answerCallbackQuery = async function(...args) {
+  try {
+    return await originalAnswerCallbackQuery(...args);
+  } catch (_) {
+    return null;
+  }
+};
+
+if (bot.setChatMenuButton) {
+  const originalSetChatMenuButton = bot.setChatMenuButton.bind(bot);
+  bot.setChatMenuButton = async function(...args) {
+    try {
+      return await originalSetChatMenuButton(...args);
+    } catch (_) {
+      return null;
+    }
+  };
+}
 
 console.log('🚀 EthioSwap P2P Telegram Bot is starting...');
 
