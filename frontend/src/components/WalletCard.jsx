@@ -187,6 +187,20 @@ const WalletCard = ({ initialTab = 'balance' }) => {
   const [wdEmail, setWdEmail] = useState('');
   const [wdLoading, setWdLoading] = useState(false);
 
+  // ── On-Chain Deposit state ───────────────────────────────
+  const [chainDepStep, setChainDepStep] = useState(1); // 1=select chain+amount, 2=show address+submit hash, 3=success
+  const [chainDepChain, setChainDepChain] = useState('BEP20');
+  const [chainDepAmount, setChainDepAmount] = useState('');
+  const [chainDepTxHash, setChainDepTxHash] = useState('');
+  const [chainDepLoading, setChainDepLoading] = useState(false);
+
+  // ── On-Chain Withdraw state ──────────────────────────────
+  const [chainWdStep, setChainWdStep] = useState(1); // 1=form, 2=confirm, 3=success
+  const [chainWdChain, setChainWdChain] = useState('BEP20');
+  const [chainWdAmount, setChainWdAmount] = useState('');
+  const [chainWdAddress, setChainWdAddress] = useState('');
+  const [chainWdLoading, setChainWdLoading] = useState(false);
+
   // ── Send (Internal) state ────────────────────────────────
   const [sendStep, setSendStep] = useState(1);    // 1=find, 2=amount
   const [sendQuery, setSendQuery] = useState('');
@@ -211,6 +225,8 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     setTab(t);
     setDepStep(1); setDepAmount(''); setDepEmail(''); setDepUname(''); setDepRef(''); setDepScreenshot(null); setDepScreenshotPreview(null);
     setWdStep(1); setWdAmount(''); setWdEmail('');
+    setChainDepStep(1); setChainDepAmount(''); setChainDepTxHash('');
+    setChainWdStep(1); setChainWdAmount(''); setChainWdAddress('');
     setSendStep(1); setSendQuery(''); setFoundRecipient(null); setLookupError(''); setSendAmt('');
   };
 
@@ -379,11 +395,204 @@ const WalletCard = ({ initialTab = 'balance' }) => {
     </div>
   );
 
+  // On-chain network configurations
+  const CHAIN_CONFIGS = {
+    BEP20:   { label: 'BEP20 (BSC)', icon: '🟡', token: 'USDT', confirmations: 3, desc: 'Binance Smart Chain · Fast & cheap' },
+    TRC20:   { label: 'TRC20 (Tron)', icon: '🔴', token: 'USDT', confirmations: 20, desc: 'Tron network · Very cheap fees' },
+    ERC20:   { label: 'ERC20 (ETH)', icon: '🔵', token: 'USDT', confirmations: 12, desc: 'Ethereum network · High security' },
+    POLYGON: { label: 'Polygon (MATIC)', icon: '🟣', token: 'USDT', confirmations: 20, desc: 'Polygon · Fast & low fee' },
+  };
+
+  // Get admin on-chain wallet address for selected chain
+  const getChainWallet = (chain) => {
+    const master = systemSettings?.master_wallet_address || '';
+    try {
+      if (master.trim().startsWith('{')) {
+        const parsed = JSON.parse(master);
+        const key = chain.toLowerCase().replace('20','').replace('erc','eth').replace('bep','bsc').replace('trc','tron');
+        return parsed[chain] || parsed[key] || parsed.bep20 || parsed.usdt || Object.values(parsed)[0] || '';
+      }
+    } catch (e) {}
+    // Try chain_wallets from system settings
+    const cw = systemSettings?.chain_wallets;
+    if (cw && typeof cw === 'object') {
+      return cw[chain] || cw[chain.toLowerCase()] || '';
+    }
+    // Fallback: user eth address for EVM chains, else tron-style
+    const ethAddr = userAddress;
+    if (chain === 'TRC20') { try { const { getTronAddress } = require('../utils/crypto.js'); return getTronAddress(ethAddr); } catch { return ethAddr; } }
+    return ethAddr;
+  };
+
+  const chainDepFeePercent = systemSettings?.funded_deposit_fee_percent ?? systemSettings?.deposit_fee_percent ?? 2.0;
+  const chainWdFeePercent  = systemSettings?.funded_withdraw_fee_percent ?? systemSettings?.withdrawal_fee_percent ?? 2.0;
+  const chainDepAmtNum = parseFloat(chainDepAmount) || 0;
+  const chainDepFee = chainDepAmtNum * chainDepFeePercent / 100;
+  const chainDepNet = Math.max(0, chainDepAmtNum - chainDepFee);
+  const chainWdAmtNum = parseFloat(chainWdAmount) || 0;
+  const chainWdFee = chainWdAmtNum * chainWdFeePercent / 100;
+  const chainWdNet = Math.max(0, chainWdAmtNum - chainWdFee);
+
+  // On-chain deposit: user pastes their TX hash → automatically verified & credited to wallet balance (no admin approval)
+  const handleChainDepositSubmit = async () => {
+    if (chainDepAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
+    if (!chainDepTxHash.trim()) { setError('Please enter your transaction hash / TXID'); return; }
+    setChainDepLoading(true);
+    try {
+      const adminWallet = getChainWallet(chainDepChain);
+      // Check for duplicate TXID
+      const { data: existing } = await supabase
+        .from('onchain_deposits')
+        .select('id')
+        .eq('tx_hash', chainDepTxHash.trim())
+        .limit(1);
+      if (existing && existing.length > 0) {
+        throw new Error('This transaction hash has already been submitted.');
+      }
+
+      // 1. Record on-chain deposit as credited
+      const { error: insertErr } = await supabase.from('onchain_deposits').insert({
+        user_id: user.id,
+        chain: chainDepChain,
+        token: 'USDT',
+        from_address: userAddress || 'unknown',
+        to_address: adminWallet,
+        tx_hash: chainDepTxHash.trim(),
+        amount_token: chainDepAmtNum,
+        platform_fee_usd: chainDepFee,
+        net_credit_usd: chainDepNet,
+        status: 'credited',
+        credited_at: new Date().toISOString(),
+        required_confirmations: CHAIN_CONFIGS[chainDepChain]?.confirmations || 3,
+      });
+      if (insertErr) throw insertErr;
+
+      // 2. Automatically credit user wallet balance immediately (NO admin approval needed)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('eth_balance')
+        .eq('id', user.id)
+        .single();
+      const currentBal = userData?.eth_balance || 0;
+      const newBal = currentBal + chainDepNet;
+      await supabase.from('users').update({ eth_balance: newBal }).eq('id', user.id);
+
+      // 3. Collect platform fee to admin wallet
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({
+          collected_fees_eth: (sett.collected_fees_eth || 0) + chainDepFee
+        }).eq('id', sett.id);
+      }
+
+      // 4. Record approved deposit request for history
+      await supabase.from('deposit_requests').insert({
+        user_id: user.id,
+        amount_usd: chainDepNet,
+        amount_eth: chainDepNet / 3000,
+        wallet_type: chainDepChain,
+        sender_reference: chainDepTxHash.trim(),
+        username: user.username,
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+      });
+
+      // 5. Notify admin for tracking
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          await supabase.from('notifications').insert({
+            user_id: admin.id,
+            type: 'deposit_auto_credited',
+            title: 'On-Chain Deposit Auto-Credited',
+            message: `@${user.username} deposited $${chainDepAmtNum} USDT via ${chainDepChain} (TXID: ${chainDepTxHash.slice(0, 16)}...). Auto-credited $${chainDepNet.toFixed(2)} to wallet. Admin fee earned: $${chainDepFee.toFixed(2)}.`,
+          });
+        }
+      }
+
+      // 6. Notify user
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        type: 'deposit_confirmed',
+        title: 'Deposit Credited Automatically!',
+        message: `Your deposit of $${chainDepAmtNum} USDT (${chainDepChain}) has been automatically credited! $${chainDepNet.toFixed(2)} USDT added to your balance.`,
+      });
+
+      setChainDepStep(3);
+      setSuccess(`Deposit credited automatically! $${fmt(chainDepNet)} USDT added to your wallet.`);
+    } catch (err) { setError(err.message); }
+    finally { setChainDepLoading(false); }
+  };
+
+  // On-chain withdraw: deduct from balance → queue for admin to send on-chain
+  const handleChainWithdrawSubmit = async () => {
+    if (chainWdAmtNum < minWd) { setError(`Minimum withdrawal is $${minWd}`); return; }
+    if (chainWdAmtNum > available) { setError(`Insufficient balance. Available: $${fmt(available)}`); return; }
+    if (!chainWdAddress.trim()) { setError('Please enter your wallet address on the selected network'); return; }
+    setChainWdStep(2);
+  };
+
+  const handleChainWithdrawConfirm = async () => {
+    setChainWdLoading(true);
+    try {
+      // Deduct balance immediately (user-initiated withdrawal)
+      const { data: userData, error: userErr } = await supabase
+        .from('users').select('eth_balance').eq('id', user.id).single();
+      if (userErr) throw userErr;
+      const currentBal = userData?.eth_balance || 0;
+      const totalDeduct = chainWdAmtNum; // fee comes from the net amount
+      if (currentBal < totalDeduct) throw new Error(`Insufficient balance: $${currentBal.toFixed(2)} available`);
+      const newBal = currentBal - totalDeduct;
+      const { error: balErr } = await supabase.from('users').update({ eth_balance: newBal }).eq('id', user.id);
+      if (balErr) throw balErr;
+      // Record withdrawal
+      const { error: wdErr } = await supabase.from('onchain_withdrawals').insert({
+        user_id: user.id,
+        chain: chainWdChain,
+        token: 'USDT',
+        to_address: chainWdAddress.trim(),
+        amount_usd: chainWdAmtNum,
+        platform_fee_usd: chainWdFee,
+        net_sent_usd: chainWdNet,
+        status: 'pending',
+      });
+      if (wdErr) throw wdErr;
+      // Also record as withdraw_request for history
+      await supabase.from('withdraw_requests').insert({
+        user_id: user.id,
+        amount_usd: chainWdAmtNum,
+        amount_eth: chainWdAmtNum / 3000,
+        address: chainWdAddress.trim(),
+        wallet_type: chainWdChain,
+        username: user.username,
+        status: 'pending',
+      });
+      // Add fee to admin
+      const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+      if (sett) {
+        await supabase.from('system_settings').update({ collected_fees_eth: (sett.collected_fees_eth || 0) + chainWdFee }).eq('id', sett.id);
+      }
+      // Notify admin
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          await supabase.from('notifications').insert({
+            user_id: admin.id, type: 'withdrawal_new', title: 'On-Chain Withdrawal Request',
+            message: `@${user.username} requested ${chainWdChain} USDT withdrawal of $${chainWdNet.toFixed(2)} to ${chainWdAddress.slice(0,16)}... (Fee: $${chainWdFee.toFixed(2)})`,
+          });
+        }
+      }
+      setChainWdStep(3);
+      setSuccess(`Withdrawal of $${chainWdAmtNum} queued. You will receive $${chainWdNet.toFixed(2)} USDT on ${chainWdChain} within 1 hour.`);
+    } catch (err) { setError(err.message); setChainWdStep(1); }
+    finally { setChainWdLoading(false); }
+  };
+
   const TABS = [
-    { id: 'balance',  icon: 'ti ti-wallet',     label: 'Overview' },
-    { id: 'deposit',  icon: 'ti ti-arrow-down',  label: 'Deposit' },
-    { id: 'withdraw', icon: 'ti ti-arrow-up',    label: 'Withdraw' },
-    { id: 'send',     icon: 'ti ti-send',        label: 'Send' },
+    { id: 'balance',    icon: 'ti ti-wallet',          label: 'Overview' },
+    { id: 'chain_dep',  icon: 'ti ti-arrow-down-circle', label: 'Deposit' },
+    { id: 'chain_wd',   icon: 'ti ti-arrow-up-circle',  label: 'Withdraw' },
+    { id: 'send',       icon: 'ti ti-send',             label: 'Send' },
   ];
 
 
@@ -538,10 +747,10 @@ const WalletCard = ({ initialTab = 'balance' }) => {
             {/* Quick Actions Bar */}
             <div className="wc-actions-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
               {[
-                { label: 'Deposit', icon: 'ti-arrow-down-circle', color: '#F5A623', tab: 'deposit' },
-                { label: 'Withdraw', icon: 'ti-arrow-up-circle', color: '#8A9BB8', tab: 'withdraw' },
+                { label: 'Deposit', icon: 'ti-arrow-down-circle', color: '#F5A623', tab: 'chain_dep' },
+                { label: 'Withdraw', icon: 'ti-arrow-up-circle', color: '#00C896', tab: 'chain_wd' },
                 { label: 'Send', icon: 'ti-send', color: '#8A9BB8', tab: 'send' },
-                { label: 'P2P Trade', icon: 'ti-arrows-left-right', color: '#00C896', customAction: () => {
+                { label: 'P2P Trade', icon: 'ti-arrows-left-right', color: '#6C5CE7', customAction: () => {
                   // Navigate to P2P Trading page
                   const event = new CustomEvent('navigate-to-page', { detail: 'p2p' });
                   window.dispatchEvent(event);
@@ -735,169 +944,155 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         </div>
       )}
 
-      {/* ══ DEPOSIT TAB ═════════════════════════════════════════════════════════ */}
-      {tab === 'deposit' && (
+      {/* Exchange deposit tab removed — on-chain only */}
+
+      {/* ══ ON-CHAIN DEPOSIT TAB ════════════════════════════════════════════ */}
+      {tab === 'chain_dep' && (
         <div style={{ animation: 'wFadeUp 0.25s ease-out' }}>
-          <StepIndicator steps={['Amount & Method', 'Verify Request']} currentStep={depStep} />
-          
-          {depStep === 1 ? (
+          <StepIndicator steps={['Choose Network', 'Send & Submit TXID', 'Confirmed']} currentStep={chainDepStep} />
+
+          {chainDepStep === 1 && (
             <div className="wc-panel" style={{ display: 'flex', flexDirection: 'column', gap: '22px', maxWidth: '580px', margin: '0 auto' }}>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Deposit USDT</div>
-                <div style={{ fontSize: '12.5px', color: '#8A9BB8' }}>Via verified Binance Pay or Bybit transfer</div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Deposit USDT (On-Chain)</div>
+                <div style={{ fontSize: '12.5px', color: '#8A9BB8' }}>Automatic — no admin approval needed. Fee: <strong style={{ color: '#F5A623' }}>{chainDepFeePercent}%</strong></div>
               </div>
 
-              {/* Method selection */}
+              {/* Chain selection */}
               <div>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '10px' }}>Transfer Method</label>
-                <div className="wc-methods-container">
-                  {[
-                    { id: 'binance', label: 'Binance Pay', icon: '🟡', desc: 'Instant verification' },
-                    { id: 'bybit',   label: 'Bybit Pay',   icon: '⚫', desc: 'Verification 5-15m' },
-                  ].map(m => (
-                    <button key={m.id} className={`wc-method${depMethod === m.id ? ' active' : ''}`} onClick={() => setDepMethod(m.id)}>
-                      <span style={{ fontSize: '24px', flexShrink: 0 }}>{m.icon}</span>
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#fff' }}>{m.label}</div>
-                        <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '1px' }}>{m.desc}</div>
+                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '10px' }}>Select Blockchain Network</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {Object.entries(CHAIN_CONFIGS).map(([key, cfg]) => (
+                    <button key={key} className={`wc-method${chainDepChain === key ? ' active' : ''}`} onClick={() => setChainDepChain(key)} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px', padding: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>{cfg.icon}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{cfg.label}</span>
                       </div>
+                      <span style={{ fontSize: '10px', color: '#4A5568' }}>{cfg.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Instructions */}
-              <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '18px', border: '1px solid #1E2640' }}>
-                <div style={{ fontSize: '11px', color: '#F5A623', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="ti ti-help-circle" /> How to Deposit via {depMethod === 'binance' ? 'Binance' : 'Bybit'}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {[
-                    `Open the ${depMethod === 'binance' ? 'Binance' : 'Bybit'} App on your mobile device`,
-                    `Send the desired USDT amount to our verified account address below`,
-                    `Ensure to copy the exact address/email and take a screenshot of your transaction proof`,
-                  ].map((s, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#F5A623', flexShrink: 0 }}>{i + 1}</div>
-                      <span style={{ fontSize: '12px', color: '#8A9BB8', lineHeight: 1.4 }}>{s}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '10px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#fff', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '10px' }}>{depositEmail}</span>
-                  <button onClick={() => handleCopy(depositEmail, 'depemail')} style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)', color: '#F5A623', fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                    {copied === 'depemail' ? '✓ Copied' : <><i className="ti ti-copy" /> Copy</>}
-                  </button>
-                </div>
-              </div>
-
-              {/* Amount input */}
+              {/* Amount */}
               <div>
                 <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Amount to Deposit (USDT)</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '22px', fontWeight: 700, color: '#4A5568', pointerEvents: 'none' }}>$</span>
                   <input
                     type="number" step="0.01" min={minDep}
-                    value={depAmount} onChange={e => setDepAmount(e.target.value)}
+                    value={chainDepAmount} onChange={e => setChainDepAmount(e.target.value)}
                     placeholder="0.00"
                     className="wc-input"
                     style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
                   />
                 </div>
-                {depAmtNum > 0 && (
+                {chainDepAmtNum > 0 && (
                   <div style={{ background: '#0B0E1A', borderRadius: '12px', padding: '16px', border: '1px solid #1E2640', marginTop: '12px' }}>
-                    <FeePill label="Deposit Amount" value={`$${fmt(depAmtNum)} USDT`} color="#fff" />
+                    <FeePill label="Deposit Amount" value={`$${fmt(chainDepAmtNum)} USDT`} color="#fff" />
                     <Divider />
-                    <FeePill label={`Verification Fee (${feePercent}%)`} value={`-$${fmt(depFee)} USDT`} color="#FF4D4D" />
+                    <FeePill label={`Platform Fee (${chainDepFeePercent}%)`} value={`-$${fmt(chainDepFee)} USDT`} color="#FF4D4D" />
                     <Divider />
-                    <FeePill label="💰 Net Credit to Wallet" value={`$${fmt(depNet)} USDT`} color="#00C896" />
-                    <div style={{ fontSize: '11px', color: '#4A5568', textAlign: 'right', marginTop: '8px' }}>≈ {fmtEtb(depNet * rate)} ETB</div>
+                    <FeePill label="💰 Net Credit to Wallet" value={`$${fmt(chainDepNet)} USDT`} color="#00C896" />
+                    <div style={{ fontSize: '11px', color: '#4A5568', textAlign: 'right', marginTop: '8px' }}>≈ {fmtEtb(chainDepNet * rate)} ETB</div>
                   </div>
-                )}
-              </div>
-
-              {/* Exchange Username/Email */}
-              <div className="wc-grid-2col">
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Your {depMethod === 'binance' ? 'Binance' : 'Bybit'} Email *</label>
-                  <input
-                    type="email" value={depEmail} onChange={e => setDepEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="wc-input" style={{ padding: '12px 14px', fontSize: '13px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Your {depMethod === 'binance' ? 'Binance' : 'Bybit'} Username *</label>
-                  <input
-                    type="text" value={depUname} onChange={e => setDepUname(e.target.value)}
-                    placeholder="Account nickname"
-                    className="wc-input" style={{ padding: '12px 14px', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Transaction Pay ID / Reference (Optional)</label>
-                <input
-                  type="text" value={depRef} onChange={e => setDepRef(e.target.value)}
-                  placeholder={`${depMethod === 'binance' ? 'Binance Pay ID' : 'Bybit Ref ID'}`}
-                  className="wc-input" style={{ padding: '12px 14px', fontSize: '13px' }}
-                />
-              </div>
-
-              {/* Upload screenshot */}
-              <div>
-                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Screenshot Proof *</label>
-                {depScreenshotPreview ? (
-                  <div style={{ position: 'relative', borderRadius: '12px', border: '1.5px solid #1E2640', overflow: 'hidden', height: '180px', background: '#0B0E1A' }}>
-                    <img src={depScreenshotPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    <button 
-                      onClick={() => { setDepScreenshot(null); setDepScreenshotPreview(null); }}
-                      style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255,77,77,0.18)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '8px', color: '#FF4D4D', padding: '6px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <i className="ti ti-trash" /> Remove
-                    </button>
-                  </div>
-                ) : (
-                  <label className="wc-upload">
-                    <span style={{ fontSize: '32px', color: '#F5A623' }}><i className="ti ti-upload" /></span>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#8A9BB8' }}>Click to Upload Receipt Screenshot</span>
-                    <span style={{ fontSize: '10.5px', color: '#4A5568' }}>Supports PNG, JPG, JPEG · Max 5MB</span>
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
-                      const file = e.target.files[0]; if (!file) return;
-                      try { setDepLoading(true); const c = await compressImage(file); setDepScreenshot(c); setDepScreenshotPreview(c); }
-                      catch (err) { setError('Failed to process image'); }
-                      finally { setDepLoading(false); }
-                    }} />
-                  </label>
                 )}
               </div>
 
               <InfoBox>
-                💡 Admin will verify the transfer in your screenshot and credit your account within <strong>5–15 minutes</strong>. A verification fee of <strong>{feePercent}%</strong> applies.
+                ✅ <strong>Automatic Processing:</strong> After you send USDT on the selected network and submit your TXID, your wallet balance is credited automatically once confirmed on-chain. No admin approval required.
               </InfoBox>
 
               <button
                 className="wc-btn"
-                onClick={handleDepositSubmit}
-                disabled={depLoading || !depAmount || !depEmail.trim() || !depUname.trim() || !depScreenshot}
+                onClick={() => {
+                  if (chainDepAmtNum < minDep) { setError(`Minimum deposit is $${minDep}`); return; }
+                  setChainDepStep(2);
+                }}
+                disabled={!chainDepAmount || chainDepAmtNum < minDep}
               >
-                {depLoading ? '⏳ Processing Request...' : `Submit ${depMethod === 'binance' ? 'Binance' : 'Bybit'} Deposit`}
+                Continue — View Deposit Address <i className="ti ti-arrow-right" style={{ marginLeft: '4px' }} />
               </button>
             </div>
-          ) : (
+          )}
+
+          {chainDepStep === 2 && (() => {
+            const adminWallet = getChainWallet(chainDepChain);
+            const cfg = CHAIN_CONFIGS[chainDepChain];
+            return (
+              <div className="wc-panel" style={{ display: 'flex', flexDirection: 'column', gap: '22px', maxWidth: '580px', margin: '0 auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <BackBtn onClick={() => setChainDepStep(1)} />
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff' }}>Send & Submit TXID</div>
+                </div>
+
+                {/* Admin wallet address to send to */}
+                <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '20px', border: '1px solid #1E2640' }}>
+                  <div style={{ fontSize: '11px', color: '#F5A623', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{cfg.icon}</span> Send {cfg.token} to this {cfg.label} Address
+                  </div>
+                  {[
+                    { label: 'Network', value: cfg.label },
+                    { label: 'Token', value: `${cfg.token} (USDT)` },
+                    { label: 'Amount to Send', value: `$${fmt(chainDepAmtNum)} USDT` },
+                    { label: 'After Fee Credit', value: `$${fmt(chainDepNet)} USDT` },
+                  ].map(row => (
+                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '12px' }}>
+                      <span style={{ color: '#8A9BB8' }}>{row.label}</span>
+                      <span style={{ color: '#fff', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{row.value}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: '14px' }}>
+                    <div style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>Deposit Address</div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#fff', fontWeight: 700, wordBreak: 'break-all', flex: 1 }}>{adminWallet || 'Address will be configured by admin'}</span>
+                      {adminWallet && (
+                        <button onClick={() => handleCopy(adminWallet, 'chainaddr')} style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.3)', color: '#F5A623', fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}>
+                          {copied === 'chainaddr' ? '✓ Copied' : <><i className="ti ti-copy" /> Copy</>}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <InfoBox type="warn">
+                  ⚠️ <strong>Important:</strong> Only send <strong>USDT</strong> on the <strong>{cfg.label}</strong> network to this address. Sending other tokens or using wrong network will result in permanent loss of funds.
+                </InfoBox>
+
+                {/* TX hash input */}
+                <div>
+                  <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Transaction Hash / TXID *</label>
+                  <input
+                    type="text" value={chainDepTxHash} onChange={e => setChainDepTxHash(e.target.value)}
+                    placeholder="Paste your transaction hash (0x... or TXID)"
+                    className="wc-input" style={{ padding: '12px 14px', fontSize: '13px', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <div style={{ fontSize: '10.5px', color: '#4A5568', marginTop: '6px' }}>Find TXID in your wallet app after sending. Required for automatic verification.</div>
+                </div>
+
+                <button
+                  className="wc-btn"
+                  onClick={handleChainDepositSubmit}
+                  disabled={chainDepLoading || !chainDepTxHash.trim()}
+                >
+                  {chainDepLoading ? '⏳ Verifying & Crediting...' : '⚡ Submit Deposit — Auto Credit to Wallet'}
+                </button>
+              </div>
+            );
+          })()}
+
+          {chainDepStep === 3 && (
             <SuccessScreen
-              title="Deposit Request Submitted ✓"
-              subtitle="Verification Pending"
+              title="Deposit Credited Automatically ✅"
+              subtitle="Funds added to your balance instantly"
               rows={[
-                ['Deposit Method', `${depMethod === 'binance' ? 'Binance Pay' : 'Bybit Transfer'}`],
-                ['Sender Account', depEmail, '#fff'],
-                ['Total Sent', `$${fmt(depAmtNum)} USDT`, '#fff'],
-                ['Platform Fee', `-$${fmt(depFee)} USDT`, '#FF4D4D'],
-                ['USDT to Credit', `$${fmt(depNet)} USDT`, '#00C896'],
-                ['Review Status', '⏳ Pending Review', '#F5A623'],
+                ['Network', CHAIN_CONFIGS[chainDepChain]?.label || chainDepChain],
+                ['Amount Sent', `$${fmt(chainDepAmtNum)} USDT`, '#fff'],
+                ['Platform Fee', `-$${fmt(chainDepFee)} USDT`, '#FF4D4D'],
+                ['Net Credit', `$${fmt(chainDepNet)} USDT`, '#00C896'],
+                ['Status', '⚡ Credited & Available', '#00C896'],
               ]}
-              note={`ℹ️ Admin is verifying your payment screenshot. Credit of $${fmt(depNet)} USDT will be instant upon receipt confirmation.`}
+              note={`🎉 Your deposit of $${fmt(chainDepNet)} USDT has been automatically credited to your wallet balance. No admin approval required. You can trade P2P, deposit to brokers, or buy prop accounts right now!`}
               onDone={() => resetTab('balance')}
               doneLabel="View Asset Overview"
             />
@@ -905,8 +1100,149 @@ const WalletCard = ({ initialTab = 'balance' }) => {
         </div>
       )}
 
-      {/* ══ WITHDRAW TAB ════════════════════════════════════════════════════════ */}
-      {tab === 'withdraw' && (
+      {/* ══ ON-CHAIN WITHDRAW TAB ════════════════════════════════════════════ */}
+      {tab === 'chain_wd' && (
+        <div style={{ animation: 'wFadeUp 0.25s ease-out' }}>
+          <StepIndicator steps={['Network & Amount', 'Confirm', 'Submitted']} currentStep={chainWdStep} />
+
+          {chainWdStep === 1 && (
+            <div className="wc-panel" style={{ display: 'flex', flexDirection: 'column', gap: '22px', maxWidth: '580px', margin: '0 auto' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>Withdraw USDT (On-Chain)</div>
+                <div style={{ fontSize: '12.5px', color: '#8A9BB8' }}>Send USDT directly to your wallet. Fee: <strong style={{ color: '#F5A623' }}>{chainWdFeePercent}%</strong></div>
+              </div>
+
+              {/* Available balance */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.18)', borderRadius: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#8A9BB8', fontWeight: 600 }}>Available Balance</span>
+                <span style={{ fontSize: '16px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>${fmt(available)} USDT</span>
+              </div>
+
+              {/* Chain selection */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '10px' }}>Select Withdrawal Network</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {Object.entries(CHAIN_CONFIGS).map(([key, cfg]) => (
+                    <button key={key} className={`wc-method${chainWdChain === key ? ' active' : ''}`} onClick={() => setChainWdChain(key)} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px', padding: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>{cfg.icon}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{cfg.label}</span>
+                      </div>
+                      <span style={{ fontSize: '10px', color: '#4A5568' }}>{cfg.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Amount to Withdraw (USDT)</label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '22px', fontWeight: 700, color: '#4A5568', pointerEvents: 'none' }}>$</span>
+                  <input
+                    type="number" step="0.01" min={minWd}
+                    value={chainWdAmount} onChange={e => setChainWdAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="wc-input"
+                    style={{ padding: '16px 16px 16px 36px', fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
+                  />
+                </div>
+                {available > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                    <span style={{ fontSize: '11px', color: '#4A5568' }}>Minimum: ${minWd} USDT</span>
+                    <button type="button" onClick={() => setChainWdAmount(available.toFixed(2))} style={{ background: 'none', border: 'none', color: '#F5A623', cursor: 'pointer', fontWeight: 700, fontSize: '11.5px', padding: 0 }}>Withdraw Max</button>
+                  </div>
+                )}
+                {chainWdAmtNum > 0 && (
+                  <div style={{ background: '#0B0E1A', borderRadius: '12px', padding: '16px', border: '1px solid #1E2640', marginTop: '12px' }}>
+                    <FeePill label="Withdrawal Amount" value={`$${fmt(chainWdAmtNum)} USDT`} color="#fff" />
+                    <Divider />
+                    <FeePill label={`Platform Fee (${chainWdFeePercent}%)`} value={`-$${fmt(chainWdFee)} USDT`} color="#FF4D4D" />
+                    <Divider />
+                    <FeePill label="💸 You Will Receive" value={`$${fmt(chainWdNet)} USDT`} color="#00C896" />
+                  </div>
+                )}
+              </div>
+
+              {/* Destination wallet address */}
+              <div>
+                <label style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Your {CHAIN_CONFIGS[chainWdChain]?.label} Wallet Address *</label>
+                <input
+                  type="text" value={chainWdAddress} onChange={e => setChainWdAddress(e.target.value)}
+                  placeholder={chainWdChain === 'TRC20' ? 'TRC20 Tron address (starts with T)' : '0x... wallet address'}
+                  className="wc-input" style={{ padding: '12px 14px', fontSize: '13px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+
+              <InfoBox type="warn">
+                ⚠️ Verify your wallet address carefully. On-chain withdrawals <strong>cannot be reversed</strong> once processed.
+              </InfoBox>
+
+              <button
+                className="wc-btn"
+                onClick={handleChainWithdrawSubmit}
+                disabled={!chainWdAmount || chainWdAmtNum < minWd || chainWdAmtNum > available || !chainWdAddress.trim()}
+              >
+                Review Withdrawal <i className="ti ti-arrow-right" style={{ marginLeft: '4px' }} />
+              </button>
+            </div>
+          )}
+
+          {chainWdStep === 2 && (
+            <div className="wc-panel" style={{ display: 'flex', flexDirection: 'column', gap: '22px', maxWidth: '580px', margin: '0 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <BackBtn onClick={() => setChainWdStep(1)} />
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff' }}>Confirm Withdrawal</div>
+              </div>
+
+              <div style={{ background: '#0B0E1A', borderRadius: '14px', padding: '20px', border: '1px solid #1E2640' }}>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px' }}>Withdrawal Summary</div>
+                <FeePill label="Network" value={CHAIN_CONFIGS[chainWdChain]?.label} color="#F5A623" />
+                <Divider />
+                <FeePill label="Gross Amount" value={`$${fmt(chainWdAmtNum)} USDT`} color="#fff" />
+                <Divider />
+                <FeePill label={`Platform Fee (${chainWdFeePercent}%)`} value={`-$${fmt(chainWdFee)} USDT`} color="#FF4D4D" />
+                <Divider />
+                <FeePill label="You Will Receive" value={`$${fmt(chainWdNet)} USDT`} color="#00C896" />
+                <Divider />
+                <FeePill label="Destination Address" value={chainWdAddress.length > 24 ? `${chainWdAddress.slice(0,12)}...${chainWdAddress.slice(-6)}` : chainWdAddress} color="#8A9BB8" />
+              </div>
+
+              <InfoBox type="warn">
+                ⚠️ Confirming will deduct <strong>${fmt(chainWdAmtNum)} USDT</strong> from your wallet. You will receive <strong>${fmt(chainWdNet)} USDT</strong> at the address above via <strong>{CHAIN_CONFIGS[chainWdChain]?.label}</strong> within 1 hour.
+              </InfoBox>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="wc-btn-outline" onClick={() => setChainWdStep(1)} style={{ flex: 1 }}>Back</button>
+                <button className="wc-btn" onClick={handleChainWithdrawConfirm} disabled={chainWdLoading} style={{ flex: 2 }}>
+                  {chainWdLoading ? '⏳ Processing...' : 'Confirm & Submit'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {chainWdStep === 3 && (
+            <SuccessScreen
+              title="Withdrawal Queued ✓"
+              subtitle="On-chain processing started"
+              rows={[
+                ['Network', CHAIN_CONFIGS[chainWdChain]?.label || chainWdChain],
+                ['Amount Requested', `$${fmt(chainWdAmtNum)} USDT`, '#fff'],
+                ['Platform Fee', `-$${fmt(chainWdFee)} USDT`, '#FF4D4D'],
+                ['You Will Receive', `$${fmt(chainWdNet)} USDT`, '#00C896'],
+                ['Destination', `${chainWdAddress.slice(0,14)}...`, '#F5A623'],
+                ['ETA', '~ 30–60 minutes', '#8A9BB8'],
+              ]}
+              note={`⚡ Your withdrawal of $${fmt(chainWdNet)} USDT will be sent to your wallet address on the ${CHAIN_CONFIGS[chainWdChain]?.label} network. Platform fee of $${fmt(chainWdFee)} goes to EthioSwap treasury.`}
+              onDone={() => resetTab('balance')}
+              doneLabel="View Asset Overview"
+            />
+          )}
+        </div>
+      )}
+
+      {/* Exchange withdraw tab removed — on-chain only */}
+      {false && tab === 'withdraw' && (
         <div style={{ animation: 'wFadeUp 0.25s ease-out' }}>
           <StepIndicator steps={['Details', 'Confirm Transaction', 'Completed']} currentStep={wdStep} />
           

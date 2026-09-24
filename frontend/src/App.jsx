@@ -16,6 +16,7 @@ import NotificationsPage from './pages/NotificationsPage.jsx';
 import ScanPage from './pages/ScanPage.jsx';
 import SellerProfilePage from './pages/SellerProfilePage.jsx';
 import Logo from './components/Logo.jsx';
+import FundedAccountsPage from './components/FundedAccountsPage.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { supabase } from './lib/supabase';
 
@@ -1055,12 +1056,13 @@ const RecoveryForm = () => {
   );
 };
 
-const PAGE_TITLES = { p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile' };
+const PAGE_TITLES = { p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile', funded: 'Funded Accounts' };
 
 const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setShowNotifications, notifCount }) => {
   const navItems = [
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
+    { id: 'funded', icon: 'ti ti-trending-up', label: 'Funded' },
     { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
     { id: 'notifications', icon: 'ti ti-bell', label: 'Notifications' },
     { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
@@ -1117,7 +1119,7 @@ const MobileBottomNav = ({ page, setPage }) => {
   const tabs = [
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
-    { id: 'scan', icon: 'ti ti-scan', label: 'Scan', center: true },
+    { id: 'funded', icon: 'ti ti-trending-up', label: 'Funded', center: true },
     { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
     { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
   ];
@@ -1182,6 +1184,8 @@ const AppContent = () => {
         setPage('profile');
       } else if (dest === 'notifications') {
         setPage('notifications');
+      } else if (dest === 'funded') {
+        setPage('funded');
       }
     };
     window.addEventListener('ethioswap_navigate', handleNavigate);
@@ -1270,6 +1274,7 @@ const AppContent = () => {
         <div style={{ maxWidth: 'var(--content-max)', margin: '0 auto' }}>
           {page === 'p2p' && <P2PListings onNavigateToSeller={navigateToSeller} onNavigateToTradeDetail={navigateToTradeDetail} />}
           {page === 'wallet' && <WalletCard initialTab={walletInitialTab} />}
+          {page === 'funded' && <FundedAccountsPage setPage={setPage} />}
           {page === 'profile' && <ProfilePage />}
           {page === 'settings' && <SettingsPage user={user} onLogout={logout} />}
           {page === 'transactions' && <TransactionHistory />}

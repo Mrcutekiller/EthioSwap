@@ -1441,6 +1441,168 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
+      {/* ── FUNDED ACCOUNTS SECTION ── */}
+      <section id="funded-accounts" style={{ padding: '100px 24px', background: 'linear-gradient(180deg, #0a0a0a 0%, #0d0c12 100%)', borderTop: '1px solid rgba(245,166,35,0.1)', position: 'relative', overflow: 'hidden', zIndex: 10 }}>
+        {/* Background glow effects */}
+        <div style={{ position: 'absolute', top: '-200px', left: '-200px', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-100px', right: '-100px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(108,92,231,0.08) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Section header */}
+          <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '50px', padding: '8px 20px', marginBottom: '24px' }}>
+              <span style={{ fontSize: '18px' }}>📈</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', letterSpacing: '0.08em', textTransform: 'uppercase' }}>NEW — Prop Trading for Ethiopians</span>
+            </div>
+            <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '56px', color: '#fff', margin: '0 0 20px 0' }}>
+              Buy <span style={{ color: '#F5A623' }}>Funded Accounts</span><br />
+              <span style={{ color: 'var(--accent-green)' }}>From Ethiopia</span>
+            </h2>
+            <p style={{ fontSize: width < 768 ? '15px' : '18px', color: 'var(--text-dim)', maxWidth: '680px', margin: '0 auto', lineHeight: 1.7 }}>
+              Access the world's top prop trading firms — FTMO, The5ers, Topstep, and 10+ more — directly from Ethiopia.
+              Pay with your EthioSwap wallet. No admin approval. Automatic processing.
+            </p>
+          </div>
+
+          {/* How it works - 3 steps */}
+          <div className="reveal-on-scroll" style={{ display: 'grid', gridTemplateColumns: width < 768 ? '1fr' : 'repeat(3, 1fr)', gap: '20px', marginBottom: '64px' }}>
+            {[
+              { step: '01', icon: '🔍', title: 'Browse & Choose', desc: 'Search 13+ top prop firms verified to work in Ethiopia. Filter by account size, price, and features.' },
+              { step: '02', icon: '📝', title: 'Fill Your Info & Pay', desc: 'Enter your full name, father\'s name, email, and trading experience. Pay instantly from your USDT wallet.' },
+              { step: '03', icon: '🚀', title: 'Receive Credentials', desc: 'Admin buys the account on your behalf with your details. Login credentials delivered to your email within 24hrs.' },
+            ].map((s, i) => (
+              <div key={i} style={{ background: 'linear-gradient(145deg, rgba(20,24,39,0.9), rgba(11,14,26,0.95))', border: '1px solid rgba(245,166,35,0.12)', borderRadius: '20px', padding: '28px', position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.35)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(245,166,35,0.12)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div style={{ position: 'absolute', top: '-10px', right: '20px', fontSize: '60px', fontWeight: 900, color: 'rgba(245,166,35,0.06)', fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>{s.step}</div>
+                <div style={{ fontSize: '36px', marginBottom: '16px' }}>{s.icon}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: '0 0 10px 0' }}>{s.title}</h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Firms showcase grid */}
+          <div className="reveal-on-scroll" style={{ marginBottom: '64px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623', textTransform: 'uppercase', letterSpacing: '0.1em' }}>🇪🇹 Firms That Accept Ethiopian Traders</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: width < 480 ? '1fr 1fr' : width < 768 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px' }}>
+              {[
+                { name: 'FTMO', emoji: '🏆', color: '#F5A623', size: '$10K–$200K' },
+                { name: 'The5ers', emoji: '🌍', color: '#00C896', size: '$5K–$100K' },
+                { name: 'Topstep', emoji: '📊', color: '#6C5CE7', size: '$50K–$150K' },
+                { name: 'E8 Funding', emoji: '⚡', color: '#E056FD', size: '$25K–$250K' },
+                { name: 'FunderPro', emoji: '💎', color: '#4EC9F0', size: '$10K–$200K' },
+                { name: 'Alpha Capital', emoji: '🔥', color: '#FF4D6D', size: '$10K–$100K' },
+                { name: 'City Traders', emoji: '🏙️', color: '#43E97B', size: '$5K–$100K' },
+                { name: 'Funded Next', emoji: '🚀', color: '#F7971E', size: '$10K–$200K' },
+                { name: 'Maven Trading', emoji: '📈', color: '#00C896', size: '$25K–$100K' },
+                { name: 'GFT', emoji: '💰', color: '#F5A623', size: '$10K–$100K' },
+              ].map((firm, i) => (
+                <div key={i} style={{
+                  background: 'rgba(20,24,39,0.8)',
+                  border: `1px solid ${firm.color}20`,
+                  borderRadius: '14px',
+                  padding: '16px 12px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s ease',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${firm.color}50`; e.currentTarget.style.background = `${firm.color}08`; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = `${firm.color}20`; e.currentTarget.style.background = 'rgba(20,24,39,0.8)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                  onClick={onGetStarted}
+                >
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>{firm.emoji}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', marginBottom: '3px' }}>{firm.name}</div>
+                  <div style={{ fontSize: '10px', color: firm.color, fontWeight: 600 }}>{firm.size}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Broker Deposit Highlight for Ethiopian Traders */}
+          <div className="reveal-on-scroll" style={{ background: 'linear-gradient(135deg, rgba(0,200,150,0.06), rgba(20,24,39,0.95))', border: '1px solid rgba(0,200,150,0.2)', borderRadius: '20px', padding: '32px', marginBottom: '56px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)', borderRadius: '30px', padding: '4px 14px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '13px' }}>🏦</span>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Direct Broker Funding</span>
+                </div>
+                <h3 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>Deposit to Forex & Synthetic Brokers from Ethiopia</h3>
+                <p style={{ fontSize: '13.5px', color: 'var(--text-dim)', margin: 0, maxWidth: '640px' }}>
+                  Cannot fund your Exness, Deriv, or XM account with local bank cards? Fund directly from your EthioSwap wallet balance. Funds deposited within 1–3 hours.
+                </p>
+              </div>
+              <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #00C896, #00A87A)', color: '#0A0C12', fontWeight: 800, fontSize: '14px', padding: '14px 26px', borderRadius: '12px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,200,150,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                Deposit to Broker →
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: width < 480 ? '1fr 1fr' : width < 768 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: '10px' }}>
+              {[
+                { name: 'Exness', icon: '🟡', desc: 'Instant MT4/5' },
+                { name: 'Deriv', icon: '🔴', desc: 'CR & Synthetics' },
+                { name: 'XM Global', icon: '⚪', desc: 'Micro & Standard' },
+                { name: 'JustMarkets', icon: '🔵', desc: '1:3000 Leverage' },
+                { name: 'HFM (HotForex)', icon: '🟠', desc: 'Cent Accounts' },
+                { name: 'IC Markets', icon: '🟢', desc: 'Raw Spread ECN' },
+              ].map((b, i) => (
+                <div key={i} style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '12px', padding: '14px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '22px', marginBottom: '6px' }}>{b.icon}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{b.name}</div>
+                  <div style={{ fontSize: '10px', color: '#8A9BB8', marginTop: '2px' }}>{b.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key benefits */}
+          <div className="reveal-on-scroll" style={{ display: 'grid', gridTemplateColumns: width < 768 ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '16px', marginBottom: '56px' }}>
+            {[
+              { icon: '⚡', label: 'Instant Payment', desc: 'Pay from your USDT wallet' },
+              { icon: '🔒', label: 'No Admin Approval', desc: 'Fully automatic processing' },
+              { icon: '🇪🇹', label: 'Ethiopia Friendly', desc: 'All firms accept ET traders' },
+              { icon: '📧', label: '24hr Delivery', desc: 'Credentials sent to email' },
+            ].map((b, i) => (
+              <div key={i} style={{ background: 'rgba(245,166,35,0.04)', border: '1px solid rgba(245,166,35,0.1)', borderRadius: '14px', padding: '18px 14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '28px', marginBottom: '8px' }}>{b.icon}</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>{b.label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{b.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Fee transparency callout */}
+          <div className="reveal-on-scroll" style={{ background: 'linear-gradient(135deg, rgba(245,166,35,0.06), rgba(108,92,231,0.04))', border: '1px solid rgba(245,166,35,0.18)', borderRadius: '20px', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px', marginBottom: '48px' }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>💡 Transparent Fee Structure</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-dim)', maxWidth: '600px', lineHeight: 1.6 }}>
+                A small <strong style={{ color: '#F5A623' }}>3% service fee</strong> is added on top of the firm's plan price. This fee is automatically collected and sent to the EthioSwap admin wallet. No hidden charges.
+              </div>
+              <div style={{ marginTop: '12px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {[['Plan Price', '$100', '#fff'], ['Service Fee (3%)', '+$3', '#FF6B6B'], ['Total', '$103', '#F5A623']].map(([l, v, c]) => (
+                  <div key={l} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '10px', color: '#4A5568', fontWeight: 600, textTransform: 'uppercase' }}>{l}</span>
+                    <span style={{ fontSize: '18px', fontWeight: 800, color: c, fontFamily: 'JetBrains Mono, monospace' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #F5A623, #D88E10)', color: '#0A0C12', fontWeight: 800, fontSize: '15px', padding: '16px 32px', borderRadius: '14px', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(245,166,35,0.35)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              Browse All Firms →
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ SECTION ── */}
       <section id="faq" style={{ padding: '120px 24px', background: 'var(--bg)', position: 'relative', zIndex: 10 }}>
         <div className="section-curve" style={{ bottom: '-50px' }} />
