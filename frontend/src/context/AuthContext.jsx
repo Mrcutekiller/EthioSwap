@@ -101,65 +101,82 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const profileLoadingPromisesRef = React.useRef(new Map());
+
   const loadUserProfile = async (userId, passedAuthUser = null) => {
-    let authUser = passedAuthUser;
-    if (!authUser) {
+    if (!userId) return null;
+
+    // Deduplicate concurrent calls for the same user (e.g. login + onAuthStateChange)
+    if (profileLoadingPromisesRef.current.has(userId)) {
+      return profileLoadingPromisesRef.current.get(userId);
+    }
+
+    const loadPromise = (async () => {
       try {
-        const { data } = await supabase.auth.getUser();
-        authUser = data?.user;
-      } catch (err) {
-        console.error('Failed to get auth user:', err);
-      }
-    }
-    const authRole = authUser?.user_metadata?.role || 'user';
+        let authUser = passedAuthUser;
+        if (!authUser) {
+          try {
+            const { data } = await supabase.auth.getUser();
+            authUser = data?.user;
+          } catch (err) {
+            console.warn('Failed to get auth user:', err);
+          }
+        }
+        const authRole = authUser?.user_metadata?.role || 'user';
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-    if (data) {
-      if (data.role !== authRole) {
-        await supabase.from('users').update({ role: authRole }).eq('id', userId);
-        data.role = authRole;
-      }
-      setUser(data);
-      localStorage.setItem('ethioswap_user', JSON.stringify(data));
-      return data;
-    }
-
-    if (error) {
-      console.error('Failed to load user profile:', error);
-      if (authUser) {
-        let address = '';
-        let privateKey = '';
-        try {
-          privateKey = ethers.Wallet.createRandom().privateKey;
-          address = new ethers.Wallet(privateKey).address;
-        } catch (walletErr) {
-          console.error('Failed to generate wallet for profile fallback:', walletErr);
+        if (data) {
+          if (data.role !== authRole && authRole === 'admin') {
+            await supabase.from('users').update({ role: authRole }).eq('id', userId);
+            data.role = authRole;
+          }
+          setUser(data);
+          localStorage.setItem('ethioswap_user', JSON.stringify(data));
+          return data;
         }
 
-        const newProfile = {
-          id: authUser.id,
-          username: authUser.user_metadata?.username || authUser.email?.split('@')[0],
-          email: authUser.email,
-          full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-          role: authRole,
-          status: 'active',
-          eth_address: address || null,
-          eth_private_key: privateKey || null,
-        };
-        const { error: insertError } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
-        if (!insertError) {
-          setUser(newProfile);
-          localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
-          return newProfile;
+        if (authUser) {
+          let address = '';
+          let privateKey = '';
+          try {
+            privateKey = ethers.Wallet.createRandom().privateKey;
+            address = new ethers.Wallet(privateKey).address;
+          } catch (walletErr) {
+            console.error('Failed to generate wallet for profile fallback:', walletErr);
+          }
+
+          const newProfile = {
+            id: authUser.id,
+            username: authUser.user_metadata?.username || authUser.email?.split('@')[0],
+            email: authUser.email,
+            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+            role: authRole,
+            status: 'active',
+            eth_address: address || null,
+            eth_private_key: privateKey || null,
+          };
+          const { error: insertError } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
+          if (!insertError) {
+            setUser(newProfile);
+            localStorage.setItem('ethioswap_user', JSON.stringify(newProfile));
+            return newProfile;
+          }
         }
+      } catch (profileErr) {
+        console.error('Error in loadUserProfile:', profileErr);
+      } finally {
+        profileLoadingPromisesRef.current.delete(userId);
       }
-    }
-    return null;
+      return null;
+    })();
+
+    profileLoadingPromisesRef.current.set(userId, loadPromise);
+    return loadPromise;
   };
 
   const loadSystemSettings = async () => {
@@ -553,18 +570,47 @@ export const AuthProvider = ({ children }) => {
     if (message) setTimeout(() => setSuccessState(null), 5000);
   };
 
-  const login = async (email, password) => {
+  const login = async (emailOrUsername, password) => {
     setLoading(true);
     setError(null);
     try {
+      const identifier = (emailOrUsername || '').trim();
+      if (!identifier || !password) {
+        throw new Error('Please enter both your email/username and password.');
+      }
+
+      // Check if identifier is an email or username
+      let loginEmail = identifier;
+      if (!loginEmail.includes('@')) {
+        // Resolve username to registered email
+        try {
+          const { data: resolvedEmail } = await supabase.rpc('resolve_login_email', { p_identifier: identifier });
+          if (resolvedEmail) {
+            loginEmail = resolvedEmail;
+          } else {
+            // Fallback query if RPC isn't available
+            const { data: userRow } = await supabase
+              .from('users')
+              .select('email')
+              .eq('username', identifier.toLowerCase())
+              .maybeSingle();
+            if (userRow?.email) {
+              loginEmail = userRow.email;
+            }
+          }
+        } catch (resolveErr) {
+          console.warn('Could not resolve username to email:', resolveErr);
+        }
+      }
+
       // Wrap sign-in in a 10-second timeout so it never hangs forever
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Sign in timed out. Please check your connection and try again.')), 10000)
       );
 
-      // Step 1: Verify credentials with Supabase Auth (race against timeout)
+      // Verify credentials with Supabase Auth (race against timeout)
       const { data, error: authError } = await Promise.race([
-        supabase.auth.signInWithPassword({ email, password }),
+        supabase.auth.signInWithPassword({ email: loginEmail, password }),
         timeoutPromise,
       ]);
 
@@ -573,13 +619,22 @@ export const AuthProvider = ({ children }) => {
 
       const userId = data.user.id;
 
-      // Load profile and log in immediately — no OTP
+      // Load profile and log in immediately
       const profile = await loadUserProfile(userId, data.user);
       if (!profile) throw new Error('User profile not found. Please try again or contact support.');
       setSuccess(`Welcome back, ${profile.username}!`);
       return { status: 'success', user: profile };
     } catch (err) {
-      const msg = err.message || 'Sign in failed. Please check your connection and try again.';
+      let msg = err.message || 'Sign in failed. Please check your connection and try again.';
+      if (msg.includes('Invalid login credentials') || msg.includes('invalid_grant')) {
+        msg = 'Incorrect email/username or password. Please try again.';
+      } else if (msg.includes('Email not confirmed')) {
+        msg = 'Please confirm your email address before signing in. Check your inbox or spam folder.';
+      } else if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+        msg = 'Too many attempts. Please wait a moment before trying again.';
+      } else if (msg.includes('User not found')) {
+        msg = 'No account found with this email/username. Please sign up first.';
+      }
       setError(msg);
       return null;
     } finally {
@@ -652,17 +707,53 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const privateKey = ethers.Wallet.createRandom().privateKey;
-      const address = new ethers.Wallet(privateKey).address;
-      const isAdminRole = email.toLowerCase() === 'ethioswap@gmail.com';
+      const cleanUsername = (username || '').trim().toLowerCase();
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const cleanPhone = (phone || '').trim();
+      const cleanFullName = (fullName || '').trim();
+      const cleanAge = age ? Number(age) : null;
+      const cleanCountry = (country || 'Ethiopia').trim();
+      const cleanCity = (city || '').trim();
+      const cleanWork = (work || '').trim();
 
+      if (!cleanUsername || cleanUsername.length < 3) {
+        throw new Error('Username must be at least 3 characters.');
+      }
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        throw new Error('Please enter a valid email address.');
+      }
+      if (!password || password.length < 6) {
+        throw new Error('Password must be at least 6 characters.');
+      }
+
+      // Generate local wallet keys for on-chain identity
+      let privateKey = '';
+      let address = '';
+      try {
+        const wallet = ethers.Wallet.createRandom();
+        privateKey = wallet.privateKey;
+        address = wallet.address;
+      } catch (wErr) {
+        console.warn('Wallet generation fallback:', wErr);
+      }
+
+      const isAdminRole = cleanEmail === 'ethioswap@gmail.com';
+
+      // Pass all metadata so DB trigger atomically populates users table with zero RLS block
       const { data, error: authError } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           data: {
-            username,
-            full_name: fullName,
+            username: cleanUsername,
+            full_name: cleanFullName,
+            phone: cleanPhone,
+            age: cleanAge,
+            country: cleanCountry,
+            city: cleanCity,
+            work: cleanWork,
+            eth_address: address,
+            eth_private_key: privateKey,
             role: isAdminRole ? 'admin' : 'user',
           }
         }
@@ -670,26 +761,30 @@ export const AuthProvider = ({ children }) => {
 
       if (authError) throw authError;
 
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .upsert({
+      if (data?.user) {
+        // If we have an active session or profilePic, update users table
+        try {
+          const profilePayload = {
             id: data.user.id,
-            username,
-            full_name: fullName,
-            phone,
-            email,
-            age: age ? Number(age) : null,
+            username: cleanUsername,
+            full_name: cleanFullName,
+            phone: cleanPhone,
+            email: cleanEmail,
+            age: cleanAge,
             role: isAdminRole ? 'admin' : 'user',
             eth_address: address,
             eth_private_key: privateKey,
-            country: country || null,
-            city: city || null,
-            work: work || null,
-            profile_pic: profilePic || null,
-          }, { onConflict: 'id' });
-
-        if (profileError) throw profileError;
+            country: cleanCountry || null,
+            city: cleanCity || null,
+            work: cleanWork || null,
+          };
+          if (profilePic) {
+            profilePayload.profile_pic = profilePic;
+          }
+          await supabase.from('users').upsert(profilePayload, { onConflict: 'id' });
+        } catch (upsertErr) {
+          console.warn('Profile upsert notice (handled by DB trigger):', upsertErr);
+        }
 
         if (data.session) {
           const profile = await loadUserProfile(data.user.id, data.user);
@@ -703,9 +798,17 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      throw new Error('Account creation failed.');
+      throw new Error('Account creation failed. Please try again.');
     } catch (err) {
-      setError(err.message);
+      let msg = err.message || 'Account creation failed. Please check your connection and try again.';
+      if (msg.includes('User already registered') || msg.includes('already registered')) {
+        msg = 'An account with this email already exists. Please sign in instead.';
+      } else if (msg.includes('users_username_key') || msg.includes('username is already taken') || msg.includes('duplicate key value violates unique constraint "users_username_key"')) {
+        msg = 'That username is already taken. Please choose another username.';
+      } else if (msg.includes('Password should be at least 6 characters')) {
+        msg = 'Password must be at least 6 characters.';
+      }
+      setError(msg);
       return null;
     } finally {
       setLoading(false);

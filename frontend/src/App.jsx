@@ -23,6 +23,38 @@ import { supabase } from './lib/supabase';
 const COUNTRIES = ['Ethiopia','Nigeria','Kenya','Ghana','South Africa','Tanzania','Uganda','Rwanda','Somalia','Sudan','Egypt','Morocco','Cameroon','Ivory Coast','Senegal','Mali','Burkina Faso','Niger','Chad','Guinea','Benin','Togo','Sierra Leone','Liberia','Gambia','Cape Verde','Djibouti','Eritrea','Seychelles','Mauritius','Comoros','Libya','Algeria','Tunisia','Botswana','Zimbabwe','Mozambique','Zambia','Malawi','Angola','Congo','Gabon','Equatorial Guinea','Central African Republic','Chad','Namibia','Lesotho','Eswatini'];
 const ETHIOPIAN_CITIES = ['Addis Ababa','Dire Dawa','Mekelle','Adama','Gondar','Hawassa','Bahir Dar','Jimma','Dessie','Jijiga','Harar','Shashamane','Nekemte','Debre Markos','Bishoftu','Arba Minch','Woldia','Sodo','Debre Birhan','Asella','Gojjam','Wolaita','Hadiya','Kembata','Sidama','Oromia','Amhara','Tigray','SNNPR'];
 
+const compressImage = (file, maxWidth = 320, maxHeight = 320, quality = 0.8) => {
+  return new Promise((resolve) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      resolve('');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
+        } else {
+          if (h > maxHeight) { w = Math.round((w * maxHeight) / h); h = maxHeight; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
 const PasswordStrength = ({ password }) => {
   let score = 0;
   if (password.length >= 8) score++;
@@ -91,14 +123,15 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
-    if (!email || !password) { setLocalError('Please enter both email and password.'); return; }
+    const identifier = (email || '').trim();
+    if (!identifier || !password) { setLocalError('Please enter both your email/username and password.'); return; }
     setIsSigningIn(true);
     // Safety fallback: if after 11s we're still "signing in", reset and show error
     const safetyTimer = setTimeout(() => {
       setIsSigningIn(false);
       setLocalError('Sign in is taking too long. Please check your connection and try again.');
     }, 11000);
-    const result = await login(email, password);
+    const result = await login(identifier, password);
     clearTimeout(safetyTimer);
     setIsSigningIn(false);
     if (result?.status === 'otp_required') {
@@ -273,8 +306,16 @@ const LoginForm = ({ onToggle, onBackToHome, externalError }) => {
             <p style={{ fontSize: '14px', color: '#8B8FA3', marginBottom: '28px', textAlign: 'center' }}>Sign in to your EthioSwap wallet</p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ position: 'relative' }}>
-                <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                <i className="ti ti-mail" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
+                <input
+                  type="text"
+                  placeholder="Email or Username"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  style={{ width: '100%', padding: '14px 16px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <i className="ti ti-user" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#8B8FA3', fontSize: '18px' }}></i>
               </div>
               <div style={{ position: 'relative' }}>
                 <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '14px 44px 14px 44px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
@@ -355,31 +396,49 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
   }, []);
 
   useEffect(() => {
-    if (!username || username.length < 3) { setUsernameError(''); return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) { setUsernameError('Only letters, numbers, underscores'); return; }
+    const cleanU = (username || '').trim().toLowerCase();
+    if (!cleanU || cleanU.length < 3) { setUsernameError(''); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanU)) { setUsernameError('Only letters, numbers, underscores'); return; }
     setCheckingUsername(true);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.from('users').select('id').eq('username', username.toLowerCase()).single();
-        setUsernameError(data ? 'Username is already taken' : '');
-      } catch (e) { console.error(e); }
-      finally { setCheckingUsername(false); }
-    }, 500);
+        const { data: isAvail, error: rpcErr } = await supabase.rpc('check_username_available', { p_username: cleanU });
+        if (!rpcErr && isAvail !== null && isAvail !== undefined) {
+          setUsernameError(!isAvail ? 'Username is already taken' : '');
+        } else {
+          const { data } = await supabase.from('users').select('id').eq('username', cleanU).maybeSingle();
+          setUsernameError(data ? 'Username is already taken' : '');
+        }
+      } catch (e) {
+        console.warn('Username check notice:', e);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 300);
     return () => clearTimeout(t);
   }, [username]);
 
   useEffect(() => {
-    if (!email) { setEmailError(''); return; }
+    const cleanE = (email || '').trim().toLowerCase();
+    if (!cleanE) { setEmailError(''); return; }
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!re.test(email)) { setEmailError('Invalid email address'); return; }
+    if (!re.test(cleanE)) { setEmailError('Invalid email address'); return; }
     setCheckingEmail(true);
     const t = setTimeout(async () => {
       try {
-        const { data } = await supabase.from('users').select('id').eq('email', email.toLowerCase()).single();
-        setEmailError(data ? 'Email is already registered' : '');
-      } catch (e) { console.error(e); }
-      finally { setCheckingEmail(false); }
-    }, 500);
+        const { data: isAvail, error: rpcErr } = await supabase.rpc('check_email_available', { p_email: cleanE });
+        if (!rpcErr && isAvail !== null && isAvail !== undefined) {
+          setEmailError(!isAvail ? 'Email is already registered' : '');
+        } else {
+          const { data } = await supabase.from('users').select('id').eq('email', cleanE).maybeSingle();
+          setEmailError(data ? 'Email is already registered' : '');
+        }
+      } catch (e) {
+        console.warn('Email check notice:', e);
+      } finally {
+        setCheckingEmail(false);
+      }
+    }, 300);
     return () => clearTimeout(t);
   }, [email]);
 
@@ -410,13 +469,19 @@ const SignupWizard = ({ onToggle, onBackToHome, externalError }) => {
 
   const goBack = () => { setDirection('back'); setLocalError(''); setStep(s => Math.max(s - 1, 1)); };
 
-  const handleFile = (e, setter, previewSetter) => {
+  const handleFile = async (e, setter, previewSetter) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setLocalError('File must be less than 5MB'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => { previewSetter(reader.result); setter(reader.result); };
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) { setLocalError('File must be less than 10MB'); return; }
+    try {
+      const compressedDataUrl = await compressImage(file);
+      previewSetter(compressedDataUrl);
+      setter(compressedDataUrl);
+    } catch (_) {
+      const reader = new FileReader();
+      reader.onloadend = () => { previewSetter(reader.result); setter(reader.result); };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async () => {
@@ -736,13 +801,19 @@ const GoogleProfileCompletion = () => {
   const cityOptions = country === 'Ethiopia' ? ETHIOPIAN_CITIES : [];
   const displayError = localError || error;
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setLocalError('File must be less than 5MB'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => { setProfilePicPreview(reader.result); setProfilePic(reader.result); };
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) { setLocalError('File must be less than 10MB'); return; }
+    try {
+      const compressed = await compressImage(file);
+      setProfilePicPreview(compressed);
+      setProfilePic(compressed);
+    } catch (_) {
+      const reader = new FileReader();
+      reader.onloadend = () => { setProfilePicPreview(reader.result); setProfilePic(reader.result); };
+      reader.readAsDataURL(file);
+    }
   };
 
   const goNext = () => {
