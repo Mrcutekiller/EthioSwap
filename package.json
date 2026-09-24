@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "npm --prefix frontend install && npm --prefix frontend run build",
-    "dev": "npm --prefix frontend run dev"
+    "dev": "npm --prefix frontend run dev",
+    "bot": "npm --prefix telegram-bot start",
+    "bot:dev": "npm --prefix telegram-bot run dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
