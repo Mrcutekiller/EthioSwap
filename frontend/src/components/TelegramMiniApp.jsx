@@ -186,6 +186,33 @@ export default function TelegramMiniApp() {
     } catch (_) {}
   };
 
+  // Helper to send instant notification directly to user's Telegram chat
+  const notifyTelegramChat = async (messageText) => {
+    try {
+      const tgUserId =
+        window.Telegram?.WebApp?.initDataUnsafe?.user?.id ||
+        new URLSearchParams(window.location.search).get('chat_id') ||
+        user?.telegram_chat_id;
+
+      if (!tgUserId) {
+        console.log('[Telegram Notification]: No chatId available in WebApp context.');
+        return;
+      }
+
+      await fetch('https://api.telegram.org/bot8920615384:AAHoJ5OCIzwehDYQ-xDe6Zr-aaGEO3L2h5c/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: tgUserId,
+          text: messageText,
+          parse_mode: 'Markdown',
+        }),
+      });
+    } catch (err) {
+      console.warn('[Telegram Chat Notification Error]:', err);
+    }
+  };
+
   // Fetch full transaction history
   const loadUserHistory = async () => {
     if (!user?.id) return;
@@ -236,6 +263,12 @@ export default function TelegramMiniApp() {
         setShowAuthModal(false);
         triggerHaptic('success');
         localStorage.setItem('ethioswap_tma_visited', 'true');
+        notifyTelegramChat(
+          `🔐 *EthioSwap Account Connected!*\n\n` +
+          `👤 *User:* @${authIdentifier.trim()}\n` +
+          `💰 *P2P Balance:* $${Number(res.user?.balance_usd || 0).toFixed(2)} USD\n` +
+          `✅ Your Telegram session is now linked with your EthioSwap account.`
+        );
         setActiveTab('buy');
       }
     } catch (err) {
@@ -261,6 +294,11 @@ export default function TelegramMiniApp() {
         setShowAuthModal(false);
         triggerHaptic('success');
         localStorage.setItem('ethioswap_tma_visited', 'true');
+        notifyTelegramChat(
+          `✨ *Welcome to EthioSwap!*\n\n` +
+          `👤 *New Account:* @${authIdentifier.trim()}\n` +
+          `🚀 Your account is registered and ready for instant P2P dollar trading!`
+        );
         setActiveTab('buy');
       }
     } catch (err) {
@@ -307,6 +345,15 @@ export default function TelegramMiniApp() {
       } else {
         triggerHaptic('success');
         setTradeSuccess('Order created successfully! Redirecting to orders...');
+        notifyTelegramChat(
+          `🛒 *P2P Buy Order Created!*\n\n` +
+          `💵 *Buying:* $${buyAmountUsd.toFixed(2)} USD\n` +
+          `💰 *Payable:* ${amountEtb.toLocaleString()} ETB (Rate: ${rate} ETB/$)\n` +
+          `👤 *Seller:* @${selectedListing.seller_name || 'Seller'}\n` +
+          `💳 *Payment Method:* ${selectedListing.payment_methods?.[0] || 'Telebirr'}\n` +
+          `🛡️ *Escrow:* Funds safely secured in Escrow.\n\n` +
+          `⚡ Transfer ETB to the seller and tap "I Have Paid" in the app!`
+        );
         setTimeout(() => {
           setSelectedListing(null);
           setActiveTab('orders');
@@ -345,6 +392,14 @@ export default function TelegramMiniApp() {
       triggerHaptic('success');
       setShowPostAdModal(false);
       setTradeSuccess('Ad published successfully!');
+      notifyTelegramChat(
+        `📢 *New P2P Listing Published!*\n\n` +
+        `📊 *Type:* ${postAdType.toUpperCase()} USD\n` +
+        `💵 *Amount:* $${amountUsd.toFixed(2)} USD\n` +
+        `📈 *Rate:* ${rate} ETB/USD\n` +
+        `💳 *Payment Method:* ${postAdPaymentMethod}\n` +
+        `🟢 *Status:* Active in EthioSwap P2P Marketplace.`
+      );
       setTimeout(() => setTradeSuccess(''), 3000);
     } catch (err) {
       setTradeError(err.message || 'Failed to post ad.');
@@ -370,6 +425,12 @@ export default function TelegramMiniApp() {
       });
       if (error) throw error;
       setDepositMsg('✅ Transaction submitted! Auto-crediting upon chain confirmation.');
+      notifyTelegramChat(
+        `📥 *On-Chain Deposit Submitted!*\n\n` +
+        `🔗 *Tx Hash:* \`${depositTxHash.trim()}\`\n` +
+        `🌐 *Network:* USDT TRC-20 / On-Chain\n` +
+        `⏳ *Status:* Pending automated verification (usually 1-3 minutes).`
+      );
       setDepositTxHash('');
       triggerHaptic('success');
     } catch (err) {
@@ -410,6 +471,12 @@ export default function TelegramMiniApp() {
 
       triggerHaptic('success');
       setWithdrawMsg('✅ Withdrawal submitted! Automated dispatch is processing.');
+      notifyTelegramChat(
+        `📤 *Withdrawal Requested!*\n\n` +
+        `💵 *Amount:* $${amount.toFixed(2)} USD\n` +
+        `🏦 *Destination:* \`${withdrawAddress.trim()}\` (${withdrawNetwork})\n` +
+        `⏳ *Status:* In queue for automated dispatch.`
+      );
       setWithdrawAmount('');
       setWithdrawAddress('');
     } catch (err) {
@@ -1437,6 +1504,13 @@ export default function TelegramMiniApp() {
                           onClick={async () => {
                             triggerHaptic('success');
                             await markTradeAsPaid(t.id);
+                            notifyTelegramChat(
+                              `✅ *Payment Confirmed by Buyer!*\n\n` +
+                              `💵 *Order:* #${t.id.slice(0, 8)}\n` +
+                              `💰 *Amount:* $${Number(t.amount_usd).toFixed(2)} USD (${Number(t.amount_etb).toLocaleString()} ETB)\n` +
+                              `🔔 *Status:* Marked as Paid.\n\n` +
+                              `The seller has been alerted to verify receipt and release the funds from escrow.`
+                            );
                           }}
                           style={{
                             width: '100%',
@@ -1459,6 +1533,12 @@ export default function TelegramMiniApp() {
                           onClick={async () => {
                             triggerHaptic('success');
                             await releaseEscrow(t.id);
+                            notifyTelegramChat(
+                              `🎉 *Escrow Released — Trade Completed!*\n\n` +
+                              `💵 *Order:* #${t.id.slice(0, 8)}\n` +
+                              `💰 *Amount:* $${Number(t.amount_usd).toFixed(2)} USD\n` +
+                              `✅ Funds released to buyer. Trade successfully completed!`
+                            );
                           }}
                           style={{
                             width: '100%',
