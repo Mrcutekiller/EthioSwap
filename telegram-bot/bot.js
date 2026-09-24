@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { BOT_TOKEN, MIN_ORDER_USD } = require('./config');
+const { BOT_TOKEN, MIN_ORDER_USD, WEB_APP_URL } = require('./config');
 const authService = require('./services/authService');
 const walletService = require('./services/walletService');
 const p2pService = require('./services/p2pService');
@@ -25,6 +25,9 @@ function getMainMenuKeyboard(isLoggedIn = false) {
   return {
     reply_markup: {
       keyboard: [
+        [
+          { text: '🚀 Launch P2P Web App', web_app: { url: WEB_APP_URL } },
+        ],
         [
           { text: '🛒 Buy $ (USD/USDT)' },
           { text: '💵 Sell $ (USD/USDT)' },
@@ -83,8 +86,39 @@ bot.onText(/\/start/, async (msg) => {
       `👉 Tap *🔐 Log In to EthioSwap* below or type /login to get started.`;
   }
 
+  // Configure persistent Telegram Menu Button to open Mini App
+  try {
+    await bot.setChatMenuButton({
+      chat_id: chatId,
+      menu_button: {
+        type: 'web_app',
+        text: 'P2P App',
+        web_app: { url: WEB_APP_URL },
+      },
+    });
+  } catch (_) {}
+
   await bot.sendMessage(chatId, text, {
     parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🚀 Launch P2P Mini App (Web)', web_app: { url: WEB_APP_URL } },
+        ],
+        [
+          { text: '🛒 Buy $', callback_data: 'menu_buy' },
+          { text: '💵 Sell $', callback_data: 'menu_sell' },
+        ],
+        [
+          { text: '💼 P2P Wallet', callback_data: 'menu_wallet' },
+          { text: '📋 My Orders', callback_data: 'menu_orders' },
+        ],
+      ],
+    },
+  });
+
+  // Also send bottom keyboard
+  await bot.sendMessage(chatId, '👇 Tap below to launch the Mini App or trade:', {
     ...getMainMenuKeyboard(Boolean(user)),
   });
 });

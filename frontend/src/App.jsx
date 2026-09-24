@@ -15,8 +15,8 @@ import SupportWidget from './components/SupportWidget.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import ScanPage from './pages/ScanPage.jsx';
 import SellerProfilePage from './pages/SellerProfilePage.jsx';
-import Logo from './components/Logo.jsx';
 import FundedAccountsPage from './components/FundedAccountsPage.jsx';
+import TelegramMiniApp from './components/TelegramMiniApp.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { supabase } from './lib/supabase';
 
@@ -1296,6 +1296,19 @@ const AppContent = () => {
       navigateToTrade(trade.id);
     }
   };
+
+  const isTelegramMiniApp =
+    typeof window !== 'undefined' &&
+    (window.location.search.includes('telegram') ||
+      window.location.search.includes('tgWebApp') ||
+      window.location.search.includes('mode=telegram') ||
+      window.location.pathname.startsWith('/tg') ||
+      window.location.hash.includes('tg') ||
+      Boolean(window.Telegram?.WebApp?.initData));
+
+  if (isTelegramMiniApp) {
+    return <TelegramMiniApp />;
+  }
 
   if (isLocked) return <AppLockScreen onUnlock={() => setIsLocked(false)} />;
 

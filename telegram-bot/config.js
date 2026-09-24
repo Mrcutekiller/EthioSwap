@@ -20,4 +20,5 @@ module.exports = {
   SUPABASE_KEY,
   supabase,
   MIN_ORDER_USD: 5,
+  WEB_APP_URL: process.env.WEB_APP_URL || 'https://ethioswap.qzz.io/?mode=telegram',
 };
