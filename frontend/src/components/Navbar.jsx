@@ -102,6 +102,26 @@ const Navbar = () => {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab('funded')}
+                className={`btn btn-secondary ${activeTab === 'funded' ? 'active-tab' : ''}`}
+                style={{
+                  background: activeTab === 'funded' ? 'rgba(245,166,35,0.1)' : 'transparent',
+                  borderColor: activeTab === 'funded' ? '#F5A623' : 'transparent'
+                }}
+              >
+                <ListCollapse size={16} /> Funded
+              </button>
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`btn btn-secondary ${activeTab === 'profile' ? 'active-tab' : ''}`}
+                style={{
+                  background: activeTab === 'profile' ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
+                  borderColor: activeTab === 'profile' ? 'var(--primary)' : 'transparent'
+                }}
+              >
+                <Shield size={16} /> Profile
+              </button>
             </>
           )}
 

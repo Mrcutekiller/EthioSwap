@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabase.js';
+import { subscribeToChatMessages, sendSupportMessage } from '../lib/firebase.js';
 
 const getBotResponse = (text) => {
   const t = text.toLowerCase().trim();
@@ -13,213 +14,388 @@ const getBotResponse = (text) => {
     return "💻 **EthioSwap Developers:**\n\nEthioSwap was developed by a professional group of traders who wanted to build a secure, fast, and transparent peer-to-peer (P2P) escrow platform for local exchanges.";
   }
   
-  if (t.includes('real person') || t.includes('support') || t.includes('issue') || t.includes('error') || t.includes('problem') || t.includes('bug') || t.includes('failed') || t.includes('not working') || t.includes('help') || t.includes('dispute')) {
-    return "📞 **Support Team Alert:**\n\nPlease write your detailed issue or problem report right here! The support team will review your report and get back to you within **30 minutes to 1 hour** (maximum 2 hours) to help resolve it.";
+  if (t.includes('fee') || t.includes('commission') || t.includes('cost') || t.includes('price') || t.includes('charge')) {
+    return "💰 **EthioSwap Fees:**\n\n• P2P trades: very low commission\n• Deposits: small platform fee\n• Withdrawals: transparent fee shown before confirming\n• Funded accounts: we charge a service fee on top of prop firm prices\n\nAll fees are shown clearly before you confirm any transaction!";
   }
   
-  return "🤖 **EthioSwap Helper:**\n\nI can help you with quick info! Ask me:\n- \"How does it work?\"\n- \"Who developed this?\"\n- Or type \"support\" / \"issue\" to get in touch with a real support agent.";
+  if (t.includes('deposit') || t.includes('add money') || t.includes('fund') || t.includes('top up')) {
+    return "💳 **How to Deposit:**\n\n1. Go to your **Wallet** tab\n2. Click **Deposit**\n3. Send the exact amount in ETH/USDT to the shown address\n4. Our team will credit your account within 30 minutes\n\nFor amounts over $100, please reach out to support after sending!";
+  }
+  
+  if (t.includes('withdraw') || t.includes('cash out') || t.includes('send money')) {
+    return "💸 **How to Withdraw:**\n\n1. Go to your **Wallet** tab\n2. Click **Withdraw**\n3. Enter your ETH/USDT wallet address and amount\n4. Confirm — funds arrive within 1-2 hours\n\nMinimum withdrawal is $10. Maximum $1,000/day for security.";
+  }
+  
+  if (t.includes('funded') || t.includes('prop') || t.includes('ftmo') || t.includes('challenge') || t.includes('trader')) {
+    return "📈 **Funded Accounts:**\n\nEthioSwap helps Ethiopian traders access top prop firms like **FTMO, The5ers, Funding Pips, Funded Next** and more!\n\nGo to the **Funded** tab to:\n✅ Browse all firms and plans\n✅ Filter by account size and type\n✅ Purchase challenges — we buy on your behalf\n✅ Track your order status";
+  }
+  
+  if (t.includes('real person') || t.includes('support') || t.includes('issue') || t.includes('error') || t.includes('problem') || t.includes('bug') || t.includes('failed') || t.includes('not working') || t.includes('help') || t.includes('dispute') || t.includes('admin')) {
+    return "📞 **Live Support:**\n\nYou're now connected to our **live support chat** powered by Firebase! 🔴\n\nType your detailed issue below and a real support agent will reply shortly. Average response time: **under 30 minutes**.";
+  }
+  
+  return "🤖 **EthioSwap Assistant:**\n\nI can help you with quick info! Ask me:\n- \"How does it work?\"\n- \"How to deposit or withdraw?\"\n- \"What are the fees?\"\n- \"Tell me about funded accounts\"\n- Or type **\"support\"** to connect with a live agent.";
 };
 
 const SupportWidget = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState('menu');
-  const [botReply, setBotReply] = useState('');
-  const [messageText, setMessageText] = useState('');
+  const [mode, setMode] = useState('menu'); // 'menu' | 'bot' | 'live'
+  const [messages, setMessages] = useState([]);
+  const [liveMessages, setLiveMessages] = useState([]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [ticket, setTicket] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [unread, setUnread] = useState(0);
   const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+  }, []);
+
+  useEffect(() => {
+    if (chatEndRef.current) scrollToBottom();
+  }, [messages, liveMessages, isTyping]);
+
+  // Subscribe to Firebase live chat messages
+  useEffect(() => {
+    if (!user || mode !== 'live') return;
+    
+    const unsubscribe = subscribeToChatMessages(
+      `support/${user.id}`,
+      (msgs) => {
+        setLiveMessages(msgs);
+        if (!isOpen) setUnread(prev => prev + 1);
+        scrollToBottom();
+      },
+      50
+    );
+    return unsubscribe;
+  }, [user, mode]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUnread(0);
+      setTimeout(() => inputRef.current?.focus(), 200);
+    }
+  }, [isOpen]);
+
+  const addBotMessage = useCallback((text, isBot = true) => {
+    setMessages(prev => [...prev, { id: Date.now(), text, isBot, timestamp: new Date() }]);
+  }, []);
+
+  const handleBotSend = useCallback(async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const userText = input.trim();
+    setInput('');
+    addBotMessage(userText, false);
+    setIsTyping(true);
+    
+    await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
+    setIsTyping(false);
+    
+    const response = getBotResponse(userText);
+    addBotMessage(response, true);
+    
+    // If user seems to need real support, suggest live chat
+    const lowerText = userText.toLowerCase();
+    if (lowerText.includes('support') || lowerText.includes('issue') || lowerText.includes('problem') || lowerText.includes('help')) {
+      setTimeout(() => {
+        addBotMessage("💬 **Want to talk to a real person?** Click the **Live Support** button in the menu to chat with our team.", true);
+      }, 1200);
+    }
+  }, [input, addBotMessage]);
+
+  const handleLiveSend = useCallback(async (e) => {
+    e.preventDefault();
+    if (!input.trim() || !user) return;
+    const userText = input.trim();
+    setInput('');
+    setLoading(true);
+    
+    try {
+      const result = await sendSupportMessage(user.id, user.username || user.full_name, userText);
+      if (!result.success) {
+        // Fallback: save to Supabase support_tickets
+        await supabase.from('support_tickets').insert({
+          user_id: user.id,
+          username: user.username,
+          subject: 'Live Chat Message',
+          status: 'open',
+          messages: [{ sender_id: user.id, sender_name: user.username, message: userText, timestamp: new Date().toISOString() }],
+        });
+        // Also notify admin via Supabase
+        const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+        if (admins) {
+          for (const a of admins) {
+            await supabase.from('notifications').insert({
+              user_id: a.id, type: 'support_new', title: '🆘 New Live Support Message',
+              message: `@${user.username || 'User'}: ${userText.slice(0, 80)}`, is_read: false
+            });
+          }
+        }
+      } else {
+        // Notify admin via Supabase as well for Firebase messages
+        const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+        if (admins) {
+          for (const a of admins) {
+            await supabase.from('notifications').insert({
+              user_id: a.id, type: 'support_new', title: '💬 Live Chat Message',
+              message: `@${user.username || 'User'}: ${userText.slice(0, 80)}`, is_read: false
+            }).then(() => {}).catch(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Support message error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, user]);
 
   if (!user || user.role === 'admin') return null;
 
-  useEffect(() => {
-    if (isOpen && user) fetchTicket();
-  }, [isOpen, user]);
-
-  useEffect(() => {
-    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [ticket?.messages, botReply, isTyping]);
-
-  const fetchTicket = async () => {
-    try {
-      const { data } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .in('status', ['open', 'in_progress'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (data) setTicket(data);
-    } catch (e) { /* no existing ticket */ }
+  const formatTime = (ts) => {
+    const d = ts instanceof Date ? ts : new Date(ts);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!messageText.trim()) return;
-    const userText = messageText.trim();
-    setLoading(true);
-    try {
-      const newMessage = { sender_id: user.id, sender_name: user.username, message: userText, timestamp: new Date().toISOString() };
-
-      if (!ticket || ticket.status === 'closed') {
-        const { data: created, error } = await supabase.from('support_tickets').insert({
-          user_id: user.id,
-          username: user.username,
-          subject: 'Support Request',
-          status: 'open',
-          messages: [newMessage],
-        }).select().single();
-        if (error) throw error;
-        setTicket(created);
-        // Notify admin
-        const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
-        if (admins) for (const a of admins) {
-          await supabase.from('notifications').insert({ user_id: a.id, type: 'support_new', title: 'New Support Ticket', message: `@${user.username} opened a new support ticket.`, is_read: false });
-        }
-      } else {
-        const updatedMessages = [...(ticket.messages || []), newMessage];
-        await supabase.from('support_tickets').update({ messages: updatedMessages, status: 'open' }).eq('id', ticket.id);
-        setTicket({ ...ticket, messages: updatedMessages });
-      }
-      setMessageText('');
-
-      // Trigger chatbot auto-reply after a short delay
-      setIsTyping(true);
-      setTimeout(async () => {
-        setIsTyping(false);
-        const botReplyText = getBotResponse(userText);
-        if (botReplyText) {
-          const botMessage = { sender_id: 'bot', sender_name: 'EthioSwap Helper', message: botReplyText, timestamp: new Date().toISOString() };
-          const currentTicket = ticket?.status !== 'closed' ? ticket : null;
-          if (currentTicket) {
-            const updated = [...(currentTicket.messages || []), botMessage];
-            await supabase.from('support_tickets').update({ messages: updated }).eq('id', currentTicket.id);
-            setTicket(prev => prev ? { ...prev, messages: updated } : prev);
-          }
-        }
-      }, 1200);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const handleBotAction = (type) => {
-    setMode('bot_reply');
-    if (type === 'escrow') {
-      setBotReply("🛡️ **How Escrow Works:**\nWhen you click 'Buy USD ($)' or a seller opens a listing, the system automatically transfers the seller's USD to a secured escrow locker.\n\nOnly pay the seller using their specified payment details (CBE, Telebirr, etc.). Once you transfer, click 'I Have Paid'. The seller will confirm and release the USD to your wallet. If any issue arises, click 'Dispute' to summon an admin auditor.");
-    } else if (type === 'deposit') {
-      setBotReply("💰 **Depositing & Withdrawing:**\n- **Deposit:** Go to the Wallet tab, copy your unique wallet address, and send USD to it.\n\n- **Withdraw:** Go to the Wallet tab, enter the destination wallet address and the amount in USD, then press 'Withdraw'.");
-    }
-  };
-
-  const startHumanChat = async () => {
-    setMode('chat');
-    if (!ticket || ticket.status === 'closed') {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.from('support_tickets').insert({
-          user_id: user.id,
-          username: user.username,
-          subject: 'Support Request',
-          status: 'open',
-          messages: [{ sender_id: 'system', sender_name: 'System', message: 'Chat started. A support agent will respond shortly.', timestamp: new Date().toISOString() }],
-        }).select().single();
-        if (error) throw error;
-        setTicket(data);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    }
+  const renderBotText = (text) => {
+    return text.split('\n').map((line, i) => {
+      const parts = line.split(/\*\*(.+?)\*\*/g);
+      return (
+        <div key={i} style={{ marginBottom: line === '' ? '8px' : '2px' }}>
+          {parts.map((part, j) =>
+            j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+          )}
+        </div>
+      );
+    });
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000, fontFamily: 'var(--font)' }}>
-      {!isOpen && (
-        <button onClick={() => setIsOpen(true)} style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', color: '#0A0C12', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(212,175,55,0.3)' }} title="Help & Support">
-          ···
-        </button>
-      )}
+    <>
+      <style>{`
+        @keyframes swBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        @keyframes swPing { 0%{transform:scale(1);opacity:1} 75%,100%{transform:scale(1.6);opacity:0} }
+        @keyframes swSlide { from{opacity:0;transform:translateY(20px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes swTyping { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+        .sw-btn:hover { filter: brightness(1.15); transform: scale(1.05) !important; }
+        .sw-msg-input:focus { outline: none; border-color: #F5A623 !important; box-shadow: 0 0 0 3px rgba(245,166,35,0.15); }
+        .sw-send-btn:hover { background: linear-gradient(135deg, #FFB740, #F5A623) !important; }
+        .sw-mode-btn:hover { background: rgba(245,166,35,0.12) !important; border-color: rgba(245,166,35,0.4) !important; }
+      `}</style>
+
+      {/* ── Floating Button ── */}
+      <button
+        className="sw-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          position: 'fixed', bottom: '80px', right: '20px', zIndex: 9000,
+          width: '56px', height: '56px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+          background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+          boxShadow: '0 4px 20px rgba(245,166,35,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '24px', transition: 'all 0.25s ease',
+          animation: !isOpen ? 'swBounce 3s infinite' : 'none',
+        }}
+        title="EthioSwap Support"
+      >
+        {isOpen ? <i className="ti ti-x" style={{ fontSize: '20px', color: '#fff' }} /> : <i className="ti ti-message-circle" style={{ fontSize: '22px', color: '#fff' }} />}
+        {unread > 0 && !isOpen && (
+          <div style={{
+            position: 'absolute', top: '-2px', right: '-2px', width: '18px', height: '18px',
+            background: '#EF4444', borderRadius: '50%', border: '2px solid #0B0E1A',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '10px', fontWeight: 800, color: '#fff',
+          }}>{unread}</div>
+        )}
+      </button>
+
+      {/* ── Widget Panel ── */}
       {isOpen && (
-        <div style={{ width: '330px', height: '420px', background: 'var(--bg-surface)', border: '1px solid var(--border-active)', borderRadius: '20px', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-          <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg, #181D28, #0D111A)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-1)' }}>EthioSwap Helper</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>Active Support Bot</div>
-            </div>
-            <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-2)', fontSize: '16px', cursor: 'pointer', padding: '4px' }}>✕</button>
-          </div>
-          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0 }}>🤖</div>
-              <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '14px 14px 14px 2px', padding: '10px 12px', fontSize: '12px', color: 'var(--text-2)', lineHeight: '1.4' }}>
-                Welcome to EthioSwap! How can we assist you with trading USD safely?
+        <div style={{
+          position: 'fixed', bottom: '148px', right: '20px', zIndex: 8999,
+          width: '360px', maxHeight: '550px',
+          background: '#0D1117', borderRadius: '20px',
+          border: '1px solid rgba(245,166,35,0.15)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          animation: 'swSlide 0.3s ease',
+        }}>
+          {/* Header */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1A1F35, #141827)',
+            borderBottom: '1px solid rgba(245,166,35,0.1)',
+            padding: '16px 20px', flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '20px', flexShrink: 0,
+              }}>
+                <i className="ti ti-headset" style={{ color: '#fff', fontSize: '18px' }} />
               </div>
-            </div>
-            {mode === 'menu' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-                <button onClick={() => handleBotAction('escrow')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-1)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>🛡️ How does escrow work?</button>
-                <button onClick={() => handleBotAction('deposit')} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-1)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>💰 Deposit or Withdraw USD</button>
-                <button onClick={startHumanChat} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'var(--gold-bg)', border: '1px solid var(--border-active)', borderRadius: '8px', color: 'var(--gold-light)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>💬 Chat with Human Support</button>
-                <a href="https://t.me/EthioSwapDev" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                  <button style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: '#0088cc', border: 'none', borderRadius: '8px', color: 'white', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>✈️ Contact Developer (Telegram)</button>
-                </a>
-              </div>
-            )}
-            {mode === 'bot_reply' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', fontSize: '11px', color: 'var(--text-2)', lineHeight: '1.5', whiteSpace: 'pre-line' }}>{botReply}</div>
-                <button onClick={() => setMode('menu')} style={{ alignSelf: 'flex-start', padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-3)', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>← Back to Menu</button>
-              </div>
-            )}
-            {mode === 'chat' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '10px', color: 'var(--gold-light)', fontWeight: 700 }}>Human Support Chat</span>
-                  <button onClick={() => setMode('menu')} style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '10px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>← Back</button>
-                </div>
-                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '10px', height: '170px', overflowY: 'auto', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(!ticket || !ticket.messages || ticket.messages.length === 0) ? (
-                    <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-3)', fontSize: '11px', padding: '10px' }}>Start a chat with our admin team. Send your message below.</div>
-                  ) : (
-                    ticket.messages.map((m, idx) => {
-                      const isMe = m.sender_id === user.id;
-                      return (
-                        <div key={idx} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
-                          <div style={{ padding: '8px 10px', borderRadius: isMe ? '10px 10px 2px 10px' : '10px 10px 10px 2px', background: isMe ? 'var(--gold-bg)' : 'var(--bg-elevated)', border: `1px solid ${isMe ? 'var(--border-active)' : 'var(--border)'}`, color: isMe ? 'var(--gold-light)' : 'var(--text-1)', fontSize: '11px', wordBreak: 'break-word' }}>{m.message}</div>
-                          <div style={{ fontSize: '8px', color: 'var(--text-3)', marginTop: '2px', textAlign: isMe ? 'right' : 'left' }}>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        </div>
-                      );
-                    })
-                  )}
-                  {isTyping && (
-                    <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '6px 10px', borderRadius: '10px 10px 10px 2px', color: 'var(--text-3)', fontSize: '10px' }}>
-                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', display: 'inline-block', animation: 'dotDelay 1.4s infinite' }} />
-                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', display: 'inline-block', animation: 'dotDelay 1.4s 0.2s infinite' }} />
-                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-3)', display: 'inline-block', animation: 'dotDelay 1.4s 0.4s infinite' }} />
-                      <span style={{ marginLeft: '4px' }}>bot is typing...</span>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>EthioSwap Support</div>
+                <div style={{ fontSize: '11px', color: '#00C896', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896', display: 'inline-block', animation: 'swPing 2s infinite' }} />
+                  Online · Avg response &lt; 30 min
                 </div>
               </div>
-            )}
+              {(mode === 'bot' || mode === 'live') && (
+                <button onClick={() => { setMode('menu'); setMessages([]); setLiveMessages([]); }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px', color: '#8A9BB8', padding: '6px 10px', cursor: 'pointer', fontSize: '11px' }}>
+                  ← Menu
+                </button>
+              )}
+            </div>
           </div>
-          {mode === 'chat' && (
-            <form onSubmit={handleSendMessage} style={{ display: 'flex', padding: '10px', borderTop: '1px solid var(--border)', gap: '6px', background: 'var(--bg-surface)' }}>
-              <input type="text" value={messageText} onChange={e => setMessageText(e.target.value)} placeholder="Describe your issue..." style={{ flex: 1, padding: '8px 10px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontSize: '12px', fontFamily: 'var(--font)' }} disabled={loading} />
-              <button type="submit" disabled={loading || !messageText.trim()} className="btn btn-gold" style={{ padding: '8px 12px', fontSize: '11px' }}>Send</button>
-            </form>
+
+          {/* ── Menu Mode ── */}
+          {mode === 'menu' && (
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <p style={{ fontSize: '13px', color: '#8A9BB8', margin: 0, lineHeight: 1.5 }}>
+                Hello, <strong style={{ color: '#fff' }}>{user.username || user.full_name}</strong>! 👋<br />
+                How can we help you today?
+              </p>
+              <button className="sw-mode-btn" onClick={() => { setMode('bot'); addBotMessage("👋 Hi! I'm EthioSwap's AI assistant. Ask me anything or type **\"support\"** to chat with a real person.", true); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: 'rgba(245,166,35,0.06)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(245,166,35,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>AI Assistant</div>
+                  <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Instant answers to common questions</div>
+                </div>
+                <i className="ti ti-arrow-right" style={{ marginLeft: 'auto', color: '#F5A623', fontSize: '16px' }} />
+              </button>
+              <button className="sw-mode-btn" onClick={() => setMode('live')}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: '14px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(0,200,150,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>💬</div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Live Support <span style={{ background: '#00C896', color: '#000', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>LIVE</span></div>
+                  <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Chat with a real support agent</div>
+                </div>
+                <i className="ti ti-arrow-right" style={{ marginLeft: 'auto', color: '#00C896', fontSize: '16px' }} />
+              </button>
+              <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', fontSize: '11px', color: '#5A6275', textAlign: 'center' }}>
+                🔒 Powered by Firebase · End-to-end encrypted
+              </div>
+            </div>
           )}
-          <style>{`
-            @keyframes dotDelay {
-              0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
-              30% { transform: translateY(-3px); opacity: 1; }
-            }
-          `}</style>
+
+          {/* ── Bot Chat Mode ── */}
+          {mode === 'bot' && (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {messages.map((msg) => (
+                  <div key={msg.id} style={{ display: 'flex', flexDirection: msg.isBot ? 'row' : 'row-reverse', gap: '8px', alignItems: 'flex-end' }}>
+                    {msg.isBot && (
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #D88E10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '14px' }}>🤖</div>
+                    )}
+                    <div style={{
+                      maxWidth: '80%', padding: '10px 14px', borderRadius: msg.isBot ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
+                      background: msg.isBot ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #F5A623, #D88E10)',
+                      color: msg.isBot ? '#E5E7EB' : '#0A0C12',
+                      fontSize: '12.5px', lineHeight: 1.55,
+                    }}>
+                      {renderBotText(msg.text)}
+                      <div style={{ fontSize: '10px', color: msg.isBot ? '#5A6275' : 'rgba(10,12,18,0.5)', marginTop: '4px', textAlign: 'right' }}>
+                        {formatTime(msg.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {isTyping && (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #D88E10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🤖</div>
+                    <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.06)', borderRadius: '16px 16px 16px 4px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {[0, 1, 2].map(i => (
+                        <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F5A623', animation: `swTyping 1.2s ${i * 0.2}s infinite` }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              <form onSubmit={handleBotSend} style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <input ref={inputRef} className="sw-msg-input" value={input} onChange={e => setInput(e.target.value)}
+                  placeholder="Ask me anything..."
+                  style={{ flex: 1, padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', fontSize: '13px', transition: 'all 0.2s' }} />
+                <button type="submit" className="sw-send-btn" disabled={!input.trim()}
+                  style={{ padding: '10px 14px', background: 'linear-gradient(135deg, #F5A623, #D88E10)', border: 'none', borderRadius: '12px', color: '#0A0C12', cursor: input.trim() ? 'pointer' : 'not-allowed', opacity: input.trim() ? 1 : 0.5, transition: 'all 0.2s' }}>
+                  <i className="ti ti-send" style={{ fontSize: '16px' }} />
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ── Live Support Mode (Firebase) ── */}
+          {mode === 'live' && (
+            <>
+              <div style={{ padding: '10px 16px', background: 'rgba(0,200,150,0.06)', borderBottom: '1px solid rgba(0,200,150,0.1)', flexShrink: 0 }}>
+                <div style={{ fontSize: '11px', color: '#00C896', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C896', display: 'inline-block' }} />
+                  Live chat powered by Firebase · Messages are end-to-end secure
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {liveMessages.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '20px', color: '#5A6275', fontSize: '12px' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>💬</div>
+                    <div style={{ fontWeight: 600, color: '#8A9BB8', marginBottom: '4px' }}>Start a conversation</div>
+                    <div>Type your question or issue below. Our team typically responds in under 30 minutes.</div>
+                  </div>
+                )}
+                {liveMessages.map((msg) => {
+                  const isMe = msg.senderId === user?.id;
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: '8px', alignItems: 'flex-end' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                        background: isMe ? 'linear-gradient(135deg, #F5A623, #D88E10)' : 'linear-gradient(135deg, #00C896, #00A87A)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: 800, color: '#fff',
+                      }}>{isMe ? (user.username?.[0] || 'U').toUpperCase() : '🛡'}</div>
+                      <div style={{ maxWidth: '75%' }}>
+                        <div style={{ fontSize: '10px', color: '#5A6275', marginBottom: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                          {isMe ? 'You' : msg.senderName || 'Support Agent'}
+                        </div>
+                        <div style={{
+                          padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          background: isMe ? 'linear-gradient(135deg, #F5A623, #D88E10)' : 'rgba(0,200,150,0.1)',
+                          color: isMe ? '#0A0C12' : '#E5E7EB',
+                          fontSize: '12.5px', lineHeight: 1.55,
+                          border: isMe ? 'none' : '1px solid rgba(0,200,150,0.2)',
+                        }}>
+                          {msg.text}
+                          <div style={{ fontSize: '10px', color: isMe ? 'rgba(10,12,18,0.5)' : '#5A6275', marginTop: '4px', textAlign: 'right' }}>
+                            {formatTime(new Date(msg.createdAt))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={chatEndRef} />
+              </div>
+              <form onSubmit={handleLiveSend} style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <input ref={inputRef} className="sw-msg-input" value={input} onChange={e => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  style={{ flex: 1, padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', fontSize: '13px', transition: 'all 0.2s' }} />
+                <button type="submit" className="sw-send-btn" disabled={!input.trim() || loading}
+                  style={{ padding: '10px 14px', background: 'linear-gradient(135deg, #00C896, #00A87A)', border: 'none', borderRadius: '12px', color: '#fff', cursor: (input.trim() && !loading) ? 'pointer' : 'not-allowed', opacity: (input.trim() && !loading) ? 1 : 0.5, transition: 'all 0.2s' }}>
+                  {loading ? <i className="ti ti-loader-2" style={{ fontSize: '16px', animation: 'spin 1s linear infinite' }} /> : <i className="ti ti-send" style={{ fontSize: '16px' }} />}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 };
 

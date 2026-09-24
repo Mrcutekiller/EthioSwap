@@ -122,7 +122,9 @@ export const AuthProvider = ({ children }) => {
             console.warn('Failed to get auth user:', err);
           }
         }
-        const authRole = authUser?.user_metadata?.role || 'user';
+        const ADMIN_EMAIL = 'ethioswap@gmail.com';
+        const authRole = authUser?.user_metadata?.role ||
+          (authUser?.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'user');
 
         const { data, error } = await supabase
           .from('users')
@@ -131,9 +133,11 @@ export const AuthProvider = ({ children }) => {
           .maybeSingle();
 
         if (data) {
-          if (data.role !== authRole && authRole === 'admin') {
-            await supabase.from('users').update({ role: authRole }).eq('id', userId);
-            data.role = authRole;
+          // Sync role to DB if it's out of sync (e.g. admin email but role not set)
+          const effectiveRole = data.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : (data.role || authRole);
+          if (data.role !== effectiveRole) {
+            await supabase.from('users').update({ role: effectiveRole }).eq('id', userId);
+            data.role = effectiveRole;
           }
           setUser(data);
           localStorage.setItem('ethioswap_user', JSON.stringify(data));

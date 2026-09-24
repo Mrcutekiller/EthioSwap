@@ -758,125 +758,204 @@ const FundedAccountsPage = ({ setPage }) => {
 
   // ── CSS Styles ─────────────────────────────────────────────────────────────
   const CSS = `
-    @keyframes faFadeUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
-    .fa-animate { animation: faFadeUp 0.28s ease-out; }
+    @keyframes faFadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes faFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes faGlow { 0%,100%{opacity:0.5} 50%{opacity:1} }
+    @keyframes faShimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    @keyframes faPulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.7} 100%{transform:scale(1);opacity:1} }
+    .fa-animate { animation: faFadeUp 0.35s cubic-bezier(0.22,1,0.36,1); }
+    .fa-animate-delay { animation: faFadeUp 0.35s cubic-bezier(0.22,1,0.36,1) 0.1s both; }
+    .fa-animate-delay2 { animation: faFadeUp 0.35s cubic-bezier(0.22,1,0.36,1) 0.2s both; }
+    .fa-hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0D1117 0%, #141827 50%, #0D1117 100%);
+      border: 1px solid rgba(245,166,35,0.12);
+      border-radius: 24px;
+      padding: 40px 36px;
+    }
+    .fa-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -15%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .fa-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40%;
+      left: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0,200,150,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .fa-stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .fa-stat-card:hover {
+      border-color: rgba(245,166,35,0.25);
+      background: rgba(245,166,35,0.03);
+      transform: translateY(-2px);
+    }
     .fa-card {
-      background: #141827;
+      background: linear-gradient(135deg, #141827, #111627);
       border: 1.5px solid #1E2640;
-      border-radius: 18px;
-      padding: 20px;
+      border-radius: 20px;
+      padding: 22px;
       cursor: pointer;
-      transition: all 0.22s ease;
+      transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .fa-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245,166,35,0.4), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
     }
     .fa-card:hover {
-      border-color: rgba(245,166,35,0.4);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      border-color: rgba(245,166,35,0.5);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,166,35,0.1);
     }
+    .fa-card:hover::before { opacity: 1; }
     .fa-plan-card {
-      background: #0B0E1A;
+      background: linear-gradient(135deg, #0E1220, #0B0E1A);
       border: 1.5px solid #1E2640;
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 18px;
+      padding: 22px;
       cursor: pointer;
-      transition: all 0.22s ease;
+      transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
       position: relative;
+      overflow: hidden;
     }
     .fa-plan-card:hover {
       border-color: #F5A623;
-      background: rgba(245,166,35,0.03);
-      transform: translateY(-2px);
+      background: rgba(245,166,35,0.04);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245,166,35,0.08);
     }
     .fa-plan-card.popular {
       border-color: rgba(245,166,35,0.5);
-      background: rgba(245,166,35,0.03);
+      background: rgba(245,166,35,0.04);
+      box-shadow: 0 0 30px rgba(245,166,35,0.08);
     }
     .fa-input {
       width: 100%;
       box-sizing: border-box;
-      background: #0B0E1A;
-      border: 1.5px solid #1E2640;
-      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
       color: #fff;
-      padding: 13px 16px;
+      padding: 14px 16px;
       font-size: 14px;
       outline: none;
       font-family: inherit;
-      transition: all 0.2s;
+      transition: all 0.25s;
     }
     .fa-input:focus {
       border-color: rgba(245,166,35,0.5);
-      box-shadow: 0 0 0 3px rgba(245,166,35,0.08);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.1);
+      background: rgba(245,166,35,0.03);
     }
     .fa-input::placeholder { color: #3E4962; }
     .fa-btn {
       width: 100%;
-      padding: 15px;
-      border-radius: 13px;
+      padding: 16px;
+      border-radius: 14px;
       border: none;
-      background: linear-gradient(135deg, #F5A623, #D88E10);
+      background: linear-gradient(135deg, #F5A623 0%, #FFE082 50%, #F5A623 100%);
+      background-size: 200% 100%;
       color: #0A0C12;
       font-size: 15px;
       font-weight: 800;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s ease;
       font-family: inherit;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      letter-spacing: 0.02em;
     }
-    .fa-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
-    .fa-btn:disabled { background: #1E2640; color: #4A5568; cursor: not-allowed; }
+    .fa-btn:hover:not(:disabled) { background-position: right center; filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,166,35,0.35); }
+    .fa-btn:disabled { background: #1E2640; color: #4A5568; cursor: not-allowed; transform: none; box-shadow: none; }
     .fa-select {
       width: 100%;
       box-sizing: border-box;
-      background: #0B0E1A;
-      border: 1.5px solid #1E2640;
-      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
       color: #fff;
-      padding: 13px 16px;
+      padding: 14px 16px;
       font-size: 14px;
       outline: none;
       font-family: inherit;
       cursor: pointer;
+      transition: all 0.25s;
     }
+    .fa-select:focus { border-color: rgba(245,166,35,0.5); box-shadow: 0 0 0 3px rgba(245,166,35,0.1); }
     .fa-tab-btn {
-      padding: 9px 18px;
-      border-radius: 10px;
+      padding: 10px 20px;
+      border-radius: 12px;
       border: 1px solid transparent;
       background: transparent;
       color: #8A9BB8;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       font-family: inherit;
       display: flex;
       align-items: center;
       gap: 6px;
       white-space: nowrap;
     }
+    .fa-tab-btn:hover:not(.active) { background: rgba(255,255,255,0.04); color: #fff; }
     .fa-tab-btn.active {
       background: rgba(245,166,35,0.12);
       color: #F5A623;
-      border-color: rgba(245,166,35,0.25);
+      border-color: rgba(245,166,35,0.3);
+      box-shadow: 0 0 12px rgba(245,166,35,0.1);
     }
     .fa-search {
       width: 100%;
       box-sizing: border-box;
-      background: #141827;
-      border: 1.5px solid #1E2640;
-      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
       color: #fff;
-      padding: 14px 16px 14px 46px;
-      font-size: 14px;
+      padding: 16px 16px 16px 50px;
+      font-size: 15px;
       outline: none;
       font-family: inherit;
-      transition: all 0.2s;
+      transition: all 0.25s;
     }
-    .fa-search:focus { border-color: rgba(245,166,35,0.4); }
+    .fa-search:focus { border-color: rgba(245,166,35,0.4); box-shadow: 0 0 0 3px rgba(245,166,35,0.08); background: rgba(245,166,35,0.02); }
     .fa-search::placeholder { color: #3E4962; }
+    .fa-firm-feature { display:flex; align-items:center; gap:6px; font-size:11px; color:#8A9BB8; }
+    .fa-firm-feature i { color:#F5A623; font-size:13px; }
+    .fa-shimmer {
+      background: linear-gradient(90deg, #141827 25%, #1E2640 50%, #141827 75%);
+      background-size: 200% 100%;
+      animation: faShimmer 1.5s infinite;
+      border-radius: 8px;
+    }
   `;
 
   // Total user orders count
@@ -885,24 +964,58 @@ const FundedAccountsPage = ({ setPage }) => {
   // ── RENDER MAIN VIEWS ──────────────────────────────────────────────────────
   if (view === 'browse' || view === 'broker_deposit' || view === 'my_orders') {
     return (
-      <div style={{ fontFamily: 'var(--font)', display: 'flex', flexDirection: 'column', gap: '24px' }} className="fa-animate">
+      <div style={{ fontFamily: 'var(--font)', display: 'flex', flexDirection: 'column', gap: '28px' }} className="fa-animate">
         <style>{CSS}</style>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'linear-gradient(135deg, #F5A623, #FFE082)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-              📈
+        {/* ── Premium Hero Header ── */}
+        <div className="fa-hero">
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Top row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'linear-gradient(135deg, #F5A623, #FFE082)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 8px 24px rgba(245,166,35,0.3)', animation: 'faFloat 3s infinite ease-in-out' }}>📈</div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.5px' }}>Funded Accounts</h1>
+                      <span style={{ background: 'linear-gradient(135deg, rgba(245,166,35,0.2), rgba(255,224,130,0.1))', border: '1px solid rgba(245,166,35,0.3)', color: '#F5A623', fontSize: '10px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.04em' }}>🇪🇹 ETHIOPIA</span>
+                    </div>
+                    <p style={{ fontSize: '13px', color: '#8A9BB8', margin: 0, lineHeight: 1.5 }}>Buy prop firm challenges &amp; deposit to brokers with your EthioSwap wallet</p>
+                  </div>
+                </div>
+                {/* Trust badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[['🔒', '100% Secure Payments'], ['⚡', 'Instant Deduction'], ['📧', 'Credentials in 24h'], ['💰', '3% Platform Fee']].map(([icon, label]) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '5px 12px', fontSize: '11px', color: '#8A9BB8', fontWeight: 600 }}>
+                      <span>{icon}</span> {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Wallet balance card */}
+              <div style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', minWidth: '160px' }}>
+                <div style={{ fontSize: '11px', color: '#8A9BB8', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Available Balance</div>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: '#00C896', fontFamily: 'var(--font-mono)', letterSpacing: '-0.5px' }}>${fmt(available)}</div>
+                <div style={{ fontSize: '11px', color: '#00C896', opacity: 0.7, marginTop: '2px' }}>USDT</div>
+              </div>
             </div>
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: 0 }}>Funded Accounts & Brokers</h1>
-              <p style={{ fontSize: '12px', color: '#8A9BB8', margin: 0 }}>Buy prop firm challenges & deposit directly to Forex brokers from Ethiopia</p>
-            </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#141827', padding: '6px 12px', borderRadius: '12px', border: '1px solid #1E2640' }}>
-            <span style={{ fontSize: '11px', color: '#8A9BB8' }}>Available:</span>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>${fmt(available)} USDT</span>
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+              {[
+                { label: 'Prop Firms', value: `${firms.length}+`, icon: '🏢', color: '#F5A623', sub: 'Verified for Ethiopians' },
+                { label: 'Account Sizes', value: '$5K–$200K', icon: '💰', color: '#00C896', sub: 'From beginner to pro' },
+                { label: 'Min Fee', value: '$32', icon: '🎯', color: '#6C5CE7', sub: 'Funding Pips $5K' },
+                { label: 'Payout Speed', value: '24h–48h', icon: '⚡', color: '#F97316', sub: 'Credentials delivery' },
+              ].map(s => (
+                <div key={s.label} className="fa-stat-card">
+                  <div style={{ fontSize: '22px', marginBottom: '6px' }}>{s.icon}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)', letterSpacing: '-0.5px' }}>{s.value}</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', marginTop: '2px' }}>{s.label}</div>
+                  <div style={{ fontSize: '10px', color: '#5A6275', marginTop: '2px' }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -951,26 +1064,13 @@ const FundedAccountsPage = ({ setPage }) => {
               )}
             </div>
 
-            {/* Stats bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              {[
-                { label: 'Active Firms', value: firms.length, icon: '🏢', color: '#F5A623' },
-                { label: 'Total Plans', value: plans.length || '30+', icon: '📋', color: '#00C896' },
-                { label: 'Account Sizes', value: '$5K – $200K', icon: '💰', color: '#6C5CE7' },
-              ].map((s) => (
-                <div key={s.label} style={{ background: '#141827', border: '1px solid #1E2640', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '4px' }}>{s.icon}</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: s.color, fontFamily: 'var(--font-mono)' }}>{s.value}</div>
-                  <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '2px', fontWeight: 600 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
             {/* Firms List */}
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} style={{ background: '#141827', borderRadius: '18px', height: '110px' }} />
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ borderRadius: '20px', height: '120px', overflow: 'hidden' }}>
+                    <div className="fa-shimmer" style={{ width: '100%', height: '100%' }} />
+                  </div>
                 ))}
               </div>
             ) : filteredFirms.length === 0 ? (
