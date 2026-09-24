@@ -129,57 +129,62 @@ ON CONFLICT (name) DO UPDATE SET
   accepts_ethiopians = EXCLUDED.accepts_ethiopians,
   is_active = EXCLUDED.is_active;
 
+-- 5b. Add Evaluation Type and Phase Targets to funded_account_plans if not present
+ALTER TABLE funded_account_plans ADD COLUMN IF NOT EXISTS evaluation_type TEXT DEFAULT '2-Step Challenge';
+ALTER TABLE funded_account_plans ADD COLUMN IF NOT EXISTS phase_1_target_percent DECIMAL DEFAULT 8.0;
+ALTER TABLE funded_account_plans ADD COLUMN IF NOT EXISTS phase_2_target_percent DECIMAL DEFAULT 5.0;
+
 -- 6. Seed Plans for FTMO
-INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
-SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
+INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
+SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.evaluation_type, v.phase_1_target_percent, v.phase_2_target_percent, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
   ARRAY['No time limit on challenge','Bi-weekly crypto payouts','Refundable fee upon 1st payout','Free trial available']::text[]
 FROM (SELECT id FROM funded_account_firms WHERE name = 'FTMO' LIMIT 1) f,
 (VALUES
-  ('$10,000 Challenge', 10000, 155, 80, 10, 5, 10, '1:100', false),
-  ('$25,000 Challenge', 25000, 250, 80, 10, 5, 10, '1:100', false),
-  ('$50,000 Challenge', 50000, 345, 80, 10, 5, 10, '1:100', true),
-  ('$100,000 Challenge', 100000, 540, 80, 10, 5, 10, '1:100', true),
-  ('$200,000 Challenge', 200000, 1080, 80, 10, 5, 10, '1:100', false)
-) AS v(plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
+  ('$10,000 Challenge', 10000, 155, '2-Step Challenge', 10.0, 5.0, 80, 10, 5, 10, '1:100', false),
+  ('$25,000 Challenge', 25000, 250, '2-Step Challenge', 10.0, 5.0, 80, 10, 5, 10, '1:100', false),
+  ('$50,000 Challenge', 50000, 345, '2-Step Challenge', 10.0, 5.0, 80, 10, 5, 10, '1:100', true),
+  ('$100,000 Challenge', 100000, 540, '2-Step Challenge', 10.0, 5.0, 80, 10, 5, 10, '1:100', true),
+  ('$200,000 Challenge', 200000, 1080, '2-Step Challenge', 10.0, 5.0, 80, 10, 5, 10, '1:100', false)
+) AS v(plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
 WHERE f.id IS NOT NULL;
 
 -- 7. Seed Plans for The5ers
-INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
-SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
+INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
+SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.evaluation_type, v.phase_1_target_percent, v.phase_2_target_percent, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
   ARRAY['Instant funding available','Double account every 10%','No time limits','Live webinar support']::text[]
 FROM (SELECT id FROM funded_account_firms WHERE name = 'The5ers' LIMIT 1) f,
 (VALUES
-  ('$5,000 Bootcamp', 5000, 95, 80, 6, 4, 8, '1:30', false),
-  ('$20,000 High Stakes', 20000, 165, 80, 8, 5, 10, '1:100', true),
-  ('$60,000 High Stakes', 60000, 395, 80, 8, 5, 10, '1:100', true),
-  ('$100,000 High Stakes', 100000, 495, 80, 8, 5, 10, '1:100', false)
-) AS v(plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
+  ('$5,000 Bootcamp', 5000, 95, '3-Step Bootcamp', 6.0, 6.0, 80, 6, 4, 8, '1:30', false),
+  ('$20,000 High Stakes', 20000, 165, '2-Step Challenge', 8.0, 5.0, 80, 8, 5, 10, '1:100', true),
+  ('$60,000 High Stakes', 60000, 395, '2-Step Challenge', 8.0, 5.0, 80, 8, 5, 10, '1:100', true),
+  ('$100,000 High Stakes', 100000, 495, '2-Step Challenge', 8.0, 5.0, 80, 8, 5, 10, '1:100', false)
+) AS v(plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
 WHERE f.id IS NOT NULL;
 
 -- 8. Seed Plans for Funding Pips
-INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
-SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
+INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
+SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.evaluation_type, v.phase_1_target_percent, v.phase_2_target_percent, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
   ARRAY['Lowest entry cost in Africa','5-day payout cycle','Up to 90% profit split','Scaling up to $2M']::text[]
 FROM (SELECT id FROM funded_account_firms WHERE name = 'Funding Pips' LIMIT 1) f,
 (VALUES
-  ('$5,000 Evaluation', 5000, 32, 85, 8, 5, 10, '1:100', false),
-  ('$10,000 Evaluation', 10000, 60, 85, 8, 5, 10, '1:100', true),
-  ('$25,000 Evaluation', 25000, 139, 85, 8, 5, 10, '1:100', false),
-  ('$50,000 Evaluation', 50000, 239, 85, 8, 5, 10, '1:100', true),
-  ('$100,000 Evaluation', 100000, 399, 85, 8, 5, 10, '1:100', false)
-) AS v(plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
+  ('$5,000 Evaluation', 5000, 32, '2-Step Evaluation', 8.0, 5.0, 85, 8, 5, 10, '1:100', false),
+  ('$10,000 Evaluation', 10000, 60, '2-Step Evaluation', 8.0, 5.0, 85, 8, 5, 10, '1:100', true),
+  ('$25,000 Evaluation', 25000, 139, '2-Step Evaluation', 8.0, 5.0, 85, 8, 5, 10, '1:100', false),
+  ('$50,000 Evaluation', 50000, 239, '2-Step Evaluation', 8.0, 5.0, 85, 8, 5, 10, '1:100', true),
+  ('$100,000 Evaluation', 100000, 399, '2-Step Evaluation', 8.0, 5.0, 85, 8, 5, 10, '1:100', false)
+) AS v(plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
 WHERE f.id IS NOT NULL;
 
 -- 9. Seed Plans for Funded Next
-INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
-SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
+INSERT INTO funded_account_plans (firm_id, plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular, is_active, features)
+SELECT f.id, v.plan_name, v.account_size_usd, v.price_usd, v.evaluation_type, v.phase_1_target_percent, v.phase_2_target_percent, v.profit_split_percent, v.profit_target_percent, v.max_daily_loss_percent, v.max_total_loss_percent, v.leverage, v.is_popular, true,
   ARRAY['15% profit share from challenge','Guaranteed payout within 24h','No minimum trading days','Swap-free accounts available']::text[]
 FROM (SELECT id FROM funded_account_firms WHERE name = 'Funded Next' LIMIT 1) f,
 (VALUES
-  ('$15,000 Stellar 2-Step', 15000, 119, 85, 8, 5, 10, '1:100', false),
-  ('$25,000 Stellar 2-Step', 25000, 199, 85, 8, 5, 10, '1:100', true),
-  ('$50,000 Stellar 2-Step', 50000, 299, 85, 8, 5, 10, '1:100', true),
-  ('$100,000 Stellar 2-Step', 100000, 519, 85, 8, 5, 10, '1:100', false),
-  ('$200,000 Stellar 2-Step', 200000, 999, 85, 8, 5, 10, '1:100', false)
-) AS v(plan_name, account_size_usd, price_usd, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
+  ('$15,000 Stellar 2-Step', 15000, 119, '2-Step Stellar Challenge', 8.0, 5.0, 85, 8, 5, 10, '1:100', false),
+  ('$25,000 Stellar 2-Step', 25000, 199, '2-Step Stellar Challenge', 8.0, 5.0, 85, 8, 5, 10, '1:100', true),
+  ('$50,000 Stellar 2-Step', 50000, 299, '2-Step Stellar Challenge', 8.0, 5.0, 85, 8, 5, 10, '1:100', true),
+  ('$100,000 Stellar 2-Step', 100000, 519, '2-Step Stellar Challenge', 8.0, 5.0, 85, 8, 5, 10, '1:100', false),
+  ('$200,000 Stellar 2-Step', 200000, 999, '2-Step Stellar Challenge', 8.0, 5.0, 85, 8, 5, 10, '1:100', false)
+) AS v(plan_name, account_size_usd, price_usd, evaluation_type, phase_1_target_percent, phase_2_target_percent, profit_split_percent, profit_target_percent, max_daily_loss_percent, max_total_loss_percent, leverage, is_popular)
 WHERE f.id IS NOT NULL;

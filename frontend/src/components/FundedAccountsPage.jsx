@@ -18,11 +18,11 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://ftmo.com',
     description: "The world's most prestigious prop trading firm. Known for fair rules, 80-90% profit splits, and fast bi-weekly payouts. Trusted by 200,000+ traders globally including Ethiopians.",
     plans: [
-      { id: 'ftmo-10k', plan_name: '$10,000 Challenge', account_size_usd: 10000, price_usd: 155, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['No time limit on challenge', 'Bi-weekly crypto payouts', 'Refundable fee upon 1st payout'] },
-      { id: 'ftmo-25k', plan_name: '$25,000 Challenge', account_size_usd: 25000, price_usd: 250, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['No time limit', 'Free trial available', 'MetaTrader 4 & 5 support'] },
-      { id: 'ftmo-50k', plan_name: '$50,000 Challenge', account_size_usd: 50000, price_usd: 345, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Most popular tier', 'Scaling plan up to $2M', 'Bi-weekly payouts'] },
-      { id: 'ftmo-100k', plan_name: '$100,000 Challenge', account_size_usd: 100000, price_usd: 540, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Pro trader choice', '90% profit split on scaling', 'Full crypto payout'] },
-      { id: 'ftmo-200k', plan_name: '$200,000 Challenge', account_size_usd: 200000, price_usd: 1080, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Maximum capital', 'Dedicated account manager', 'Premium conditions'] },
+      { id: 'ftmo-10k', plan_name: '$10,000 Challenge', account_size_usd: 10000, price_usd: 155, evaluation_type: '2-Step Challenge', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['No time limit on challenge', 'Bi-weekly crypto payouts', 'Refundable fee upon 1st payout'] },
+      { id: 'ftmo-25k', plan_name: '$25,000 Challenge', account_size_usd: 25000, price_usd: 250, evaluation_type: '2-Step Challenge', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['No time limit', 'Free trial available', 'MetaTrader 4 & 5 support'] },
+      { id: 'ftmo-50k', plan_name: '$50,000 Challenge', account_size_usd: 50000, price_usd: 345, evaluation_type: '2-Step Challenge', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Most popular tier', 'Scaling plan up to $2M', 'Bi-weekly payouts'] },
+      { id: 'ftmo-100k', plan_name: '$100,000 Challenge', account_size_usd: 100000, price_usd: 540, evaluation_type: '2-Step Challenge', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Pro trader choice', '90% profit split on scaling', 'Full crypto payout'] },
+      { id: 'ftmo-200k', plan_name: '$200,000 Challenge', account_size_usd: 200000, price_usd: 1080, evaluation_type: '2-Step Challenge', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Maximum capital', 'Dedicated account manager', 'Premium conditions'] },
     ]
   },
   {
@@ -36,10 +36,10 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://the5ers.com',
     description: 'Instant funding and hyper-growth scaling plans. Accepts Ethiopian traders with flexible challenge rules and a proven track record of reliable payouts.',
     plans: [
-      { id: '5ers-5k', plan_name: '$5,000 Bootcamp', account_size_usd: 5000, price_usd: 95, profit_split_percent: 80, profit_target_percent: 6, max_daily_loss_percent: 4, max_total_loss_percent: 8, leverage: '1:30', is_popular: false, features: ['Low entry barrier', 'Double account every 10%', 'Webinar support'] },
-      { id: '5ers-20k', plan_name: '$20,000 High Stakes', account_size_usd: 20000, price_usd: 165, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Instant evaluation', '80% profit split', 'Crypto payouts'] },
-      { id: '5ers-60k', plan_name: '$60,000 High Stakes', account_size_usd: 60000, price_usd: 395, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $4M', 'Fast track to profit', 'No time limits'] },
-      { id: '5ers-100k', plan_name: '$100,000 High Stakes', account_size_usd: 100000, price_usd: 495, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Maximum capital', 'Direct VIP support', 'Bi-weekly payouts'] },
+      { id: '5ers-5k', plan_name: '$5,000 Bootcamp', account_size_usd: 5000, price_usd: 95, evaluation_type: '3-Step Bootcamp', phase_1_target: '6%', phase_2_target: '6%', profit_split_percent: 80, profit_target_percent: 6, max_daily_loss_percent: 4, max_total_loss_percent: 8, leverage: '1:30', is_popular: false, features: ['Low entry barrier', 'Double account every 10%', 'Webinar support'] },
+      { id: '5ers-20k', plan_name: '$20,000 High Stakes', account_size_usd: 20000, price_usd: 165, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Instant evaluation', '80% profit split', 'Crypto payouts'] },
+      { id: '5ers-60k', plan_name: '$60,000 High Stakes', account_size_usd: 60000, price_usd: 395, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $4M', 'Fast track to profit', 'No time limits'] },
+      { id: '5ers-100k', plan_name: '$100,000 High Stakes', account_size_usd: 100000, price_usd: 495, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Maximum capital', 'Direct VIP support', 'Bi-weekly payouts'] },
     ]
   },
   {
@@ -53,11 +53,11 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://fundingpips.com',
     description: 'Extremely popular in East Africa due to ultra-affordable challenge fees, 5-day payout cycle, and generous profit split up to 90%.',
     plans: [
-      { id: 'fp-5k', plan_name: '$5,000 Evaluation', account_size_usd: 5000, price_usd: 32, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Lowest cost challenge', '5-day payout cycle', 'Zero commission'] },
-      { id: 'fp-10k', plan_name: '$10,000 Evaluation', account_size_usd: 10000, price_usd: 60, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Best value for beginners', '85% profit split', 'Raw spreads'] },
-      { id: 'fp-25k', plan_name: '$25,000 Evaluation', account_size_usd: 25000, price_usd: 139, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Fast scaling plan', 'Trade news allowed', 'Weekend holding'] },
-      { id: 'fp-50k', plan_name: '$50,000 Evaluation', account_size_usd: 50000, price_usd: 239, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['90% profit split on scale', 'No minimum trading days', 'Crypto withdrawal'] },
-      { id: 'fp-100k', plan_name: '$100,000 Evaluation', account_size_usd: 100000, price_usd: 399, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Pro conditions', 'VIP support group', 'Scale to $2M'] },
+      { id: 'fp-5k', plan_name: '$5,000 Evaluation', account_size_usd: 5000, price_usd: 32, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Lowest cost challenge', '5-day payout cycle', 'Zero commission'] },
+      { id: 'fp-10k', plan_name: '$10,000 Evaluation', account_size_usd: 10000, price_usd: 60, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Best value for beginners', '85% profit split', 'Raw spreads'] },
+      { id: 'fp-25k', plan_name: '$25,000 Evaluation', account_size_usd: 25000, price_usd: 139, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Fast scaling plan', 'Trade news allowed', 'Weekend holding'] },
+      { id: 'fp-50k', plan_name: '$50,000 Evaluation', account_size_usd: 50000, price_usd: 239, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['90% profit split on scale', 'No minimum trading days', 'Crypto withdrawal'] },
+      { id: 'fp-100k', plan_name: '$100,000 Evaluation', account_size_usd: 100000, price_usd: 399, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Pro conditions', 'VIP support group', 'Scale to $2M'] },
     ]
   },
   {
@@ -71,10 +71,10 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://fundednext.com',
     description: 'Fastest-growing prop firm in the world with guaranteed payout promises and a unique 15% profit share even during challenge evaluation phases.',
     plans: [
-      { id: 'fn-15k', plan_name: '$15,000 Stellar 2-Step', account_size_usd: 15000, price_usd: 119, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['15% share during challenge', 'Guaranteed payout in 24h', 'Swap-free available'] },
-      { id: 'fn-25k', plan_name: '$25,000 Stellar 2-Step', account_size_usd: 25000, price_usd: 199, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['No minimum trading days', '85% to 90% split', 'MetaTrader & cTrader'] },
-      { id: 'fn-50k', plan_name: '$50,000 Stellar 2-Step', account_size_usd: 50000, price_usd: 299, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Bi-weekly payouts', 'Free repeat on profit', 'News trading allowed'] },
-      { id: 'fn-100k', plan_name: '$100,000 Stellar 2-Step', account_size_usd: 100000, price_usd: 519, profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Top institutional tier', 'Instant certificate', 'Priority payout'] },
+      { id: 'fn-15k', plan_name: '$15,000 Stellar 2-Step', account_size_usd: 15000, price_usd: 119, evaluation_type: '2-Step Stellar Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['15% share during challenge', 'Guaranteed payout in 24h', 'Swap-free available'] },
+      { id: 'fn-25k', plan_name: '$25,000 Stellar 2-Step', account_size_usd: 25000, price_usd: 199, evaluation_type: '2-Step Stellar Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['No minimum trading days', '85% to 90% split', 'MetaTrader & cTrader'] },
+      { id: 'fn-50k', plan_name: '$50,000 Stellar 2-Step', account_size_usd: 50000, price_usd: 299, evaluation_type: '2-Step Stellar Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Bi-weekly payouts', 'Free repeat on profit', 'News trading allowed'] },
+      { id: 'fn-100k', plan_name: '$100,000 Stellar 2-Step', account_size_usd: 100000, price_usd: 519, evaluation_type: '2-Step Stellar Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 85, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Top institutional tier', 'Instant certificate', 'Priority payout'] },
     ]
   },
   {
@@ -88,9 +88,9 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://topstep.com',
     description: 'US-based futures prop firm. Premier choice for traders wanting CME/NYMEX futures contracts (ES, NQ, CL). Accepts international traders including Ethiopia.',
     plans: [
-      { id: 'ts-50k', plan_name: '$50,000 Trading Combine', account_size_usd: 50000, price_usd: 49, profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 5 contracts', is_popular: true, features: ['100% of first $10K profit', '90% thereafter', 'Daily payout requests'] },
-      { id: 'ts-100k', plan_name: '$100,000 Trading Combine', account_size_usd: 100000, price_usd: 99, profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 10 contracts', is_popular: true, features: ['Trade Nasdaq & S&P', 'NinjaTrader & TradingView', 'Coaching sessions'] },
-      { id: 'ts-150k', plan_name: '$150,000 Trading Combine', account_size_usd: 150000, price_usd: 149, profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 15 contracts', is_popular: false, features: ['Maximum contracts', 'VIP Discord channel', 'Fast-track payouts'] },
+      { id: 'ts-50k', plan_name: '$50,000 Trading Combine', account_size_usd: 50000, price_usd: 49, evaluation_type: 'Futures Combine (1-Step)', phase_1_target: '6%', phase_2_target: 'None (Direct Funded)', profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 5 contracts', is_popular: true, features: ['100% of first $10K profit', '90% thereafter', 'Daily payout requests'] },
+      { id: 'ts-100k', plan_name: '$100,000 Trading Combine', account_size_usd: 100000, price_usd: 99, evaluation_type: 'Futures Combine (1-Step)', phase_1_target: '6%', phase_2_target: 'None (Direct Funded)', profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 10 contracts', is_popular: true, features: ['Trade Nasdaq & S&P', 'NinjaTrader & TradingView', 'Coaching sessions'] },
+      { id: 'ts-150k', plan_name: '$150,000 Trading Combine', account_size_usd: 150000, price_usd: 149, evaluation_type: 'Futures Combine (1-Step)', phase_1_target: '6%', phase_2_target: 'None (Direct Funded)', profit_split_percent: 90, profit_target_percent: 6, max_daily_loss_percent: 2, max_total_loss_percent: 4, leverage: 'Futures 15 contracts', is_popular: false, features: ['Maximum contracts', 'VIP Discord channel', 'Fast-track payouts'] },
     ]
   },
   {
@@ -104,9 +104,9 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://e8funding.com',
     description: 'High-tech prop firm with custom trader dashboard, flexible challenge conditions, up to 80% profit split, and scaling to $1M+.',
     plans: [
-      { id: 'e8-25k', plan_name: '$25,000 E8 Challenge', account_size_usd: 25000, price_usd: 198, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['8% Phase 1 target', '5% Phase 2 target', 'Crypto payments'] },
-      { id: 'e8-50k', plan_name: '$50,000 E8 Challenge', account_size_usd: 50000, price_usd: 288, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: true, features: ['Custom E8X dashboard', 'Scale up to $1M', 'Fast evaluation'] },
-      { id: 'e8-100k', plan_name: '$100,000 E8 Challenge', account_size_usd: 100000, price_usd: 488, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['Bi-weekly payout', 'Zero commission on FX', 'Weekend holding'] },
+      { id: 'e8-25k', plan_name: '$25,000 E8 Challenge', account_size_usd: 25000, price_usd: 198, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['8% Phase 1 target', '5% Phase 2 target', 'Crypto payments'] },
+      { id: 'e8-50k', plan_name: '$50,000 E8 Challenge', account_size_usd: 50000, price_usd: 288, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: true, features: ['Custom E8X dashboard', 'Scale up to $1M', 'Fast evaluation'] },
+      { id: 'e8-100k', plan_name: '$100,000 E8 Challenge', account_size_usd: 100000, price_usd: 488, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['Bi-weekly payout', 'Zero commission on FX', 'Weekend holding'] },
     ]
   },
   {
@@ -120,9 +120,9 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://funderpro.com',
     description: 'Real funded capital via tier-1 liquidity providers. Offers unlimited trading days and instant funded options with direct crypto payouts.',
     plans: [
-      { id: 'fpr-25k', plan_name: '$25,000 Regular', account_size_usd: 25000, price_usd: 199, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Unlimited days', 'Trade on MT5', 'Weekly payouts'] },
-      { id: 'fpr-50k', plan_name: '$50,000 Regular', account_size_usd: 50000, price_usd: 349, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Trade crypto on weekends', 'No consistency rule', '80% profit split'] },
-      { id: 'fpr-100k', plan_name: '$100,000 Regular', account_size_usd: 100000, price_usd: 549, profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Real STP liquidity', 'Fast onboarding', 'Refundable fee'] },
+      { id: 'fpr-25k', plan_name: '$25,000 Regular', account_size_usd: 25000, price_usd: 199, evaluation_type: '2-Step Evaluation', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Unlimited days', 'Trade on MT5', 'Weekly payouts'] },
+      { id: 'fpr-50k', plan_name: '$50,000 Regular', account_size_usd: 50000, price_usd: 349, evaluation_type: '2-Step Evaluation', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Trade crypto on weekends', 'No consistency rule', '80% profit split'] },
+      { id: 'fpr-100k', plan_name: '$100,000 Regular', account_size_usd: 100000, price_usd: 549, evaluation_type: '2-Step Evaluation', phase_1_target: '10%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 10, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Real STP liquidity', 'Fast onboarding', 'Refundable fee'] },
     ]
   },
   {
@@ -136,9 +136,9 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://alphacapitalgroup.uk',
     description: '0% commission on challenge trading, free performance coaching, and zero platform markup. Excellent for East African Forex traders.',
     plans: [
-      { id: 'acg-10k', plan_name: '$10,000 Alpha Pro', account_size_usd: 10000, price_usd: 75, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Free market analysis tools', 'No time limit', 'Raw spreads'] },
-      { id: 'acg-50k', plan_name: '$50,000 Alpha Pro', account_size_usd: 50000, price_usd: 275, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Zero commissions', 'Bi-weekly payouts', 'MT5 platform'] },
-      { id: 'acg-100k', plan_name: '$100,000 Alpha Pro', account_size_usd: 100000, price_usd: 475, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Up to 90% profit share', 'Performance coaching', 'Scale to $2M'] },
+      { id: 'acg-10k', plan_name: '$10,000 Alpha Pro', account_size_usd: 10000, price_usd: 75, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Free market analysis tools', 'No time limit', 'Raw spreads'] },
+      { id: 'acg-50k', plan_name: '$50,000 Alpha Pro', account_size_usd: 50000, price_usd: 275, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Zero commissions', 'Bi-weekly payouts', 'MT5 platform'] },
+      { id: 'acg-100k', plan_name: '$100,000 Alpha Pro', account_size_usd: 100000, price_usd: 475, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Up to 90% profit share', 'Performance coaching', 'Scale to $2M'] },
     ]
   },
   {
@@ -152,8 +152,8 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://citytraderseimperium.com',
     description: 'London-based firm known for instant funding accounts, long-term scaling pathways, and personalized trading psychology mentorship.',
     plans: [
-      { id: 'cti-10k', plan_name: '$10,000 Direct Funding', account_size_usd: 10000, price_usd: 129, profit_split_percent: 70, profit_target_percent: 7, max_daily_loss_percent: 4, max_total_loss_percent: 6, leverage: '1:30', is_popular: false, features: ['Instant capital', 'Double capital on 10%', 'No evaluation'] },
-      { id: 'cti-50k', plan_name: '$50,000 Evaluation', account_size_usd: 50000, price_usd: 299, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $4,000,000', 'Mentorship access', 'Flexible rules'] },
+      { id: 'cti-10k', plan_name: '$10,000 Direct Funding', account_size_usd: 10000, price_usd: 129, evaluation_type: 'Instant Funding (No Challenge)', phase_1_target: 'None (Direct Funded)', phase_2_target: 'None (Direct Funded)', profit_split_percent: 70, profit_target_percent: 7, max_daily_loss_percent: 4, max_total_loss_percent: 6, leverage: '1:30', is_popular: false, features: ['Instant capital', 'Double capital on 10%', 'No evaluation'] },
+      { id: 'cti-50k', plan_name: '$50,000 Evaluation', account_size_usd: 50000, price_usd: 299, evaluation_type: '2-Step Challenge', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $4,000,000', 'Mentorship access', 'Flexible rules'] },
     ]
   },
   {
@@ -167,8 +167,8 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://maventrading.io',
     description: 'Community-centric prop firm with competitive pricing, automated crypto payouts, and permission for EA/algorithmic trading strategies.',
     plans: [
-      { id: 'mav-10k', plan_name: '$10,000 2-Step', account_size_usd: 10000, price_usd: 59, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['EA & bots allowed', 'Crypto payouts', 'No minimum days'] },
-      { id: 'mav-50k', plan_name: '$50,000 2-Step', account_size_usd: 50000, price_usd: 249, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Instant Discord roles', 'Fast payouts', 'News trading OK'] },
+      { id: 'mav-10k', plan_name: '$10,000 2-Step', account_size_usd: 10000, price_usd: 59, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['EA & bots allowed', 'Crypto payouts', 'No minimum days'] },
+      { id: 'mav-50k', plan_name: '$50,000 2-Step', account_size_usd: 50000, price_usd: 249, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Instant Discord roles', 'Fast payouts', 'News trading OK'] },
     ]
   },
   {
@@ -182,8 +182,8 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://myfundedfx.tech',
     description: 'Offers same-day crypto payouts, 1-step and 2-step evaluation tracks, and competitive challenge pricing for African traders.',
     plans: [
-      { id: 'mfx-25k', plan_name: '$25,000 2-Step', account_size_usd: 25000, price_usd: 189, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['Same-day payouts', 'No time limits', 'MetaTrader 5'] },
-      { id: 'mfx-50k', plan_name: '$50,000 2-Step', account_size_usd: 50000, price_usd: 299, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: true, features: ['Most chosen', '80% profit split', 'Raw spreads'] },
+      { id: 'mfx-25k', plan_name: '$25,000 2-Step', account_size_usd: 25000, price_usd: 189, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: false, features: ['Same-day payouts', 'No time limits', 'MetaTrader 5'] },
+      { id: 'mfx-50k', plan_name: '$50,000 2-Step', account_size_usd: 50000, price_usd: 299, evaluation_type: '2-Step Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 8, leverage: '1:100', is_popular: true, features: ['Most chosen', '80% profit split', 'Raw spreads'] },
     ]
   },
   {
@@ -197,8 +197,8 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://fundedengineer.com',
     description: 'Specializes in quantitative and algorithmic traders. Allows expert advisors (EAs) and offers aggressive scaling programs up to $2.5M.',
     plans: [
-      { id: 'fe-25k', plan_name: '$25,000 Standard', account_size_usd: 25000, price_usd: 175, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['EAs permitted', 'Bi-weekly payouts', 'Zero fees on scale'] },
-      { id: 'fe-50k', plan_name: '$50,000 Standard', account_size_usd: 50000, price_usd: 275, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $2.5M', '90% profit split tier', 'Fast support'] },
+      { id: 'fe-25k', plan_name: '$25,000 Standard', account_size_usd: 25000, price_usd: 175, evaluation_type: '2-Step Standard', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['EAs permitted', 'Bi-weekly payouts', 'Zero fees on scale'] },
+      { id: 'fe-50k', plan_name: '$50,000 Standard', account_size_usd: 50000, price_usd: 275, evaluation_type: '2-Step Standard', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Scale to $2.5M', '90% profit split tier', 'Fast support'] },
     ]
   },
   {
@@ -212,8 +212,8 @@ const DEFAULT_PROP_FIRMS = [
     website: 'https://trueforexfunds.com',
     description: 'Low spreads, no time limits, bi-weekly payouts, and free retry if ending in profit. Very popular among African forex traders.',
     plans: [
-      { id: 'tff-25k', plan_name: '$25,000 2-Phase', account_size_usd: 25000, price_usd: 195, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Free retry if in profit', 'No time limits', 'Crypto payouts'] },
-      { id: 'tff-50k', plan_name: '$50,000 2-Phase', account_size_usd: 50000, price_usd: 295, profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Bi-weekly payouts', 'MetaTrader 4 & 5', 'Weekend holding'] },
+      { id: 'tff-25k', plan_name: '$25,000 2-Phase', account_size_usd: 25000, price_usd: 195, evaluation_type: '2-Phase Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: false, features: ['Free retry if in profit', 'No time limits', 'Crypto payouts'] },
+      { id: 'tff-50k', plan_name: '$50,000 2-Phase', account_size_usd: 50000, price_usd: 295, evaluation_type: '2-Phase Evaluation', phase_1_target: '8%', phase_2_target: '5%', profit_split_percent: 80, profit_target_percent: 8, max_daily_loss_percent: 5, max_total_loss_percent: 10, leverage: '1:100', is_popular: true, features: ['Bi-weekly payouts', 'MetaTrader 4 & 5', 'Weekend holding'] },
     ]
   }
 ];
@@ -422,12 +422,28 @@ const FundedAccountsPage = ({ setPage }) => {
     );
   }, [firms, searchQuery]);
 
-  // Plans for selected firm
+  // Plans for selected firm (guarantees evaluation_type, phase targets, and loss limits)
   const firmPlans = useMemo(() => {
     if (!selectedFirm) return [];
+    const preset = DEFAULT_PROP_FIRMS.find(f =>
+      f.name.toLowerCase() === selectedFirm.name?.toLowerCase() || f.id === selectedFirm.id
+    );
     const directPlans = plans.filter(p => p.firm_id === selectedFirm.id);
-    if (directPlans.length > 0) return directPlans;
-    const preset = DEFAULT_PROP_FIRMS.find(f => f.name.toLowerCase() === selectedFirm.name.toLowerCase());
+    if (directPlans.length > 0) {
+      return directPlans.map(dp => {
+        const matchingPresetPlan = preset?.plans.find(pp =>
+          pp.account_size_usd === Number(dp.account_size_usd) || pp.plan_name === dp.plan_name
+        );
+        return {
+          ...dp,
+          evaluation_type: dp.evaluation_type || matchingPresetPlan?.evaluation_type || '2-Step Challenge',
+          phase_1_target: dp.phase_1_target || (dp.phase_1_target_percent ? `${dp.phase_1_target_percent}%` : null) || matchingPresetPlan?.phase_1_target || `${dp.profit_target_percent || 8}%`,
+          phase_2_target: dp.phase_2_target || (dp.phase_2_target_percent ? `${dp.phase_2_target_percent}%` : null) || matchingPresetPlan?.phase_2_target || '5%',
+          max_daily_loss_percent: dp.max_daily_loss_percent ?? matchingPresetPlan?.max_daily_loss_percent ?? 5,
+          max_total_loss_percent: dp.max_total_loss_percent ?? matchingPresetPlan?.max_total_loss_percent ?? 10,
+        };
+      });
+    }
     return preset ? preset.plans : [];
   }, [plans, selectedFirm]);
 
@@ -1283,7 +1299,7 @@ const FundedAccountsPage = ({ setPage }) => {
             <span style={{ fontSize: '12px', fontWeight: 600, color: '#4A5568' }}>({firmPlans.length} plans)</span>
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '14px' }}>
             {firmPlans.map(plan => {
               const fee = plan.price_usd * firmFeePercent / 100;
               const total = plan.price_usd + fee;
@@ -1295,40 +1311,67 @@ const FundedAccountsPage = ({ setPage }) => {
                     </div>
                   )}
 
-                  <div style={{ marginBottom: '12px' }}>
+                  {/* Funded Type Badge */}
+                  <div style={{ marginBottom: '8px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(108,92,231,0.15)', border: '1px solid rgba(108,92,231,0.35)', color: '#A29BFE', fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.02em' }}>
+                      <i className="ti ti-shield-check" style={{ color: '#F5A623' }} /> {plan.evaluation_type || '2-Step Challenge'}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '10px' }}>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>{plan.plan_name}</div>
                     <div style={{ fontSize: '28px', fontWeight: 800, color: '#F5A623', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>
                       {fmtK(plan.account_size_usd)}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#4A5568' }}>Account Size (Capital)</div>
+                    <div style={{ fontSize: '11px', color: '#8A9BB8' }}>Funded Capital</div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'rgba(245,166,35,0.05)', borderRadius: '10px', border: '1px solid rgba(245,166,35,0.1)' }}>
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#4A5568', fontWeight: 600 }}>Plan Price</div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>${plan.price_usd}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '10px', color: '#4A5568', fontWeight: 600 }}>Total with {firmFeePercent}% Fee</div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>
-                        ${fmt(total)}
+                  {/* Price Breakdown: Base Price | Fee for Us | Total to Pay */}
+                  <div style={{ background: '#0B0E1A', border: '1px solid #1E2640', borderRadius: '12px', padding: '10px', marginBottom: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.25fr', gap: '6px', textAlign: 'center' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '6px 4px' }}>
+                        <div style={{ fontSize: '9px', color: '#8A9BB8', fontWeight: 700, textTransform: 'uppercase' }}>Firm Price</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>${plan.price_usd}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,107,107,0.06)', border: '1px dashed rgba(255,107,107,0.3)', borderRadius: '8px', padding: '6px 4px' }}>
+                        <div style={{ fontSize: '9px', color: '#FF8888', fontWeight: 700, textTransform: 'uppercase' }}>Fee for Us ({firmFeePercent}%)</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#FF6B6B', fontFamily: 'var(--font-mono)' }}>+${fmt(fee)}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: '8px', padding: '6px 4px' }}>
+                        <div style={{ fontSize: '9px', color: '#00C896', fontWeight: 800, textTransform: 'uppercase' }}>Total to Pay</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#00C896', fontFamily: 'var(--font-mono)' }}>${fmt(total)}</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Key rules */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
-                    {[
-                      { label: 'Profit Split', value: `${plan.profit_split_percent}%`, color: '#00C896' },
-                      { label: 'Target', value: `${plan.profit_target_percent}%`, color: '#F5A623' },
-                      { label: 'Max Daily Loss', value: `${plan.max_daily_loss_percent}%`, color: '#FF6B6B' },
-                      { label: 'Leverage', value: plan.leverage || '1:100', color: '#6C5CE7' },
-                    ].map(m => (
-                      <div key={m.label} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '9px', color: '#4A5568', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: m.color }}>{m.value}</div>
+                  {/* Targets & Loss Limits Grid: Phase 1, Phase 2, Daily Loss, Total Loss */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', marginBottom: '12px' }}>
+                    <div style={{ background: 'rgba(245,166,35,0.05)', border: '1px solid rgba(245,166,35,0.15)', borderRadius: '8px', padding: '7px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#F5A623', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Phase 1 Target</div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{plan.phase_1_target || `${plan.profit_target_percent}%`}</div>
+                    </div>
+                    <div style={{ background: 'rgba(0,200,150,0.05)', border: '1px solid rgba(0,200,150,0.15)', borderRadius: '8px', padding: '7px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#00C896', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Phase 2 Target</div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>{plan.phase_2_target || '5%'}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,107,107,0.05)', border: '1px solid rgba(255,107,107,0.15)', borderRadius: '8px', padding: '7px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#FF6B6B', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Daily Loss Limit</div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#FF6B6B' }}>
+                        {plan.max_daily_loss_percent}% <span style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600 }}>(-${fmt(plan.account_size_usd * plan.max_daily_loss_percent / 100, 0)})</span>
                       </div>
-                    ))}
+                    </div>
+                    <div style={{ background: 'rgba(255,77,77,0.05)', border: '1px solid rgba(255,77,77,0.15)', borderRadius: '8px', padding: '7px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', color: '#FF4D4D', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Max Total Loss</div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#FF4D4D' }}>
+                        {plan.max_total_loss_percent}% <span style={{ fontSize: '10px', color: '#8A9BB8', fontWeight: 600 }}>(-${fmt(plan.account_size_usd * plan.max_total_loss_percent / 100, 0)})</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Profit Split & Leverage */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '7px 10px', marginBottom: '12px', fontSize: '11px' }}>
+                    <span style={{ color: '#8A9BB8' }}>Profit Split: <strong style={{ color: '#00C896', fontWeight: 800 }}>{plan.profit_split_percent}%</strong></span>
+                    <span style={{ color: '#8A9BB8' }}>Leverage: <strong style={{ color: '#A29BFE', fontWeight: 800 }}>{plan.leverage || '1:100'}</strong></span>
                   </div>
 
                   {plan.features && plan.features.length > 0 && (
@@ -1385,22 +1428,27 @@ const FundedAccountsPage = ({ setPage }) => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {[
-              ['Account Size', fmtK(selectedPlan.account_size_usd), '#fff'],
-              ['Profit Split', `${selectedPlan.profit_split_percent}%`, '#00C896'],
-              ['Plan Price', `$${fmt(planPrice)} USDT`, '#fff'],
-              [`EthioSwap Fee (${firmFeePercent}%)`, `+$${fmt(platformFee)} USDT`, '#FF6B6B'],
+              ['Funded Type', selectedPlan.evaluation_type || '2-Step Challenge', '#A29BFE'],
+              ['Account Size (Capital)', fmtK(selectedPlan.account_size_usd), '#fff'],
+              ['Phase 1 Target', selectedPlan.phase_1_target || `${selectedPlan.profit_target_percent}%`, '#F5A623'],
+              ['Phase 2 Target', selectedPlan.phase_2_target || '5%', '#00C896'],
+              ['Daily Loss Limit', `${selectedPlan.max_daily_loss_percent}% (-$${fmt(selectedPlan.account_size_usd * selectedPlan.max_daily_loss_percent / 100, 0)})`, '#FF6B6B'],
+              ['Max Total Loss', `${selectedPlan.max_total_loss_percent}% (-$${fmt(selectedPlan.account_size_usd * selectedPlan.max_total_loss_percent / 100, 0)})`, '#FF4D4D'],
+              ['Profit Split', `${selectedPlan.profit_split_percent}% to Trader`, '#00C896'],
+              ['Firm Base Price', `$${fmt(planPrice)} USDT`, '#fff'],
+              [`EthioSwap Fee for Us (${firmFeePercent}%)`, `+$${fmt(platformFee)} USDT`, '#FF6B6B'],
             ].map(([label, value, color], i, arr) => (
               <div key={label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0' }}>
-                  <span style={{ fontSize: '13px', color: '#8A9BB8' }}>{label}</span>
-                  <span style={{ fontSize: '13.5px', fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>{value}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0' }}>
+                  <span style={{ fontSize: '12.5px', color: '#8A9BB8' }}>{label}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color, fontFamily: 'var(--font-mono)' }}>{value}</span>
                 </div>
                 {i < arr.length - 1 && <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />}
               </div>
             ))}
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>💳 Total to Pay</span>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: '#fff' }}>💳 Total to Pay</span>
               <span style={{ fontSize: '20px', fontWeight: 800, color: '#F5A623', fontFamily: 'var(--font-mono)' }}>${fmt(totalCharge)} USDT</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0 8px' }}>
