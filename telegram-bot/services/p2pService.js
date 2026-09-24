@@ -1,3 +1,5 @@
+const { supabase, MIN_ORDER_USD } = require('../config');
+
 const DEFAULT_BUY_LISTINGS = [
   {
     id: 'ethio-seller-1',
