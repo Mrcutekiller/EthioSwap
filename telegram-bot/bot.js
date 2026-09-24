@@ -65,6 +65,19 @@ if (bot.setChatMenuButton) {
 
 console.log('🚀 EthioSwap P2P Telegram Bot is starting...');
 
+// Register bot commands for @EthioSwap_bot
+bot.setMyCommands([
+  { command: 'start', description: '🚀 Open EthioSwap P2P & Mini App' },
+  { command: 'buy', description: '🛒 Buy $ (USD/USDT) with Telebirr/CBE' },
+  { command: 'sell', description: '💵 Sell $ (USD/USDT) for ETB' },
+  { command: 'wallet', description: '💼 P2P Wallet & Balances' },
+  { command: 'orders', description: '📋 My Active Orders' },
+  { command: 'history', description: '📜 Transaction History' },
+  { command: 'login', description: '🔐 Log In / Connect Account' },
+  { command: 'logout', description: '🚪 Log Out' }
+]).then(() => console.log('✅ Registered commands for @EthioSwap_bot'))
+  .catch((err) => console.warn('[Bot Commands Warning]:', err.message));
+
 // ========================================================
 // KEYBOARDS & MENUS (INLINE ONLY - REMOVE BOTTOM MENU)
 // ========================================================

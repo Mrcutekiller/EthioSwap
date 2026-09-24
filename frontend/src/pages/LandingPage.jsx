@@ -1010,9 +1010,30 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 </a>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '8px 16px', fontSize: '14px' }}>Log in</button>
-              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '10px 22px', fontSize: '14px', borderRadius: '12px' }}>Get Started</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+              <a
+                href="https://t.me/EthioSwap_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(0, 136, 204, 0.15)',
+                  border: '1px solid rgba(0, 136, 204, 0.45)',
+                  color: '#38bdf8',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  padding: '7px 12px',
+                  borderRadius: '10px',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span>✈️</span> @EthioSwap_bot
+              </a>
+              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '8px 14px', fontSize: '14px' }}>Log in</button>
+              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '10px 20px', fontSize: '14px', borderRadius: '12px' }}>Get Started</button>
             </div>
           </>
         ) : (
@@ -1042,6 +1063,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
             {[
               { label: 'Trade & P2P', target: '#hero', icon: 'ti-arrows-left-right' },
+              { label: 'Telegram Bot (@EthioSwap_bot)', target: 'https://t.me/EthioSwap_bot', icon: 'ti-brand-telegram', isExternal: true, isNew: true },
               { label: 'How It Works', target: '#how-it-works', icon: 'ti-list-numbers' }, 
               { label: 'Features & Security', target: '#features', icon: 'ti-shield-check' }, 
               { label: 'Live Rates & Calculator', target: '#market', icon: 'ti-calculator' }, 
@@ -1125,11 +1147,34 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </p>
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: width < 1024 ? 'center' : 'flex-start', marginBottom: '48px' }}>
-                <button onClick={onGetStarted} className="btn-saas-primary" style={{ fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 32px' : '18px 44px' }}>
+                <button onClick={onGetStarted} className="btn-saas-primary" style={{ fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 28px' : '18px 36px' }}>
                   Start trading
                 </button>
+                <a
+                  href="https://t.me/EthioSwap_bot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #0088cc, #0288d1)',
+                    color: '#ffffff',
+                    fontSize: width < 768 ? '15px' : '17px',
+                    padding: width < 768 ? '14px 24px' : '18px 32px',
+                    borderRadius: '14px',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 8px 24px rgba(0, 136, 204, 0.35)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <span style={{ fontSize: '18px' }}>✈️</span> Trade on Telegram (@EthioSwap_bot)
+                </a>
                 <button onClick={() => document.getElementById('market')?.scrollIntoView({ behavior: 'smooth' })} 
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 32px' : '18px 44px', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 28px' : '18px 36px', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}>
                   View live rates
                 </button>
               </div>
@@ -1788,7 +1833,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>TikTok</a>
               <a href="https://www.instagram.com/ethioswap" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Instagram</a>
-              <a href="https://t.me/EthioSwap1" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Telegram</a>
+              <a href="https://t.me/EthioSwap_bot" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none', color: '#38bdf8', fontWeight: 700 }}>✈️ Telegram Bot (@EthioSwap_bot)</a>
             </div>
           </div>
         </div>
