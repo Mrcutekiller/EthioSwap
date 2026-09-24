@@ -5,10 +5,102 @@ import { supabase } from '../lib/supabase';
 
 const MIN_ORDER_USD = 5;
 
+// 3D Flipping Paper Money Component (USD $100 on front, ETB 200 on back)
+function PaperMoneyMini({ flipped, onToggleFlip }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onClick={onToggleFlip}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '130px',
+        height: '270px',
+        perspective: '1200px',
+        cursor: 'pointer',
+        userSelect: 'none',
+        margin: '0 auto',
+        filter: hovered
+          ? 'drop-shadow(0 20px 40px rgba(0,0,0,0.8)) drop-shadow(0 0 25px rgba(245,166,35,0.4))'
+          : 'drop-shadow(0 15px 30px rgba(0,0,0,0.6))',
+        transition: 'filter 0.3s ease',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          transition: 'transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+      >
+        {/* FRONT: US $100 Bill */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            border: '1.5px solid rgba(245, 166, 35, 0.4)',
+            background: '#0d2217',
+            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              backgroundImage: 'url(/images/usd_100.jpg)',
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          />
+        </div>
+
+        {/* BACK: Ethiopian Birr 200 Note */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            border: '1.5px solid rgba(245, 166, 35, 0.4)',
+            background: '#1d1b24',
+            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              width: '270px',
+              height: '130px',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%) rotate(90deg)',
+              backgroundImage: 'url(/images/etb_200.jpg)',
+              backgroundSize: '100% 200%',
+              backgroundPosition: 'top center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TelegramMiniApp() {
   const {
     user,
-    wallet,
     listings,
     trades,
     systemSettings,
@@ -19,13 +111,18 @@ export default function TelegramMiniApp() {
     initiateTrade,
     markTradeAsPaid,
     releaseEscrow,
-    createDepositRequest,
-    withdrawETH,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('buy'); // 'buy', 'sell', 'wallet', 'orders'
+  // Navigation tab: 'welcome', 'buy', 'sell', 'wallet', 'orders', 'history'
+  const [activeTab, setActiveTab] = useState('welcome');
+  const [welcomeStep, setWelcomeStep] = useState(1); // 1: Swap bill, 2: How it works, 3: Log In / Start
+  const [billFlipped, setBillFlipped] = useState(false);
+  const [swapUsd, setSwapUsd] = useState(100);
+  const [swapDirection, setSwapDirection] = useState('USD_TO_ETB'); // 'USD_TO_ETB' or 'ETB_TO_USD'
+
+  // Auth modal
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [authMode, setAuthMode] = useState('login');
   const [authIdentifier, setAuthIdentifier] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authFullName, setAuthFullName] = useState('');
@@ -35,20 +132,19 @@ export default function TelegramMiniApp() {
   // Trade modals
   const [selectedListing, setSelectedListing] = useState(null);
   const [buyAmountUsd, setBuyAmountUsd] = useState(10);
-  const [sellAmountUsd, setSellAmountUsd] = useState(10);
   const [tradeLoading, setTradeLoading] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState('');
   const [tradeError, setTradeError] = useState('');
 
   // Post Ad Modal
   const [showPostAdModal, setShowPostAdModal] = useState(false);
-  const [postAdType, setPostAdType] = useState('sell'); // 'sell' or 'buy'
+  const [postAdType, setPostAdType] = useState('sell');
   const [postAdAmount, setPostAdAmount] = useState(50);
   const [postAdRate, setPostAdRate] = useState(systemSettings?.etbRatePerDollarSell || 186.0);
   const [postAdAccount, setPostAdAccount] = useState('');
   const [postAdPaymentMethod, setPostAdPaymentMethod] = useState('Telebirr');
 
-  // Wallet Deposit & Withdraw Modals
+  // Wallet Modals
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [depositTxHash, setDepositTxHash] = useState('');
@@ -61,6 +157,11 @@ export default function TelegramMiniApp() {
   const [withdrawMsg, setWithdrawMsg] = useState('');
   const [copiedAddress, setCopiedAddress] = useState(false);
 
+  // History Tab state
+  const [historyFilter, setHistoryFilter] = useState('all'); // 'all', 'trades', 'deposits', 'withdrawals'
+  const [userTransactions, setUserTransactions] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // Initialize Telegram WebApp SDK
   useEffect(() => {
     if (window.Telegram?.WebApp) {
@@ -72,12 +173,55 @@ export default function TelegramMiniApp() {
         tg.setBackgroundColor?.('#0B0E1A');
       } catch (_) {}
     }
+
+    // If user is already logged in and previously visited, go to Buy
+    if (localStorage.getItem('ethioswap_tma_visited') === 'true') {
+      setActiveTab('buy');
+    }
   }, []);
 
   const triggerHaptic = (style = 'light') => {
     try {
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(style);
     } catch (_) {}
+  };
+
+  // Fetch full transaction history
+  const loadUserHistory = async () => {
+    if (!user?.id) return;
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (!error && data) {
+        setUserTransactions(data);
+      }
+    } catch (err) {
+      console.warn('Error loading transactions:', err.message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history' && user?.id) {
+      loadUserHistory();
+    }
+  }, [activeTab, user?.id]);
+
+  const handleBillFlip = () => {
+    triggerHaptic('medium');
+    setBillFlipped(f => !f);
+    setSwapDirection(d => (d === 'USD_TO_ETB' ? 'ETB_TO_USD' : 'USD_TO_ETB'));
+    // Advance to calculator if on step 1
+    if (welcomeStep === 1) {
+      setWelcomeStep(2);
+    }
   };
 
   const handleLoginSubmit = async (e) => {
@@ -91,6 +235,8 @@ export default function TelegramMiniApp() {
       } else {
         setShowAuthModal(false);
         triggerHaptic('success');
+        localStorage.setItem('ethioswap_tma_visited', 'true');
+        setActiveTab('buy');
       }
     } catch (err) {
       setAuthError(err.message || 'Login failed.');
@@ -114,6 +260,8 @@ export default function TelegramMiniApp() {
       } else {
         setShowAuthModal(false);
         triggerHaptic('success');
+        localStorage.setItem('ethioswap_tma_visited', 'true');
+        setActiveTab('buy');
       }
     } catch (err) {
       setAuthError(err.message || 'Sign up failed.');
@@ -171,7 +319,7 @@ export default function TelegramMiniApp() {
     }
   };
 
-  // Create Listing (Post Ad)
+  // Create Listing
   const handleCreateAd = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -184,7 +332,7 @@ export default function TelegramMiniApp() {
 
       const payload = {
         type: postAdType,
-        amount_eth: amountUsd, // used for USD representation
+        amount_eth: amountUsd,
         custom_rate_etb: rate,
         min_limit_etb: MIN_ORDER_USD * rate,
         max_limit_etb: amountUsd * rate,
@@ -205,7 +353,7 @@ export default function TelegramMiniApp() {
     }
   };
 
-  // Submit on-chain deposit hash
+  // Deposit Tx Hash
   const handleSubmitDepositHash = async (e) => {
     e.preventDefault();
     if (!depositTxHash.trim()) return;
@@ -221,7 +369,7 @@ export default function TelegramMiniApp() {
         admin_note: 'Submitted via Telegram Mini App (Chain Verification)',
       });
       if (error) throw error;
-      setDepositMsg('✅ Transaction submitted! Your P2P wallet will be credited once confirmed.');
+      setDepositMsg('✅ Transaction submitted! Auto-crediting upon chain confirmation.');
       setDepositTxHash('');
       triggerHaptic('success');
     } catch (err) {
@@ -231,7 +379,7 @@ export default function TelegramMiniApp() {
     }
   };
 
-  // Submit withdrawal request
+  // Withdrawal
   const handleSubmitWithdrawal = async (e) => {
     e.preventDefault();
     const amount = parseFloat(withdrawAmount);
@@ -247,10 +395,7 @@ export default function TelegramMiniApp() {
     setWithdrawSubmitting(true);
     setWithdrawMsg('');
     try {
-      // Deduct from balance
       await supabase.from('users').update({ balance_usd: currentBal - amount }).eq('id', user.id);
-
-      // Record withdrawal request
       const { error } = await supabase.from('withdraw_requests').insert({
         user_id: user.id,
         username: user.username,
@@ -264,7 +409,7 @@ export default function TelegramMiniApp() {
       if (error) throw error;
 
       triggerHaptic('success');
-      setWithdrawMsg('✅ Withdrawal submitted! Processing automatically on blockchain.');
+      setWithdrawMsg('✅ Withdrawal submitted! Automated dispatch is processing.');
       setWithdrawAmount('');
       setWithdrawAddress('');
     } catch (err) {
@@ -281,6 +426,9 @@ export default function TelegramMiniApp() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
+  const buyRate = systemSettings?.etbRatePerDollar || 190.0;
+  const sellRate = systemSettings?.etbRatePerDollarSell || 186.0;
+
   // Filter listings
   const buyListings = (listings || []).filter(l => l.status === 'active' && l.type === 'sell' && l.seller_id !== user?.id);
   const sellListings = (listings || []).filter(l => l.status === 'active' && l.type === 'buy' && l.seller_id !== user?.id);
@@ -294,7 +442,7 @@ export default function TelegramMiniApp() {
       background: '#0B0E1A',
       color: '#FFFFFF',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      paddingBottom: '80px',
+      paddingBottom: activeTab === 'welcome' ? '24px' : '80px',
       overflowX: 'hidden',
     }}>
       {/* ── HEADER ── */}
@@ -331,21 +479,42 @@ export default function TelegramMiniApp() {
               EthioSwap <span style={{ color: '#F5A623', fontSize: '11px', padding: '2px 6px', background: 'rgba(245, 166, 35, 0.15)', borderRadius: '6px' }}>P2P</span>
             </div>
             <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
-              1 USD ≈ {systemSettings?.etbRatePerDollar || 190.0} ETB
+              1 USD ≈ {buyRate} ETB
             </div>
           </div>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => {
+              triggerHaptic();
+              setActiveTab('welcome');
+              setWelcomeStep(1);
+            }}
+            title="Interactive Welcome / Tour"
+            style={{
+              background: activeTab === 'welcome' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(245, 166, 35, 0.3)',
+              color: '#F5A623',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '5px 8px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            ✨ Tour
+          </button>
+
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div
                 onClick={() => setActiveTab('wallet')}
                 style={{
                   background: 'rgba(245, 166, 35, 0.12)',
                   border: '1px solid rgba(245, 166, 35, 0.3)',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
+                  padding: '4px 8px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   textAlign: 'right',
                 }}
@@ -353,7 +522,6 @@ export default function TelegramMiniApp() {
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623' }}>
                   ${Number(user.balance_usd || 0).toFixed(2)}
                 </div>
-                <div style={{ fontSize: '9px', color: '#9CA3AF' }}>@{user.username}</div>
               </div>
               <button
                 onClick={() => { logout(); triggerHaptic(); }}
@@ -383,10 +551,9 @@ export default function TelegramMiniApp() {
                 border: 'none',
                 fontWeight: 700,
                 fontSize: '12px',
-                padding: '6px 14px',
+                padding: '6px 12px',
                 borderRadius: '10px',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(245,166,35,0.3)',
               }}
             >
               🔐 Log In
@@ -402,722 +569,1187 @@ export default function TelegramMiniApp() {
         </div>
       )}
 
-      {/* ── MAIN CONTENT BASED ON TAB ── */}
-      <main style={{ padding: '16px' }}>
-
-        {/* ─── TAB 1: BUY $ ─── */}
-        {activeTab === 'buy' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>🛒 Buy $ (USD/USDT)</h2>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
-                  Pay in ETB (Telebirr / CBE). Starting from <b>${MIN_ORDER_USD}</b>.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  if (!user) { setShowAuthModal(true); return; }
-                  setPostAdType('sell');
-                  setShowPostAdModal(true);
-                }}
-                style={{
-                  background: 'rgba(245, 166, 35, 0.15)',
-                  border: '1px solid rgba(245, 166, 35, 0.4)',
-                  color: '#F5A623',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                ➕ Post Ad
-              </button>
-            </div>
-
-            {buyListings.length === 0 ? (
-              <div style={{
-                background: '#141926',
-                border: '1px dashed rgba(255,255,255,0.1)',
-                borderRadius: '16px',
-                padding: '32px 16px',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛒</div>
-                <div style={{ fontWeight: 700, fontSize: '15px' }}>No Active Sellers Available</div>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', maxWidth: '260px', margin: '6px auto 14px' }}>
-                  Be the first to post a listing or check back in a few minutes.
-                </p>
-                <button
-                  onClick={() => {
-                    if (!user) { setShowAuthModal(true); return; }
-                    setPostAdType('buy');
-                    setShowPostAdModal(true);
-                  }}
-                  style={{
-                    background: '#F5A623',
-                    color: '#0B0E1A',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ➕ Create Buy Order
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {buyListings.map((item) => {
-                  const rate = Number(item.custom_rate_etb || systemSettings?.etbRatePerDollar || 190.0);
-                  const minUsd = item.min_limit_etb ? Math.max(MIN_ORDER_USD, Math.round(item.min_limit_etb / rate)) : MIN_ORDER_USD;
-                  const maxUsd = item.max_limit_etb ? Math.round(item.max_limit_etb / rate) : 500;
-                  const sellerName = item.seller_name || 'Verified Trader';
-
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        background: '#141926',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: '14px',
-                        padding: '14px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: '#1E2640',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: '#F5A623',
-                          }}>
-                            {sellerName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              {sellerName} <span style={{ color: '#10B981', fontSize: '11px' }}>● Online</span>
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                              ⭐ 99% (45+ orders)
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '17px', fontWeight: 800, color: '#10B981' }}>
-                            {rate.toFixed(2)} <span style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF' }}>ETB</span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Price per 1 USD</div>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingTop: '8px',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                        marginTop: '4px',
-                      }}>
-                        <div>
-                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                            Limits: <b>${minUsd} - ${maxUsd} USD</b>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                            {(Array.isArray(item.payment_methods) ? item.payment_methods : ['Telebirr', 'CBE']).map((m, i) => (
-                              <span key={i} style={{
-                                background: 'rgba(255,255,255,0.06)',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontSize: '9px',
-                                color: '#E5E7EB',
-                              }}>
-                                {m}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => handleOpenBuyModal(item)}
-                          style={{
-                            background: 'linear-gradient(135deg, #10B981, #059669)',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            fontWeight: 800,
-                            fontSize: '13px',
-                            padding: '8px 18px',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                          }}
-                        >
-                          Buy $
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 0: WELCOME & INTERACTIVE CURRENCY SWAP ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'welcome' && (
+        <div style={{ padding: '20px 16px', maxWidth: '440px', margin: '0 auto', textAlign: 'center' }}>
+          {/* Badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(245, 166, 35, 0.12)',
+            border: '1px solid rgba(245, 166, 35, 0.3)',
+            borderRadius: '20px',
+            padding: '4px 14px',
+            fontSize: '12px',
+            fontWeight: 700,
+            color: '#F5A623',
+            marginBottom: '12px',
+          }}>
+            🇪🇹 Ethiopia’s Official P2P Currency Swap
           </div>
-        )}
 
-        {/* ─── TAB 2: SELL $ ─── */}
-        {activeTab === 'sell' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>💵 Sell $ (Instant ETB)</h2>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
-                  Cash out your $ directly to Telebirr or Bank.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  if (!user) { setShowAuthModal(true); return; }
-                  setPostAdType('sell');
-                  setShowPostAdModal(true);
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                ➕ Post Sell Ad
-              </button>
-            </div>
+          <h1 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+            Instant <span style={{ color: '#10B981' }}>USD ($)</span> ⇄ <span style={{ color: '#F5A623' }}>Birr (ETB)</span>
+          </h1>
+          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 20px', lineHeight: 1.4 }}>
+            Trade directly with Telebirr & CBE. Touch the bill below to swap currencies!
+          </p>
 
-            {/* Quick Balance Preview */}
-            {user && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                borderRadius: '12px',
-                padding: '12px',
-                marginBottom: '14px',
-                display: 'flex',
-                justifyContent: 'space-between',
+          {/* ── THE 3D FLIPPING CURRENCY BILL ── */}
+          <div style={{ position: 'relative', marginBottom: '14px' }}>
+            <PaperMoneyMini flipped={billFlipped} onToggleFlip={handleBillFlip} />
+            <div
+              onClick={handleBillFlip}
+              style={{
+                marginTop: '12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#F5A623',
+                cursor: 'pointer',
+                display: 'inline-flex',
                 alignItems: 'center',
-              }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Available to Sell:</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#EF4444' }}>
-                    ${Number(user.balance_usd || 0).toFixed(2)} USD
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setPostAdType('sell');
-                    setPostAdAmount(Math.max(MIN_ORDER_USD, Number(user.balance_usd || 0)));
-                    setShowPostAdModal(true);
-                  }}
-                  style={{
-                    background: '#EF4444',
-                    border: 'none',
-                    color: '#FFF',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Sell All
-                </button>
-              </div>
-            )}
-
-            {sellListings.length === 0 ? (
-              <div style={{
-                background: '#141926',
-                border: '1px dashed rgba(255,255,255,0.1)',
+                gap: '6px',
+                background: 'rgba(245,166,35,0.1)',
+                padding: '6px 14px',
                 borderRadius: '16px',
-                padding: '32px 16px',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>💵</div>
-                <div style={{ fontWeight: 700, fontSize: '15px' }}>No Waiting Buyers Right Now</div>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', maxWidth: '260px', margin: '6px auto 14px' }}>
-                  Post your own Sell Ad with your price and Telebirr number!
-                </p>
-                <button
-                  onClick={() => {
-                    if (!user) { setShowAuthModal(true); return; }
-                    setPostAdType('sell');
-                    setShowPostAdModal(true);
-                  }}
-                  style={{
-                    background: '#EF4444',
-                    color: '#FFFFFF',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ➕ Create Sell Ad
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {sellListings.map((item) => {
-                  const rate = Number(item.custom_rate_etb || systemSettings?.etbRatePerDollarSell || 186.0);
-                  const minUsd = item.min_limit_etb ? Math.max(MIN_ORDER_USD, Math.round(item.min_limit_etb / rate)) : MIN_ORDER_USD;
-                  const maxUsd = item.max_limit_etb ? Math.round(item.max_limit_etb / rate) : 500;
-                  const buyerName = item.seller_name || 'Verified Buyer';
-
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        background: '#141926',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: '14px',
-                        padding: '14px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: '#1E2640',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: '#EF4444',
-                          }}>
-                            {buyerName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: 700 }}>
-                              {buyerName}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                              ⭐ 100% (30+ orders)
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '17px', fontWeight: 800, color: '#EF4444' }}>
-                            {rate.toFixed(2)} <span style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF' }}>ETB</span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Will pay per $</div>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingTop: '8px',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                        marginTop: '4px',
-                      }}>
-                        <div>
-                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                            Limits: <b>${minUsd} - ${maxUsd} USD</b>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            if (!user) { setShowAuthModal(true); return; }
-                            setPostAdType('sell');
-                            setPostAdRate(rate);
-                            setShowPostAdModal(true);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            fontWeight: 800,
-                            fontSize: '13px',
-                            padding: '8px 18px',
-                            borderRadius: '10px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Sell $
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                border: '1px solid rgba(245,166,35,0.25)',
+              }}
+            >
+              🔄 Touch Bill to Flip & Swap ({billFlipped ? '200 Birr' : '100 USD'})
+            </div>
           </div>
-        )}
 
-        {/* ─── TAB 3: WALLET ─── */}
-        {activeTab === 'wallet' && (
-          <div>
-            {!user ? (
-              <div style={{
-                background: '#141926',
-                borderRadius: '16px',
-                padding: '32px 16px',
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '36px', marginBottom: '8px' }}>💼</div>
-                <div style={{ fontSize: '16px', fontWeight: 800 }}>P2P Wallet</div>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '8px auto 16px', maxWidth: '240px' }}>
-                  Please log in to view your balances, deposit on-chain, and withdraw funds.
-                </p>
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  style={{
-                    background: '#F5A623',
-                    border: 'none',
-                    color: '#0B0E1A',
-                    fontWeight: 700,
-                    padding: '10px 24px',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  🔐 Log In
-                </button>
-              </div>
-            ) : (
-              <div>
-                {/* Main Balance Card */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #1A2238, #141926)',
-                  border: '1px solid rgba(245, 166, 35, 0.25)',
-                  borderRadius: '18px',
-                  padding: '20px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                  marginBottom: '16px',
-                }}>
-                  <div style={{ fontSize: '12px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Available P2P Balance
-                  </div>
-                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', margin: '6px 0' }}>
-                    ${Number(user.balance_usd || 0).toFixed(2)} <span style={{ fontSize: '16px', color: '#F5A623' }}>USD</span>
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#10B981', fontWeight: 600 }}>
-                    ≈ {(Number(user.balance_usd || 0) * (systemSettings?.etbRatePerDollar || 190.0)).toLocaleString()} ETB
-                  </div>
+          {/* ── STEP 1: INTERACTIVE SWAP CALCULATOR ── */}
+          <div style={{
+            background: 'linear-gradient(135deg, #141926, #1E2640)',
+            border: '1px solid rgba(245, 166, 35, 0.25)',
+            borderRadius: '18px',
+            padding: '16px',
+            marginTop: '16px',
+            textAlign: 'left',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF' }}>Live Currency Swap</span>
+              <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>1 USD = {buyRate} ETB</span>
+            </div>
 
-                  {Number(user.balance_escrow || 0) > 0 && (
-                    <div style={{ fontSize: '11px', color: '#EAB308', marginTop: '6px' }}>
-                      🔒 In Escrow: ${Number(user.balance_escrow).toFixed(2)} USD
-                    </div>
-                  )}
-
-                  {/* Wallet Action Buttons */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '16px' }}>
-                    <button
-                      onClick={() => { triggerHaptic(); setShowDepositModal(true); }}
-                      style={{
-                        background: 'linear-gradient(135deg, #10B981, #059669)',
-                        border: 'none',
-                        color: '#FFFFFF',
-                        fontWeight: 800,
-                        padding: '12px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 12px rgba(16,185,129,0.25)',
-                      }}
-                    >
-                      📥 Deposit
-                    </button>
-
-                    <button
-                      onClick={() => { triggerHaptic(); setShowWithdrawModal(true); }}
-                      style={{
-                        background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                        border: 'none',
-                        color: '#FFFFFF',
-                        fontWeight: 800,
-                        padding: '12px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 12px rgba(239,68,68,0.25)',
-                      }}
-                    >
-                      📤 Withdraw
-                    </button>
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'center' }}>
+              {/* Box 1 */}
+              <div style={{ background: '#0B0E1A', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '10px', color: '#9CA3AF' }}>You Send</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#FFF' }}>
+                  {swapDirection === 'USD_TO_ETB' ? `$${swapUsd}` : `${(swapUsd * buyRate).toLocaleString()} ETB`}
                 </div>
+              </div>
 
-                {/* Crypto On-Chain Address Box */}
-                <div style={{
-                  background: '#141926',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '14px',
-                  padding: '14px',
-                  marginBottom: '16px',
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '6px', color: '#F5A623' }}>
-                    📍 Your On-Chain Deposit Address (USDT / ETH)
-                  </div>
-                  <div style={{
-                    background: '#0B0E1A',
-                    padding: '8px 10px',
+              {/* Swap Button */}
+              <button
+                onClick={handleBillFlip}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: '#F5A623',
+                  border: 'none',
+                  color: '#0B0E1A',
+                  fontWeight: 900,
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(245,166,35,0.4)',
+                }}
+              >
+                ⇄
+              </button>
+
+              {/* Box 2 */}
+              <div style={{ background: '#0B0E1A', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '10px', color: '#9CA3AF' }}>You Receive</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#10B981' }}>
+                  {swapDirection === 'USD_TO_ETB' ? `${(swapUsd * buyRate).toLocaleString()} ETB` : `$${swapUsd}`}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '12px', display: 'flex', gap: '6px' }}>
+              {[25, 50, 100, 200, 500].map((amt) => (
+                <button
+                  key={amt}
+                  onClick={() => { triggerHaptic(); setSwapUsd(amt); }}
+                  style={{
+                    flex: 1,
+                    background: swapUsd === amt ? 'rgba(245, 166, 35, 0.25)' : 'rgba(255,255,255,0.04)',
+                    border: swapUsd === amt ? '1px solid #F5A623' : '1px solid rgba(255,255,255,0.06)',
+                    color: swapUsd === amt ? '#F5A623' : '#9CA3AF',
                     borderRadius: '8px',
+                    padding: '6px 0',
                     fontSize: '11px',
-                    fontFamily: 'monospace',
-                    color: '#9CA3AF',
-                    wordBreak: 'break-all',
-                    marginBottom: '8px',
-                  }}>
-                    {user.eth_address || '0x8b321aF28741e9766dB5E9F90a0715D2c5D5eFE6'}
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(user.eth_address || '0x8b321aF28741e9766dB5E9F90a0715D2c5D5eFE6')}
-                    style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      border: 'none',
-                      color: '#FFFFFF',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      width: '100%',
-                    }}
-                  >
-                    {copiedAddress ? '✅ Address Copied!' : '📋 Copy Deposit Address'}
-                  </button>
-                </div>
-              </div>
-            )}
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ${amt}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* ─── TAB 4: ORDERS ─── */}
-        {activeTab === 'orders' && (
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 14px 0' }}>📋 My P2P Orders</h2>
+          {/* ── STEP 2: HOW IT WORKS ── */}
+          <div style={{ marginTop: '24px', textAlign: 'left' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              💡 How It Works in 3 Steps
+            </h3>
 
-            {!user ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '16px' }}>
-                <p style={{ fontSize: '13px', color: '#9CA3AF' }}>Log in to view and manage your orders.</p>
-                <button
-                  onClick={() => setShowAuthModal(true)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { step: '1', title: 'Choose Buy or Sell', desc: 'Select a verified trader or post your own custom price ad with Telebirr or CBE.' },
+                { step: '2', title: '100% Escrow Protection', desc: 'The crypto or dollars are held securely in smart escrow. Zero risk of fraud.' },
+                { step: '3', title: 'Instant Release', desc: 'Transfer ETB via Telebirr or Bank, confirm payment, and funds release to your wallet!' },
+              ].map((item) => (
+                <div
+                  key={item.step}
                   style={{
+                    background: '#141926',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
                     background: '#F5A623',
+                    color: '#0B0E1A',
+                    fontWeight: 900,
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {item.step}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFF' }}>{item.title}</div>
+                    <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px', lineHeight: 1.35 }}>
+                      {item.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── STEP 3: ACTION BUTTONS ── */}
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {!user ? (
+              <>
+                <button
+                  onClick={() => {
+                    triggerHaptic('success');
+                    setAuthMode('login');
+                    setShowAuthModal(true);
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #F5A623, #D97706)',
                     border: 'none',
                     color: '#0B0E1A',
-                    fontWeight: 700,
-                    padding: '8px 18px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
+                    fontWeight: 900,
+                    fontSize: '15px',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(245, 166, 35, 0.35)',
                   }}
                 >
-                  Log In
+                  🔐 Log In with EthioSwap Account
                 </button>
-              </div>
-            ) : myTrades.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '16px' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>📦</div>
-                <div style={{ fontSize: '14px', fontWeight: 700 }}>No Orders Found</div>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '4px 0 14px' }}>
-                  Your active trades and transaction history will appear here.
-                </p>
+
                 <button
-                  onClick={() => setActiveTab('buy')}
+                  onClick={() => {
+                    triggerHaptic();
+                    setAuthMode('register');
+                    setShowAuthModal(true);
+                  }}
                   style={{
-                    background: '#10B981',
-                    border: 'none',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     color: '#FFF',
                     fontWeight: 700,
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
+                    fontSize: '14px',
+                    padding: '12px',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
                   }}
                 >
-                  Start a Trade
+                  ✨ Create Free Account
                 </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {myTrades.map((t) => {
-                  const isBuyer = t.buyer_id === user.id;
-                  const isPending = t.status === 'pending' || t.status === 'payment_pending';
-                  const isPaid = t.status === 'paid';
-                  const isCompleted = t.status === 'completed';
+              </>
+            ) : null}
 
-                  return (
-                    <div
-                      key={t.id}
-                      style={{
-                        background: '#141926',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: '14px',
-                        padding: '14px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{
-                          fontWeight: 800,
-                          fontSize: '12px',
-                          color: isBuyer ? '#10B981' : '#EF4444',
-                        }}>
-                          {isBuyer ? '🟢 BUY $' : '🔴 SELL $'}
-                        </span>
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: isCompleted ? '#10B981' : isPaid ? '#F5A623' : '#9CA3AF',
-                        }}>
-                          {t.status.toUpperCase()}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '18px', fontWeight: 800 }}>
-                        ${Number(t.amount_usd).toFixed(2)} USD
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>
-                        Total: <b>{Number(t.amount_etb).toLocaleString()} ETB</b> (Rate: {t.rate} ETB/$)
-                      </div>
-
-                      {/* Interactive Action Buttons */}
-                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        {isBuyer && isPending && (
-                          <button
-                            onClick={async () => {
-                              triggerHaptic('success');
-                              await markTradeAsPaid(t.id);
-                            }}
-                            style={{
-                              width: '100%',
-                              background: 'linear-gradient(135deg, #10B981, #059669)',
-                              border: 'none',
-                              color: '#FFF',
-                              fontWeight: 800,
-                              padding: '10px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            ✅ I Have Paid ({Number(t.amount_etb).toLocaleString()} ETB)
-                          </button>
-                        )}
-
-                        {!isBuyer && isPaid && (
-                          <button
-                            onClick={async () => {
-                              triggerHaptic('success');
-                              await releaseEscrow(t.id);
-                            }}
-                            style={{
-                              width: '100%',
-                              background: 'linear-gradient(135deg, #F5A623, #D97706)',
-                              border: 'none',
-                              color: '#0B0E1A',
-                              fontWeight: 800,
-                              padding: '10px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            🔓 Release Escrow to Buyer
-                          </button>
-                        )}
-
-                        {isCompleted && (
-                          <div style={{ fontSize: '12px', color: '#10B981', textAlign: 'center', fontWeight: 600 }}>
-                            🎉 Trade completed successfully!
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* ── BOTTOM NAVIGATION (4 P2P TABS) ── */}
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 50,
-        background: 'rgba(11, 14, 26, 0.98)',
-        backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        padding: '8px 0 12px',
-      }}>
-        {[
-          { id: 'buy', icon: '🛒', label: 'Buy $' },
-          { id: 'sell', icon: '💵', label: 'Sell $' },
-          { id: 'wallet', icon: '💼', label: 'Wallet' },
-          { id: 'orders', icon: '📋', label: 'Orders' },
-        ].map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
             <button
-              key={tab.id}
               onClick={() => {
                 triggerHaptic();
-                setActiveTab(tab.id);
+                localStorage.setItem('ethioswap_tma_visited', 'true');
+                setActiveTab('buy');
               }}
               style={{
-                background: 'none',
+                background: 'linear-gradient(135deg, #10B981, #059669)',
                 border: 'none',
-                color: isActive ? '#F5A623' : '#9CA3AF',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '2px',
+                color: '#FFF',
+                fontWeight: 800,
+                fontSize: '15px',
+                padding: '14px',
+                borderRadius: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              🚀 Explore P2P Market Now →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 1: BUY $ ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'buy' && (
+        <main style={{ padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>🛒 Buy $ (USD/USDT)</h2>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
+                Pay in ETB (Telebirr / CBE). Starting from <b>${MIN_ORDER_USD}</b>.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (!user) { setShowAuthModal(true); return; }
+                setPostAdType('sell');
+                setShowPostAdModal(true);
+              }}
+              style={{
+                background: 'rgba(245, 166, 35, 0.15)',
+                border: '1px solid rgba(245, 166, 35, 0.4)',
+                color: '#F5A623',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '6px 10px',
+                borderRadius: '8px',
                 cursor: 'pointer',
               }}
             >
-              <span style={{ fontSize: '20px' }}>{tab.icon}</span>
-              <span style={{ fontSize: '11px', fontWeight: isActive ? 700 : 500 }}>
-                {tab.label}
-              </span>
+              ➕ Post Ad
             </button>
-          );
-        })}
-      </nav>
+          </div>
+
+          {buyListings.length === 0 ? (
+            <div style={{
+              background: '#141926',
+              border: '1px dashed rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛒</div>
+              <div style={{ fontWeight: 700, fontSize: '15px' }}>No Active Sellers Available</div>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', maxWidth: '260px', margin: '6px auto 14px' }}>
+                Be the first to post a listing or check back in a few minutes.
+              </p>
+              <button
+                onClick={() => {
+                  if (!user) { setShowAuthModal(true); return; }
+                  setPostAdType('buy');
+                  setShowPostAdModal(true);
+                }}
+                style={{
+                  background: '#F5A623',
+                  color: '#0B0E1A',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ➕ Create Buy Order
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {buyListings.map((item) => {
+                const rate = Number(item.custom_rate_etb || buyRate);
+                const minUsd = item.min_limit_etb ? Math.max(MIN_ORDER_USD, Math.round(item.min_limit_etb / rate)) : MIN_ORDER_USD;
+                const maxUsd = item.max_limit_etb ? Math.round(item.max_limit_etb / rate) : 500;
+                const sellerName = item.seller_name || 'Verified Trader';
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: '#141926',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '14px',
+                      padding: '14px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: '#1E2640',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#F5A623',
+                        }}>
+                          {sellerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {sellerName} <span style={{ color: '#10B981', fontSize: '11px' }}>● Online</span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                            ⭐ 99% (45+ orders)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '17px', fontWeight: 800, color: '#10B981' }}>
+                          {rate.toFixed(2)} <span style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF' }}>ETB</span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Price per 1 USD</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: '8px',
+                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                      marginTop: '4px',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                          Limits: <b>${minUsd} - ${maxUsd} USD</b>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                          {(Array.isArray(item.payment_methods) ? item.payment_methods : ['Telebirr', 'CBE']).map((m, i) => (
+                            <span key={i} style={{
+                              background: 'rgba(255,255,255,0.06)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '9px',
+                              color: '#E5E7EB',
+                            }}>
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleOpenBuyModal(item)}
+                        style={{
+                          background: 'linear-gradient(135deg, #10B981, #059669)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '13px',
+                          padding: '8px 18px',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                        }}
+                      >
+                        Buy $
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 2: SELL $ ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'sell' && (
+        <main style={{ padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>💵 Sell $ (Instant ETB)</h2>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
+                Cash out your $ directly to Telebirr or Bank.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (!user) { setShowAuthModal(true); return; }
+                setPostAdType('sell');
+                setShowPostAdModal(true);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '6px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              ➕ Post Sell Ad
+            </button>
+          </div>
+
+          {user && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '12px',
+              padding: '12px',
+              marginBottom: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Available to Sell:</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#EF4444' }}>
+                  ${Number(user.balance_usd || 0).toFixed(2)} USD
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setPostAdType('sell');
+                  setPostAdAmount(Math.max(MIN_ORDER_USD, Number(user.balance_usd || 0)));
+                  setShowPostAdModal(true);
+                }}
+                style={{
+                  background: '#EF4444',
+                  border: 'none',
+                  color: '#FFF',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Sell All
+              </button>
+            </div>
+          )}
+
+          {sellListings.length === 0 ? (
+            <div style={{
+              background: '#141926',
+              border: '1px dashed rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>💵</div>
+              <div style={{ fontWeight: 700, fontSize: '15px' }}>No Waiting Buyers Right Now</div>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', maxWidth: '260px', margin: '6px auto 14px' }}>
+                Post your own Sell Ad with your price and Telebirr number!
+              </p>
+              <button
+                onClick={() => {
+                  if (!user) { setShowAuthModal(true); return; }
+                  setPostAdType('sell');
+                  setShowPostAdModal(true);
+                }}
+                style={{
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ➕ Create Sell Ad
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {sellListings.map((item) => {
+                const rate = Number(item.custom_rate_etb || sellRate);
+                const minUsd = item.min_limit_etb ? Math.max(MIN_ORDER_USD, Math.round(item.min_limit_etb / rate)) : MIN_ORDER_USD;
+                const maxUsd = item.max_limit_etb ? Math.round(item.max_limit_etb / rate) : 500;
+                const buyerName = item.seller_name || 'Verified Buyer';
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: '#141926',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '14px',
+                      padding: '14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: '#1E2640',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: '#EF4444',
+                        }}>
+                          {buyerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 700 }}>
+                            {buyerName}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                            ⭐ 100% (30+ orders)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '17px', fontWeight: 800, color: '#EF4444' }}>
+                          {rate.toFixed(2)} <span style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF' }}>ETB</span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Will pay per $</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: '8px',
+                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                      marginTop: '4px',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                          Limits: <b>${minUsd} - ${maxUsd} USD</b>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!user) { setShowAuthModal(true); return; }
+                          setPostAdType('sell');
+                          setPostAdRate(rate);
+                          setShowPostAdModal(true);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '13px',
+                          padding: '8px 18px',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Sell $
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 3: WALLET ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'wallet' && (
+        <main style={{ padding: '16px' }}>
+          {!user ? (
+            <div style={{
+              background: '#141926',
+              borderRadius: '16px',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>💼</div>
+              <div style={{ fontSize: '16px', fontWeight: 800 }}>P2P Wallet</div>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '8px auto 16px', maxWidth: '240px' }}>
+                Please log in to view your balances, deposit on-chain, and withdraw funds.
+              </p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: '#F5A623',
+                  border: 'none',
+                  color: '#0B0E1A',
+                  fontWeight: 700,
+                  padding: '10px 24px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                🔐 Log In
+              </button>
+            </div>
+          ) : (
+            <div>
+              {/* Main Balance Card */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1A2238, #141926)',
+                border: '1px solid rgba(245, 166, 35, 0.25)',
+                borderRadius: '18px',
+                padding: '20px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                marginBottom: '16px',
+              }}>
+                <div style={{ fontSize: '12px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Available P2P Balance
+                </div>
+                <div style={{ fontSize: '32px', fontWeight: 900, color: '#FFFFFF', margin: '6px 0' }}>
+                  ${Number(user.balance_usd || 0).toFixed(2)} <span style={{ fontSize: '16px', color: '#F5A623' }}>USD</span>
+                </div>
+                <div style={{ fontSize: '13px', color: '#10B981', fontWeight: 600 }}>
+                  ≈ {(Number(user.balance_usd || 0) * buyRate).toLocaleString()} ETB
+                </div>
+
+                {Number(user.balance_escrow || 0) > 0 && (
+                  <div style={{ fontSize: '11px', color: '#EAB308', marginTop: '6px' }}>
+                    🔒 In Escrow: ${Number(user.balance_escrow).toFixed(2)} USD
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '16px' }}>
+                  <button
+                    onClick={() => { triggerHaptic(); setShowDepositModal(true); }}
+                    style={{
+                      background: 'linear-gradient(135deg, #10B981, #059669)',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      padding: '12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.25)',
+                    }}
+                  >
+                    📥 Deposit
+                  </button>
+
+                  <button
+                    onClick={() => { triggerHaptic(); setShowWithdrawModal(true); }}
+                    style={{
+                      background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      padding: '12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(239,68,68,0.25)',
+                    }}
+                  >
+                    📤 Withdraw
+                  </button>
+                </div>
+              </div>
+
+              {/* On-Chain Crypto Box */}
+              <div style={{
+                background: '#141926',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '14px',
+                padding: '14px',
+                marginBottom: '16px',
+              }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '6px', color: '#F5A623' }}>
+                  📍 Your On-Chain Address (USDT / ETH)
+                </div>
+                <div style={{
+                  background: '#0B0E1A',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                  color: '#9CA3AF',
+                  wordBreak: 'break-all',
+                  marginBottom: '8px',
+                }}>
+                  {user.eth_address || '0x8b321aF28741e9766dB5E9F90a0715D2c5D5eFE6'}
+                </div>
+                <button
+                  onClick={() => copyToClipboard(user.eth_address || '0x8b321aF28741e9766dB5E9F90a0715D2c5D5eFE6')}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  {copiedAddress ? '✅ Address Copied!' : '📋 Copy Deposit Address'}
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 4: ORDERS ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'orders' && (
+        <main style={{ padding: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 14px 0' }}>📋 Active Orders</h2>
+
+          {!user ? (
+            <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '16px' }}>
+              <p style={{ fontSize: '13px', color: '#9CA3AF' }}>Log in to view and manage your orders.</p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: '#F5A623',
+                  border: 'none',
+                  color: '#0B0E1A',
+                  fontWeight: 700,
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              >
+                Log In
+              </button>
+            </div>
+          ) : myTrades.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '16px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>📦</div>
+              <div style={{ fontSize: '14px', fontWeight: 700 }}>No Orders Found</div>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '4px 0 14px' }}>
+                Your active trades will appear here.
+              </p>
+              <button
+                onClick={() => setActiveTab('buy')}
+                style={{
+                  background: '#10B981',
+                  border: 'none',
+                  color: '#FFF',
+                  fontWeight: 700,
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              >
+                Start a Trade
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {myTrades.map((t) => {
+                const isBuyer = t.buyer_id === user.id;
+                const isPending = t.status === 'pending' || t.status === 'payment_pending';
+                const isPaid = t.status === 'paid';
+                const isCompleted = t.status === 'completed';
+
+                return (
+                  <div
+                    key={t.id}
+                    style={{
+                      background: '#141926',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '14px',
+                      padding: '14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{
+                        fontWeight: 800,
+                        fontSize: '12px',
+                        color: isBuyer ? '#10B981' : '#EF4444',
+                      }}>
+                        {isBuyer ? '🟢 BUY $' : '🔴 SELL $'}
+                      </span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: isCompleted ? '#10B981' : isPaid ? '#F5A623' : '#9CA3AF',
+                      }}>
+                        {t.status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '18px', fontWeight: 800 }}>
+                      ${Number(t.amount_usd).toFixed(2)} USD
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>
+                      Total: <b>{Number(t.amount_etb).toLocaleString()} ETB</b> (Rate: {t.rate} ETB/$)
+                    </div>
+
+                    <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      {isBuyer && isPending && (
+                        <button
+                          onClick={async () => {
+                            triggerHaptic('success');
+                            await markTradeAsPaid(t.id);
+                          }}
+                          style={{
+                            width: '100%',
+                            background: 'linear-gradient(135deg, #10B981, #059669)',
+                            border: 'none',
+                            color: '#FFF',
+                            fontWeight: 800,
+                            padding: '10px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          ✅ I Have Paid ({Number(t.amount_etb).toLocaleString()} ETB)
+                        </button>
+                      )}
+
+                      {!isBuyer && isPaid && (
+                        <button
+                          onClick={async () => {
+                            triggerHaptic('success');
+                            await releaseEscrow(t.id);
+                          }}
+                          style={{
+                            width: '100%',
+                            background: 'linear-gradient(135deg, #F5A623, #D97706)',
+                            border: 'none',
+                            color: '#0B0E1A',
+                            fontWeight: 800,
+                            padding: '10px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🔓 Release Escrow to Buyer
+                        </button>
+                      )}
+
+                      {isCompleted && (
+                        <div style={{ fontSize: '12px', color: '#10B981', textAlign: 'center', fontWeight: 600 }}>
+                          🎉 Trade completed successfully!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* ─── TAB 5: TRANSACTION HISTORY ─── */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {activeTab === 'history' && (
+        <main style={{ padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>📜 Transaction History</h2>
+              <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>
+                Your complete trading and funding ledger.
+              </p>
+            </div>
+            <button
+              onClick={loadUserHistory}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: 'none',
+                color: '#F5A623',
+                fontSize: '11px',
+                padding: '6px 10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              🔄 Refresh
+            </button>
+          </div>
+
+          {!user ? (
+            <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '16px' }}>
+              <p style={{ fontSize: '13px', color: '#9CA3AF' }}>Please log in to view your transaction history.</p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  background: '#F5A623',
+                  border: 'none',
+                  color: '#0B0E1A',
+                  fontWeight: 700,
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              >
+                Log In
+              </button>
+            </div>
+          ) : (
+            <div>
+              {/* Summary Metrics */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                marginBottom: '14px',
+              }}>
+                <div style={{ background: '#141926', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Total Trades</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#F5A623' }}>
+                    {user.total_trades || user.trade_count || myTrades.length}
+                  </div>
+                </div>
+                <div style={{ background: '#141926', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Completed Orders</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#10B981' }}>
+                    {myTrades.filter(t => t.status === 'completed').length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Chips */}
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'trades', label: 'Trades' },
+                  { id: 'deposits', label: 'Deposits' },
+                  { id: 'withdrawals', label: 'Withdrawals' },
+                ].map(chip => (
+                  <button
+                    key={chip.id}
+                    onClick={() => { triggerHaptic(); setHistoryFilter(chip.id); }}
+                    style={{
+                      background: historyFilter === chip.id ? '#F5A623' : 'rgba(255,255,255,0.06)',
+                      color: historyFilter === chip.id ? '#0B0E1A' : '#9CA3AF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Transaction List */}
+              {loadingHistory ? (
+                <div style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF', fontSize: '12px' }}>
+                  Loading transaction ledger...
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Render both trades and ledger transactions */}
+                  {(() => {
+                    const items = [];
+
+                    // 1. Trades
+                    if (historyFilter === 'all' || historyFilter === 'trades') {
+                      myTrades.forEach(t => {
+                        items.push({
+                          id: t.id,
+                          type: t.buyer_id === user.id ? 'P2P Buy' : 'P2P Sell',
+                          isCredit: t.buyer_id === user.id,
+                          amountUsd: Number(t.amount_usd || 0),
+                          amountEtb: Number(t.amount_etb || 0),
+                          status: t.status,
+                          date: new Date(t.created_at || Date.now()),
+                          details: `Rate: ${t.rate} ETB/$ (${t.payment_method || 'Telebirr'})`,
+                        });
+                      });
+                    }
+
+                    // 2. Ledger transactions (deposits / withdrawals)
+                    userTransactions.forEach(tx => {
+                      const isDep = tx.type === 'deposit';
+                      const isWith = tx.type === 'withdrawal';
+                      if (historyFilter === 'all' || (historyFilter === 'deposits' && isDep) || (historyFilter === 'withdrawals' && isWith)) {
+                        items.push({
+                          id: tx.id,
+                          type: isDep ? 'On-Chain Deposit' : 'Crypto Withdrawal',
+                          isCredit: isDep,
+                          amountUsd: Number(tx.amount_usd || 0),
+                          amountEtb: 0,
+                          status: tx.status || 'completed',
+                          date: new Date(tx.created_at || Date.now()),
+                          details: tx.tx_hash ? `Tx: ${tx.tx_hash.slice(0, 10)}...` : tx.note || tx.method,
+                        });
+                      }
+                    });
+
+                    // Sort newest first
+                    items.sort((a, b) => b.date - a.date);
+
+                    if (items.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', padding: '32px 16px', background: '#141926', borderRadius: '14px' }}>
+                          <div style={{ fontSize: '24px', marginBottom: '6px' }}>📜</div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#9CA3AF' }}>No records found in this category.</div>
+                        </div>
+                      );
+                    }
+
+                    return items.map((item, idx) => {
+                      const isSuccess = item.status === 'completed' || item.status === 'approved';
+                      const isPending = item.status === 'pending' || item.status === 'payment_pending' || item.status === 'paid';
+
+                      return (
+                        <div
+                          key={item.id || idx}
+                          style={{
+                            background: '#141926',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '12px',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{item.isCredit ? '📥' : '📤'}</span>
+                              <span>{item.type}</span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                              {item.date.toLocaleDateString()} {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {item.details}
+                            </div>
+                          </div>
+
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: 800,
+                              color: item.isCredit ? '#10B981' : '#EF4444',
+                            }}>
+                              {item.isCredit ? '+' : '-'}${item.amountUsd.toFixed(2)}
+                            </div>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: isSuccess ? '#10B981' : isPending ? '#F5A623' : '#9CA3AF',
+                              textTransform: 'uppercase',
+                            }}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ── BOTTOM NAVIGATION (5 TABS INCLUDING HISTORY) ── */}
+      {activeTab !== 'welcome' && (
+        <nav style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: 'rgba(11, 14, 26, 0.98)',
+          backdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          padding: '8px 0 12px',
+        }}>
+          {[
+            { id: 'buy', icon: '🛒', label: 'Buy $' },
+            { id: 'sell', icon: '💵', label: 'Sell $' },
+            { id: 'wallet', icon: '💼', label: 'Wallet' },
+            { id: 'orders', icon: '📋', label: 'Orders' },
+            { id: 'history', icon: '📜', label: 'History' },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  triggerHaptic();
+                  setActiveTab(tab.id);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isActive ? '#F5A623' : '#9CA3AF',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+                <span style={{ fontSize: '10px', fontWeight: isActive ? 800 : 500 }}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
 
       {/* ── MODAL: BUY $ MODAL ── */}
       {selectedListing && (
@@ -1175,7 +1807,6 @@ export default function TelegramMiniApp() {
               </div>
             </div>
 
-            {/* Quick calculation */}
             <div style={{
               background: 'rgba(255,255,255,0.03)',
               borderRadius: '10px',
@@ -1185,11 +1816,11 @@ export default function TelegramMiniApp() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#9CA3AF' }}>Exchange Rate:</span>
-                <span style={{ fontWeight: 700 }}>1 USD = {selectedListing.custom_rate_etb || 190.0} ETB</span>
+                <span style={{ fontWeight: 700 }}>1 USD = {selectedListing.custom_rate_etb || buyRate} ETB</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontWeight: 800, fontSize: '15px' }}>
                 <span>You will pay:</span>
-                <span>{(buyAmountUsd * (selectedListing.custom_rate_etb || 190.0)).toLocaleString()} ETB</span>
+                <span>{(buyAmountUsd * (selectedListing.custom_rate_etb || buyRate)).toLocaleString()} ETB</span>
               </div>
             </div>
 
@@ -1439,7 +2070,6 @@ export default function TelegramMiniApp() {
               {copiedAddress ? '✅ Copied!' : '📋 Copy Address'}
             </button>
 
-            {/* Instant Tx Hash Verification */}
             <form onSubmit={handleSubmitDepositHash} style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
               <label style={{ fontSize: '11px', color: '#9CA3AF', display: 'block', marginBottom: '4px' }}>
                 Sent Crypto? Paste Tx Hash (TxID) for Instant Verification:
