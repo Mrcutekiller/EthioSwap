@@ -121,19 +121,57 @@ const FeatureIcons = {
 // PREMIUM 3D PAPER MONEY — USD front / Ethiopian Birr back
 // Click to flip. Floats with gentle animation.
 // ═══════════════════════════════════════════════════════════
+// PREMIUM 3D PAPER MONEY & MULTI-VIEW FORENSIC INSPECTION
+// Modes supported:
+//  • standard: click-to-flip USD ↔ ETB with realistic 3D paper physics
+//  • 360: interactive 360° orbital rotation (drag or auto-spin) with specular reflection
+//  • exploded: 4-layer 3D exploded architectural deconstruction (Hologram, Banknote, Smart Contract Escrow, Settlement Rail)
+//  • xray: forensic UV-A 365nm inspection with sweeping laser, glowing fluorescent Lion of Judah & security thread
+// ═══════════════════════════════════════════════════════════
 
-export const PaperMoney3D = ({ size = 'lg', className = '' }) => {
-  const [flipped, setFlipped] = useState(false);
+export const PaperMoney3D = ({
+  size = 'lg',
+  className = '',
+  viewMode = 'standard',
+  dragAngle = 0,
+  flipped = false,
+  onFlip = () => {},
+  isDragging = false,
+  onStartDrag = () => {},
+}) => {
   const [hovered, setHovered] = useState(false);
+  const [localFlipped, setLocalFlipped] = useState(false);
+
+  const isCardFlipped = flipped !== undefined ? flipped : localFlipped;
+  const handleCardClick = () => {
+    if (viewMode === '360') return; // in 360 mode, drag or rotation reveals both sides
+    if (onFlip) onFlip();
+    setLocalFlipped(f => !f);
+  };
 
   // Dimensions: real $100 bill ratio (vertical format)
   const dims = {
-    lg: { w: 178, h: 420 },
-    md: { w: 145, h: 340 },
-    sm: { w: 110, h: 260 },
-  }[size] || { w: 178, h: 420 };
+    lg: { w: 182, h: 426 },
+    md: { w: 148, h: 346 },
+    sm: { w: 114, h: 268 },
+  }[size] || { w: 182, h: 426 };
 
   const { w, h } = dims;
+  const isMobile = size === 'sm';
+
+  // Dynamic filter and transform based on viewMode
+  let containerFilter = hovered
+    ? 'drop-shadow(0 32px 64px rgba(0,0,0,0.8)) drop-shadow(0 0 45px rgba(245,166,35,0.3))'
+    : 'drop-shadow(0 22px 42px rgba(0,0,0,0.65))';
+
+  if (viewMode === 'xray') {
+    containerFilter = 'drop-shadow(0 0 50px rgba(124, 58, 237, 0.5)) drop-shadow(0 0 35px rgba(0, 230, 255, 0.45))';
+  } else if (viewMode === 'exploded') {
+    containerFilter = 'drop-shadow(0 35px 70px rgba(0,0,0,0.85)) drop-shadow(0 0 50px rgba(245,166,35,0.22))';
+  }
+
+  // 360 reflection offset
+  const sheenOffset = ((dragAngle % 180 + 180) % 180) / 180 * 200 - 50;
 
   return (
     <div
@@ -141,103 +179,674 @@ export const PaperMoney3D = ({ size = 'lg', className = '' }) => {
       style={{
         width: `${w}px`,
         height: `${h}px`,
-        perspective: '1200px',
-        cursor: 'pointer',
+        perspective: viewMode === 'exploded' ? '1800px' : '1300px',
+        cursor: viewMode === '360' ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
         userSelect: 'none',
-        filter: hovered
-          ? 'drop-shadow(0 30px 60px rgba(0,0,0,0.75)) drop-shadow(0 0 40px rgba(245,166,35,0.25))'
-          : 'drop-shadow(0 20px 40px rgba(0,0,0,0.6))',
+        position: 'relative',
+        filter: containerFilter,
         transition: 'filter 0.4s ease',
       }}
-      onClick={() => setFlipped(f => !f)}
+      onClick={handleCardClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title="Click to flip"
+      title={viewMode === '360' ? 'Click and drag left/right to rotate 360°' : 'Click to flip banknote'}
     >
-      {/* 3D flip container */}
-      <div style={{
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        transformStyle: 'preserve-3d',
-        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
-      }}>
-
-        {/* ── FRONT: US $100 Bill ── */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          border: '1.5px solid rgba(255,255,255,0.12)',
-          background: '#0d2217',
-          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
-        }}>
-          {/* US dollar note scan is already vertical, fit directly */}
-          <div style={{
+      {/* ── MODE 1 & 2: STANDARD FLIP & 360° ORBITAL VIEW ── */}
+      {viewMode !== 'exploded' && (
+        <div
+          style={{
             width: '100%',
             height: '100%',
-            backgroundImage: 'url(/images/usd_100.jpg)',
-            backgroundSize: '100% 100%',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }} />
-        </div>
+            position: 'relative',
+            transformStyle: 'preserve-3d',
+            transform: viewMode === '360'
+              ? `rotateY(${dragAngle}deg) rotateX(${Math.sin((dragAngle * Math.PI) / 180) * 5}deg)`
+              : isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+            transition: viewMode === '360' && !isDragging
+              ? 'none'
+              : 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+        >
+          {/* FRONT: US $100 Note */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              border: viewMode === 'xray' ? '2px solid #00ffcc' : '1.5px solid rgba(255,255,255,0.14)',
+              background: '#0d2217',
+              boxShadow: 'inset 0 0 25px rgba(0,0,0,0.7)',
+              filter: viewMode === 'xray' ? 'invert(0.88) hue-rotate(180deg) contrast(1.8) saturate(2.2) brightness(0.95)' : 'none',
+              transition: 'filter 0.5s ease, border-color 0.5s ease',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundImage: 'url(/images/usd_100.jpg)',
+                backgroundSize: '100% 100%',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
 
-        {/* ── BACK: Ethiopian Birr 200 Note ── */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          border: '1.5px solid rgba(255,255,255,0.12)',
-          background: '#1d1b24',
-          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.6)',
-        }}>
-          {/* Center and rotate the horizontal ETB scan to fit the vertical card */}
-          <div style={{
-            position: 'absolute',
-            width: `${h}px`,
-            height: `${w}px`,
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%) rotate(90deg)',
-            backgroundImage: 'url(/images/etb_200.jpg)',
-            backgroundSize: '100% 200%',
-            backgroundPosition: 'top center',
-            backgroundRepeat: 'no-repeat',
-          }} />
-        </div>
-      </div>
+            {/* Specular sheen on 360 rotation */}
+            {viewMode === '360' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.35) 48%, rgba(245,166,35,0.4) 52%, transparent 70%)',
+                  transform: `translateX(${sheenOffset}%)`,
+                  pointerEvents: 'none',
+                  mixBlendMode: 'overlay',
+                }}
+              />
+            )}
+          </div>
 
-      {/* Flip hint */}
-      <div style={{
-        position: 'absolute', bottom: '-28px', left: '50%',
-        transform: 'translateX(-50%)',
-        fontSize: '11px', color: 'rgba(245,166,35,0.7)',
-        fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap',
-        pointerEvents: 'none', fontFamily: 'sans-serif',
-        background: 'rgba(0, 0, 0, 0.4)',
-        padding: '4px 12px',
-        borderRadius: '20px',
-        border: '1px solid rgba(245,166,35,0.15)',
-        backdropFilter: 'blur(5px)',
-      }}>
-        {flipped ? '← Click to see USD' : 'Click to see Birr →'}
+          {/* BACK: Ethiopian Birr 200 Note */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              border: viewMode === 'xray' ? '2px solid #00ffcc' : '1.5px solid rgba(255,255,255,0.14)',
+              background: '#1d1b24',
+              boxShadow: 'inset 0 0 25px rgba(0,0,0,0.7)',
+              filter: viewMode === 'xray' ? 'invert(0.88) hue-rotate(180deg) contrast(1.8) saturate(2.2) brightness(0.95)' : 'none',
+              transition: 'filter 0.5s ease, border-color 0.5s ease',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                width: `${h}px`,
+                height: `${w}px`,
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%) rotate(90deg)',
+                backgroundImage: 'url(/images/etb_200.jpg)',
+                backgroundSize: '100% 200%',
+                backgroundPosition: 'top center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+
+            {/* Specular sheen on 360 rotation */}
+            {viewMode === '360' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.35) 48%, rgba(245,166,35,0.4) 52%, transparent 70%)',
+                  transform: `translateX(${-sheenOffset}%)`,
+                  pointerEvents: 'none',
+                  mixBlendMode: 'overlay',
+                }}
+              />
+            )}
+          </div>
+
+          {/* X-RAY FORENSIC OVERLAYS */}
+          {viewMode === 'xray' && (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: '12px', overflow: 'hidden' }}>
+              {/* Sweeping Laser Scanline */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, transparent, #00ffcc 20%, #ffffff 50%, #00ffcc 80%, transparent)',
+                  boxShadow: '0 0 16px #00ffcc, 0 0 32px #00e5ff',
+                  animation: 'xrayScanline 3.2s ease-in-out infinite',
+                  zIndex: 20,
+                }}
+              />
+
+              {/* Glowing Fluorescent Security Ribbon */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '26%',
+                  top: 0,
+                  bottom: 0,
+                  width: '7px',
+                  background: 'linear-gradient(180deg, #39ff14, #00ffcc, #39ff14)',
+                  boxShadow: '0 0 14px #39ff14, 0 0 28px rgba(57,255,20,0.6)',
+                  opacity: 0.92,
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <span style={{
+                  writingMode: 'vertical-rl',
+                  fontSize: '8px',
+                  fontWeight: 900,
+                  color: '#000',
+                  letterSpacing: '3px',
+                  fontFamily: 'monospace',
+                }}>
+                  ETHIOSWAP 100 SECURE
+                </span>
+              </div>
+
+              {/* Hidden Fluorescent Lion of Judah Watermark in Center */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '42%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: isMobile ? '64px' : '90px',
+                  height: isMobile ? '64px' : '90px',
+                  borderRadius: '50%',
+                  border: '2px dashed #39ff14',
+                  boxShadow: '0 0 24px rgba(57, 255, 20, 0.7), inset 0 0 16px rgba(57, 255, 20, 0.4)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 12,
+                  animation: 'uvPhosphorPulse 2s ease-in-out infinite',
+                  background: 'rgba(57, 255, 20, 0.12)',
+                }}
+              >
+                <span style={{ fontSize: isMobile ? '24px' : '36px' }}>🦁</span>
+                <span style={{ fontSize: '7px', fontWeight: 800, color: '#39ff14', letterSpacing: '1px', fontFamily: 'monospace' }}>
+                  UV WATERMARK
+                </span>
+              </div>
+
+              {/* Fluorescent Denomination 100/200 Stamp */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  right: '12px',
+                  fontSize: '18px',
+                  fontWeight: 900,
+                  color: '#39ff14',
+                  textShadow: '0 0 10px #39ff14, 0 0 20px #00ffcc',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  zIndex: 15,
+                }}
+              >
+                100 / 200
+              </div>
+
+              {/* HUD Forensic Bracket Readouts */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '8px',
+                  color: '#00ffcc',
+                  lineHeight: 1.4,
+                  textShadow: '0 0 6px #00ffcc',
+                  zIndex: 16,
+                }}
+              >
+                <div>[UV-A 365nm]</div>
+                <div>PASS: 100%</div>
+              </div>
+
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '8px',
+                  color: '#39ff14',
+                  lineHeight: 1.4,
+                  textShadow: '0 0 6px #39ff14',
+                  textAlign: 'right',
+                  zIndex: 16,
+                }}
+              >
+                <div>ESCROW LOCK</div>
+                <div>VERIFIED</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MODE 3: EXPLODED 3D ARCHITECTURAL VIEW ── */}
+      {viewMode === 'exploded' && (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            transformStyle: 'preserve-3d',
+            transform: 'perspective(1600px) rotateY(-28deg) rotateX(16deg) rotateZ(-3deg)',
+            transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
+          {/* Corner Blueprint Laser Connector Lines */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '5%',
+              bottom: '5%',
+              left: '4%',
+              width: '1px',
+              borderLeft: '1.5px dashed rgba(245, 166, 35, 0.45)',
+              transform: 'translateZ(-90px)',
+              pointerEvents: 'none',
+              transformStyle: 'preserve-3d',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '5%',
+              bottom: '5%',
+              right: '4%',
+              width: '1px',
+              borderLeft: '1.5px dashed rgba(245, 166, 35, 0.45)',
+              transform: 'translateZ(-90px)',
+              pointerEvents: 'none',
+              transformStyle: 'preserve-3d',
+            }}
+          />
+
+          {/* ── LAYER 4 (Back Z: -85px): Multi-Bank Settlement Rail ── */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '12px',
+              transform: `translateZ(${isMobile ? -55 : -85}px)`,
+              background: 'linear-gradient(145deg, #181924, #0b0c12)',
+              border: '1.5px solid rgba(255, 255, 255, 0.16)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+              overflow: 'hidden',
+              padding: '16px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              transition: 'transform 0.6s ease',
+            }}
+          >
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 800,
+              color: 'var(--gold)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>🏦</span> LAYER 4: FIAT SETTLEMENT
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              background: 'rgba(0,0,0,0.4)',
+              padding: '10px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700 }}>Direct Ethiopian Banks</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {['Telebirr', 'CBE', 'Dashen', 'Awash'].map(bank => (
+                  <span key={bank} style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    background: 'rgba(245,166,35,0.15)',
+                    color: 'var(--gold)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(245,166,35,0.3)',
+                  }}>
+                    {bank}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div style={{
+              fontSize: '9px',
+              color: 'var(--text-dim)',
+              lineHeight: 1.4,
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              paddingTop: '8px',
+            }}>
+              100% P2P direct transfer with automated receipt validation & instant bank release.
+            </div>
+          </div>
+
+          {/* Floating HUD Tag for Layer 4 */}
+          <div
+            style={{
+              position: 'absolute',
+              right: isMobile ? '-100px' : '-140px',
+              bottom: '15%',
+              transform: `translateZ(${isMobile ? -55 : -85}px)`,
+              background: 'rgba(10, 12, 18, 0.85)',
+              border: '1px solid rgba(245, 166, 35, 0.3)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              pointerEvents: 'none',
+              backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--gold)' }}>L4: Multi-Bank Rail</div>
+            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>Instant Birr settlement</div>
+          </div>
+
+          {/* ── LAYER 3 (Z: -28px): Smart Contract Escrow Mesh ── */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '12px',
+              transform: `translateZ(${isMobile ? -18 : -28}px)`,
+              background: 'linear-gradient(145deg, rgba(3, 25, 20, 0.94), rgba(4, 14, 18, 0.96))',
+              border: '1.5px solid rgba(0, 200, 150, 0.65)',
+              boxShadow: '0 0 30px rgba(0,200,150,0.25), inset 0 0 20px rgba(0,200,150,0.15)',
+              overflow: 'hidden',
+              padding: '14px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              transition: 'transform 0.6s ease',
+            }}
+          >
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 800,
+              color: 'var(--accent-green)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>🔒</span> LAYER 3: ESCROW CORE
+            </div>
+
+            {/* Matrix Circuit Pattern Overlay */}
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '9px',
+              color: 'rgba(0, 200, 150, 0.85)',
+              background: 'rgba(0,0,0,0.5)',
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid rgba(0,200,150,0.2)',
+              lineHeight: 1.5,
+            }}>
+              <div>STATUS: LOCKED</div>
+              <div>SIGS: 2/2 MULTISIG</div>
+              <div style={{ color: '#fff', fontSize: '8px' }}>HASH: 0x8F92...71B4</div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '9px',
+              color: 'var(--accent-green)',
+              fontWeight: 700,
+            }}>
+              <span>TRC-20 / ERC-20</span>
+              <span>100% COLLATERAL</span>
+            </div>
+          </div>
+
+          {/* Floating HUD Tag for Layer 3 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: isMobile ? '-105px' : '-150px',
+              top: '40%',
+              transform: `translateZ(${isMobile ? -18 : -28}px)`,
+              background: 'rgba(3, 20, 16, 0.9)',
+              border: '1px solid rgba(0, 200, 150, 0.4)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              pointerEvents: 'none',
+              backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--accent-green)' }}>L3: Escrow Smart Lock</div>
+            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>Non-custodial collateral</div>
+          </div>
+
+          {/* ── LAYER 2 (Z: +28px): Legal Tender Banknote Paper ── */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '12px',
+              transform: `translateZ(${isMobile ? 18 : 28}px)`,
+              overflow: 'hidden',
+              border: '1.5px solid rgba(255,255,255,0.18)',
+              background: '#0d2217',
+              boxShadow: '0 25px 45px rgba(0,0,0,0.85), inset 0 0 20px rgba(0,0,0,0.6)',
+              transition: 'transform 0.6s ease',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundImage: isCardFlipped ? 'none' : 'url(/images/usd_100.jpg)',
+                backgroundSize: '100% 100%',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+            {isCardFlipped && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: `${h}px`,
+                  height: `${w}px`,
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%) rotate(90deg)',
+                  backgroundImage: 'url(/images/etb_200.jpg)',
+                  backgroundSize: '100% 200%',
+                  backgroundPosition: 'top center',
+                  backgroundRepeat: 'no-repeat',
+                }}
+              />
+            )}
+          </div>
+
+          {/* Floating HUD Tag for Layer 2 */}
+          <div
+            style={{
+              position: 'absolute',
+              right: isMobile ? '-105px' : '-145px',
+              top: '25%',
+              transform: `translateZ(${isMobile ? 18 : 28}px)`,
+              background: 'rgba(12, 16, 20, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              pointerEvents: 'none',
+              backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontSize: '9px', fontWeight: 800, color: '#ffffff' }}>L2: Legal Tender Note</div>
+            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>US $100 / ETB 200 paper</div>
+          </div>
+
+          {/* ── LAYER 1 (Foreground Z: +85px): Holographic Security Shield ── */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '12px',
+              transform: `translateZ(${isMobile ? 55 : 85}px)`,
+              background: 'linear-gradient(135deg, rgba(245,166,35,0.12), rgba(0,200,150,0.08) 50%, rgba(124,58,237,0.12))',
+              border: '2px solid rgba(245, 166, 35, 0.75)',
+              boxShadow: '0 0 35px rgba(245,166,35,0.35), inset 0 0 25px rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(3px)',
+              overflow: 'hidden',
+              padding: '16px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              transition: 'transform 0.6s ease',
+            }}
+          >
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 800,
+              color: 'var(--gold)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>✨</span> LAYER 1: HOLO-SEAL
+              </span>
+              <span style={{ fontSize: '8px', color: '#fff', background: 'var(--gold)', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                AUTHENTIC
+              </span>
+            </div>
+
+            {/* Central Holographic Emblem */}
+            <div style={{
+              margin: 'auto 0',
+              textAlign: 'center',
+              padding: '14px 6px',
+              borderRadius: '8px',
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px dashed rgba(245,166,35,0.4)',
+            }}>
+              <div style={{ fontSize: isMobile ? '24px' : '32px', marginBottom: '4px' }}>🛡️</div>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--gold)', letterSpacing: '0.08em' }}>
+                ETHIOSWAP VERIFIED
+              </div>
+              <div style={{ fontSize: '8px', color: '#fff', opacity: 0.8, letterSpacing: '0.05em' }}>
+                ANTI-COUNTERFEIT SHIELD
+              </div>
+            </div>
+
+            <div style={{
+              fontSize: '8px',
+              color: 'rgba(255,255,255,0.8)',
+              fontFamily: 'monospace',
+              letterSpacing: '1px',
+              textAlign: 'center',
+            }}>
+              ID: #ES-2026-X992 • 100% COLLATERAL
+            </div>
+          </div>
+
+          {/* Floating HUD Tag for Layer 1 */}
+          <div
+            style={{
+              position: 'absolute',
+              left: isMobile ? '-105px' : '-150px',
+              top: '12%',
+              transform: `translateZ(${isMobile ? 55 : 85}px)`,
+              background: 'rgba(20, 16, 8, 0.92)',
+              border: '1px solid rgba(245, 166, 35, 0.5)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              pointerEvents: 'none',
+              backdropFilter: 'blur(8px)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ fontSize: '9px', fontWeight: 800, color: 'var(--gold)' }}>L1: Hologram Shield</div>
+            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>Tamper-evident seal</div>
+          </div>
+        </div>
+      )}
+
+      {/* Mode Status Pill / Flip Hint */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: viewMode === 'exploded' ? '-36px' : '-32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '11px',
+          color: viewMode === 'xray' ? '#00ffcc' : 'rgba(245,166,35,0.9)',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          fontFamily: 'sans-serif',
+          background: 'rgba(0, 0, 0, 0.65)',
+          padding: '4px 14px',
+          borderRadius: '20px',
+          border: viewMode === 'xray' ? '1px solid rgba(0,255,204,0.3)' : '1px solid rgba(245,166,35,0.25)',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          zIndex: 30,
+        }}
+      >
+        {viewMode === '360'
+          ? `🔄 360° Drag & Orbit (${Math.round(((dragAngle % 360) + 360) % 360)}°)`
+          : viewMode === 'exploded'
+          ? '💥 Exploded 4-Layer View (Click to flip paper)'
+          : viewMode === 'xray'
+          ? '🔬 UV-A 365nm Forensic Scan Active'
+          : isCardFlipped ? '← Click to see USD $100' : 'Click to see Birr 200 →'}
       </div>
     </div>
   );
 };
 
-// Floating wrapper — adds the gentle up/down float + entry animation + scroll parallax
-export const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = false }) => {
+// ═══════════════════════════════════════════════════════════
+// FLOATING BILL WRAPPER & INTERACTIVE VIEW COMMAND TERMINAL
+// Provides /explodedview, /360view, and /Xray view controller
+// ═══════════════════════════════════════════════════════════
+export const FloatingBill = ({
+  size = 'lg',
+  style = {},
+  prefersReducedMotion = false,
+  interactive = false,
+}) => {
   const containerRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
 
+  // View modes: 'standard' | '360' | 'exploded' | 'xray'
+  const [viewMode, setViewMode] = useState('standard');
+  const [flipped, setFlipped] = useState(false);
+
+  // 360 Rotation state
+  const [dragAngle, setDragAngle] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+
+  // Terminal command input & summon feedback
+  const [commandInput, setCommandInput] = useState('');
+  const [summonFeedback, setSummonFeedback] = useState(null);
+
+  // Scroll parallax for standard mode
   useEffect(() => {
     if (prefersReducedMotion) return;
     let ticking = false;
@@ -265,42 +874,336 @@ export const FloatingBill = ({ size = 'lg', style = {}, prefersReducedMotion = f
     };
   }, [prefersReducedMotion]);
 
-  // Subtle parallax translation and rotation based on scroll distance from center
-  const translateY = prefersReducedMotion ? 0 : scrollY * 0.15; // float lag
-  const rotateZ = prefersReducedMotion ? 0 : scrollY * -0.015; // gentle roll
+  // Continuous auto-spin when in 360 view and not actively dragging
+  useEffect(() => {
+    if (viewMode !== '360' || isDragging || prefersReducedMotion) return;
+    let rafId;
+    const tick = () => {
+      setDragAngle(prev => (prev + 0.6) % 360);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [viewMode, isDragging, prefersReducedMotion]);
+
+  // Mouse & Touch Drag Scrubbing in 360 Mode
+  const handleMouseDown = (e) => {
+    if (viewMode !== '360') return;
+    setIsDragging(true);
+    setStartX(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || viewMode !== '360') return;
+    const delta = (e.clientX - startX) * 0.9;
+    setDragAngle(prev => (prev + delta) % 360);
+    setStartX(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging) setIsDragging(false);
+  };
+
+  const handleTouchStart = (e) => {
+    if (viewMode !== '360') return;
+    setIsDragging(true);
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || viewMode !== '360') return;
+    const delta = (e.touches[0].clientX - startX) * 0.9;
+    setDragAngle(prev => (prev + delta) % 360);
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging) setIsDragging(false);
+  };
+
+  // Switch mode with feedback
+  const activateMode = (modeName) => {
+    setViewMode(modeName);
+    const labels = {
+      standard: '⚡ Default Banknote View',
+      '360': '🔄 /360view: Panoramic 3D Orbital Inspection',
+      exploded: '💥 /explodedview: 4-Layer Security Deconstruction',
+      xray: '🔬 /Xray: Forensic UV-A 365nm Fluorescence Scan',
+    };
+    setSummonFeedback(labels[modeName] || `Activated ${modeName}`);
+    setTimeout(() => setSummonFeedback(null), 3000);
+  };
+
+  // Summon by slash command typing (e.g. /explodedview, /360view, /xray)
+  const handleCommandSubmit = (e) => {
+    e.preventDefault();
+    const cleanCmd = commandInput.trim().toLowerCase();
+    if (cleanCmd === '/explodedview' || cleanCmd === 'explodedview' || cleanCmd === 'exploded') {
+      activateMode('exploded');
+    } else if (cleanCmd === '/360view' || cleanCmd === '360view' || cleanCmd === '360') {
+      activateMode('360');
+    } else if (cleanCmd === '/xray' || cleanCmd === 'xray' || cleanCmd === '/x-ray') {
+      activateMode('xray');
+    } else if (cleanCmd === '/standard' || cleanCmd === 'standard' || cleanCmd === 'default') {
+      activateMode('standard');
+    } else {
+      setSummonFeedback(`Unknown command. Try /explodedview, /360view, or /Xray`);
+      setTimeout(() => setSummonFeedback(null), 3000);
+    }
+    setCommandInput('');
+  };
+
+  const translateY = prefersReducedMotion ? 0 : scrollY * 0.12;
+  const rotateZ = prefersReducedMotion ? 0 : scrollY * -0.012;
 
   return (
     <div
       ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        transform: `translateY(${translateY}px) rotate(${rotateZ}deg)`,
-        transition: 'transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        willChange: 'transform',
+        width: '100%',
         ...style,
       }}
     >
-      <style>{`
-        @keyframes billFloat {
-          0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
-          50%       { transform: translateY(-12px) rotate(1.5deg); }
-        }
-        @keyframes billEntry {
-          from { opacity: 0; transform: translateY(40px) scale(0.92); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
-      <div style={{
-        animation: prefersReducedMotion
-          ? 'none'
-          : 'billFloat 6s ease-in-out infinite, billEntry 0.8s cubic-bezier(0.16,1,0.3,1) both',
-      }}>
-        <PaperMoney3D size={size} />
+      {/* 3D Banknote Showcase Canvas */}
+      <div
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        style={{
+          transform: viewMode === 'standard'
+            ? `translateY(${translateY}px) rotate(${rotateZ}deg)`
+            : 'none',
+          transition: 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          willChange: 'transform',
+          animation: (prefersReducedMotion || viewMode !== 'standard')
+            ? 'none'
+            : 'billFloat 6s ease-in-out infinite, billEntry 0.8s cubic-bezier(0.16,1,0.3,1) both',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingBottom: interactive ? '32px' : '10px',
+        }}
+      >
+        <PaperMoney3D
+          size={size}
+          viewMode={viewMode}
+          dragAngle={dragAngle}
+          flipped={flipped}
+          onFlip={() => setFlipped(f => !f)}
+          isDragging={isDragging}
+        />
       </div>
+
+      {/* ── INTERACTIVE VIEW CONTROLLER & SUMMON CONSOLE ── */}
+      {interactive && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            width: '100%',
+            maxWidth: '380px',
+            marginTop: '8px',
+            zIndex: 40,
+          }}
+        >
+          {/* Summoning Notification Toast */}
+          {summonFeedback && (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,166,35,0.2), rgba(0,200,150,0.2))',
+                border: '1px solid var(--gold)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '6px 14px',
+                borderRadius: '20px',
+                backdropFilter: 'blur(10px)',
+                textAlign: 'center',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                animation: 'billEntry 0.3s ease-out',
+              }}
+            >
+              {summonFeedback}
+            </div>
+          )}
+
+          {/* Mode Switcher Buttons */}
+          <div
+            style={{
+              display: 'flex',
+              background: 'rgba(15, 17, 24, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '30px',
+              padding: '4px',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+              gap: '4px',
+              width: '100%',
+              justifyContent: 'space-between',
+            }}
+          >
+            {[
+              { id: 'standard', label: 'Default', icon: '⚡' },
+              { id: '360', label: '/360view', icon: '🔄' },
+              { id: 'exploded', label: '/explodedview', icon: '💥' },
+              { id: 'xray', label: '/Xray', icon: '🔬' },
+            ].map(btn => {
+              const active = viewMode === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  onClick={() => activateMode(btn.id)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px',
+                    padding: '8px 6px',
+                    borderRadius: '22px',
+                    border: active ? '1px solid rgba(245,166,35,0.6)' : '1px solid transparent',
+                    background: active
+                      ? 'linear-gradient(135deg, rgba(245,166,35,0.25), rgba(245,166,35,0.1))'
+                      : 'transparent',
+                    color: active ? '#ffffff' : 'var(--text-dim)',
+                    fontSize: '11px',
+                    fontWeight: active ? 800 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    whiteSpace: 'nowrap',
+                    boxShadow: active ? '0 0 14px rgba(245,166,35,0.25)' : 'none',
+                  }}
+                  onMouseOver={e => {
+                    if (!active) {
+                      e.currentTarget.style.color = '#fff';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                    }
+                  }}
+                  onMouseOut={e => {
+                    if (!active) {
+                      e.currentTarget.style.color = 'var(--text-dim)';
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '13px' }}>{btn.icon}</span>
+                  <span>{btn.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Summon Console Terminal Input */}
+          <form
+            onSubmit={handleCommandSubmit}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              background: 'rgba(8, 10, 14, 0.75)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '24px',
+              padding: '4px 6px 4px 12px',
+              backdropFilter: 'blur(8px)',
+              boxSizing: 'border-box',
+            }}
+          >
+            <span style={{ color: 'var(--gold)', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', marginRight: '6px', fontWeight: 700 }}>
+              &gt;
+            </span>
+            <input
+              type="text"
+              value={commandInput}
+              onChange={e => setCommandInput(e.target.value)}
+              placeholder="Summon /explodedview, /360view, /Xray..."
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                fontSize: '11px',
+                outline: 'none',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: 'rgba(245, 166, 35, 0.15)',
+                border: '1px solid rgba(245, 166, 35, 0.3)',
+                color: 'var(--gold)',
+                fontSize: '10px',
+                fontWeight: 800,
+                borderRadius: '16px',
+                padding: '4px 10px',
+                cursor: 'pointer',
+                letterSpacing: '0.05em',
+                transition: 'background 0.2s',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(245, 166, 35, 0.3)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(245, 166, 35, 0.15)'}
+            >
+              Summon
+            </button>
+          </form>
+
+          {/* Quick Clickable Command Chips */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '10px',
+              color: 'var(--text-dim)',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            <span>Click to summon:</span>
+            {[
+              { cmd: 'exploded', label: '/explodedview' },
+              { cmd: '360', label: '/360view' },
+              { cmd: 'xray', label: '/Xray' },
+            ].map(chip => (
+              <span
+                key={chip.cmd}
+                onClick={() => activateMode(chip.cmd)}
+                style={{
+                  color: 'var(--gold)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  background: 'rgba(245, 166, 35, 0.08)',
+                  border: '1px solid rgba(245, 166, 35, 0.18)',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(245, 166, 35, 0.2)';
+                  e.currentTarget.style.borderColor = 'var(--gold)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(245, 166, 35, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(245, 166, 35, 0.18)';
+                }}
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -903,8 +1806,24 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         .bill-birr { background-image: url('/images/birr-back.jpg'); transform: rotateY(180deg); }
         
         @keyframes billFloat { 
-          0%, 100% { transform: rotateY(var(--ry, 0deg)) translateY(0) rotateZ(0deg); } 
-          50% { transform: rotateY(var(--ry, 0deg)) translateY(-20px) rotateZ(1deg); } 
+          0%, 100% { transform: translateY(0px) rotate(-1.5deg); } 
+          50% { transform: translateY(-12px) rotate(1.5deg); } 
+        }
+
+        @keyframes billEntry {
+          from { opacity: 0; transform: translateY(40px) scale(0.92); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes xrayScanline {
+          0% { top: 0%; opacity: 0.85; }
+          50% { top: 96%; opacity: 1; filter: drop-shadow(0 0 12px #00ffcc); }
+          100% { top: 0%; opacity: 0.85; }
+        }
+
+        @keyframes uvPhosphorPulse {
+          0%, 100% { opacity: 0.78; transform: translate(-50%, -50%) scale(0.97); filter: drop-shadow(0 0 8px #39ff14); }
+          50% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); filter: drop-shadow(0 0 22px #39ff14) drop-shadow(0 0 35px #00ffcc); }
         }
 
         /* SaaS Layout Animations */
@@ -1307,15 +2226,16 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* Right Side: 3D Paper Money */}
+            {/* Right Side: 3D Paper Money & Multi-View Inspection */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              height: width < 768 ? '300px' : '500px',
+              minHeight: width < 768 ? '460px' : '560px',
               marginTop: width < 1024 ? '32px' : '0',
+              position: 'relative',
             }}>
-              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
+              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} interactive={true} />
             </div>
           </div>
         </div>
