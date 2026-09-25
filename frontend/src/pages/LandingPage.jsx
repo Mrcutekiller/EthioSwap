@@ -829,13 +829,20 @@ export const FloatingBill = ({
   style = {},
   prefersReducedMotion = false,
   interactive = false,
+  mode = 'standard',
+  showBadge = false,
+  badgeLabel = '',
 }) => {
   const containerRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
 
   // View modes: 'standard' | '360' | 'exploded' | 'xray'
-  const [viewMode, setViewMode] = useState('standard');
+  const [viewMode, setViewMode] = useState(mode);
   const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    setViewMode(mode);
+  }, [mode]);
 
   // 360 Rotation state
   const [dragAngle, setDragAngle] = useState(0);
@@ -1002,6 +1009,35 @@ export const FloatingBill = ({
           isDragging={isDragging}
         />
       </div>
+
+      {/* Optional Mode Showcase Badge */}
+      {showBadge && (
+        <div
+          style={{
+            marginTop: viewMode === 'exploded' ? '28px' : '16px',
+            fontSize: '11px',
+            color: viewMode === 'xray' ? '#00ffcc' : 'var(--gold)',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            fontFamily: 'JetBrains Mono, monospace',
+            background: viewMode === 'xray' ? 'rgba(0,255,204,0.08)' : 'rgba(245,166,35,0.08)',
+            border: viewMode === 'xray' ? '1px solid rgba(0,255,204,0.3)' : '1px solid rgba(245,166,35,0.25)',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+            textAlign: 'center',
+            zIndex: 20,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {badgeLabel || (
+            viewMode === '360' ? '🔄 /360view • 360° Panoramic Inspection (Drag to Scrub)' :
+            viewMode === 'exploded' ? '💥 /explodedview • 4-Layer Security Architecture' :
+            viewMode === 'xray' ? '🔬 /Xray • UV-A 365nm Forensic Security Scan' : ''
+          )}
+        </div>
+      )}
 
       {/* ── INTERACTIVE VIEW CONTROLLER & SUMMON CONSOLE ── */}
       {interactive && (
@@ -2226,16 +2262,15 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* Right Side: 3D Paper Money & Multi-View Inspection */}
+            {/* Right Side: 3D Paper Money (Hero default) */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              minHeight: width < 768 ? '460px' : '560px',
+              height: width < 768 ? '300px' : '500px',
               marginTop: width < 1024 ? '32px' : '0',
-              position: 'relative',
             }}>
-              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} interactive={true} />
+              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} mode="standard" interactive={false} />
             </div>
           </div>
         </div>
@@ -2254,16 +2289,24 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             gap: '80px', 
             alignItems: 'center' 
           }}>
-            {/* Left Column: 3D Paper Money (alternating layout) */}
+            {/* Left Column: /360view 3D Panoramic Bilateral Inspection */}
             <div style={{ 
               display: 'flex', 
+              flexDirection: 'column',
               alignItems: 'center', 
               justifyContent: 'center', 
-              height: width < 768 ? '300px' : '500px',
+              minHeight: width < 768 ? '360px' : '520px',
               order: width < 1024 ? 2 : 1,
               marginTop: width < 1024 ? '32px' : '0',
+              position: 'relative',
             }}>
-              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
+              <FloatingBill
+                size={width < 768 ? 'sm' : 'lg'}
+                prefersReducedMotion={prefersReducedMotion}
+                mode="360"
+                showBadge={true}
+                badgeLabel="🔄 /360view • 360° Panoramic Inspection (Drag to Scrub)"
+              />
             </div>
 
             {/* Right Column: Secure Asset Card + Simple & Transparent Steps */}
@@ -2370,15 +2413,23 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               </div>
             </div>
 
-            {/* Right side visual: 3D Paper Money (alternating layout) */}
+            {/* Right side visual: /explodedview 4-Layer Security Architecture */}
             <div style={{ 
               display: 'flex', 
+              flexDirection: 'column',
               alignItems: 'center', 
               justifyContent: 'center', 
-              height: width < 768 ? '300px' : '500px',
+              minHeight: width < 768 ? '440px' : '560px',
               marginTop: width < 1024 ? '32px' : '0',
+              position: 'relative',
             }}>
-              <FloatingBill size={width < 768 ? 'sm' : 'lg'} prefersReducedMotion={prefersReducedMotion} />
+              <FloatingBill 
+                size={width < 768 ? 'sm' : 'lg'} 
+                prefersReducedMotion={prefersReducedMotion} 
+                mode="exploded" 
+                showBadge={true} 
+                badgeLabel="💥 /explodedview • 4-Layer Security Architecture" 
+              />
             </div>
           </div>
         </div>
@@ -2427,8 +2478,23 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             gap: width < 768 ? '40px' : '80px', 
             alignItems: 'center' 
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: width < 768 ? '320px' : '380px', order: width < 1024 ? 2 : 1 }}>
-              <AutoScrollingBills direction="down" speed="18s" size="md" />
+            {/* Left side visual: /Xray Forensic UV-A 365nm Scan */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              minHeight: width < 768 ? '360px' : '520px', 
+              order: width < 1024 ? 2 : 1,
+              position: 'relative',
+            }}>
+              <FloatingBill 
+                size={width < 768 ? 'sm' : 'lg'} 
+                prefersReducedMotion={prefersReducedMotion} 
+                mode="xray" 
+                showBadge={true} 
+                badgeLabel="🔬 /Xray • UV-A 365nm Forensic Security Scan" 
+              />
             </div>
             <div style={{ order: width < 1024 ? 1 : 2 }}>
               <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Unmatched Security</div>
