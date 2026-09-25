@@ -785,37 +785,31 @@ export const PaperMoney3D = ({
         </div>
       )}
 
-      {/* Mode Status Pill / Flip Hint */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: viewMode === 'exploded' ? '-36px' : '-32px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: '11px',
-          color: viewMode === 'xray' ? '#00ffcc' : 'rgba(245,166,35,0.9)',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-          fontFamily: 'sans-serif',
-          background: 'rgba(0, 0, 0, 0.65)',
-          padding: '4px 14px',
-          borderRadius: '20px',
-          border: viewMode === 'xray' ? '1px solid rgba(0,255,204,0.3)' : '1px solid rgba(245,166,35,0.25)',
-          backdropFilter: 'blur(6px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          zIndex: 30,
-        }}
-      >
-        {viewMode === '360'
-          ? `🔄 360° Drag & Orbit (${Math.round(((dragAngle % 360) + 360) % 360)}°)`
-          : viewMode === 'exploded'
-          ? '💥 Exploded 4-Layer View (Click to flip paper)'
-          : viewMode === 'xray'
-          ? '🔬 UV-A 365nm Forensic Scan Active'
-          : isCardFlipped ? '← Click to see USD $100' : 'Click to see Birr 200 →'}
-      </div>
+      {/* Flip hint only in standard mode */}
+      {viewMode === 'standard' && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-28px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '11px',
+            color: 'rgba(245,166,35,0.7)',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            fontFamily: 'sans-serif',
+            background: 'rgba(0, 0, 0, 0.4)',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            border: '1px solid rgba(245,166,35,0.15)',
+            backdropFilter: 'blur(5px)',
+          }}
+        >
+          {isCardFlipped ? '← Click to see USD' : 'Click to see Birr →'}
+        </div>
+      )}
     </div>
   );
 };
@@ -830,8 +824,6 @@ export const FloatingBill = ({
   prefersReducedMotion = false,
   interactive = false,
   mode = 'standard',
-  showBadge = false,
-  badgeLabel = '',
 }) => {
   const containerRef = useRef(null);
   const [scrollY, setScrollY] = useState(0);
@@ -1009,35 +1001,6 @@ export const FloatingBill = ({
           isDragging={isDragging}
         />
       </div>
-
-      {/* Optional Mode Showcase Badge */}
-      {showBadge && (
-        <div
-          style={{
-            marginTop: viewMode === 'exploded' ? '28px' : '16px',
-            fontSize: '11px',
-            color: viewMode === 'xray' ? '#00ffcc' : 'var(--gold)',
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            fontFamily: 'JetBrains Mono, monospace',
-            background: viewMode === 'xray' ? 'rgba(0,255,204,0.08)' : 'rgba(245,166,35,0.08)',
-            border: viewMode === 'xray' ? '1px solid rgba(0,255,204,0.3)' : '1px solid rgba(245,166,35,0.25)',
-            padding: '6px 16px',
-            borderRadius: '20px',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-            textAlign: 'center',
-            zIndex: 20,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {badgeLabel || (
-            viewMode === '360' ? '🔄 /360view • 360° Panoramic Inspection (Drag to Scrub)' :
-            viewMode === 'exploded' ? '💥 /explodedview • 4-Layer Security Architecture' :
-            viewMode === 'xray' ? '🔬 /Xray • UV-A 365nm Forensic Security Scan' : ''
-          )}
-        </div>
-      )}
 
       {/* ── INTERACTIVE VIEW CONTROLLER & SUMMON CONSOLE ── */}
       {interactive && (
@@ -2304,8 +2267,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 size={width < 768 ? 'sm' : 'lg'}
                 prefersReducedMotion={prefersReducedMotion}
                 mode="360"
-                showBadge={true}
-                badgeLabel="🔄 /360view • 360° Panoramic Inspection (Drag to Scrub)"
               />
             </div>
 
@@ -2427,8 +2388,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 size={width < 768 ? 'sm' : 'lg'} 
                 prefersReducedMotion={prefersReducedMotion} 
                 mode="exploded" 
-                showBadge={true} 
-                badgeLabel="💥 /explodedview • 4-Layer Security Architecture" 
               />
             </div>
           </div>
@@ -2492,8 +2451,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 size={width < 768 ? 'sm' : 'lg'} 
                 prefersReducedMotion={prefersReducedMotion} 
                 mode="xray" 
-                showBadge={true} 
-                badgeLabel="🔬 /Xray • UV-A 365nm Forensic Security Scan" 
               />
             </div>
             <div style={{ order: width < 1024 ? 1 : 2 }}>
