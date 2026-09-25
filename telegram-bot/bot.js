@@ -103,19 +103,23 @@ function getAppInlineKeyboard(user = null, chatId = null) {
   return {
     inline_keyboard: [
       [
-        { text: '🚀 Open EthioSwap P2P App', web_app: { url: targetUrl } },
+        { text: '⚡ Open EthioSwap App', web_app: { url: targetUrl } },
       ],
       [
-        { text: '🛒 Buy $', callback_data: 'menu_buy' },
-        { text: '💵 Sell $', callback_data: 'menu_sell' },
+        { text: '🛒 Buy USDT', callback_data: 'menu_buy' },
+        { text: '💵 Sell USDT', callback_data: 'menu_sell' },
       ],
       [
-        { text: '💼 P2P Wallet', callback_data: 'menu_wallet' },
-        { text: '📋 My Orders', callback_data: 'menu_orders' },
+        { text: '💼 Wallet', callback_data: 'menu_wallet' },
+        { text: '📋 Orders', callback_data: 'menu_orders' },
       ],
       [
-        { text: '📜 History', callback_data: 'menu_history' },
-        { text: user ? '👤 Profile' : '🔐 Log In', callback_data: user ? 'menu_profile' : 'action_login' },
+        { text: '🏅 Badges & Score', callback_data: 'show_badges' },
+        { text: user ? '👤 Profile' : '🔐 Login', callback_data: user ? 'menu_profile' : 'action_login' },
+      ],
+      [
+        { text: '🎁 Referral', callback_data: 'show_referral' },
+        { text: '🔒 Escrow', callback_data: 'show_escrow_help' },
       ],
     ],
   };
@@ -124,9 +128,31 @@ function getAppInlineKeyboard(user = null, chatId = null) {
 function getCancelKeyboard() {
   return {
     reply_markup: {
-      inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'menu_start' }]],
+      inline_keyboard: [[{ text: '✕ Cancel', callback_data: 'menu_start' }]],
     },
   };
+}
+
+// ─── Shared brand helpers ───────────────────────────────────────────────────
+const DIVIDER     = '─────────────────────';
+const DIVIDER_GOLD = '▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰';
+const BRAND_TAG   = '\n_🇪🇹 EthioSwap · Ethiopia\'s #1 P2P Exchange_';
+
+function creditBar(score = 500) {
+  const filled = Math.round(score / 100);
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
+function creditLabel(score = 500) {
+  if (score >= 800) return '🟢 Elite';
+  if (score >= 650) return '🟡 Good';
+  if (score >= 500) return '🟠 Fair';
+  return '🔴 Low';
+}
+
+function statusEmoji(status) {
+  const map = { completed: '✅', paid: '🟡', payment_pending: '🟠', pending: '⏳', cancelled: '❌', disputed: '⚖️', expired: '⏱' };
+  return map[status] || '⏳';
 }
 
 // ========================================================
@@ -153,24 +179,50 @@ bot.onText(/\/start/, async (msg) => {
     menu_button: { type: 'default' },
   }).catch(() => {});
 
-  let text = `🇪🇹 *Welcome to EthioSwap P2P!*\n\n` +
-    `Fast, secure peer-to-peer dollar & crypto exchange for Ethiopia.\n` +
-    `100% Escrow Protection • Telebirr & CBE Supported\n\n`;
+  // ── PREMIUM WELCOME CARD ────────────────────────────────────────────────
+  let text;
 
   if (user) {
-    const balUsd = Number(user.balance_usd || 0).toFixed(2);
-    text += `👤 *Account:* @${user.username || 'Trader'}\n` +
-      `💰 *P2P Balance:* $${balUsd} USD\n` +
-      `⭐ *Reputation:* ${user.reputation || 100}%\n\n`;
+    const balUsd   = Number(user.balance_usd || 0).toFixed(2);
+    const balEtb   = Number(user.etb_balance || 0).toLocaleString();
+    const rep      = user.reputation || 100;
+    const trades   = user.trade_count || 0;
+    const score    = user.credit_score || 500;
+    const scoreBar = creditBar(score);
+    const scoreLbl = creditLabel(score);
+    const kycBadge = user.kyc_status === 'approved' ? '✅ KYC Verified' : '⏳ Unverified';
+    const verified  = user.is_verified_trader ? ' 🏅' : '';
+
+    text =
+      `╔═══════════════════════╗\n` +
+      `║  🇪🇹  *ETHIOSWAP P2P*  ║\n` +
+      `╚═══════════════════════╝\n\n` +
+      `👤 *@${user.username}*${verified}  •  ${kycBadge}\n` +
+      `${DIVIDER}\n` +
+      `💵  Available   \`$${balUsd}\`\n` +
+      `🇪🇹  ETB Bal.   \`${balEtb} ETB\`\n` +
+      `📦  Trades     \`${trades} completed\`\n` +
+      `⭐  Rep.       \`${rep}%\`\n\n` +
+      `📊 *Credit Score: ${score}/1000*  ${scoreLbl}\n` +
+      `\`${scoreBar}\`\n` +
+      `${DIVIDER}\n` +
+      `_Tap a button below to trade, check your wallet, or earn badges._`;
   } else {
-    text += `🔒 *Welcome Trader!*\n` +
-      `Tap the button below to launch the Mini App or log in with your website account.\n\n`;
+    text =
+      `╔═══════════════════════╗\n` +
+      `║  🇪🇹  *ETHIOSWAP P2P*  ║\n` +
+      `╚═══════════════════════╝\n\n` +
+      `*Ethiopia's most trusted P2P exchange.*\n\n` +
+      `🔐 *Secure Escrow* — your money is safe until both parties confirm\n` +
+      `📱 *Telebirr & CBE* — instant local payments supported\n` +
+      `⚡ *Sub-15min trades* — fastest P2P in Ethiopia\n` +
+      `🏅 *Verified traders only* — KYC-protected marketplace\n\n` +
+      `${DIVIDER}\n` +
+      `_Create a free account at ethioswap.qzz.io or tap Login below._`;
   }
 
-  text += `👇 *Tap the button below to open the P2P App:*`;
-
-  // Send single message with remove_keyboard to instantly collapse any bottom menu
-  const initMsg = await bot.sendMessage(chatId, '⚡ Loading EthioSwap P2P...', {
+  const initMsg = await bot.sendMessage(chatId, '⚡ _Loading EthioSwap…_', {
+    parse_mode: 'Markdown',
     reply_markup: { remove_keyboard: true },
   });
 
@@ -181,16 +233,10 @@ bot.onText(/\/start/, async (msg) => {
       parse_mode: 'Markdown',
       reply_markup: getAppInlineKeyboard(user, chatId),
     }).catch(async () => {
-      await bot.sendMessage(chatId, text, {
-        parse_mode: 'Markdown',
-        reply_markup: getAppInlineKeyboard(user, chatId),
-      });
+      await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: getAppInlineKeyboard(user, chatId) });
     });
   } else {
-    await bot.sendMessage(chatId, text, {
-      parse_mode: 'Markdown',
-      reply_markup: getAppInlineKeyboard(user, chatId),
-    });
+    await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: getAppInlineKeyboard(user, chatId) });
   }
 });
 
@@ -205,25 +251,23 @@ bot.onText(/\/login|🔐 Log In to EthioSwap/, async (msg) => {
   if (user) {
     return bot.sendMessage(
       chatId,
-      `✅ You are already logged in as *@${user.username}*!\n\n` +
-      `Balance: *$${Number(user.balance_usd || 0).toFixed(2)} USD*\n\n` +
-      `If you want to switch accounts, type /logout first.`,
-      {
-        parse_mode: 'Markdown',
-        ...getMainMenuKeyboard(true),
-      }
+      `✅ *Already Logged In*\n` +
+      `${DIVIDER}\n` +
+      `👤 Account: *@${user.username}*\n` +
+      `💵 Balance: \`$${Number(user.balance_usd || 0).toFixed(2)} USD\`\n\n` +
+      `_Type /logout to switch accounts._`,
+      { parse_mode: 'Markdown', reply_markup: getAppInlineKeyboard(user, chatId) }
     );
   }
 
   authService.setStep(chatId, 'AWAITING_LOGIN_IDENTIFIER', {});
   await bot.sendMessage(
     chatId,
-    `🔐 *Log In to your EthioSwap Account*\n\n` +
-    `Please enter your *Email address* or *Username* that you use on the website:`,
-    {
-      parse_mode: 'Markdown',
-      ...getCancelKeyboard(),
-    }
+    `🔐 *Sign In to EthioSwap*\n` +
+    `${DIVIDER}\n` +
+    `Enter your *email address* or *username*:\n\n` +
+    `_Don't have an account? Register free at ethioswap.qzz.io_`,
+    { parse_mode: 'Markdown', ...getCancelKeyboard() }
   );
 });
 
@@ -232,11 +276,11 @@ bot.onText(/\/logout/, async (msg) => {
   await authService.logout(chatId);
   await bot.sendMessage(
     chatId,
-    `👋 You have been logged out from EthioSwap.\n\nTap /login whenever you want to reconnect.`,
-    {
-      parse_mode: 'Markdown',
-      ...getMainMenuKeyboard(false),
-    }
+    `👋 *Signed Out*\n` +
+    `${DIVIDER}\n` +
+    `You've been safely logged out from EthioSwap.\n\n` +
+    `Tap /login to sign back in anytime.`,
+    { parse_mode: 'Markdown', ...getMainMenuKeyboard(false) }
   );
 });
 
@@ -265,39 +309,43 @@ bot.onText(/\/wallet|💼 P2P Wallet/, async (msg) => {
 
   try {
     const summary = await walletService.getWalletSummary(user.id);
+    const totalUsd = summary.totalUsd;
+    const portfolioBar = Math.min(10, Math.round(totalUsd / 50)); // 1 bar per $50
+    const barStr = '█'.repeat(portfolioBar) + '░'.repeat(10 - portfolioBar);
 
     const message =
-      `💼 *EthioSwap P2P Wallet*\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👤 *Account:* @${user.username} (ID: #${summary.numericId})\n\n` +
-      `💵 *Available USD:* \`$${summary.usdAvailable.toFixed(2)}\`\n` +
-      `🔒 *Escrow Locked:* \`$${summary.usdEscrow.toFixed(2)}\`\n` +
-      `💰 *Total Balance:* \`$${summary.totalUsd.toFixed(2)} USD\`\n` +
-      `🇪🇹 *ETB Balance:* \`${summary.etbBalance.toLocaleString()} ETB\`\n` +
-      `⛓ *ETH Balance:* \`${summary.ethBalance.toFixed(4)} ETH\`\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `📍 *Your On-Chain Address:*\n\`${summary.depositAddress}\`\n\n` +
-      `_Automatic on-chain deposits & instant P2P withdrawals enabled._`;
-
-    const inlineKeyboard = {
-      inline_keyboard: [
-        [
-          { text: '📥 Deposit (On-Chain / USD)', callback_data: 'wallet_deposit' },
-          { text: '📤 Withdraw Funds', callback_data: 'wallet_withdraw' },
-        ],
-        [
-          { text: '📜 Recent Transactions', callback_data: 'wallet_history' },
-          { text: '🔄 Refresh Balance', callback_data: 'wallet_refresh' },
-        ],
-      ],
-    };
+      `💼 *EthioSwap Wallet*\n` +
+      `${DIVIDER}\n` +
+      `👤 *@${user.username}*  ·  ID \`#${summary.numericId}\`\n\n` +
+      `💵  *Available*    \`$${summary.usdAvailable.toFixed(2)} USD\`\n` +
+      `🔒  *In Escrow*    \`$${summary.usdEscrow.toFixed(2)} USD\`\n` +
+      `🇪🇹  *ETB Balance*  \`${summary.etbBalance.toLocaleString()} ETB\`\n` +
+      `⛓   *On-Chain*    \`${summary.ethBalance.toFixed(4)} ETH\`\n\n` +
+      `📊 *Portfolio: $${totalUsd.toFixed(2)}*\n` +
+      `\`${barStr}\`\n` +
+      `${DIVIDER}\n` +
+      `🏦 *Deposit Address (TRC20/ERC20):*\n` +
+      `\`${summary.depositAddress}\`\n\n` +
+      `_On-chain deposits auto-credit. Withdrawals process instantly._`;
 
     await bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown',
-      reply_markup: inlineKeyboard,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '📥 Deposit', callback_data: 'wallet_deposit' },
+            { text: '📤 Withdraw', callback_data: 'wallet_withdraw' },
+          ],
+          [
+            { text: '📜 Transactions', callback_data: 'wallet_history' },
+            { text: '🔄 Refresh', callback_data: 'wallet_refresh' },
+          ],
+          [{ text: '⚡ Open App', web_app: { url: `${WEB_APP_URL}&chat_id=${chatId}` } }],
+        ],
+      },
     });
   } catch (err) {
-    await bot.sendMessage(chatId, `⚠️ Could not fetch wallet details: ${err.message}`);
+    await bot.sendMessage(chatId, `⚠️ Wallet error: ${err.message}`);
   }
 });
 
@@ -332,42 +380,42 @@ async function handleShowBuyListings(chatId) {
     );
   }
 
-  let text = `🛒 *Active Sellers — Buy $ (USD / USDT)*\n` +
-    `Choose a verified seller below. Minimum order starts from *$${MIN_ORDER_USD}*.\n\n`;
+  let text =
+    `🛒 *Buy USDT — P2P Orderbook*\n` +
+    `${DIVIDER}\n` +
+    `Pay with *Telebirr, CBE, Awash, Dashen.*\n` +
+    `Min order *$${MIN_ORDER_USD}*  •  100% Escrow protected\n` +
+    `${DIVIDER}\n\n`;
 
   const buttons = [];
 
   listings.slice(0, 6).forEach((item, index) => {
-    const sellerName = item.seller_name || item.sellerStats?.username || `Seller #${index + 1}`;
-    const orders = item.sellerStats?.trade_count || 0;
-    const rep = item.sellerStats?.reputation || 100;
-    const rate = item.rate || 190.0;
-    const min = item.minUsd || MIN_ORDER_USD;
-    const max = item.maxUsd || 500;
+    const sellerName  = item.seller_name || item.sellerStats?.username || `Seller ${index + 1}`;
+    const orders      = item.sellerStats?.trade_count || 0;
+    const rep         = item.sellerStats?.reputation || 100;
+    const rate        = item.rate || 190.0;
+    const min         = item.minUsd || MIN_ORDER_USD;
+    const max         = item.maxUsd || 500;
+    const verified    = item.sellerStats?.is_verified_trader ? ' ✅' : '';
+    const repBar      = '★'.repeat(Math.round(rep / 20)) + '☆'.repeat(5 - Math.round(rep / 20));
+    const rankEmoji   = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'][index] || `${index+1}.`;
 
-    text += `*${index + 1}. 👤 ${sellerName}* ${item.sellerStats?.is_verified ? '✅' : ''}\n` +
-      `   📦 *Orders:* ${orders} orders | ⭐ ${rep}%\n` +
-      `   💵 *Rate:* 1 USD = *${rate} ETB*\n` +
-      `   📊 *Limits:* $${min} - $${max} USD\n` +
-      `   💳 *Methods:* ${Array.isArray(item.payment_methods) ? item.payment_methods.join(', ') : 'Telebirr, CBE'}\n\n`;
+    text +=
+      `${rankEmoji} *${sellerName}*${verified}  •  ${repBar}\n` +
+      `   📦 ${orders} trades  ·  ⭐ ${rep}% rep\n` +
+      `   💱 \`1 USD = ${rate} ETB\`\n` +
+      `   📊 \`$${min} – $${max}\`\n` +
+      `   💳 ${Array.isArray(item.payment_methods) ? item.payment_methods.slice(0,3).join(' · ') : 'Telebirr · CBE'}\n\n`;
 
-    buttons.push([
-      {
-        text: `🛒 Buy from ${sellerName} (${rate} ETB)`,
-        callback_data: `buy_select_${item.id}`,
-      },
-    ]);
+    buttons.push([{ text: `🛒 Buy from ${sellerName} · ${rate} ETB`, callback_data: `buy_select_${item.id}` }]);
   });
 
-  buttons.push([
-    { text: '➕ Post My Own Buy Ad', callback_data: 'post_ad_buy' },
-    { text: '🔄 Refresh', callback_data: 'refresh_buy_listings' },
-  ]);
+  buttons.push(
+    [{ text: '➕ Post a Buy Ad', callback_data: 'post_ad_buy' }, { text: '🔄 Refresh', callback_data: 'refresh_buy_listings' }],
+    [{ text: '⚡ Open P2P App', web_app: { url: `${WEB_APP_URL}&chat_id=${chatId}` } }]
+  );
 
-  await bot.sendMessage(chatId, text, {
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: buttons },
-  });
+  await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: buttons } });
 }
 
 // ========================================================
@@ -383,49 +431,48 @@ async function handleShowSellListings(chatId) {
   const user = await authService.getCurrentUser(chatId);
   const listings = await p2pService.getSellListings(user?.id);
 
-  let text = `💵 *P2P Sell $ — Instant ETB Cashout*\n\n` +
-    `You can sell your USD/USDT directly to verified buyers below, or create your own Sell ad.\n` +
-    `Minimum order starts from *$${MIN_ORDER_USD}*.\n\n`;
+  let text =
+    `💵 *Sell USDT — Get ETB Instantly*\n` +
+    `${DIVIDER}\n` +
+    `Sell your USDT to verified buyers below.\n` +
+    `Min order *$${MIN_ORDER_USD}*  •  ETB paid direct to your account\n` +
+    `${DIVIDER}\n\n`;
 
   const buttons = [];
 
   if (listings && listings.length > 0) {
-    text += `*Available Buyers:*\n\n`;
     listings.slice(0, 6).forEach((item, index) => {
-      const buyerName = item.seller_name || item.sellerStats?.username || `Buyer #${index + 1}`;
-      const orders = item.sellerStats?.trade_count || 0;
-      const rep = item.sellerStats?.reputation || 100;
-      const rate = item.rate || 186.0;
-      const min = item.minUsd || MIN_ORDER_USD;
-      const max = item.maxUsd || 500;
+      const buyerName = item.seller_name || item.sellerStats?.username || `Buyer ${index + 1}`;
+      const orders    = item.sellerStats?.trade_count || 0;
+      const rep       = item.sellerStats?.reputation || 100;
+      const rate      = item.rate || 186.0;
+      const min       = item.minUsd || MIN_ORDER_USD;
+      const max       = item.maxUsd || 500;
+      const verified  = item.sellerStats?.is_verified_trader ? ' ✅' : '';
+      const repBar    = '★'.repeat(Math.round(rep / 20)) + '☆'.repeat(5 - Math.round(rep / 20));
+      const rankEmoji = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'][index] || `${index+1}.`;
 
-      text += `*${index + 1}. 👤 ${buyerName}* ${item.sellerStats?.is_verified ? '✅' : ''}\n` +
-        `   📦 *Orders:* ${orders} orders | ⭐ ${rep}%\n` +
-        `   💵 *Rate:* 1 USD = *${rate} ETB*\n` +
-        `   📊 *Limits:* $${min} - $${max} USD\n` +
-        `   💳 *Pays via:* ${Array.isArray(item.payment_methods) ? item.payment_methods.join(', ') : 'Telebirr, CBE'}\n\n`;
+      text +=
+        `${rankEmoji} *${buyerName}*${verified}  •  ${repBar}\n` +
+        `   📦 ${orders} trades  ·  ⭐ ${rep}% rep\n` +
+        `   💱 \`1 USD = ${rate} ETB\`\n` +
+        `   📊 \`$${min} – $${max}\`\n` +
+        `   💳 ${Array.isArray(item.payment_methods) ? item.payment_methods.slice(0,3).join(' · ') : 'Telebirr · CBE'}\n\n`;
 
-      buttons.push([
-        {
-          text: `💵 Sell to ${buyerName} (${rate} ETB)`,
-          callback_data: `sell_select_${item.id}`,
-        },
-      ]);
+      buttons.push([{ text: `💵 Sell to ${buyerName} · ${rate} ETB`, callback_data: `sell_select_${item.id}` }]);
     });
   } else {
-    text += `_No active buyers waiting in queue right now._\n\n` +
-      `💡 Create your own Sell ad and buyers will order from you instantly!\n\n`;
+    text +=
+      `📭 *No active buyers right now.*\n\n` +
+      `Post your own Sell ad — buyers will come to you!\n\n`;
   }
 
-  buttons.push([
-    { text: '➕ Create My Sell Ad (Post Listing)', callback_data: 'post_ad_sell' },
-    { text: '🔄 Refresh', callback_data: 'refresh_sell_listings' },
-  ]);
+  buttons.push(
+    [{ text: '➕ Post Sell Ad', callback_data: 'post_ad_sell' }, { text: '🔄 Refresh', callback_data: 'refresh_sell_listings' }],
+    [{ text: '⚡ Open P2P App', web_app: { url: `${WEB_APP_URL}&chat_id=${chatId}` } }]
+  );
 
-  await bot.sendMessage(chatId, text, {
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: buttons },
-  });
+  await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: { inline_keyboard: buttons } });
 }
 
 // ========================================================
@@ -450,37 +497,36 @@ bot.onText(/\/orders|📋 My Orders/, async (msg) => {
     if (!trades || trades.length === 0) {
       return bot.sendMessage(
         chatId,
-        `📋 *My Orders*\n\nYou don't have any active or past P2P trade orders yet.`,
+        `📋 *My Orders*\n${DIVIDER}\n\n📭 No trade orders yet.\n\n_Browse the orderbook below to start your first trade!_`,
         {
           parse_mode: 'Markdown',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🛒 Browse Buy Orders', callback_data: 'menu_buy' }],
-              [{ text: '💵 Browse Sell Orders', callback_data: 'menu_sell' }],
+              [{ text: '🛒 Buy USDT', callback_data: 'menu_buy' }, { text: '💵 Sell USDT', callback_data: 'menu_sell' }],
+              [{ text: '⚡ Open P2P App', web_app: { url: `${WEB_APP_URL}&chat_id=${chatId}` } }],
             ],
           },
         }
       );
     }
 
-    let text = `📋 *Your P2P Orders*\n\n`;
+    let text = `📋 *My Trade Orders*\n${DIVIDER}\n\n`;
     const buttons = [];
 
     trades.slice(0, 8).forEach((t) => {
-      const isBuyer = t.buyer_id === user.id;
-      const roleText = isBuyer ? '🟢 BUY' : '🔴 SELL';
-      const statusIcon = t.status === 'completed' ? '✅' : t.status === 'paid' ? '⏳' : t.status === 'cancelled' ? '❌' : '⏱';
+      const isBuyer    = t.buyer_id === user.id;
+      const role       = isBuyer ? '🟢 BUY ' : '🔴 SELL';
+      const sIcon      = statusEmoji(t.status);
+      const amtUsd     = Number(t.amount_usd || 0).toFixed(2);
+      const amtEtb     = Number(t.amount_etb || 0).toLocaleString();
+      const dateStr    = new Date(t.created_at).toLocaleDateString('en-ET', { day:'2-digit', month:'short' });
 
-      text += `${roleText} *#${t.id.slice(0, 8)}* — $${Number(t.amount_usd).toFixed(2)} (${Number(t.amount_etb).toLocaleString()} ETB)\n` +
-        `Status: ${statusIcon} *${t.status.toUpperCase()}* | Method: ${t.payment_method || 'Telebirr/CBE'}\n` +
-        `Date: ${new Date(t.created_at).toLocaleDateString()}\n\n`;
+      text +=
+        `${role} *#${t.id.slice(0, 8)}*  ${sIcon} ${t.status.toUpperCase()}\n` +
+        `   💵 \`$${amtUsd}\`  🇪🇹 \`${amtEtb} ETB\`\n` +
+        `   📅 ${dateStr}  ·  ${t.payment_method || 'Telebirr/CBE'}\n\n`;
 
-      buttons.push([
-        {
-          text: `🔍 View Order #${t.id.slice(0, 8)} (${t.status})`,
-          callback_data: `trade_view_${t.id}`,
-        },
-      ]);
+      buttons.push([{ text: `${sIcon} #${t.id.slice(0, 8)} · $${amtUsd} · ${t.status}`, callback_data: `trade_view_${t.id}` }]);
     });
 
     await bot.sendMessage(chatId, text, {
@@ -540,29 +586,35 @@ bot.onText(/👤 Account & Profile/, async (msg) => {
     });
   }
 
+  const score    = user.credit_score || 500;
+  const scoreBar = creditBar(score);
+  const scoreLbl = creditLabel(score);
+  const verified = user.is_verified_trader ? '✅ Verified Trader' : '⬜ Standard Trader';
+  const kycStr   = user.kyc_status === 'approved' ? '✅ Approved' : `⏳ ${user.kyc_status || 'None'}`;
+  const vol      = Number(user.total_volume || 0).toFixed(2);
+
   const text =
-    `👤 *Trader Profile: @${user.username}*\n` +
-    `━━━━━━━━━━━━━━━━━━━━\n` +
-    `📧 *Email:* \`${user.email || 'N/A'}\`\n` +
-    `🆔 *Trader ID:* \`#${user.numeric_id || 'N/A'}\`\n` +
-    `⭐ *Reputation:* \`${user.reputation || 100}%\`\n` +
-    `📦 *Total Trades:* \`${user.total_trades || user.trade_count || 0}\`\n` +
-    `🛡 *Verification:* \`${user.is_verified_trader ? 'Verified Trader ✅' : 'Standard Trader'}\`\n` +
-    `💰 *USD Balance:* \`$${Number(user.balance_usd || 0).toFixed(2)}\`\n` +
-    `🇪🇹 *ETB Balance:* \`${Number(user.etb_balance || 0).toLocaleString()} ETB\`\n` +
-    `━━━━━━━━━━━━━━━━━━━━`;
+    `👤 *@${user.username}*  •  \`#${user.numeric_id || 'N/A'}\`\n` +
+    `${DIVIDER}\n` +
+    `🛡  ${verified}\n` +
+    `🔐  KYC: ${kycStr}\n` +
+    `📧  \`${user.email || 'N/A'}\`\n\n` +
+    `📦  Trades     \`${user.trade_count || 0}\`\n` +
+    `💰  Volume     \`$${vol}\`\n` +
+    `⭐  Reputation  \`${user.reputation || 100}%\`\n` +
+    `💵  USD Bal.   \`$${Number(user.balance_usd || 0).toFixed(2)}\`\n` +
+    `🇪🇹  ETB Bal.   \`${Number(user.etb_balance || 0).toLocaleString()} ETB\`\n\n` +
+    `📊 *Credit Score: ${score}/1000*  ${scoreLbl}\n` +
+    `\`${scoreBar}\`\n` +
+    `${DIVIDER}`;
 
   await bot.sendMessage(chatId, text, {
     parse_mode: 'Markdown',
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: '💼 My Wallet', callback_data: 'menu_wallet' },
-          { text: '📋 My Orders', callback_data: 'menu_orders' },
-        ],
-        [
-          { text: '🚪 Log Out', callback_data: 'action_logout' },
-        ],
+        [{ text: '💼 Wallet', callback_data: 'menu_wallet' }, { text: '📋 Orders', callback_data: 'menu_orders' }],
+        [{ text: '🏅 Badges', callback_data: 'show_badges' }, { text: '🎁 Referral', callback_data: 'show_referral' }],
+        [{ text: '🚪 Log Out', callback_data: 'action_logout' }],
       ],
     },
   });
@@ -572,29 +624,33 @@ bot.onText(/👤 Account & Profile/, async (msg) => {
 // PLATFORM INFO & POLICY
 // ========================================================
 
-bot.onText(/ℹ️ Platform Info & Policy|ℹ️ Exchange Rates & Info/, async (msg) => {
+bot.onText(/ℹ️ Platform Info & Policy|ℹ️ Exchange Rates & Info|^\/info$/, async (msg) => {
   const chatId = msg.chat.id;
   const text =
-    `ℹ️ *EthioSwap P2P Platform Policy*\n` +
-    `━━━━━━━━━━━━━━━━━━━━\n` +
-    `🛡 *Escrow Protection:* 100% Guaranteed\n` +
-    `⚡️ *Min P2P Order:* $5.00 USD\n` +
-    `⚡️ *Deposit Processing:* Automatic on-chain\n` +
-    `🏦 *Supported Payment Methods:*\n` +
-    `• Telebirr (Instant mobile transfer)\n` +
-    `• Commercial Bank of Ethiopia (CBE)\n` +
-    `• Awash Bank / BOA / Dashen\n` +
-    `• USDT On-chain (ERC20 / TRC20 / BSC)\n` +
-    `━━━━━━━━━━━━━━━━━━━━`;
+    `ℹ️ *EthioSwap — Platform Info*\n` +
+    `${DIVIDER}\n` +
+    `🛡  *Escrow*       100% Guaranteed\n` +
+    `⚡  *Min Order*    \`$5.00 USD\`\n` +
+    `🔗  *Networks*     TRC20 · ERC20 · BSC\n` +
+    `⏱  *Trade Time*   < 15 minutes avg\n\n` +
+    `🏦 *Payment Methods*\n` +
+    `   📱 Telebirr — instant mobile\n` +
+    `   🏛 CBE — Commercial Bank of Ethiopia\n` +
+    `   🏦 Awash · Dashen · BOA\n` +
+    `   ⛓ USDT On-chain (TRC20 / ERC20)\n\n` +
+    `📜 *Policies*\n` +
+    `   • All traders must complete KYC\n` +
+    `   • Funds locked in escrow until both confirm\n` +
+    `   • Disputes resolved by admin within 24h\n` +
+    `${DIVIDER}\n` +
+    `_🌐 ethioswap.qzz.io_`;
 
   await bot.sendMessage(chatId, text, {
     parse_mode: 'Markdown',
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: '🛒 Buy $ Now', callback_data: 'menu_buy' },
-          { text: '💵 Sell $ Now', callback_data: 'menu_sell' },
-        ],
+        [{ text: '🛒 Buy USDT', callback_data: 'menu_buy' }, { text: '💵 Sell USDT', callback_data: 'menu_sell' }],
+        [{ text: '⚡ Open App', web_app: { url: `${WEB_APP_URL}&chat_id=${msg.chat.id}` } }],
       ],
     },
   });
@@ -616,16 +672,17 @@ bot.on('callback_query', async (query) => {
     authService.setStep(chatId, 'AWAITING_LOGIN_IDENTIFIER', {});
     return bot.sendMessage(
       chatId,
-      `🔐 *Log In to EthioSwap*\n\nPlease enter your *Email* or *Username*:`,
+      `🔐 *Sign In to EthioSwap*\n${DIVIDER}\nEnter your *email* or *username*:`,
       { parse_mode: 'Markdown', ...getCancelKeyboard() }
     );
   }
 
   if (data === 'action_logout') {
     await authService.logout(chatId);
-    return bot.sendMessage(chatId, `👋 You have logged out successfully.`, {
-      ...getMainMenuKeyboard(false),
-    });
+    return bot.sendMessage(chatId,
+      `👋 *Signed Out*\n${DIVIDER}\nSee you next time! Tap /start to come back.`,
+      { parse_mode: 'Markdown', ...getMainMenuKeyboard(false) }
+    );
   }
 
   if (data === 'menu_buy' || data === 'refresh_buy_listings') {
@@ -638,21 +695,35 @@ bot.on('callback_query', async (query) => {
 
   if (data === 'menu_wallet' || data === 'wallet_refresh') {
     const user = await authService.getCurrentUser(chatId);
-    if (!user) return bot.sendMessage(chatId, `🔒 Please log in.`);
+    if (!user) return bot.sendMessage(chatId, `🔒 *Login required.* Type /login.`, { parse_mode: 'Markdown' });
     await authService.refreshUserProfile(chatId);
-    return bot.sendMessage(chatId, `🔄 Wallet balance refreshed! Type /wallet to view.`);
+    return bot.sendMessage(chatId,
+      `🔄 *Balance refreshed!*\n${DIVIDER}\nType /wallet to view your updated balances.`,
+      { parse_mode: 'Markdown' }
+    );
   }
 
   if (data === 'menu_start') {
     const user = await authService.getCurrentUser(chatId);
-    let text = `🇪🇹 *EthioSwap P2P Main Menu*\n\n` +
-      (user ? `👤 Account: @${user.username}\n💰 Balance: $${Number(user.balance_usd || 0).toFixed(2)} USD\n\n` : '') +
-      `👇 *Tap below to launch the P2P App or trade:*`;
+    const balStr = user ? `\n💵 \`$${Number(user.balance_usd||0).toFixed(2)}\` · @${user.username}` : '';
+    return bot.sendMessage(chatId,
+      `🇪🇹 *EthioSwap P2P*${balStr}\n${DIVIDER}\n_Choose an action below:_`,
+      { parse_mode: 'Markdown', reply_markup: getAppInlineKeyboard(user, chatId) }
+    );
+  }
 
-    return bot.sendMessage(chatId, text, {
-      parse_mode: 'Markdown',
-      reply_markup: getAppInlineKeyboard(user, chatId),
-    });
+  // New callback shortcuts for new commands
+  if (data === 'show_badges') {
+    return bot.sendMessage(chatId, `🏅 Type /badges to see your credit score and earned badges.`, { parse_mode: 'Markdown' });
+  }
+  if (data === 'show_referral') {
+    return bot.sendMessage(chatId, `🎁 Type /referral to get your referral link and see your earnings.`, { parse_mode: 'Markdown' });
+  }
+  if (data === 'show_escrow_help') {
+    return bot.sendMessage(chatId,
+      `🔒 *Group Escrow*\n${DIVIDER}\nUse EthioSwap escrow in any Telegram group!\n\n*Usage:*\n\`/escrow 50 @counterpart Description\`\n\n_Works in groups — both parties need EthioSwap accounts._`,
+      { parse_mode: 'Markdown' }
+    );
   }
 
   if (data === 'menu_orders') {
