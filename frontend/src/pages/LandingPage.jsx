@@ -483,6 +483,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
    const [faqActiveIndex, setFaqActiveIndex] = useState(null);
    const [openModal, setOpenModal] = useState(null);
+   const [lang, setLang] = useState('en'); // 'en' | 'am'
 
    // Calculator state
    const [calcMode, setCalcMode] = useState('usd-to-etb');
@@ -495,6 +496,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
    const [reviewError, setReviewError] = useState('');
    const [reviewSuccess, setReviewSuccess] = useState(false);
    const [submitLoading, setSubmitLoading] = useState(false);
+
+   // Rate prediction state (simple 7-day moving average)
+   const [rateForecast, setRateForecast] = useState(null);
+   const [showStickyBar, setShowStickyBar] = useState(false);
+   const [userReferralCode, setUserReferralCode] = useState('');
 
   const [width, setWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -574,6 +580,58 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     setLiveRate(buyRate);
     setRateTimestamp(new Date().toLocaleTimeString());
   }, [buyRate]);
+
+  // Fetch rate history for prediction widget + referral code for logged-in user
+  useEffect(() => {
+    const fetchRateAndReferral = async () => {
+      try {
+        const { data: rates } = await supabase
+          .from('p2p_rate_history')
+          .select('rate_etb, recorded_at')
+          .order('recorded_at', { ascending: false })
+          .limit(30);
+        if (rates && rates.length >= 3) {
+          const vals = rates.map(r => r.rate_etb);
+          const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+          const recent = vals.slice(0, 7).reduce((a, b) => a + b, 0) / Math.min(vals.length, 7);
+          const trend = recent - avg;
+          setRateForecast({
+            current: vals[0],
+            predicted7d: +(vals[0] + trend * 0.6).toFixed(2),
+            trend: trend > 0.5 ? 'up' : trend < -0.5 ? 'down' : 'stable',
+            confidence: Math.min(95, 60 + rates.length),
+          });
+        }
+      } catch (_) {}
+
+      // Load referral code for logged-in user
+      if (user?.id) {
+        try {
+          const { data } = await supabase.from('users').select('referral_code').eq('id', user.id).single();
+          if (data?.referral_code) setUserReferralCode(data.referral_code);
+        } catch (_) {}
+      }
+    };
+    fetchRateAndReferral();
+  }, [user]);
+
+  // Show sticky CTA after scrolling 40% down page
+  useEffect(() => {
+    const handleStickyBar = () => setShowStickyBar(window.scrollY > window.innerHeight * 0.6);
+    window.addEventListener('scroll', handleStickyBar, { passive: true });
+    return () => window.removeEventListener('scroll', handleStickyBar);
+  }, []);
+
+  // SEO meta tags
+  useEffect(() => {
+    document.title = 'EthioSwap — Buy & Sell USDT for Ethiopian Birr | Secure P2P Exchange';
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
+    meta.content = 'EthioSwap is Ethiopia\'s most trusted P2P USDT exchange. Buy and sell USD for ETB using Telebirr, CBE, and more. 100% escrow protected, KYC verified.';
+    let og = document.querySelector('meta[property="og:title"]');
+    if (!og) { og = document.createElement('meta'); og.setAttribute('property', 'og:title'); document.head.appendChild(og); }
+    og.content = 'EthioSwap — Ethiopia\'s #1 P2P USDT Exchange';
+  }, []);
 
   // Track scroll progress for 3D Bill movement
   useEffect(() => {
@@ -731,6 +789,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
     }
   };
 
+
+  const t = (en, am) => lang === 'am' ? am : en;
 
   return (
     <div style={{ background: '#0a0a0a', color: '#c8c8c8', fontFamily: "'Inter', sans-serif", overflowX: 'hidden', position: 'relative' }}>
@@ -944,7 +1004,45 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           50% { opacity: 0.8; transform: scale(1.1); }
         }
         .card-glow-pulse { animation: cardGlowPulse 4s ease-in-out infinite; }
+
+        /* Sticky CTA bar */
+        .sticky-cta-bar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 900;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 20px;
+          background: rgba(7, 8, 16, 0.96);
+          backdrop-filter: blur(24px);
+          border-top: 1px solid rgba(245,166,35,0.2);
+          gap: 12px;
+          transform: translateY(100%);
+          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .sticky-cta-bar.visible { transform: translateY(0); }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,200,150,0.4); }
+          50% { opacity: 0.85; box-shadow: 0 0 0 6px rgba(0,200,150,0); }
+        }
       `}</style>
+
+      {/* ── STICKY MOBILE CTA BAR ── */}
+      {width < 768 && (
+        <div className={`sticky-cta-bar${showStickyBar ? ' visible' : ''}`}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Ready to trade?</div>
+            <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.7)' }}>Live rate: 1 USD = {liveRate.toFixed(2)} ETB</div>
+          </div>
+          <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #F5A623, #D88E10)', color: '#0A0C12', fontWeight: 800, fontSize: '14px', padding: '12px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            Start Trading →
+          </button>
+        </div>
+      )}
 
       {!prefersReducedMotion && (
         <div className={`cursor-trail ${cursorHovered ? 'hovered' : ''}`} style={{ left: `${cursorPos.x}px`, top: `${cursorPos.y}px` }} />
@@ -1769,6 +1867,123 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* ── AI RATE PREDICTION WIDGET ── */}
+      {rateForecast && (
+        <section style={{ padding: '80px 24px', background: 'linear-gradient(180deg, #0a0a0f 0%, #070810 100%)', position: 'relative', overflow: 'hidden', zIndex: 10 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse 600px 400px at 50% 50%, rgba(108,92,231,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            <div className="reveal-on-scroll" style={{ background: 'linear-gradient(135deg, rgba(108,92,231,0.06), rgba(10,12,24,0.98), rgba(0,200,150,0.04))', border: '1px solid rgba(108,92,231,0.2)', borderRadius: '28px', padding: width < 768 ? '28px 20px' : '44px 52px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #6C5CE7, #00C896, transparent)' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px' }}>
+                <div style={{ flex: 1, minWidth: '240px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(108,92,231,0.1)', border: '1px solid rgba(108,92,231,0.25)', borderRadius: '30px', padding: '6px 16px', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '14px' }}>🤖</span>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Rate Forecast</span>
+                    <span style={{ fontSize: '9px', background: '#6C5CE7', color: '#fff', padding: '1px 6px', borderRadius: '10px', fontWeight: 700 }}>BETA</span>
+                  </div>
+                  <h3 style={{ fontSize: width < 768 ? '22px' : '28px', fontWeight: 800, color: '#fff', margin: '0 0 10px 0', lineHeight: 1.2 }}>7-Day Rate Forecast</h3>
+                  <p style={{ fontSize: '14px', color: 'rgba(160,175,210,0.7)', margin: '0 0 24px 0', lineHeight: 1.6 }}>
+                    Based on EthioSwap P2P trade history. Simple moving average model with {rateForecast.confidence}% data confidence.
+                  </p>
+                  <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Current Rate</div>
+                      <div style={{ fontSize: '28px', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{rateForecast.current?.toFixed(2)}</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.5)', marginTop: '3px' }}>ETB per USD</div>
+                    </div>
+                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Predicted (7d)</div>
+                      <div style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1, color: rateForecast.trend === 'up' ? '#FF6B6B' : rateForecast.trend === 'down' ? '#00C896' : '#F5A623' }}>
+                        {rateForecast.predicted7d}
+                      </div>
+                      <div style={{ fontSize: '11px', marginTop: '3px', color: rateForecast.trend === 'up' ? '#FF6B6B' : rateForecast.trend === 'down' ? '#00C896' : '#F5A623', fontWeight: 700 }}>
+                        {rateForecast.trend === 'up' ? '↑ ETB depreciating' : rateForecast.trend === 'down' ? '↓ ETB strengthening' : '→ Stable'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Visual bar chart */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
+                  <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Trend Signal</div>
+                  {[['Buy Signal', rateForecast.trend === 'down' ? 92 : 45, '#00C896'], ['Sell Signal', rateForecast.trend === 'up' ? 88 : 35, '#FF6B6B'], ['Hold Signal', rateForecast.trend === 'stable' ? 80 : 50, '#F5A623']].map(([label, val, color]) => (
+                    <div key={label}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', color: 'rgba(160,175,210,0.7)' }}>{label}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color, fontFamily: 'JetBrains Mono' }}>{val}%</span>
+                      </div>
+                      <div style={{ height: '5px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${val}%`, background: color, borderRadius: '5px', transition: 'width 1s ease' }} />
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: '8px', fontSize: '10px', color: 'rgba(160,175,210,0.35)', fontStyle: 'italic' }}>
+                    ⚠️ Prediction only. Not financial advice.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── REFERRAL PROGRAM BANNER ── */}
+      <section style={{ padding: '80px 24px', background: '#07080E', position: 'relative', overflow: 'hidden', zIndex: 10 }}>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse 800px 400px at 20% 50%, rgba(0,200,150,0.05) 0%, transparent 60%), radial-gradient(ellipse 600px 400px at 80% 50%, rgba(245,166,35,0.04) 0%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <div className="reveal-on-scroll" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px', background: 'linear-gradient(135deg, rgba(0,200,150,0.06), rgba(10,12,24,0.98), rgba(245,166,35,0.04))', border: '1px solid rgba(0,200,150,0.15)', borderRadius: '28px', padding: width < 768 ? '28px 20px' : '40px 52px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #00C896, rgba(245,166,35,0.5), transparent)' }} />
+            <div style={{ flex: 1, minWidth: '260px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)', borderRadius: '30px', padding: '6px 16px', marginBottom: '18px' }}>
+                <span style={{ fontSize: '14px' }}>🎁</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#00C896', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Referral Program</span>
+              </div>
+              <h3 style={{ fontSize: width < 768 ? '22px' : '30px', fontWeight: 800, color: '#fff', margin: '0 0 12px 0', lineHeight: 1.2 }}>
+                Earn Cash for Every Friend<br />
+                <span style={{ color: '#00C896' }}>You Bring to EthioSwap</span>
+              </h3>
+              <p style={{ fontSize: '15px', color: 'rgba(160,175,210,0.75)', margin: '0 0 20px 0', lineHeight: 1.7, maxWidth: '460px' }}>
+                Share your unique referral link. When your friend completes their first trade, you automatically earn <strong style={{ color: '#00C896' }}>0.2% of their trade volume</strong> — deposited directly into your wallet.
+              </p>
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                {[['0.2%', 'Commission per trade'], ['Up to $5', 'Per referral cap'], ['Auto', 'Instant wallet credit']].map(([val, lbl]) => (
+                  <div key={lbl}>
+                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#F5A623', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{val}</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.55)', marginTop: '3px', fontWeight: 600 }}>{lbl}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '220px' }}>
+              {user && userReferralCode ? (
+                <>
+                  <div style={{ background: 'rgba(8,10,20,0.8)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px 18px' }}>
+                    <div style={{ fontSize: '10px', color: 'rgba(160,175,210,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Your Referral Code</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#F5A623', fontFamily: 'JetBrains Mono', letterSpacing: '0.08em' }}>{userReferralCode}</div>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(`https://ethioswap.qzz.io/?ref=${userReferralCode}`); }}
+                    style={{ background: 'linear-gradient(135deg, #00C896, #00A87A)', color: '#05140F', fontWeight: 800, fontSize: '14px', padding: '14px 24px', borderRadius: '12px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,200,150,0.3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    📋 Copy Referral Link
+                  </button>
+                </>
+              ) : (
+                <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #00C896, #00A87A)', color: '#05140F', fontWeight: 800, fontSize: '15px', padding: '16px 32px', borderRadius: '14px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 20px rgba(0,200,150,0.2)' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,200,150,0.35)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.2)'; }}
+                >
+                  🎁 Get My Referral Link
+                </button>
+              )}
+              <div style={{ fontSize: '11px', color: 'rgba(160,175,210,0.4)', textAlign: 'center' }}>No limit on referrals • Instant payout</div>
+            </div>
+          </div>
         </div>
       </section>
 

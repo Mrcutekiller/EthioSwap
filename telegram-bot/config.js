@@ -1,11 +1,27 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-const BOT_TOKEN = process.env.BOT_TOKEN || '8920615384:AAHoJ5OCIzwehDYQ-xDe6Zr-aaGEO3L2h5c';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gsiyofpzydlkgwpuxmbh.supabase.co';
-const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_KEY.includes('YOUR_'))
+// ─── Validate required environment variables ──────────────────────────────────
+const BOT_TOKEN = process.env.BOT_TOKEN;
+if (!BOT_TOKEN) {
+  console.error('❌ FATAL: BOT_TOKEN environment variable is not set. Exiting.');
+  process.exit(1);
+}
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+if (!SUPABASE_URL) {
+  console.error('❌ FATAL: SUPABASE_URL environment variable is not set. Exiting.');
+  process.exit(1);
+}
+
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_KEY.includes('YOUR_')
   ? process.env.SUPABASE_SERVICE_KEY
-  : (process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzaXlvZnB6eWRsa2d3cHV4bWJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQ2MzMsImV4cCI6MjA5NjAwMDYzM30.iIveuTPYl1ZBUxBz1SRdTvGTG25VkcmOwVL6FebWs_0');
+  : process.env.SUPABASE_ANON_KEY;
+
+if (!SUPABASE_KEY) {
+  console.error('❌ FATAL: Neither SUPABASE_SERVICE_KEY nor SUPABASE_ANON_KEY is set. Exiting.');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
@@ -21,4 +37,5 @@ module.exports = {
   supabase,
   MIN_ORDER_USD: 5,
   WEB_APP_URL: process.env.WEB_APP_URL || 'https://ethioswap.qzz.io/?mode=telegram',
+  ADMIN_WALLET: process.env.ADMIN_WALLET_ADDRESS || '',
 };

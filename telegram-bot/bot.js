@@ -67,14 +67,18 @@ console.log('🚀 EthioSwap P2P Telegram Bot is starting...');
 
 // Register bot commands for @EthioSwap_bot
 bot.setMyCommands([
-  { command: 'start', description: '🚀 Open EthioSwap P2P & Mini App' },
-  { command: 'buy', description: '🛒 Buy $ (USD/USDT) with Telebirr/CBE' },
-  { command: 'sell', description: '💵 Sell $ (USD/USDT) for ETB' },
-  { command: 'wallet', description: '💼 P2P Wallet & Balances' },
-  { command: 'orders', description: '📋 My Active Orders' },
-  { command: 'history', description: '📜 Transaction History' },
-  { command: 'login', description: '🔐 Log In / Connect Account' },
-  { command: 'logout', description: '🚪 Log Out' }
+  { command: 'start',    description: '🚀 Open EthioSwap P2P & Mini App' },
+  { command: 'buy',      description: '🛒 Buy $ (USD/USDT) with Telebirr/CBE' },
+  { command: 'sell',     description: '💵 Sell $ (USD/USDT) for ETB' },
+  { command: 'wallet',   description: '💼 P2P Wallet & Balances' },
+  { command: 'orders',   description: '📋 My Active Orders' },
+  { command: 'history',  description: '📜 Transaction History' },
+  { command: 'escrow',   description: '🔒 Start a Group Escrow Trade' },
+  { command: 'dca',      description: '🔄 Set Up Recurring Auto-Buy Order' },
+  { command: 'referral', description: '🎁 My Referral Link & Earnings' },
+  { command: 'badges',   description: '🏅 My Trader Badges & Credit Score' },
+  { command: 'login',    description: '🔐 Log In / Connect Account' },
+  { command: 'logout',   description: '🚪 Log Out' },
 ]).then(() => console.log('✅ Registered commands for @EthioSwap_bot'))
   .catch((err) => console.warn('[Bot Commands Warning]:', err.message));
 
@@ -1417,6 +1421,424 @@ bot.on('message', async (msg) => {
   }
 });
 
+// ============================================================
+// 🏅 BADGES & CREDIT SCORE COMMAND
+// ============================================================
+
+bot.onText(/\/badges/, async (msg) => {
+  const chatId = msg.chat.id;
+  const user = await authService.getCurrentUser(chatId);
+
+  if (!user) {
+    return bot.sendMessage(chatId,
+      `🔒 *Login Required*\n\nPlease /login to see your badges and credit score.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  try {
+    const { supabase } = require('./config');
+
+    // Fetch credit score and badges
+    const [userRes, badgesRes] = await Promise.all([
+      supabase.from('users').select('credit_score, trade_count, total_volume, reputation, kyc_status').eq('id', user.id).single(),
+      supabase.from('trader_badges').select('*').eq('user_id', user.id).order('earned_at', { ascending: true }),
+    ]);
+
+    const u = userRes.data || {};
+    const badges = badgesRes.data || [];
+    const score = u.credit_score || 500;
+
+    // Credit score bar
+    const barFilled = Math.round(score / 100);
+    const bar = '█'.repeat(barFilled) + '░'.repeat(10 - barFilled);
+
+    let scoreLabel = '🔴 Low';
+    if (score >= 800) scoreLabel = '🟢 Elite';
+    else if (score >= 650) scoreLabel = '🟡 Good';
+    else if (score >= 500) scoreLabel = '🟠 Fair';
+
+    let text = `🏅 *Trader Profile: @${user.username}*\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    text += `📊 *Credit Score:* \`${score}/1000\` — ${scoreLabel}\n`;
+    text += `\`[${bar}]\`\n\n`;
+    text += `📈 *Trades Completed:* ${u.trade_count || 0}\n`;
+    text += `💰 *Total Volume:* $${Number(u.total_volume || 0).toFixed(2)}\n`;
+    text += `⭐ *Reputation:* ${u.reputation || 100}%\n`;
+    text += `🔐 *KYC Status:* ${u.kyc_status === 'approved' ? '✅ Verified' : '⏳ ' + (u.kyc_status || 'None')}\n\n`;
+
+    if (badges.length === 0) {
+      text += `🏆 *Badges:* None yet — complete 5 trades to earn your first badge!\n`;
+    } else {
+      text += `🏆 *Earned Badges (${badges.length}):*\n`;
+      badges.forEach(b => {
+        text += `  ${b.badge_icon} *${b.badge_name}* — ${b.description}\n`;
+      });
+    }
+
+    text += `\n_Score updates automatically after each trade._`;
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '🔄 Refresh Score', callback_data: 'refresh_credit_score' },
+          { text: '📜 My History', callback_data: 'menu_history' },
+        ]],
+      },
+    });
+  } catch (err) {
+    await bot.sendMessage(chatId, `⚠️ Could not load badges: ${err.message}`);
+  }
+});
+
+// ============================================================
+// 🎁 REFERRAL COMMAND
+// ============================================================
+
+bot.onText(/\/referral/, async (msg) => {
+  const chatId = msg.chat.id;
+  const user = await authService.getCurrentUser(chatId);
+
+  if (!user) {
+    return bot.sendMessage(chatId,
+      `🔒 *Login Required*\n\nPlease /login to access your referral program.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  try {
+    const { supabase, WEB_APP_URL } = require('./config');
+
+    // Get referral code and stats
+    const [userRes, referralsRes] = await Promise.all([
+      supabase.from('users').select('referral_code, referral_earnings').eq('id', user.id).single(),
+      supabase.from('referrals').select('status, commission_earned').eq('referrer_id', user.id),
+    ]);
+
+    const referralCode = userRes.data?.referral_code || 'N/A';
+    const totalEarnings = Number(userRes.data?.referral_earnings || 0).toFixed(2);
+    const refs = referralsRes.data || [];
+    const qualifiedRefs = refs.filter(r => r.status === 'qualified' || r.status === 'paid').length;
+    const pendingRefs = refs.filter(r => r.status === 'pending').length;
+
+    const referralLink = `${WEB_APP_URL.replace('?mode=telegram', '')}?ref=${referralCode}`;
+
+    const text =
+      `🎁 *EthioSwap Referral Program*\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `Your referral code: \`${referralCode}\`\n\n` +
+      `🔗 *Your Referral Link:*\n\`${referralLink}\`\n\n` +
+      `📊 *Your Stats:*\n` +
+      `  👥 Referred: ${refs.length} people\n` +
+      `  ✅ Qualified: ${qualifiedRefs}\n` +
+      `  ⏳ Pending: ${pendingRefs}\n` +
+      `  💰 Total Earned: \`$${totalEarnings}\`\n\n` +
+      `💡 *How it works:*\n` +
+      `• Share your link with friends\n` +
+      `• When they complete their first trade, you earn *0.2%* of their trade volume (up to $5)\n` +
+      `• Earnings go directly to your EthioSwap wallet`;
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📤 Share Referral Link', url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('🇪🇹 Trade USD for ETB safely with EthioSwap P2P! Use my referral link to get started:')}` }],
+          [{ text: '💼 Check Wallet', callback_data: 'menu_wallet' }],
+        ],
+      },
+    });
+  } catch (err) {
+    await bot.sendMessage(chatId, `⚠️ Could not load referral data: ${err.message}`);
+  }
+});
+
+// ============================================================
+// 🔒 ESCROW-AS-A-SERVICE (/escrow) — works in groups too!
+// ============================================================
+
+bot.onText(/\/escrow(?:\s+(.*))?/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const isGroup = msg.chat.type === 'group' || msg.chat.type === 'supergroup';
+  const user = await authService.getCurrentUser(chatId);
+
+  if (!user) {
+    return bot.sendMessage(chatId,
+      `🔒 *Login Required*\n\nYou need an EthioSwap account to create an escrow.\nUse /login in a private chat with this bot first.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  const args = match?.[1]?.trim().split(/\s+/) || [];
+
+  // Usage: /escrow <amount> <@counterpart> <description>
+  if (args.length < 2 || isNaN(parseFloat(args[0]))) {
+    return bot.sendMessage(chatId,
+      `🔒 *EthioSwap Group Escrow*\n\n` +
+      `Use me to safely escrow trades directly in Telegram groups!\n\n` +
+      `*Usage:*\n` +
+      `\`/escrow <amount_usd> @counterpart description\`\n\n` +
+      `*Example:*\n` +
+      `\`/escrow 50 @alice_trades Selling 50 USDT for ETB\`\n\n` +
+      `Both parties must have EthioSwap accounts. The initiator's funds are locked until the trade is confirmed by both sides.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  const amountUsd = parseFloat(args[0]);
+  const counterpartHandle = args[1]?.replace('@', '');
+  const description = args.slice(2).join(' ') || `Escrow trade for $${amountUsd}`;
+
+  if (amountUsd < 5) {
+    return bot.sendMessage(chatId, `❌ Minimum escrow amount is $5.00 USD.`);
+  }
+
+  if (amountUsd > user.balance_usd) {
+    return bot.sendMessage(chatId,
+      `❌ *Insufficient Balance*\n\nYour balance: \`$${Number(user.balance_usd).toFixed(2)}\`\nRequired: \`$${amountUsd.toFixed(2)}\`\n\nDeposit funds first with /wallet.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  try {
+    const { supabase } = require('./config');
+
+    // Create the escrow session in DB
+    const { data: session, error } = await supabase
+      .from('group_escrow_sessions')
+      .insert({
+        telegram_group_id: String(chatId),
+        telegram_group_name: msg.chat.title || 'Private Chat',
+        initiator_user_id: user.id,
+        initiator_telegram_id: String(msg.from.id),
+        amount_usd: amountUsd,
+        description,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const escrowId = session.id.substring(0, 8).toUpperCase();
+
+    await bot.sendMessage(chatId,
+      `🔒 *Escrow Session Created!*\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `📋 *Escrow ID:* \`${escrowId}\`\n` +
+      `💰 *Amount:* \`$${amountUsd.toFixed(2)} USD\`\n` +
+      `📝 *Trade:* ${description}\n` +
+      `👤 *Initiator:* @${user.username}\n` +
+      `⏳ *Waiting for:* @${counterpartHandle} to accept\n\n` +
+      `@${counterpartHandle} — tap *Accept* to lock in this escrow trade. Once accepted, funds are held safely until both parties confirm release.\n\n` +
+      `⚠️ Session expires in 24 hours.`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Accept Escrow', callback_data: `escrow_accept_${session.id}` },
+              { text: '❌ Decline', callback_data: `escrow_decline_${session.id}` },
+            ],
+            [{ text: '🔓 Release Funds (After Trade)', callback_data: `escrow_release_${session.id}` }],
+            [{ text: '⚖️ Open Dispute', callback_data: `escrow_dispute_${session.id}` }],
+          ],
+        },
+      }
+    );
+  } catch (err) {
+    await bot.sendMessage(chatId, `❌ Failed to create escrow: ${err.message}`);
+  }
+});
+
+// Handle escrow callbacks
+bot.on('callback_query', async (query) => {
+  const data = query.data;
+  const chatId = query.message.chat.id;
+  const fromId = query.from.id;
+
+  if (!data.startsWith('escrow_')) return;
+
+  const [, action, sessionId] = data.split('_').reduce((acc, part, i) => {
+    if (i === 0) return [part, '', ''];
+    if (i === 1) return [acc[0], part, ''];
+    return [acc[0], acc[1], acc[2] + (acc[2] ? '_' : '') + part];
+  }, []);
+
+  try {
+    const { supabase } = require('./config');
+    const { data: session } = await supabase
+      .from('group_escrow_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+
+    if (!session) {
+      return bot.answerCallbackQuery(query.id, { text: '❌ Escrow session not found.' });
+    }
+
+    const actionKey = query.data.replace(`escrow_`, '').replace(`_${sessionId}`, '');
+
+    if (actionKey === 'accept') {
+      if (String(fromId) === session.initiator_telegram_id) {
+        return bot.answerCallbackQuery(query.id, { text: '⚠️ You cannot accept your own escrow.' });
+      }
+      await supabase.from('group_escrow_sessions').update({ status: 'accepted', counterpart_telegram_id: String(fromId) }).eq('id', sessionId);
+      await bot.editMessageText(
+        query.message.text + '\n\n✅ *Accepted!* Both parties agreed. Funds are now locked in escrow.',
+        { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'Markdown', reply_markup: {
+          inline_keyboard: [[{ text: '🔓 Release Funds', callback_data: `escrow_release_${sessionId}` }, { text: '⚖️ Dispute', callback_data: `escrow_dispute_${sessionId}` }]],
+        }}
+      ).catch(() => {});
+      return bot.answerCallbackQuery(query.id, { text: '✅ Escrow accepted!' });
+    }
+
+    if (actionKey === 'release') {
+      if (String(fromId) !== session.initiator_telegram_id) {
+        return bot.answerCallbackQuery(query.id, { text: '⚠️ Only the fund initiator can release.' });
+      }
+      await supabase.from('group_escrow_sessions').update({ status: 'released' }).eq('id', sessionId);
+      await bot.sendMessage(chatId, `✅ *Escrow #${sessionId.substring(0,8).toUpperCase()} Released!*\n\nFunds have been released to the counterpart. Trade complete!`, { parse_mode: 'Markdown' });
+      return bot.answerCallbackQuery(query.id, { text: '✅ Funds released!' });
+    }
+
+    if (actionKey === 'dispute') {
+      await supabase.from('group_escrow_sessions').update({ status: 'disputed' }).eq('id', sessionId);
+      await bot.sendMessage(chatId, `⚖️ *Dispute Opened — Escrow #${sessionId.substring(0,8).toUpperCase()}*\n\nAn EthioSwap admin has been notified and will review within 24 hours. Both parties please prepare evidence.`, { parse_mode: 'Markdown' });
+      return bot.answerCallbackQuery(query.id, { text: '⚠️ Dispute filed.' });
+    }
+
+    if (actionKey === 'decline') {
+      await supabase.from('group_escrow_sessions').update({ status: 'cancelled' }).eq('id', sessionId);
+      await bot.sendMessage(chatId, `❌ Escrow session #${sessionId.substring(0,8).toUpperCase()} was declined.`);
+      return bot.answerCallbackQuery(query.id, { text: 'Escrow cancelled.' });
+    }
+
+    // Credit score refresh callback
+    if (data === 'refresh_credit_score') {
+      const user = await authService.getCurrentUser(chatId);
+      if (!user) return bot.answerCallbackQuery(query.id, { text: 'Not logged in.' });
+      const { supabase } = require('./config');
+      const { data: scoreData } = await supabase.rpc('refresh_user_credit_score', { p_user_id: user.id });
+      return bot.answerCallbackQuery(query.id, { text: `✅ Credit score updated: ${scoreData}/1000`, show_alert: true });
+    }
+  } catch (err) {
+    bot.answerCallbackQuery(query.id, { text: `Error: ${err.message}` }).catch(() => {});
+  }
+});
+
+// ============================================================
+// 🔄 DCA / RECURRING AUTO-BUY (/dca)
+// ============================================================
+
+bot.onText(/\/dca/, async (msg) => {
+  const chatId = msg.chat.id;
+  const user = await authService.getCurrentUser(chatId);
+
+  if (!user) {
+    return bot.sendMessage(chatId,
+      `🔒 *Login Required*\n\nPlease /login to set up recurring orders.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  try {
+    const { supabase } = require('./config');
+    const { data: orders } = await supabase
+      .from('recurring_orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    let text = `🔄 *Dollar-Cost Averaging (DCA) for Ethiopia*\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    text += `Automate your USDT purchases on a schedule. Your balance is used automatically.\n\n`;
+
+    if (orders && orders.length > 0) {
+      text += `📋 *Your Active DCA Orders:*\n`;
+      orders.forEach((o, i) => {
+        const nextRun = new Date(o.next_run_at).toLocaleDateString('en-ET', { weekday: 'short', month: 'short', day: 'numeric' });
+        text += `${i + 1}. ${o.order_type === 'buy' ? '🛒' : '💵'} *$${o.amount_usd}* ${o.frequency} via ${o.payment_method}\n`;
+        text += `   Next run: ${nextRun} | Runs: ${o.run_count}${o.max_runs ? '/' + o.max_runs : ''}\n\n`;
+      });
+    } else {
+      text += `📭 *No active DCA orders yet.*\n\n`;
+    }
+
+    text += `\n👇 *Create a new recurring order:*`;
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🛒 Weekly Auto-Buy $20', callback_data: 'dca_create_buy_20_weekly' },
+            { text: '🛒 Monthly Auto-Buy $50', callback_data: 'dca_create_buy_50_monthly' },
+          ],
+          [
+            { text: '🛒 Daily Auto-Buy $5', callback_data: 'dca_create_buy_5_daily' },
+            { text: '⚙️ Custom Amount', callback_data: 'dca_create_custom' },
+          ],
+          [{ text: '⏸ Pause All Orders', callback_data: 'dca_pause_all' }],
+        ],
+      },
+    });
+  } catch (err) {
+    await bot.sendMessage(chatId, `⚠️ Error loading DCA orders: ${err.message}`);
+  }
+});
+
+// DCA creation callbacks
+bot.on('callback_query', async (query) => {
+  const data = query.data;
+  const chatId = query.message.chat.id;
+
+  if (!data.startsWith('dca_')) return;
+
+  if (data.startsWith('dca_create_buy_')) {
+    const parts = data.split('_'); // ['dca', 'create', 'buy', amount, frequency]
+    const amount = parseFloat(parts[3]);
+    const frequency = parts[4];
+    const user = await authService.getCurrentUser(chatId);
+
+    if (!user) return bot.answerCallbackQuery(query.id, { text: 'Please /login first.' });
+
+    const { supabase } = require('./config');
+    const nextRun = new Date();
+    if (frequency === 'daily') nextRun.setDate(nextRun.getDate() + 1);
+    else if (frequency === 'weekly') nextRun.setDate(nextRun.getDate() + 7);
+    else if (frequency === 'monthly') nextRun.setMonth(nextRun.getMonth() + 1);
+
+    const { error } = await supabase.from('recurring_orders').insert({
+      user_id: user.id,
+      order_type: 'buy',
+      amount_usd: amount,
+      frequency,
+      payment_method: 'wallet_balance',
+      next_run_at: nextRun.toISOString(),
+      status: 'active',
+    });
+
+    if (error) return bot.answerCallbackQuery(query.id, { text: `Error: ${error.message}`, show_alert: true });
+
+    await bot.sendMessage(chatId,
+      `✅ *DCA Order Created!*\n\n🛒 Auto-buy *$${amount}* USDT every *${frequency}*\n💳 Paid from your wallet balance\n📅 First run: ${nextRun.toLocaleDateString()}\n\nYou can pause or cancel anytime with /dca.`,
+      { parse_mode: 'Markdown' }
+    );
+    return bot.answerCallbackQuery(query.id, { text: '✅ DCA order created!' });
+  }
+
+  if (data === 'dca_create_custom') {
+    authService.setStep(chatId, 'AWAITING_DCA_AMOUNT', {});
+    await bot.sendMessage(chatId,
+      `⚙️ *Custom DCA Order*\n\nEnter the amount in USD you want to auto-buy (minimum $5):`,
+      { parse_mode: 'Markdown', ...getCancelKeyboard() }
+    );
+    return bot.answerCallbackQuery(query.id);
+  }
+});
+
 // Graceful process shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down Telegram bot...');
@@ -1427,3 +1849,4 @@ process.on('SIGTERM', () => {
   console.log('Terminating Telegram bot...');
   bot.stopPolling().then(() => process.exit(0));
 });
+
