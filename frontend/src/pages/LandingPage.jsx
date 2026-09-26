@@ -1382,7 +1382,8 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
   const sellRate = systemSettings?.etbRatePerDollarSell ?? systemSettings?.etbRatePerDollar ?? 186.00;
   
   const [scrolled, setScrolled] = useState(false);
-   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
    const [faqActiveIndex, setFaqActiveIndex] = useState(null);
    const [openModal, setOpenModal] = useState(null);
    const [lang, setLang] = useState('en'); // 'en' | 'am'
@@ -1982,16 +1983,12 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         
         {width > 1080 ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
               {[
-                { id: 'trade', label: 'Trade', target: '#hero' },
-                { id: 'social', label: 'Social & Stars ⭐', target: '#social-services', isNew: true },
-                { id: 'funded', label: 'Funded Accounts', target: '#funded-accounts', isNew: true },
-                { id: 'security', label: 'Guardian Vault 🛡️', target: '#security', isNew: true },
-                { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
-                { id: 'features', label: 'Features', target: '#features' },
-                { id: 'reviews', label: 'Reviews', target: '#reviews' },
-                { id: 'faq', label: 'FAQ', target: '#faq' },
+                { id: 'trade', label: 'Trade', target: '#hero', icon: 'ti-arrows-left-right' },
+                { id: 'social', label: 'Social & Stars', target: '#social-services', icon: 'ti-brand-telegram', isNew: true },
+                { id: 'funded', label: 'Funded', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true },
+                { id: 'security', label: 'Guardian Vault', target: '#security', icon: 'ti-shield-lock', isNew: true },
               ].map(link => (
                 <a
                   key={link.id}
@@ -1999,15 +1996,18 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   className="nav-item-saas"
                   style={{
                     fontSize: '13.5px',
-                    padding: '7px 11px',
+                    padding: '8px 12px',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '7px',
                     whiteSpace: 'nowrap',
-                    position: 'relative'
+                    position: 'relative',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
                   }}
                 >
-                  {link.label}
+                  <i className={`ti ${link.icon}`} style={{ fontSize: '15px', color: link.isNew ? '#F5A623' : '#8A9BB8' }} />
+                  <span>{link.label}</span>
                   {link.isNew && (
                     <span style={{
                       background: 'linear-gradient(135deg, #F5A623, #D88E10)',
@@ -2025,31 +2025,106 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   )}
                 </a>
               ))}
+
+              {/* More / Explore Dropdown */}
+              <div 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setMoreMenuOpen(true)}
+                onMouseLeave={() => setMoreMenuOpen(false)}
+              >
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen(prev => !prev)}
+                  className="nav-item-saas"
+                  style={{
+                    fontSize: '13.5px',
+                    padding: '8px 12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    background: moreMenuOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    border: 'none',
+                    color: moreMenuOpen ? '#fff' : '#c8c8c8',
+                    cursor: 'pointer',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <i className="ti ti-layout-grid" style={{ fontSize: '15px', color: '#8A9BB8' }} />
+                  <span>Explore</span>
+                  <i className="ti ti-chevron-down" style={{ fontSize: '12px', transition: 'transform 0.2s', transform: moreMenuOpen ? 'rotate(180deg)' : 'none' }} />
+                </button>
+
+                {moreMenuOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '260px',
+                    background: 'rgba(13, 17, 23, 0.96)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 166, 35, 0.1)',
+                    padding: '8px',
+                    zIndex: 1000,
+                    animation: 'floatUp 0.18s ease-out'
+                  }}>
+                    {[
+                      { id: 'how-it-works', label: 'How It Works', desc: 'Step-by-step P2P process', target: '#how-it-works', icon: 'ti-list-numbers' },
+                      { id: 'features', label: 'Features', desc: 'Escrow & platform engine', target: '#features', icon: 'ti-sparkles' },
+                      { id: 'reviews', label: 'Reviews', desc: 'Verified trader ratings', target: '#reviews', icon: 'ti-star' },
+                      { id: 'faq', label: 'FAQ', desc: 'Help & common questions', target: '#faq', icon: 'ti-help' },
+                    ].map(item => (
+                      <a
+                        key={item.id}
+                        href={item.target}
+                        onClick={() => setMoreMenuOpen(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          textDecoration: 'none',
+                          color: '#fff',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: 'rgba(245, 166, 35, 0.1)',
+                          border: '1px solid rgba(245, 166, 35, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <i className={`ti ${item.icon}`} style={{ color: '#F5A623', fontSize: '16px' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{item.label}</span>
+                          <span style={{ fontSize: '11px', color: '#8A9BB8' }}>{item.desc}</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-              <a
-                href="https://t.me/EthioSwap_bot"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(0, 136, 204, 0.15)',
-                  border: '1px solid rgba(0, 136, 204, 0.45)',
-                  color: '#38bdf8',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  padding: '7px 12px',
-                  borderRadius: '10px',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <span>✈️</span> @EthioSwap_bot
-              </a>
-              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '8px 14px', fontSize: '14px' }}>Log in</button>
-              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '10px 20px', fontSize: '14px', borderRadius: '12px' }}>Get Started</button>
+              <button onClick={onSignIn} style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', padding: '8px 16px', fontSize: '14px' }}>Log in</button>
+              <button onClick={onGetStarted} className="btn-saas-primary" style={{ padding: '10px 22px', fontSize: '14px', borderRadius: '12px', fontWeight: 800 }}>Get Started</button>
             </div>
           </>
         ) : (
@@ -2082,7 +2157,6 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               { label: 'Social & Telegram Stars ⭐', target: '#social-services', icon: 'ti-brand-telegram', isNew: true },
               { label: 'Funded Accounts & Brokers', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true }, 
               { label: 'Guardian Anti-Hack Vault 🛡️', target: '#security', icon: 'ti-shield-lock', isNew: true }, 
-              { label: 'Telegram Bot (@EthioSwap_bot)', target: 'https://t.me/EthioSwap_bot', icon: 'ti-robot', isExternal: true },
               { label: 'How It Works', target: '#how-it-works', icon: 'ti-list-numbers' }, 
               { label: 'Features & Security', target: '#features', icon: 'ti-shield-check' }, 
               { label: 'Trader Reviews', target: '#reviews', icon: 'ti-star' }, 
@@ -2187,7 +2261,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                   onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                  <span style={{ fontSize: '18px' }}>✈️</span> Trade on Telegram (@EthioSwap_bot)
+                  <span style={{ fontSize: '18px' }}>✈️</span> Telegram Bot
                 </a>
                 <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} 
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', fontSize: width < 768 ? '16px' : '18px', padding: width < 768 ? '14px 28px' : '18px 36px', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}>
@@ -3167,7 +3241,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <a href="https://www.tiktok.com/@ethioswap0?_r=1&_t=ZS-96qWnCZbcRN" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>TikTok</a>
               <a href="https://www.instagram.com/ethioswap" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none' }}>Instagram</a>
-              <a href="https://t.me/EthioSwap_bot" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none', color: '#38bdf8', fontWeight: 700 }}>✈️ Telegram Bot (@EthioSwap_bot)</a>
+              <a href="https://t.me/EthioSwap_bot" target="_blank" rel="noopener noreferrer" className="nav-item-saas" style={{ textDecoration: 'none', color: '#38bdf8', fontWeight: 700 }}>✈️ Telegram Bot</a>
             </div>
           </div>
         </div>
