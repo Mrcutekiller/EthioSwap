@@ -184,31 +184,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadSystemSettings = async () => {
-    const { data } = await supabase
-      .from('system_settings')
-      .select('*')
-      .limit(1)
-      .single();
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('*')
+        .limit(1)
+        .single();
 
-    if (data) {
-      setSystemSettings({
-        ...data,
-        etbRatePerDollar: data.etb_rate_per_dollar ?? 190.0,
-        etbRatePerDollarSell: data.etb_rate_per_dollar_sell ?? 186.0,
-        flatFeePercent: data.flat_fee_percent ?? 1.0,
-        maxFeeUSD: data.max_fee_usd ?? 0.5,
-        commissionType: data.commission_type ?? 'percentage',
-        commissionValue: data.commission_value ?? 5.0,
-        isP2pFreePeriod: data.is_p2p_free_period ?? false,
-        depositFeePercent: data.deposit_fee_percent ?? 5.0,
-        withdrawalFeePercent: data.withdrawal_fee_percent ?? 5.0,
-        minDepositUsd: data.min_deposit_usd ?? 1.0,
-        minWithdrawalUsd: data.min_withdrawal_usd ?? 10.0,
-        minP2pListingUsd: data.min_p2p_listing_usd ?? 1.0,
-        maxDailyWithdrawalUsd: data.max_daily_withdrawal_usd ?? 1000,
-        collectedFeesETH: data.collected_fees_eth ?? 0,
-        maxCustomRateEtb: data.max_custom_rate_etb ?? null,  // admin-set max rate
-      });
+      if (data) {
+        setSystemSettings({
+          ...data,
+          etbRatePerDollar: data.etb_rate_per_dollar ?? 190.0,
+          etbRatePerDollarSell: data.etb_rate_per_dollar_sell ?? 186.0,
+          flatFeePercent: data.flat_fee_percent ?? 1.0,
+          maxFeeUSD: data.max_fee_usd ?? 0.5,
+          commissionType: data.commission_type ?? 'percentage',
+          commissionValue: data.commission_value ?? 5.0,
+          isP2pFreePeriod: data.is_p2p_free_period ?? false,
+          depositFeePercent: data.deposit_fee_percent ?? 5.0,
+          withdrawalFeePercent: data.withdrawal_fee_percent ?? 5.0,
+          minDepositUsd: data.min_deposit_usd ?? 1.0,
+          minWithdrawalUsd: data.min_withdrawal_usd ?? 10.0,
+          minP2pListingUsd: data.min_p2p_listing_usd ?? 1.0,
+          maxDailyWithdrawalUsd: data.max_daily_withdrawal_usd ?? 1000,
+          collectedFeesETH: data.collected_fees_eth ?? 0,
+          maxCustomRateEtb: data.max_custom_rate_etb ?? null,  // admin-set max rate
+        });
+      }
+    } catch (err) {
+      console.warn('Could not load system settings from Supabase:', err.message);
     }
   };
 
@@ -638,6 +642,8 @@ export const AuthProvider = ({ children }) => {
         msg = 'Too many attempts. Please wait a moment before trying again.';
       } else if (msg.includes('User not found')) {
         msg = 'No account found with this email/username. Please sign up first.';
+      } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('fetch failed') || msg.toLowerCase().includes('networkerror') || msg.includes('AuthRetryableFetchError')) {
+        msg = 'Cannot connect to Supabase database (Failed to fetch). Your Supabase project appears to be PAUSED or unreachable. Please unpause/restore it in your Supabase Dashboard.';
       }
       setError(msg);
       return null;
@@ -811,6 +817,8 @@ export const AuthProvider = ({ children }) => {
         msg = 'That username is already taken. Please choose another username.';
       } else if (msg.includes('Password should be at least 6 characters')) {
         msg = 'Password must be at least 6 characters.';
+      } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('fetch failed') || msg.toLowerCase().includes('networkerror') || msg.includes('AuthRetryableFetchError')) {
+        msg = 'Cannot connect to Supabase database (Failed to fetch). Your Supabase project appears to be PAUSED or unreachable. Please unpause/restore it in your Supabase Dashboard.';
       }
       setError(msg);
       return null;
