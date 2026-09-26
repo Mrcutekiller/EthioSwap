@@ -1235,6 +1235,21 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
+      // 🛡️ GUARDIAN ANTI-HACK CHECK 1: Protective Lockdown
+      if (user.is_security_locked) {
+        throw new Error('🚨 ACCOUNT SECURITY LOCK ACTIVE: Withdrawals are frozen by Guardian Protocol. If this was not triggered by you, check your Guardian Security Settings immediately.');
+      }
+
+      // 🛡️ GUARDIAN ANTI-HACK CHECK 2: Whitelist Only Mode
+      if (user.whitelist_only_mode) {
+        const whitelisted = Array.isArray(user.whitelisted_addresses) ? user.whitelisted_addresses : [];
+        const isWhitelisted = whitelisted.some(a => a?.toLowerCase() === address?.toLowerCase()) || 
+                             (user.emergency_evac_address && user.emergency_evac_address.toLowerCase() === address.toLowerCase());
+        if (!isWhitelisted) {
+          throw new Error('🛡️ WHITELIST RESTRICTION: Your account is in Whitelist-Only mode. Withdrawals to unverified addresses are blocked.');
+        }
+      }
+
       const platformFeePercent = systemSettings?.withdrawal_fee_percent ?? 5.0;
       const platformFee = amountUSD * platformFeePercent / 100;
       const totalDeduction = amountUSD + platformFee;
@@ -2053,19 +2068,156 @@ export const AuthProvider = ({ children }) => {
     logout();
   };
 
-  const updateUser = async (updates) => {
+  const triggerEmergencyLock = async (reason = 'user_panic_button', autoEvacuate = false) => {
     if (!user) return;
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', user.id);
+      // 1. Call stored procedure or fallback to direct update
+      const { data, error } = await supabase.rpc('trigger_emergency_account_lock', {
+        p_user_id: user.id,
+        p_reason: reason,
+        p_auto_evacuate: autoEvacuate,
+      });
+
+      if (error) {
+        await supabase.from('users').update({
+          is_security_locked: true,
+          lock_reason: reason,
+          locked_at: new Date().toISOString(),
+          ...(autoEvacuate && user.emergency_evac_address ? { eth_balance: 0 } : {})
+        }).eq('id', user.id);
+
+        if (autoEvacuate && user.emergency_evac_address && (user.eth_balance || 0) > 0) {
+          await supabase.from('withdraw_requests').insert({
+            user_id: user.id,
+            username: user.username,
+            amount_eth: (user.eth_balance || 0) / ETH_USD_PRICE,
+            amount_usd: user.eth_balance || 0,
+            address: user.emergency_evac_address,
+            wallet_type: `EMERGENCY_EVAC_${user.emergency_evac_network || 'TRC20'}`,
+            status: 'emergency_evac',
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      const updatedUser = {
+        ...user,
+        is_security_locked: true,
+        lock_reason: reason,
+        locked_at: new Date().toISOString(),
+        ...(autoEvacuate && user.emergency_evac_address ? { eth_balance: 0 } : {})
+      };
+      setUser(updatedUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+
+      // 2. Dispatch in-app notifications
+      await createNotification(
+        user.id,
+        'security_lockdown',
+        '🚨 EMERGENCY LOCKDOWN ENGAGED',
+        autoEvacuate && user.emergency_evac_address
+          ? `Your account was locked and funds evacuated to your emergency address: ${user.emergency_evac_address}`
+          : 'Your account was locked. All withdrawals and outgoing transfers are frozen.'
+      );
+
+      // 3. Browser notification
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('🚨 EthioSwap Emergency Lockdown', {
+          body: autoEvacuate && user.emergency_evac_address
+            ? `Account locked & funds evacuated to ${user.emergency_evac_address}`
+            : 'Your account is locked. Withdrawals are frozen.',
+          icon: '/favicon.ico',
+        });
+      }
+
+      setSuccess('🔒 Guardian Lockdown engaged! Your account is safe and withdrawals are halted.');
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unlockEmergencyAccount = async (unlockedBy = 'user') => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.rpc('unlock_emergency_account', {
+        p_user_id: user.id,
+        p_unlocked_by: unlockedBy,
+      });
+
+      if (error) {
+        await supabase.from('users').update({
+          is_security_locked: false,
+          lock_reason: null,
+          locked_at: null,
+        }).eq('id', user.id);
+      }
+
+      const updatedUser = {
+        ...user,
+        is_security_locked: false,
+        lock_reason: null,
+        locked_at: null,
+      };
+      setUser(updatedUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+
+      await createNotification(
+        user.id,
+        'security_unlocked',
+        '🛡️ Security Lockdown Released',
+        'Your account lockdown has been safely released. Full trading access is restored.'
+      );
+
+      setSuccess('✓ Security lockdown successfully released.');
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateEmergencyEvacAddress = async ({ address, network = 'TRC20', autoEvacuate = true }) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const timelockUntil = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+      const updates = {
+        emergency_evac_address: address.trim(),
+        emergency_evac_network: network,
+        emergency_address_updated_at: new Date().toISOString(),
+        emergency_address_timelock_until: timelockUntil,
+        auto_evacuate_on_breach: autoEvacuate,
+      };
+
+      const { error } = await supabase.from('users').update(updates).eq('id', user.id);
       if (error) throw error;
+
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+
+      await createNotification(
+        user.id,
+        'security_update',
+        '🛡️ Emergency Address Configured',
+        `Your emergency evacuation address has been set to: ${address} (${network}). A 48-hour security timelock is active.`
+      );
+
+      setSuccess('✓ Emergency evacuation address saved! 48h security timelock is active.');
+      return { success: true };
     } catch (err) {
       setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2100,7 +2252,8 @@ export const AuthProvider = ({ children }) => {
       verifyLoginOtp,
       isRecoveringPassword, setIsRecoveringPassword,
       setError, setSuccess, setIsLocked,
-      loadSystemSettings, createNotification, withdrawAdminEarnings
+      loadSystemSettings, createNotification, withdrawAdminEarnings,
+      triggerEmergencyLock, unlockEmergencyAccount, updateEmergencyEvacAddress
     }}>
       {children}
     </AuthContext.Provider>

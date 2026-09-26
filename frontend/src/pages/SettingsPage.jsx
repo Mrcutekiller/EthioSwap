@@ -143,6 +143,38 @@ const SettingsPage = ({ user, onLogout }) => {
             )}
           </div>
         </div>
+
+        {/* Guardian Security Vault & Anti-Hack Card */}
+        <div className="card" style={{ border: user?.is_security_locked ? '1.5px solid #EF4444' : '1px solid rgba(16,185,129,0.3)', background: user?.is_security_locked ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.04)' }}>
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+              <span style={{ fontSize: '18px' }}>{user?.is_security_locked ? '🚨' : '🛡️'}</span>
+              <span>Guardian Anti-Hack & Bybit Vault</span>
+            </div>
+            <span style={{ fontSize: '10px', background: user?.is_security_locked ? '#EF4444' : '#10B981', color: user?.is_security_locked ? '#fff' : '#0A0C12', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>
+              {user?.is_security_locked ? 'LOCKDOWN ACTIVE' : 'PROTECTED'}
+            </span>
+          </div>
+          <p style={{ fontSize: '12px', color: '#8A9BB8', margin: '0 0 14px 0', lineHeight: 1.5 }}>
+            Automated circuit breaker that freezes your account or sweeps funds to your Bybit address if an unauthorized breach is suspected.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ fontSize: '12px', color: '#c8cde0' }}>
+              Emergency Bybit Address: <strong style={{ color: user?.emergency_evac_address ? '#10B981' : '#F5A623', fontFamily: 'monospace' }}>{user?.emergency_evac_address ? `${user.emergency_evac_address.slice(0, 10)}...` : 'Not Set'}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_open_guardian'))}
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #059669)',
+                color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '10px',
+                fontWeight: 700, fontSize: '12px', cursor: 'pointer',
+              }}
+            >
+              Open Guardian Vault →
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Notification Channels */}

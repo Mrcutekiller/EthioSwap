@@ -18,6 +18,7 @@ import SellerProfilePage from './pages/SellerProfilePage.jsx';
 import FundedAccountsPage from './components/FundedAccountsPage.jsx';
 import TelegramMiniApp from './components/TelegramMiniApp.jsx';
 import SocialServicesPage from './components/SocialServicesPage.jsx';
+import GuardianSecurityModal from './components/GuardianSecurityModal.jsx';
 import { requestPermission, showBrowserNotification, isNotificationSupported } from './utils/notifications.js';
 import { supabase } from './lib/supabase';
 
@@ -1130,7 +1131,7 @@ const RecoveryForm = () => {
 
 const PAGE_TITLES = { p2p: 'Trade', wallet: 'Wallet', transactions: 'History', notifications: 'Notifications', profile: 'Profile', settings: 'Settings', admin: 'Admin', scan: 'Scan QR', sellerProfile: 'Trader Profile', funded: 'Funded Accounts', social: 'Social Services' };
 
-const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setShowNotifications, notifCount }) => {
+const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setShowNotifications, notifCount, onOpenGuardian }) => {
   const navItems = [
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
@@ -1172,6 +1173,36 @@ const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setSho
           );
         })}
       </nav>
+
+      {/* Guardian Security Anti-Hack Vault Button */}
+      <div style={{ padding: '0 12px', marginBottom: '12px' }}>
+        <button
+          onClick={onOpenGuardian}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            background: user?.is_security_locked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+            border: `1px solid ${user?.is_security_locked ? '#EF4444' : 'rgba(16, 185, 129, 0.3)'}`,
+            color: user?.is_security_locked ? '#EF4444' : '#10B981',
+            fontWeight: 700,
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '15px' }}>{user?.is_security_locked ? '🚨' : '🛡️'}</span>
+            <span>{user?.is_security_locked ? 'Lockdown Active' : 'Guardian Vault'}</span>
+          </div>
+          <span style={{ fontSize: '10px', background: user?.is_security_locked ? '#EF4444' : '#10B981', color: user?.is_security_locked ? '#fff' : '#0A0C12', padding: '2px 6px', borderRadius: '100px', fontWeight: 800 }}>
+            {user?.is_security_locked ? 'LOCKED' : 'ACTIVE'}
+          </span>
+        </button>
+      </div>
       <div style={{ padding: '16px 20px', borderTop: '1px solid #1E2640', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '13px' }}>{user?.username?.[0]?.toUpperCase() || 'U'}</div>
@@ -1227,6 +1258,7 @@ const AppContent = () => {
   const [sellerId, setSellerId] = useState(null);
   const [currentTradeId, setCurrentTradeId] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
+  const [showGuardianModal, setShowGuardianModal] = useState(false);
   const notifCount = useNotifCount(user?.id);
   const [width, setWidth] = useState(window.innerWidth);
 
@@ -1234,6 +1266,12 @@ const AppContent = () => {
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenGuardian = () => setShowGuardianModal(true);
+    window.addEventListener('ethioswap_open_guardian', handleOpenGuardian);
+    return () => window.removeEventListener('ethioswap_open_guardian', handleOpenGuardian);
   }, []);
 
   useEffect(() => {
@@ -1246,7 +1284,11 @@ const AppContent = () => {
         } else if (dest.page === 'wallet') {
           if (dest.tab) setWalletInitialTab(dest.tab);
           setPage('wallet');
+        } else if (dest.page === 'guardian') {
+          setShowGuardianModal(true);
         }
+      } else if (dest === 'guardian') {
+        setShowGuardianModal(true);
       } else if (dest === 'history') {
         setPage('transactions');
       } else if (dest === 'trades' || dest === 'p2p') {
@@ -1332,6 +1374,53 @@ const AppContent = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0E1A' }}>
+      {/* ── Guardian Emergency Lockdown Banner ─────────────────────── */}
+      {user?.is_security_locked && (
+        <div style={{
+          background: 'linear-gradient(90deg, #7F1D1D, #991B1B, #DC2626)',
+          borderBottom: '2px solid #EF4444',
+          padding: '12px 20px',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          zIndex: 99999,
+          position: 'sticky',
+          top: 0,
+          boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>🚨</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Guardian Emergency Lockdown Active
+              </div>
+              <div style={{ fontSize: '12px', color: '#FECACA' }}>
+                All balance withdrawals and outgoing transfers are frozen to protect your funds against unauthorized access.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowGuardianModal(true)}
+            style={{
+              background: '#fff',
+              color: '#991B1B',
+              border: 'none',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              fontWeight: 800,
+              fontSize: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            }}
+          >
+            🛡️ Security Vault & Status →
+          </button>
+        </div>
+      )}
+
       {isDesktop && !is_admin_page && (
         <DesktopSidebar 
           page={page} 
@@ -1341,6 +1430,7 @@ const AppContent = () => {
           showNotifications={showNotifications} 
           setShowNotifications={setShowNotifications} 
           notifCount={notifCount} 
+          onOpenGuardian={() => setShowGuardianModal(true)}
         />
       )}
       {!isDesktop && !is_admin_page && (
@@ -1349,10 +1439,31 @@ const AppContent = () => {
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>E</div>
             <span style={{ fontSize: '16px', fontWeight: 600, color: '#E5E7EB' }}>EthioSwap</span>
           </div>
-          <button onClick={() => setShowNotifications(prev => !prev)} style={{ padding: '8px', position: 'relative', color: '#E5E7EB', background: 'none', border: 'none' }}>
-            <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
-            {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', border: '2px solid #0D1117' }}></div>}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setShowGuardianModal(true)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '8px',
+                background: user?.is_security_locked ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.15)',
+                border: `1px solid ${user?.is_security_locked ? '#EF4444' : 'rgba(16,185,129,0.3)'}`,
+                color: user?.is_security_locked ? '#EF4444' : '#10B981',
+                fontWeight: 800,
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>{user?.is_security_locked ? '🚨' : '🛡️'}</span>
+              <span>{user?.is_security_locked ? 'LOCKED' : 'VAULT'}</span>
+            </button>
+            <button onClick={() => setShowNotifications(prev => !prev)} style={{ padding: '8px', position: 'relative', color: '#E5E7EB', background: 'none', border: 'none' }}>
+              <i className="ti ti-bell" style={{ fontSize: '20px' }}></i>
+              {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', border: '2px solid #0D1117' }}></div>}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1382,6 +1493,7 @@ const AppContent = () => {
 
       <SupportWidget />
       {showNotifications && <NotificationCenter userId={user?.id} isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
+      <GuardianSecurityModal isOpen={showGuardianModal} onClose={() => setShowGuardianModal(false)} />
       {!isDesktop && !is_admin_page && <MobileBottomNav page={page} setPage={setPage} />}
     </div>
   );

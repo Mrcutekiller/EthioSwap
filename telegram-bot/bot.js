@@ -1910,6 +1910,73 @@ bot.on('callback_query', async (query) => {
   }
 });
 
+// ============================================================
+// 🚨 GUARDIAN EMERGENCY LOCKDOWN & EVACUATION (/lock, /panic, /evacuate)
+// ============================================================
+
+bot.onText(/\/lock|\/panic/, async (msg) => {
+  const chatId = msg.chat.id;
+  const user = await authService.getCurrentUser(chatId);
+  if (!user) return bot.sendMessage(chatId, `🔒 *Login Required*\n\nPlease log in first via /login to manage your security vault.`, { parse_mode: 'Markdown' });
+
+  try {
+    const { supabase } = require('./config');
+    await supabase.rpc('trigger_emergency_account_lock', {
+      p_user_id: user.id,
+      p_reason: 'telegram_panic_command',
+      p_auto_evacuate: false,
+    });
+
+    return bot.sendMessage(chatId,
+      `🚨 *GUARDIAN EMERGENCY LOCKDOWN ENGAGED*\n\n` +
+      `Your EthioSwap account (*@${user.username}*) has been immediately *FROZEN*.\n\n` +
+      `🛡️ *Protective Measures Active:*\n` +
+      `• All outgoing balance withdrawals are strictly blocked\n` +
+      `• P2P releases and transfers are halted\n` +
+      `• Attackers cannot drain or transfer your funds\n\n` +
+      `⚡ *Emergency Fund Evacuation:*\n` +
+      `To immediately sweep your balance to your Bybit address, type /evacuate.\n\n` +
+      `To safely release this lockdown, sign in to your Guardian Vault at https://ethioswap.qzz.io`,
+      { parse_mode: 'Markdown' }
+    );
+  } catch (err) {
+    return bot.sendMessage(chatId, `⚠️ Lock failed: ${err.message}`);
+  }
+});
+
+bot.onText(/\/evacuate/, async (msg) => {
+  const chatId = msg.chat.id;
+  const user = await authService.getCurrentUser(chatId);
+  if (!user) return bot.sendMessage(chatId, `🔒 *Login Required*\n\nPlease log in first via /login.`, { parse_mode: 'Markdown' });
+
+  if (!user.emergency_evac_address) {
+    return bot.sendMessage(chatId,
+      `⚠️ *No Emergency Bybit Address Configured*\n\n` +
+      `Please configure your Bybit address in your Guardian Vault on EthioSwap Web before emergency evacuation can be executed. Your account has been locked for safety.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  try {
+    const { supabase } = require('./config');
+    await supabase.rpc('trigger_emergency_account_lock', {
+      p_user_id: user.id,
+      p_reason: 'telegram_evacuate_command',
+      p_auto_evacuate: true,
+    });
+
+    return bot.sendMessage(chatId,
+      `🚨 *EMERGENCY FUND EVACUATION EXECUTED*\n\n` +
+      `⚡ *Remaining funds are being swept to your emergency address:*\n` +
+      `\`${user.emergency_evac_address}\` (${user.emergency_evac_network || 'TRC20'})\n\n` +
+      `🔒 Account *@${user.username}* is locked down. Any unauthorized intruder is blocked from accessing your balance.`,
+      { parse_mode: 'Markdown' }
+    );
+  } catch (err) {
+    return bot.sendMessage(chatId, `⚠️ Evacuation failed: ${err.message}`);
+  }
+});
+
 // Graceful process shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down Telegram bot...');
