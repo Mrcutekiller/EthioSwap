@@ -280,6 +280,10 @@ const AdminPanel = ({ user }) => {
   const [userRatingsHistory, setUserRatingsHistory] = useState([]);
   const [allTrades, setAllTrades] = useState([]);
   const [adminWithdrawals, setAdminWithdrawals] = useState([]);
+  const [socialOrders, setSocialOrders] = useState([]);
+  const [smmConfig, setSmmConfig] = useState({ api_url: '', api_key: '', commission_pct: 30 });
+  const [smmConfigSaving, setSmmConfigSaving] = useState(false);
+  const [updatingSocialOrderId, setUpdatingSocialOrderId] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -310,6 +314,11 @@ const AdminPanel = ({ user }) => {
     supabase.from('listings').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllListings(data || []));
     supabase.from('trades').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllTrades(data || []));
     supabase.from('admin_withdrawals').select('*').order('created_at', { ascending: false }).then(({ data }) => setAdminWithdrawals(data || []));
+    // Load social orders + SMM config
+    supabase.from('social_service_orders').select('*, users(username, full_name)').order('created_at', { ascending: false }).then(({ data }) => setSocialOrders(data || []));
+    supabase.from('system_settings').select('smm_api_url, smm_api_key, smm_commission_pct').limit(1).single().then(({ data }) => {
+      if (data) setSmmConfig({ api_url: data.smm_api_url || '', api_key: data.smm_api_key || '', commission_pct: data.smm_commission_pct ?? 30 });
+    });
   }, [user]);
 
   useEffect(() => {
@@ -513,6 +522,7 @@ const AdminPanel = ({ user }) => {
     { id: 'listings',   icon: 'ti-list-search',      title: 'Listings',     badge: 0 },
     { id: 'reviews',    icon: 'ti-star',             title: 'Reviews',      badge: 0 },
     { id: 'disputes',   icon: 'ti-alert-triangle',   title: 'Disputes',     badge: disputes.length },
+    { id: 'social',     icon: 'ti-brand-telegram',   title: 'Social Orders',badge: 0 },
     { id: 'support',    icon: 'ti-messages',         title: 'Support',      badge: supportTickets.filter(t => t.status === 'open' && t.messages && t.messages.length > 0 && t.messages[t.messages.length - 1].sender_id !== user?.id && t.messages[t.messages.length - 1].sender_id !== 'usr_admin').length },
     { id: 'earnings',   icon: 'ti-chart-line',       title: 'Exchange Rates', badge: 0 },
     { id: 'comms',      icon: 'ti-message-share',    title: 'Comms & OTP Logs', badge: 0 },
@@ -3606,8 +3616,226 @@ const AdminPanel = ({ user }) => {
             </div>
           )}
 
+          {/* ════ SOCIAL MEDIA ORDERS ════ */}
+          {activeTab === 'social' && (() => {
+            const PLATFORM_COLOR = { telegram: '#2AABEE', tiktok: '#FF0050', instagram: '#E1306C' };
+            const STATUS_CLR = { pending: '#F5A623', processing: '#3B82F6', completed: '#10B981', cancelled: '#EF4444' };
+            const commPct = smmConfig.commission_pct || 30;
+
+            // Revenue summary
+            const completedOrders = socialOrders.filter(o => o.status === 'completed');
+            const totalRevenue  = completedOrders.reduce((s, o) => s + (o.total_usd || 0), 0);
+            const totalCost     = completedOrders.reduce((s, o) => s + (o.provider_cost_usd || 0), 0);
+            const totalProfit   = totalRevenue - totalCost;
+
+            const handleUpdateStatus = async (orderId, newStatus) => {
+              setUpdatingSocialOrderId(orderId);
+              try {
+                await supabase.from('social_service_orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', orderId);
+                setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+                showAlert(`Order marked as ${newStatus}`);
+              } catch (err) { showAlert(err.message, 'error'); }
+              setUpdatingSocialOrderId(null);
+            };
+
+            const handleSaveSmmConfig = async (e) => {
+              e.preventDefault();
+              setSmmConfigSaving(true);
+              try {
+                await supabase.from('system_settings').update({
+                  smm_api_url: smmConfig.api_url,
+                  smm_api_key: smmConfig.api_key,
+                  smm_commission_pct: Number(smmConfig.commission_pct),
+                }).eq('id', settings?.id);
+                showAlert('SMM config saved!');
+              } catch (err) { showAlert(err.message, 'error'); }
+              setSmmConfigSaving(false);
+            };
+
+            const handleSetProviderCost = async (orderId, costStr) => {
+              const cost = parseFloat(costStr);
+              if (isNaN(cost) || cost < 0) return;
+              try {
+                await supabase.from('social_service_orders').update({ provider_cost_usd: cost }).eq('id', orderId);
+                setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, provider_cost_usd: cost } : o));
+              } catch (err) { showAlert(err.message, 'error'); }
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }}>
+
+                {/* ── SMM Provider Config ── */}
+                <div className="card-premium" style={{ '--before-bg': 'linear-gradient(90deg, #2AABEE, #FF0050)' }}>
+                  <div className="admin-section-title-bar" style={{ marginBottom: '16px' }}>
+                    <i className="ti ti-api" style={{ fontSize: '16px', color: '#F5A623' }} />
+                    SMM Provider Configuration
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#8b92a8', marginBottom: '16px', lineHeight: 1.6 }}>
+                    Connect a trusted reseller API (e.g. <strong style={{ color: '#2AABEE' }}>SMMKings</strong>, <strong style={{ color: '#E1306C' }}>Peakerr</strong>, or any standard SMM panel).
+                    The standard API format: <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>POST https://provider.com/api/v2</code> with <code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>{"{"} key, action, service, link, quantity {"}"}</code>
+                  </p>
+                  <form onSubmit={handleSaveSmmConfig} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '12px', alignItems: 'end' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Provider API URL</label>
+                      <input value={smmConfig.api_url} onChange={e => setSmmConfig(c => ({ ...c, api_url: e.target.value }))}
+                        placeholder="https://smmkings.com/api/v2"
+                        style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>API Key</label>
+                      <input type="password" value={smmConfig.api_key} onChange={e => setSmmConfig(c => ({ ...c, api_key: e.target.value }))}
+                        placeholder="Your secret API key"
+                        style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Commission %</label>
+                      <input type="number" min="0" max="500" value={smmConfig.commission_pct} onChange={e => setSmmConfig(c => ({ ...c, commission_pct: e.target.value }))}
+                        style={{ width: '90px', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#F5A623', fontSize: '14px', fontWeight: 700, outline: 'none', textAlign: 'center' }} />
+                    </div>
+                    <button type="submit" disabled={smmConfigSaving} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', fontWeight: 800, fontSize: '13px', borderRadius: '8px', border: 'none', cursor: 'pointer', height: '38px' }}>
+                      {smmConfigSaving ? 'Saving…' : 'Save Config'}
+                    </button>
+                  </form>
+                  <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(42,171,238,0.06)', border: '1px solid rgba(42,171,238,0.15)', borderRadius: '8px', fontSize: '12px', color: '#8b92a8' }}>
+                    💡 <strong style={{ color: '#2AABEE' }}>Recommended providers:</strong> &nbsp;
+                    <a href="https://smmkings.com" target="_blank" rel="noopener noreferrer" style={{ color: '#2AABEE', textDecoration: 'none', fontWeight: 700 }}>SMMKings</a> &nbsp;·&nbsp;
+                    <a href="https://peakerr.com" target="_blank" rel="noopener noreferrer" style={{ color: '#E1306C', textDecoration: 'none', fontWeight: 700 }}>Peakerr</a> &nbsp;·&nbsp;
+                    <a href="https://justanotherpanel.com" target="_blank" rel="noopener noreferrer" style={{ color: '#10B981', textDecoration: 'none', fontWeight: 700 }}>JustAnotherPanel</a>
+                    &nbsp;— all use the same standard API format.
+                  </div>
+                </div>
+
+                {/* ── Revenue Summary ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
+                  {[
+                    { label: 'Total Orders', value: socialOrders.length, color: '#8b92a8', icon: 'ti-list' },
+                    { label: 'Pending', value: socialOrders.filter(o => o.status === 'pending').length, color: '#F5A623', icon: 'ti-clock' },
+                    { label: 'Completed', value: completedOrders.length, color: '#10B981', icon: 'ti-check' },
+                    { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, color: '#3B82F6', icon: 'ti-coins' },
+                    { label: 'Provider Cost', value: `$${totalCost.toFixed(2)}`, color: '#EF4444', icon: 'ti-receipt' },
+                    { label: 'Net Profit', value: `$${totalProfit.toFixed(2)}`, color: '#10B981', icon: 'ti-trending-up' },
+                  ].map(card => (
+                    <div key={card.label} className="admin-stat-card" style={{ '--ac': card.color }}>
+                      <div className="admin-stat-label">{card.label}</div>
+                      <div className="admin-stat-value" style={{ fontSize: '22px', color: card.color }}>{card.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Orders Table ── */}
+                <div className="card-premium">
+                  <div className="admin-section-title-bar" style={{ marginBottom: '0' }}>
+                    <i className="ti ti-brand-telegram" style={{ fontSize: '16px', color: '#F5A623' }} />
+                    All Social Service Orders
+                    <button onClick={() => supabase.from('social_service_orders').select('*, users(username, full_name)').order('created_at', { ascending: false }).then(({ data }) => setSocialOrders(data || []))}
+                      style={{ marginLeft: 'auto', padding: '5px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#8b92a8', fontSize: '12px', cursor: 'pointer' }}>
+                      ↻ Refresh
+                    </button>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          {['User', 'Platform', 'Service', 'Target', 'Qty', 'User Paid', 'Provider Cost', `Commission (${commPct}%)`, 'Net Profit', 'Payment', 'Status', 'Date', 'Actions'].map(h => (
+                            <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, fontSize: '10px', color: '#5a6280', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {socialOrders.length === 0 ? (
+                          <tr><td colSpan={13} style={{ textAlign: 'center', padding: '40px', color: '#5a6280' }}>No social orders yet</td></tr>
+                        ) : socialOrders.map(order => {
+                          const userPaid      = order.total_usd || 0;
+                          const providerCost  = order.provider_cost_usd || 0;
+                          // commission = markup we take above provider cost
+                          const commission    = userPaid - providerCost;
+                          const pltColor = PLATFORM_COLOR[order.platform] || '#8b92a8';
+                          const isUpdating = updatingSocialOrderId === order.id;
+                          return (
+                            <tr key={order.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <td style={{ padding: '12px' }}>
+                                <span style={{ fontWeight: 600, color: '#e8eaf0' }}>@{order.users?.username || '—'}</span>
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <span style={{ fontWeight: 700, color: pltColor, textTransform: 'capitalize' }}>{order.platform}</span>
+                              </td>
+                              <td style={{ padding: '12px', color: '#c8cde0', maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {order.icon} {order.service_label}
+                              </td>
+                              <td style={{ padding: '12px', color: '#8b92a8', maxWidth: '140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <a href={order.target.startsWith('http') ? order.target : `https://t.me/${order.target}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2AABEE', textDecoration: 'none' }}>{order.target}</a>
+                              </td>
+                              <td style={{ padding: '12px', color: '#c8cde0', textAlign: 'center' }}>
+                                {order.qty}{order.unit ? `×${order.unit}` : ''}
+                              </td>
+                              <td style={{ padding: '12px', fontWeight: 700, color: '#3B82F6' }}>${userPaid.toFixed(2)}</td>
+                              <td style={{ padding: '12px' }}>
+                                <input
+                                  type="number" step="0.01" min="0"
+                                  defaultValue={providerCost > 0 ? providerCost.toFixed(2) : ''}
+                                  placeholder="0.00"
+                                  onBlur={e => handleSetProviderCost(order.id, e.target.value)}
+                                  style={{ width: '70px', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#EF4444', fontWeight: 700, fontSize: '13px', outline: 'none', textAlign: 'center' }}
+                                />
+                              </td>
+                              <td style={{ padding: '12px', fontWeight: 700, color: commission >= 0 ? '#F5A623' : '#EF4444' }}>
+                                ${commission.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '12px', fontWeight: 700, color: commission >= 0 ? '#10B981' : '#EF4444' }}>
+                                ${commission.toFixed(2)}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: order.pay_method === 'wallet' ? 'rgba(59,130,246,0.15)' : 'rgba(245,166,35,0.12)', color: order.pay_method === 'wallet' ? '#3B82F6' : '#F5A623', fontWeight: 700 }}>
+                                  {order.pay_method === 'wallet' ? '💰 USDT' : '📱 Telebirr'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '20px', background: `${STATUS_CLR[order.status] || '#8b92a8'}22`, color: STATUS_CLR[order.status] || '#8b92a8', fontWeight: 700 }}>
+                                  {order.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px', color: '#5a6280', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                {new Date(order.created_at).toLocaleDateString()}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  {order.status === 'pending' && (
+                                    <button disabled={isUpdating} onClick={() => handleUpdateStatus(order.id, 'processing')}
+                                      style={{ padding: '4px 10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '6px', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                      ▶ Process
+                                    </button>
+                                  )}
+                                  {(order.status === 'pending' || order.status === 'processing') && (
+                                    <button disabled={isUpdating} onClick={() => handleUpdateStatus(order.id, 'completed')}
+                                      style={{ padding: '4px 10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px', color: '#10B981', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                      ✓ Done
+                                    </button>
+                                  )}
+                                  {order.status !== 'cancelled' && order.status !== 'completed' && (
+                                    <button disabled={isUpdating} onClick={() => { if(window.confirm('Cancel this order and notify user?')) handleUpdateStatus(order.id, 'cancelled'); }}
+                                      style={{ padding: '4px 10px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', color: '#EF4444', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ════ SUPPORT TICKETS MEDIATION SCREEN ════ */}
           {activeTab === 'support' && (
+
             <div style={{ display: 'flex', gap: '20px', minHeight: '520px', animation: 'fadeIn 0.25s ease' }}>
               
               {/* Left Column: Tickets list */}

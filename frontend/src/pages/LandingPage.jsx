@@ -2930,6 +2930,111 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
         </div>
       </section>
 
+      {/* ── SOCIAL MEDIA SERVICES SECTION ── */}
+      <section id="social-services" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #080a14 0%, #0a0c18 100%)', position: 'relative', zIndex: 10, overflow: 'hidden' }}>
+        {/* background orbs */}
+        <div style={{ position: 'absolute', top: '-200px', left: '-200px', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(42,171,238,0.06)', filter: 'blur(100px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-200px', right: '-200px', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(255,0,80,0.06)', filter: 'blur(100px)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
+          {/* Section header */}
+          <div className="reveal-on-scroll" style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(42,171,238,0.1)', border: '1px solid rgba(42,171,238,0.3)', borderRadius: '100px', padding: '6px 16px', fontSize: '13px', color: '#2AABEE', fontWeight: 700, marginBottom: '20px' }}>
+              ✨ New Service
+            </div>
+            <h2 className="serif-title" style={{ fontSize: width < 768 ? '36px' : '52px', color: '#fff', margin: '0 0 16px 0' }}>
+              Social Media Growth
+            </h2>
+            <p style={{ fontSize: '18px', color: 'var(--text-dim)', maxWidth: '560px', margin: '0 auto' }}>
+              Buy Telegram Premium, grow your TikTok & Instagram — pay with USDT or Ethiopian Birr.
+            </p>
+          </div>
+
+          {/* Platform cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '56px' }}>
+            {[
+              {
+                platform: 'Telegram',
+                emoji: '✈️',
+                color: '#2AABEE',
+                glow: 'rgba(42,171,238,0.18)',
+                services: ['Premium (1M / 3M)', 'Channel Members', 'Post Views'],
+                startingAt: '$0.80',
+              },
+              {
+                platform: 'TikTok',
+                emoji: '🎵',
+                color: '#FF0050',
+                glow: 'rgba(255,0,80,0.16)',
+                services: ['Video Views', 'Followers', 'Likes', 'Custom Comments'],
+                startingAt: '$0.50',
+              },
+              {
+                platform: 'Instagram',
+                emoji: '📸',
+                color: '#E1306C',
+                glow: 'rgba(225,48,108,0.16)',
+                services: ['Reel/Post Views', 'Followers', 'Likes', 'Custom Comments'],
+                startingAt: '$0.60',
+              },
+            ].map((p) => (
+              <div
+                key={p.platform}
+                className="reveal-on-scroll"
+                style={{
+                  background: 'rgba(255,255,255,0.025)',
+                  border: `1px solid ${p.color}33`,
+                  borderRadius: '24px',
+                  padding: '32px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = `0 20px 60px ${p.glow}`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '160px', height: '160px', borderRadius: '50%', background: p.glow, filter: 'blur(50px)', pointerEvents: 'none' }} />
+                <div style={{ fontSize: '40px', marginBottom: '16px' }}>{p.emoji}</div>
+                <div style={{ fontWeight: 800, fontSize: '20px', color: p.color, marginBottom: '8px' }}>{p.platform}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {p.services.map(s => (
+                    <li key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'rgba(200,210,230,0.8)' }}>
+                      <span style={{ color: p.color, fontWeight: 700 }}>✓</span> {s}
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#8A9BB8' }}>Starting at</div>
+                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff' }}>{p.startingAt}<span style={{ fontSize: '12px', color: '#8A9BB8', fontWeight: 500 }}>/1K</span></div>
+                  </div>
+                  <button
+                    onClick={onGetStarted}
+                    style={{ background: `linear-gradient(135deg, ${p.color}, ${p.color}cc)`, color: '#fff', border: 'none', borderRadius: '12px', padding: '10px 22px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', boxShadow: `0 6px 20px ${p.glow}` }}
+                  >
+                    Get Started →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust badges */}
+          <div className="reveal-on-scroll" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
+            {[
+              { icon: '⚡', label: 'Fast Delivery' },
+              { icon: '🔒', label: 'Secure & Private' },
+              { icon: '💳', label: 'Pay with ETB or USDT' },
+              { icon: '🛡️', label: '100% Refund Guarantee' },
+            ].map(b => (
+              <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '100px', padding: '8px 18px', fontSize: '13px', color: 'rgba(200,210,230,0.7)' }}>
+                <span>{b.icon}</span> {b.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ SECTION ── */}
       <section id="faq" style={{ padding: '120px 24px', background: 'var(--bg)', position: 'relative', zIndex: 10 }}>
         <div className="section-curve" style={{ bottom: '-50px' }} />
