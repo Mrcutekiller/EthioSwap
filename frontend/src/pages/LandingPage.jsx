@@ -1985,10 +1985,11 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
               {[
                 { id: 'trade', label: 'Trade', target: '#hero' },
+                { id: 'social', label: 'Social & Stars ⭐', target: '#social-services', isNew: true },
+                { id: 'funded', label: 'Funded Accounts', target: '#funded-accounts', isNew: true },
+                { id: 'security', label: 'Guardian Vault 🛡️', target: '#security', isNew: true },
                 { id: 'how-it-works', label: 'How It Works', target: '#how-it-works' },
                 { id: 'features', label: 'Features', target: '#features' },
-                { id: 'funded', label: 'Funded Accounts', target: '#funded-accounts', isNew: true },
-                { id: 'security', label: 'Security', target: '#security' },
                 { id: 'reviews', label: 'Reviews', target: '#reviews' },
                 { id: 'faq', label: 'FAQ', target: '#faq' },
               ].map(link => (
@@ -2078,11 +2079,12 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
             {[
               { label: 'Trade & P2P', target: '#hero', icon: 'ti-arrows-left-right' },
-              { label: 'Telegram Bot (@EthioSwap_bot)', target: 'https://t.me/EthioSwap_bot', icon: 'ti-brand-telegram', isExternal: true, isNew: true },
+              { label: 'Social & Telegram Stars ⭐', target: '#social-services', icon: 'ti-brand-telegram', isNew: true },
+              { label: 'Funded Accounts & Brokers', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true }, 
+              { label: 'Guardian Anti-Hack Vault 🛡️', target: '#security', icon: 'ti-shield-lock', isNew: true }, 
+              { label: 'Telegram Bot (@EthioSwap_bot)', target: 'https://t.me/EthioSwap_bot', icon: 'ti-robot', isExternal: true },
               { label: 'How It Works', target: '#how-it-works', icon: 'ti-list-numbers' }, 
               { label: 'Features & Security', target: '#features', icon: 'ti-shield-check' }, 
-              { label: 'Funded Accounts & Brokers', target: '#funded-accounts', icon: 'ti-trending-up', isNew: true }, 
-              { label: 'Trust & Escrow', target: '#security', icon: 'ti-lock' }, 
               { label: 'Trader Reviews', target: '#reviews', icon: 'ti-star' }, 
               { label: 'FAQ', target: '#faq', icon: 'ti-help' }
             ].map((link, idx, arr) => (
@@ -3131,10 +3133,13 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
               <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Product</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {[
+                  { label: 'Trade & P2P', target: '#hero' },
+                  { label: 'Social & Telegram Stars ⭐', target: '#social-services' },
+                  { label: 'Funded Accounts 📈', target: '#funded-accounts' },
+                  { label: 'Guardian Security 🛡️', target: '#security' },
                   { label: 'Features', target: '#features' },
                   { label: 'How It Works', target: '#how-it-works' },
-                  { label: 'Market Rates', target: '#market' },
-                  { label: 'Security', target: '#security' }
+                  { label: 'Market Rates', target: '#market' }
                 ].map(item => (
                   <li key={item.label}><a href={item.target} className="nav-item-saas" style={{ fontSize: '15px', textDecoration: 'none' }}>{item.label}</a></li>
                 ))}

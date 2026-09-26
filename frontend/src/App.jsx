@@ -1135,8 +1135,8 @@ const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setSho
   const navItems = [
     { id: 'wallet', icon: 'ti ti-wallet', label: 'Wallet' },
     { id: 'p2p', icon: 'ti ti-arrows-left-right', label: 'Trade' },
-    { id: 'funded', icon: 'ti ti-trending-up', label: 'Funded' },
-    { id: 'social', icon: 'ti ti-brand-telegram', label: 'Social' },
+    { id: 'social', icon: 'ti ti-brand-telegram', label: 'Social & Stars', isNew: true },
+    { id: 'funded', icon: 'ti ti-trending-up', label: 'Funded', isNew: true },
     { id: 'transactions', icon: 'ti ti-clock', label: 'History' },
     { id: 'notifications', icon: 'ti ti-bell', label: 'Notifications' },
     { id: 'profile', icon: 'ti ti-user', label: 'Profile' },
@@ -1164,6 +1164,20 @@ const DesktopSidebar = ({ page, setPage, user, logout, showNotifications, setSho
             }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px', fontSize: '14px', color: isSelected ? '#F5A623' : '#8A9BB8', background: isSelected ? 'rgba(245,166,35,0.1)' : 'transparent', borderLeft: isSelected ? '3px solid #F5A623' : '3px solid transparent', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease' }}>
               <i className={item.icon} style={{ fontSize: '20px' }}></i>
               <span style={{ fontWeight: isSelected ? 700 : 500, flex: 1 }}>{item.label}</span>
+              {item.isNew && (
+                <span style={{
+                  background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+                  color: '#0A0C12',
+                  fontSize: '9px',
+                  fontWeight: 800,
+                  padding: '2px 5px',
+                  borderRadius: '5px',
+                  lineHeight: 1,
+                  letterSpacing: '0.04em'
+                }}>
+                  NEW
+                </span>
+              )}
               {item.id === 'notifications' && notifCount > 0 && (
                 <span style={{ background: '#FF4D4D', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {notifCount}
@@ -1232,13 +1246,29 @@ const MobileBottomNav = ({ page, setPage }) => {
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'var(--bottom-nav-h)', background: '#0D1117', borderTop: '1px solid #1E2640', display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0 8px', zIndex: 100 }}>
       {tabs.map(tab => (
         tab.center ? (
-          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 0, position: 'relative', background: 'none', border: 'none' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #F5A623, #FFE082)', color: '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '-20px', boxShadow: '0 4px 16px rgba(245,166,35,0.3)' }}>
+          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 0, position: 'relative', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: page === tab.id ? 'linear-gradient(135deg, #2AABEE, #0088cc)' : 'linear-gradient(135deg, #F5A623, #FFE082)', color: page === tab.id ? '#fff' : '#0A0C12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '-20px', boxShadow: '0 4px 16px rgba(245,166,35,0.3)', position: 'relative' }}>
               <i className={tab.icon} style={{ fontSize: '24px' }}></i>
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#EF4444',
+                color: '#fff',
+                fontSize: '8px',
+                fontWeight: 900,
+                padding: '2px 5px',
+                borderRadius: '8px',
+                border: '2px solid #0D1117',
+                letterSpacing: '0.04em'
+              }}>
+                NEW
+              </span>
             </div>
+            <span style={{ fontSize: '10px', color: page === tab.id ? '#2AABEE' : '#8A9BB8', marginTop: '2px', fontWeight: page === tab.id ? 700 : 500 }}>Stars ⭐</span>
           </button>
         ) : (
-          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 12px', color: page === tab.id ? '#F5A623' : '#8A9BB8', background: 'none', border: 'none', fontSize: '10px' }}>
+          <button key={tab.id} onClick={() => setPage(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px 12px', color: page === tab.id ? '#F5A623' : '#8A9BB8', background: 'none', border: 'none', fontSize: '10px', cursor: 'pointer' }}>
             <i className={tab.icon} style={{ fontSize: '22px' }}></i>
             <span>{tab.label}</span>
           </button>
@@ -1301,6 +1331,8 @@ const AppContent = () => {
         setPage('notifications');
       } else if (dest === 'funded') {
         setPage('funded');
+      } else if (dest === 'social' || dest === 'stars') {
+        setPage('social');
       }
     };
     window.addEventListener('ethioswap_navigate', handleNavigate);

@@ -113,6 +113,44 @@ const Navbar = () => {
                 <ListCollapse size={16} /> Funded
               </button>
               <button
+                onClick={() => {
+                  if (typeof setActiveTab === 'function') setActiveTab('social');
+                  window.dispatchEvent(new CustomEvent('ethioswap_navigate', { detail: 'social' }));
+                }}
+                className={`btn btn-secondary ${activeTab === 'social' ? 'active-tab' : ''}`}
+                style={{
+                  background: activeTab === 'social' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                  borderColor: activeTab === 'social' ? '#38bdf8' : 'transparent',
+                  position: 'relative'
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>⭐</span> Social & Stars
+                <span style={{
+                  fontSize: '9px',
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #F5A623, #D88E10)',
+                  color: '#0A0C12',
+                  padding: '2px 5px',
+                  borderRadius: '4px',
+                  marginLeft: '4px'
+                }}>NEW</span>
+              </button>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('ethioswap_open_guardian'))}
+                className="btn btn-secondary"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: 'rgba(16, 185, 129, 0.3)',
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                title="Guardian Anti-Hack Security Vault"
+              >
+                <Shield size={16} /> Guardian Vault
+              </button>
+              <button
                 onClick={() => setActiveTab('profile')}
                 className={`btn btn-secondary ${activeTab === 'profile' ? 'active-tab' : ''}`}
                 style={{
