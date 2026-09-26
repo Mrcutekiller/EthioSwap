@@ -2958,7 +2958,7 @@ const LandingPage = ({ onGetStarted, onSignIn, systemSettings }) => {
                 emoji: '✈️',
                 color: '#2AABEE',
                 glow: 'rgba(42,171,238,0.18)',
-                services: ['Premium (1M / 3M)', 'Channel Members', 'Post Views'],
+                services: ['Premium (3M / 6M / 12M)', 'Channel Members', 'Post Views'],
                 startingAt: '$0.80',
               },
               {

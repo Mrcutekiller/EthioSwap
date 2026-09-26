@@ -12,24 +12,39 @@ const PLATFORMS = [
 const SERVICES = {
   telegram: [
     {
-      id: 'tg_premium_1m',
-      type: 'premium',
-      label: 'Telegram Premium',
-      subtitle: '1 Month',
-      icon: '⭐',
-      price_usd: 4.99,
-      description: 'Full Telegram Premium for 1 month — no ads, larger uploads, exclusive stickers & more.',
-      inputType: 'username',
-      inputPlaceholder: '@your_telegram_username',
-    },
-    {
       id: 'tg_premium_3m',
       type: 'premium',
       label: 'Telegram Premium',
       subtitle: '3 Months',
+      icon: '⭐',
+      price_usd: 16.99,
+      rate_label: '~$4.44/mo wholesale',
+      description: 'Full Telegram Premium for 3 months — no ads, 4GB file uploads, exclusive stickers & badge.',
+      inputType: 'username',
+      inputPlaceholder: '@your_telegram_username',
+    },
+    {
+      id: 'tg_premium_6m',
+      type: 'premium',
+      label: 'Telegram Premium',
+      subtitle: '6 Months',
       icon: '⭐⭐',
-      price_usd: 13.99,
-      description: 'Full Telegram Premium for 3 months — best value for heavy users.',
+      price_usd: 22.99,
+      rate_label: '~$2.96/mo wholesale',
+      description: 'Full Telegram Premium for 6 months — great savings for long term users.',
+      inputType: 'username',
+      inputPlaceholder: '@your_telegram_username',
+    },
+    {
+      id: 'tg_premium_12m',
+      type: 'premium',
+      label: 'Telegram Premium 🔥',
+      subtitle: '12 Months + 73 ⭐ FREE',
+      badge: 'Popular',
+      icon: '👑',
+      price_usd: 39.99,
+      rate_label: '~$2.68/mo wholesale',
+      description: '1 Full Year of Telegram Premium + 73 Telegram Stars FREE gift. Best value plan!',
       inputType: 'username',
       inputPlaceholder: '@your_telegram_username',
     },
@@ -512,18 +527,19 @@ const SocialServicesPage = () => {
   useEffect(() => { loadOrders(); }, [user?.id]);
 
 const DEFAULT_PROVIDER_COSTS = {
-  tg_premium_1m: 3.50,
-  tg_premium_3m: 10.20,
-  tg_members:    0.90, // per 1k
-  tg_views:      0.08, // per 1k
-  tt_views:      0.04, // per 1k
-  tt_followers:  1.20, // per 1k
-  tt_likes:      0.35, // per 1k
-  tt_comments:   0.60, // per 100
-  ig_views:      0.05, // per 1k
-  ig_followers:  1.10, // per 1k
-  ig_likes:      0.30, // per 1k
-  ig_comments:   0.70, // per 100
+  tg_premium_3m:  13.31, // GRAM 9.1845 (~$4.44/mo)
+  tg_premium_6m:  17.74, // GRAM 12.2448 (~$2.96/mo)
+  tg_premium_12m: 32.17, // GRAM 22.2078 (~$2.68/mo + 73 stars FREE)
+  tg_members:     0.90,  // per 1k
+  tg_views:       0.08,  // per 1k
+  tt_views:       0.04,  // per 1k
+  tt_followers:   1.20,  // per 1k
+  tt_likes:       0.35,  // per 1k
+  tt_comments:    0.60,  // per 100
+  ig_views:       0.05,  // per 1k
+  ig_followers:   1.10,  // per 1k
+  ig_likes:       0.30,  // per 1k
+  ig_comments:    0.70,  // per 100
 };
 
   const handleOrderSubmit = async ({ service, qty, target, comment, payMethod, totalUSD, totalETB }) => {
