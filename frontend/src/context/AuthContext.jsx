@@ -2068,6 +2068,24 @@ export const AuthProvider = ({ children }) => {
     logout();
   };
 
+  const updateUser = async (updates) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id);
+      if (error) throw error;
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('ethioswap_user', JSON.stringify(updatedUser));
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const triggerEmergencyLock = async (reason = 'user_panic_button', autoEvacuate = false) => {
     if (!user) return;
     setLoading(true);
