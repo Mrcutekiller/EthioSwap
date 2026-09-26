@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext.jsx';
+import { checkRecipientEligibility, cleanTelegramUsername } from '../lib/mystars';
 
 /* ─── Service catalogue ─────────────────────────────────────────── */
 const PLATFORMS = [
@@ -545,6 +546,16 @@ const DEFAULT_PROVIDER_COSTS = {
   const handleOrderSubmit = async ({ service, qty, target, comment, payMethod, totalUSD, totalETB }) => {
     setOrderLoading(true);
     try {
+      // 0. If Telegram Premium, run pre-flight eligibility check via MyStars
+      const cleanTarget = activePlatform === 'telegram' ? cleanTelegramUsername(target) : target.trim();
+      if (activePlatform === 'telegram' && service.type === 'premium') {
+        const months = service.id?.includes('6m') ? 6 : service.id?.includes('12m') ? 12 : 3;
+        const check = await checkRecipientEligibility(cleanTarget, months);
+        if (check.resolved && !check.eligible && !check.fallback) {
+          throw new Error(check.message || `@${cleanTarget} cannot receive Telegram Premium right now.`);
+        }
+      }
+
       // 1. Calculate provider wholesale cost and profit
       const unitCost = DEFAULT_PROVIDER_COSTS[service.id] || (service.price_usd * 0.65);
       const providerCostUSD = service.unit ? Number((unitCost * qty).toFixed(2)) : Number(unitCost.toFixed(2));

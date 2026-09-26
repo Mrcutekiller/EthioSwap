@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Logo from './Logo.jsx';
 import { supabase } from '../lib/supabase';
 import { notify } from '../lib/notify';
+import { createTelegramPremiumOrder, getMyStarsOrderStatus, getLivePricing, MYSTARS_CONFIG } from '../lib/mystars';
 
 /* ── Tiny inline icon ──────────────────────────────────────── */
 const Ic = ({ d, size = 18, strokeWidth = 2 }) => (
@@ -284,6 +285,16 @@ const AdminPanel = ({ user }) => {
   const [smmConfig, setSmmConfig] = useState({ api_url: '', api_key: '', commission_pct: 30 });
   const [smmConfigSaving, setSmmConfigSaving] = useState(false);
   const [updatingSocialOrderId, setUpdatingSocialOrderId] = useState(null);
+  const [myStarsConfig, setMyStarsConfig] = useState({
+    api_url: 'https://api.mystars.tg',
+    api_key: 'faas_2a19ef9912dea131431f9d643fdddd0a9370956e2b9deb5dff4c590191f438e1',
+    webhook_secret: 'a516b73beb2e49fca4d438b5cf7d1b0492c770ffc3e1d9e80021af77ff0de4b8',
+  });
+  const [myStarsSaving, setMyStarsSaving] = useState(false);
+  const [myStarsTesting, setMyStarsTesting] = useState(false);
+  const [myStarsTestResult, setMyStarsTestResult] = useState(null);
+  const [fulfillingOrderId, setFulfillingOrderId] = useState(null);
+  const [paymentModalOrder, setPaymentModalOrder] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -314,10 +325,17 @@ const AdminPanel = ({ user }) => {
     supabase.from('listings').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllListings(data || []));
     supabase.from('trades').select('*').order('created_at', { ascending: false }).then(({ data }) => setAllTrades(data || []));
     supabase.from('admin_withdrawals').select('*').order('created_at', { ascending: false }).then(({ data }) => setAdminWithdrawals(data || []));
-    // Load social orders + SMM config
+    // Load social orders + SMM config + MyStars config
     supabase.from('social_service_orders').select('*, users(username, full_name)').order('created_at', { ascending: false }).then(({ data }) => setSocialOrders(data || []));
-    supabase.from('system_settings').select('smm_api_url, smm_api_key, smm_commission_pct').limit(1).single().then(({ data }) => {
-      if (data) setSmmConfig({ api_url: data.smm_api_url || '', api_key: data.smm_api_key || '', commission_pct: data.smm_commission_pct ?? 30 });
+    supabase.from('system_settings').select('smm_api_url, smm_api_key, smm_commission_pct, mystars_api_key, mystars_webhook_secret, mystars_base_url').limit(1).single().then(({ data }) => {
+      if (data) {
+        setSmmConfig({ api_url: data.smm_api_url || '', api_key: data.smm_api_key || '', commission_pct: data.smm_commission_pct ?? 30 });
+        setMyStarsConfig({
+          api_url: data.mystars_base_url || 'https://api.mystars.tg',
+          api_key: data.mystars_api_key || 'faas_2a19ef9912dea131431f9d643fdddd0a9370956e2b9deb5dff4c590191f438e1',
+          webhook_secret: data.mystars_webhook_secret || 'a516b73beb2e49fca4d438b5cf7d1b0492c770ffc3e1d9e80021af77ff0de4b8',
+        });
+      }
     });
   }, [user]);
 
@@ -3773,8 +3791,160 @@ const AdminPanel = ({ user }) => {
               } catch (err) { showAlert(err.message, 'error'); }
             };
 
+            const handleSaveMyStarsConfig = async (e) => {
+              e.preventDefault();
+              setMyStarsSaving(true);
+              try {
+                await supabase.from('system_settings').update({
+                  mystars_base_url: myStarsConfig.api_url,
+                  mystars_api_key: myStarsConfig.api_key,
+                  mystars_webhook_secret: myStarsConfig.webhook_secret,
+                }).eq('id', settings?.id);
+                showAlert('✓ MyStars Telegram configuration saved!');
+              } catch (err) { showAlert(err.message, 'error'); }
+              setMyStarsSaving(false);
+            };
+
+            const handleTestMyStars = async () => {
+              setMyStarsTesting(true);
+              try {
+                const quote = await getLivePricing(3, 'usdt_ton', myStarsConfig.api_key || MYSTARS_CONFIG.apiKey);
+                setMyStarsTestResult({ success: true, quote });
+                showAlert(`✓ MyStars API Connected! Live 3M: ${quote.amount} ${quote.currency.toUpperCase()}`);
+              } catch (err) {
+                setMyStarsTestResult({ success: false, error: err.message });
+                showAlert(`MyStars connection error: ${err.message}`, 'error');
+              }
+              setMyStarsTesting(false);
+            };
+
+            const handleFulfillMyStars = async (order) => {
+              setFulfillingOrderId(order.id);
+              showAlert('Submitting to MyStars Telegram gateway...');
+              try {
+                let months = 3;
+                if (order.service_id?.includes('6m')) months = 6;
+                if (order.service_id?.includes('12m')) months = 12;
+
+                const res = await createTelegramPremiumOrder({
+                  username: order.target,
+                  months,
+                  paymentCurrency: 'usdt_ton',
+                  apiKey: myStarsConfig.api_key || MYSTARS_CONFIG.apiKey,
+                });
+
+                const providerCost = res.payment?.amount ? parseFloat(res.payment.amount) : (order.provider_cost_usd || (months === 3 ? 13.44 : months === 6 ? 17.74 : 32.17));
+                const newProfit = Math.max(0, Number(((order.total_usd || 0) - providerCost).toFixed(2)));
+
+                await supabase.from('social_service_orders').update({
+                  provider_order_id: res.order_id,
+                  provider_cost_usd: providerCost,
+                  profit_usd: newProfit,
+                  payment_address: res.payment?.pay_to_address || null,
+                  payment_memo: res.payment?.memo || null,
+                  status: 'processing',
+                  updated_at: new Date().toISOString(),
+                }).eq('id', order.id);
+
+                setSocialOrders(prev => prev.map(o => o.id === order.id ? {
+                  ...o,
+                  provider_order_id: res.order_id,
+                  provider_cost_usd: providerCost,
+                  profit_usd: newProfit,
+                  payment_address: res.payment?.pay_to_address,
+                  payment_memo: res.payment?.memo,
+                  status: 'processing',
+                } : o));
+
+                if (res.payment?.pay_to_address) {
+                  setPaymentModalOrder({
+                    ...order,
+                    provider_order_id: res.order_id,
+                    payment: res.payment,
+                  });
+                }
+                showAlert(`✓ MyStars Order #${res.order_id} created for @${order.target}!`);
+              } catch (err) {
+                showAlert(`MyStars Error: ${err.message}`, 'error');
+              }
+              setFulfillingOrderId(null);
+            };
+
+            const handleCheckMyStarsStatus = async (order) => {
+              if (!order.provider_order_id) return;
+              showAlert(`Checking MyStars order #${order.provider_order_id}...`);
+              try {
+                const res = await getMyStarsOrderStatus(order.provider_order_id, myStarsConfig.api_key || MYSTARS_CONFIG.apiKey);
+                const s = res.status?.toLowerCase();
+                if (s === 'completed' || s === 'delivered' || s === 'paid') {
+                  await handleUpdateStatus(order.id, 'completed');
+                  showAlert(`🎉 MyStars Order #${order.provider_order_id} is completed!`);
+                } else {
+                  showAlert(`MyStars Order #${order.provider_order_id} status: ${res.status || 'Pending Payment/Delivery'}`);
+                }
+              } catch (err) {
+                showAlert(`Status check failed: ${err.message}`, 'error');
+              }
+            };
+
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeIn 0.25s ease' }}>
+
+                {/* ── MyStars Official Telegram Premium Gateway Config ── */}
+                <div className="card-premium" style={{ '--before-bg': 'linear-gradient(90deg, #2AABEE, #0088CC)', border: '1px solid rgba(42,171,238,0.25)' }}>
+                  <div className="admin-section-title-bar" style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>⭐</span>
+                      <strong>MyStars Telegram Premium Store API</strong>
+                      <span style={{ fontSize: '11px', background: 'rgba(42,171,238,0.15)', color: '#2AABEE', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>Official Integration</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={myStarsTesting}
+                      onClick={handleTestMyStars}
+                      style={{ padding: '6px 14px', background: 'rgba(42,171,238,0.15)', border: '1px solid rgba(42,171,238,0.35)', borderRadius: '8px', color: '#2AABEE', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {myStarsTesting ? 'Testing…' : '⚡ Test Connection & Live Rates'}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#8b92a8', marginBottom: '16px', lineHeight: 1.6 }}>
+                    Connected directly to <a href="https://mystars.tg/docs" target="_blank" rel="noopener noreferrer" style={{ color: '#2AABEE', textDecoration: 'none', fontWeight: 700 }}>MyStars FaaS API</a> for 1-click Telegram Premium gifting (3M, 6M, 12M).
+                  </p>
+                  {myStarsTestResult && (
+                    <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '10px', background: myStarsTestResult.success ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${myStarsTestResult.success ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, fontSize: '12px' }}>
+                      {myStarsTestResult.success ? (
+                        <span style={{ color: '#10B981', fontWeight: 600 }}>
+                          ✓ Connected to MyStars API! Live 3M Wholesale Cost: <strong>${myStarsTestResult.quote?.amount} {myStarsTestResult.quote?.currency?.toUpperCase()}</strong> (TON/USDT: ${Number(myStarsTestResult.quote?.usdt_per_ton || 1.45).toFixed(2)})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#EF4444' }}>✕ Error: {myStarsTestResult.error}</span>
+                      )}
+                    </div>
+                  )}
+                  <form onSubmit={handleSaveMyStarsConfig} style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr 1.5fr auto', gap: '12px', alignItems: 'end' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>API Base URL</label>
+                      <input value={myStarsConfig.api_url} onChange={e => setMyStarsConfig(c => ({ ...c, api_url: e.target.value }))}
+                        placeholder="https://api.mystars.tg"
+                        style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>X-Api-Key</label>
+                      <input type="password" value={myStarsConfig.api_key} onChange={e => setMyStarsConfig(c => ({ ...c, api_key: e.target.value }))}
+                        placeholder="faas_..."
+                        style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: '#8b92a8', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Webhook Secret</label>
+                      <input type="password" value={myStarsConfig.webhook_secret} onChange={e => setMyStarsConfig(c => ({ ...c, webhook_secret: e.target.value }))}
+                        placeholder="Secret key"
+                        style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <button type="submit" disabled={myStarsSaving} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #2AABEE, #0088CC)', color: '#fff', fontWeight: 800, fontSize: '13px', borderRadius: '8px', border: 'none', cursor: 'pointer', height: '38px', whiteSpace: 'nowrap' }}>
+                      {myStarsSaving ? 'Saving…' : 'Save MyStars'}
+                    </button>
+                  </form>
+                </div>
 
                 {/* ── SMM Provider Config ── */}
                 <div className="card-premium" style={{ '--before-bg': 'linear-gradient(90deg, #2AABEE, #FF0050)' }}>
@@ -3913,8 +4083,34 @@ const AdminPanel = ({ user }) => {
                                 {new Date(order.created_at).toLocaleDateString()}
                               </td>
                               <td style={{ padding: '12px' }}>
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                  {order.status === 'pending' && (
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                  {/* MyStars 1-Click Fulfillment */}
+                                  {order.platform === 'telegram' && order.service_id?.includes('premium') && !order.provider_order_id && order.status !== 'completed' && order.status !== 'cancelled' && (
+                                    <button
+                                      disabled={fulfillingOrderId === order.id}
+                                      onClick={() => handleFulfillMyStars(order)}
+                                      style={{ padding: '4px 10px', background: 'linear-gradient(135deg, #2AABEE, #0088CC)', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(42,171,238,0.3)' }}
+                                    >
+                                      {fulfillingOrderId === order.id ? 'Fulfilling…' : '⚡ MyStars Fulfill'}
+                                    </button>
+                                  )}
+                                  {order.platform === 'telegram' && order.provider_order_id && (
+                                    <button
+                                      onClick={() => handleCheckMyStarsStatus(order)}
+                                      style={{ padding: '4px 8px', background: 'rgba(42,171,238,0.12)', border: '1px solid rgba(42,171,238,0.3)', borderRadius: '6px', color: '#2AABEE', fontSize: '10px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                    >
+                                      🔍 #{order.provider_order_id.slice(0, 8)}
+                                    </button>
+                                  )}
+                                  {order.platform === 'telegram' && (order.payment_address || order.payment?.pay_to_address) && (
+                                    <button
+                                      onClick={() => setPaymentModalOrder(order)}
+                                      style={{ padding: '4px 8px', background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: '6px', color: '#F5A623', fontSize: '10px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                    >
+                                      💳 Pay Info
+                                    </button>
+                                  )}
+                                  {order.status === 'pending' && !(order.platform === 'telegram' && order.service_id?.includes('premium')) && (
                                     <button disabled={isUpdating} onClick={() => handleUpdateStatus(order.id, 'processing')}
                                       style={{ padding: '4px 10px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '6px', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                       ▶ Process
@@ -3941,6 +4137,69 @@ const AdminPanel = ({ user }) => {
                     </table>
                   </div>
                 </div>
+
+                {/* ── Payment Details Modal ── */}
+                {paymentModalOrder && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                    onClick={() => setPaymentModalOrder(null)}>
+                    <div style={{ background: '#0F1322', border: '1px solid #2AABEE44', borderRadius: '20px', padding: '28px', maxWidth: '520px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
+                      onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '24px' }}>⭐</span>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '18px', color: '#fff' }}>MyStars Payment Instructions</h3>
+                            <div style={{ fontSize: '12px', color: '#2AABEE' }}>Order #{paymentModalOrder.provider_order_id || paymentModalOrder.order_id}</div>
+                          </div>
+                        </div>
+                        <button onClick={() => setPaymentModalOrder(null)} style={{ background: 'none', border: 'none', color: '#8b92a8', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
+                        <div style={{ padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', marginBottom: '4px' }}>Amount to Transfer</div>
+                          <div style={{ fontSize: '22px', fontWeight: 800, color: '#10B981' }}>
+                            {paymentModalOrder.payment?.amount || paymentModalOrder.provider_cost_usd} {paymentModalOrder.payment?.currency?.toUpperCase() || 'USDT'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: '11px', color: '#8b92a8', textTransform: 'uppercase', marginBottom: '6px' }}>Deposit Address (TON / USDT-TON)</div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input readOnly value={paymentModalOrder.payment?.pay_to_address || paymentModalOrder.payment_address || ''}
+                              style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '12px', outline: 'none' }} />
+                            <button onClick={() => { navigator.clipboard.writeText(paymentModalOrder.payment?.pay_to_address || paymentModalOrder.payment_address || ''); showAlert('Address copied!'); }}
+                              style={{ padding: '8px 14px', background: '#2AABEE', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>Copy</button>
+                          </div>
+                        </div>
+
+                        {(paymentModalOrder.payment?.memo || paymentModalOrder.payment_memo) && (
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#EF4444', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>⚠️ REQUIRED MEMO / COMMENT</div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <input readOnly value={paymentModalOrder.payment?.memo || paymentModalOrder.payment_memo || ''}
+                                style={{ flex: 1, padding: '10px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', color: '#fff', fontSize: '14px', fontWeight: 800, outline: 'none' }} />
+                              <button onClick={() => { navigator.clipboard.writeText(paymentModalOrder.payment?.memo || paymentModalOrder.payment_memo || ''); showAlert('Memo copied!'); }}
+                                style={{ padding: '8px 14px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>Copy</button>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>You MUST include this memo in the transfer so MyStars credits the payment automatically.</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button onClick={() => handleCheckMyStarsStatus(paymentModalOrder)}
+                          style={{ padding: '10px 18px', background: 'rgba(42,171,238,0.15)', border: '1px solid rgba(42,171,238,0.3)', borderRadius: '10px', color: '#2AABEE', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                          Check Status
+                        </button>
+                        <button onClick={() => setPaymentModalOrder(null)}
+                          style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
