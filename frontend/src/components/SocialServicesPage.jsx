@@ -16,10 +16,11 @@ const SERVICES = {
       id: 'tg_premium_3m',
       type: 'premium',
       label: 'Telegram Premium',
-      subtitle: '3 Months',
+      subtitle: '3 Months (~$4.44/mo base)',
       icon: '⭐',
-      price_usd: 16.99,
-      rate_label: '~$4.44/mo wholesale',
+      price_usd: 17.31, // $13.31 wholesale + $4.00 commission
+      base_cost: 13.31,
+      commission_usd: 4.00,
       description: 'Full Telegram Premium for 3 months — no ads, 4GB file uploads, exclusive stickers & badge.',
       inputType: 'username',
       inputPlaceholder: '@your_telegram_username',
@@ -28,10 +29,11 @@ const SERVICES = {
       id: 'tg_premium_6m',
       type: 'premium',
       label: 'Telegram Premium',
-      subtitle: '6 Months',
+      subtitle: '6 Months (~$2.96/mo base)',
       icon: '⭐⭐',
-      price_usd: 22.99,
-      rate_label: '~$2.96/mo wholesale',
+      price_usd: 23.06, // $17.74 wholesale + $5.32 commission
+      base_cost: 17.74,
+      commission_usd: 5.32,
       description: 'Full Telegram Premium for 6 months — great savings for long term users.',
       inputType: 'username',
       inputPlaceholder: '@your_telegram_username',
@@ -40,11 +42,12 @@ const SERVICES = {
       id: 'tg_premium_12m',
       type: 'premium',
       label: 'Telegram Premium 🔥',
-      subtitle: '12 Months + 73 ⭐ FREE',
+      subtitle: '12 Months (~$2.68/mo base) + 73 ⭐ FREE',
       badge: 'Popular',
       icon: '👑',
-      price_usd: 39.99,
-      rate_label: '~$2.68/mo wholesale',
+      price_usd: 41.82, // $32.17 wholesale + $9.65 commission
+      base_cost: 32.17,
+      commission_usd: 9.65,
       description: '1 Full Year of Telegram Premium + 73 Telegram Stars FREE gift. Best value plan!',
       inputType: 'username',
       inputPlaceholder: '@your_telegram_username',
@@ -432,12 +435,26 @@ const OrderModal = ({ service, platform, onClose, onSubmit, loading }) => {
           <div style={{
             background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: '12px', padding: '14px 16px',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            display: 'flex', flexDirection: 'column', gap: '8px',
           }}>
-            <span style={{ fontSize: '13px', color: '#8A9BB8' }}>Order Total</span>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: platform.color }}>{formatUSD(totalUSD)}</div>
-              <div style={{ fontSize: '11px', color: '#8A9BB8' }}>≈ {formatETB(totalETB)}</div>
+            {service.base_cost && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8A9BB8' }}>
+                <span>Wholesale Provider Cost</span>
+                <span>${service.base_cost.toFixed(2)}</span>
+              </div>
+            )}
+            {service.commission_usd && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#10B981' }}>
+                <span>Platform Fee & Service</span>
+                <span>+${service.commission_usd.toFixed(2)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: service.base_cost ? '1px solid rgba(255,255,255,0.08)' : 'none', paddingTop: service.base_cost ? '8px' : 0 }}>
+              <span style={{ fontSize: '13px', color: '#fff', fontWeight: 600 }}>Total</span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: platform.color }}>{formatUSD(totalUSD)}</div>
+                <div style={{ fontSize: '11px', color: '#8A9BB8' }}>≈ {formatETB(totalETB)}</div>
+              </div>
             </div>
           </div>
 
