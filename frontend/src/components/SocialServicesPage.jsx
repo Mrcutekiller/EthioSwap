@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext.jsx';
-import { checkRecipientEligibility, cleanTelegramUsername } from '../lib/mystars';
+import { checkRecipientEligibility, cleanTelegramUsername, createTelegramPremiumOrder } from '../lib/mystars';
 
 /* ─── Service catalogue ─────────────────────────────────────────── */
 const PLATFORMS = [
@@ -573,7 +573,7 @@ const DEFAULT_PROVIDER_COSTS = {
         }
       }
 
-      // 1. Calculate provider wholesale cost and profit
+      // 1. Calculate provider wholesale cost and commission
       const unitCost = DEFAULT_PROVIDER_COSTS[service.id] || (service.price_usd * 0.65);
       const providerCostUSD = service.unit ? Number((unitCost * qty).toFixed(2)) : Number(unitCost.toFixed(2));
       const profitUSD = Math.max(0, Number((totalUSD - providerCostUSD).toFixed(2)));
@@ -594,7 +594,7 @@ const DEFAULT_PROVIDER_COSTS = {
           );
         }
 
-        // Deduct from customer wallet
+        // Deduct full amount from customer wallet
         const newBal = Number((currentBal - totalUSD).toFixed(2));
         const { error: balErr } = await supabase
           .from('users')
@@ -611,23 +611,26 @@ const DEFAULT_PROVIDER_COSTS = {
           note: `Purchased ${service.label} (${activePlatform})`,
         });
 
-        // 3. CREDIT ALL NET PROFIT DIRECTLY TO ADMIN WALLET (system_settings.collected_fees_eth)
-        if (profitUSD > 0) {
-          const { data: sett } = await supabase
+        // 3. FUNDS ROUTING:
+        // A) Commission goes to Admin Platform Wallet (system_settings.collected_fees_eth)
+        // B) Real Price goes to Payment Reserve Pool (system_settings.provider_payment_reserve_usd)
+        const { data: sett } = await supabase
+          .from('system_settings')
+          .select('id, collected_fees_eth, provider_payment_reserve_usd')
+          .limit(1)
+          .single();
+        if (sett) {
+          await supabase
             .from('system_settings')
-            .select('id, collected_fees_eth')
-            .limit(1)
-            .single();
-          if (sett) {
-            await supabase
-              .from('system_settings')
-              .update({
-                collected_fees_eth: (sett.collected_fees_eth || 0) + profitUSD
-              })
-              .eq('id', sett.id);
-          }
+            .update({
+              collected_fees_eth: (sett.collected_fees_eth || 0) + profitUSD,
+              provider_payment_reserve_usd: (sett.provider_payment_reserve_usd || 0) + providerCostUSD,
+            })
+            .eq('id', sett.id);
+        }
 
-          // Also credit admin users' balance
+        // Credit Admin user balance with the Commission
+        if (profitUSD > 0) {
           const { data: admins } = await supabase
             .from('users')
             .select('id, balance_usd, eth_balance')
@@ -647,36 +650,70 @@ const DEFAULT_PROVIDER_COSTS = {
                 type: 'admin_profit_social',
                 amount_usd: profitUSD,
                 status: 'completed',
-                note: `Profit from ${service.label} order (${activePlatform})`,
+                note: `Commission from ${service.label} order (sent to Admin Wallet)`,
               });
             }
           }
         }
+
+        // Record real price allocated to payment reserve
+        if (providerCostUSD > 0) {
+          const { data: firstAdmin } = await supabase.from('users').select('id').eq('role', 'admin').limit(1).single();
+          if (firstAdmin) {
+            await supabase.from('transactions').insert({
+              user_id: firstAdmin.id,
+              type: 'provider_payment_reserve',
+              amount_usd: providerCostUSD,
+              status: 'completed',
+              note: `Real wholesale price ($${providerCostUSD.toFixed(2)}) allocated to MyStars payment pool`,
+            });
+          }
+        }
       }
 
-      // 4. Save order with wholesale cost & profit tracking
+      // 4. If Telegram Premium and paying via wallet, auto-initiate MyStars order if possible
+      let myStarsResult = null;
+      if (activePlatform === 'telegram' && service.type === 'premium' && payMethod === 'wallet') {
+        try {
+          const months = service.id?.includes('6m') ? 6 : service.id?.includes('12m') ? 12 : 3;
+          myStarsResult = await createTelegramPremiumOrder({
+            username: cleanTarget,
+            months,
+            paymentCurrency: 'usdt_ton',
+          });
+        } catch (myStarsErr) {
+          console.warn('MyStars order pre-creation notice:', myStarsErr.message);
+        }
+      }
+
+      // 5. Save order with wholesale cost, commission & payment tracking
       const { error } = await supabase.from('social_service_orders').insert({
         user_id:           user.id,
         platform:          activePlatform,
         service_id:        service.id,
         service_label:     `${service.label} – ${service.subtitle}`,
         icon:              service.icon,
-        target,
+        target:            cleanTarget,
         comment:           comment || null,
         qty:               service.unit ? qty : 1,
         unit:              service.unit || null,
         total_usd:         totalUSD,
         total_etb:         totalETB,
         pay_method:        payMethod,
-        status:            'pending',
+        status:            myStarsResult?.order_id ? 'processing' : 'pending',
         provider_cost_usd: providerCostUSD,
         profit_usd:        profitUSD,
-        profit_credited:   payMethod === 'wallet' ? true : false,
+        profit_credited:   payMethod === 'wallet',
+        provider_order_id: myStarsResult?.order_id || null,
+        payment_address:   myStarsResult?.payment?.pay_to_address || null,
+        payment_memo:      myStarsResult?.payment?.memo || null,
+        provider_response: myStarsResult || null,
+        payment_status:    payMethod === 'wallet' ? 'reserved' : 'pending',
       });
       if (error) throw error;
 
       setSelectedService(null);
-      showToast(`🎉 Order placed! Total: $${totalUSD.toFixed(2)}. Our team will process it shortly.`);
+      showToast(`🎉 Order placed! Commission ($${profitUSD.toFixed(2)}) sent to Admin Wallet, real price ($${providerCostUSD.toFixed(2)}) routed to payment.`);
       loadOrders();
     } catch (err) {
       showToast(`❌ ${err.message || 'Failed to place order. Try again.'}`, 'error');

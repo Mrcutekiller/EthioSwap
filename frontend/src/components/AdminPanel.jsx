@@ -3993,9 +3993,9 @@ const AdminPanel = ({ user }) => {
                     { label: 'Total Orders', value: socialOrders.length, color: '#8b92a8', icon: 'ti-list' },
                     { label: 'Pending', value: socialOrders.filter(o => o.status === 'pending').length, color: '#F5A623', icon: 'ti-clock' },
                     { label: 'Completed', value: completedOrders.length, color: '#10B981', icon: 'ti-check' },
-                    { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, color: '#3B82F6', icon: 'ti-coins' },
-                    { label: 'Provider Cost', value: `$${totalCost.toFixed(2)}`, color: '#EF4444', icon: 'ti-receipt' },
-                    { label: 'Net Profit', value: `$${totalProfit.toFixed(2)}`, color: '#10B981', icon: 'ti-trending-up' },
+                    { label: 'Customer Paid', value: `$${totalRevenue.toFixed(2)}`, color: '#3B82F6', icon: 'ti-coins' },
+                    { label: 'Real Price (To Payment Pool)', value: `$${totalCost.toFixed(2)}`, color: '#EF4444', icon: 'ti-receipt' },
+                    { label: 'My Commission (Admin Wallet)', value: `$${totalProfit.toFixed(2)}`, color: '#10B981', icon: 'ti-trending-up' },
                   ].map(card => (
                     <div key={card.label} className="admin-stat-card" style={{ '--ac': card.color }}>
                       <div className="admin-stat-label">{card.label}</div>
@@ -4019,14 +4019,14 @@ const AdminPanel = ({ user }) => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                          {['User', 'Platform', 'Service', 'Target', 'Qty', 'User Paid', 'Provider Cost', `Commission (${commPct}%)`, 'Net Profit', 'Payment', 'Status', 'Date', 'Actions'].map(h => (
+                          {['User', 'Platform', 'Service', 'Target', 'Qty', 'Customer Paid', 'Real Price (To Payment)', 'My Commission (Admin Wallet)', 'Payment', 'Status', 'Date', 'Actions'].map(h => (
                             <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, fontSize: '10px', color: '#5a6280', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {socialOrders.length === 0 ? (
-                          <tr><td colSpan={13} style={{ textAlign: 'center', padding: '40px', color: '#5a6280' }}>No social orders yet</td></tr>
+                          <tr><td colSpan={12} style={{ textAlign: 'center', padding: '40px', color: '#5a6280' }}>No social orders yet</td></tr>
                         ) : socialOrders.map(order => {
                           const userPaid      = order.total_usd || 0;
                           const providerCost  = order.provider_cost_usd || 0;
@@ -4055,19 +4055,22 @@ const AdminPanel = ({ user }) => {
                               </td>
                               <td style={{ padding: '12px', fontWeight: 700, color: '#3B82F6' }}>${userPaid.toFixed(2)}</td>
                               <td style={{ padding: '12px' }}>
-                                <input
-                                  type="number" step="0.01" min="0"
-                                  defaultValue={providerCost > 0 ? providerCost.toFixed(2) : ''}
-                                  placeholder="0.00"
-                                  onBlur={e => handleSetProviderCost(order.id, e.target.value)}
-                                  style={{ width: '70px', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#EF4444', fontWeight: 700, fontSize: '13px', outline: 'none', textAlign: 'center' }}
-                                />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  <input
+                                    type="number" step="0.01" min="0"
+                                    defaultValue={providerCost > 0 ? providerCost.toFixed(2) : ''}
+                                    placeholder="0.00"
+                                    onBlur={e => handleSetProviderCost(order.id, e.target.value)}
+                                    style={{ width: '70px', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#EF4444', fontWeight: 700, fontSize: '13px', outline: 'none', textAlign: 'center' }}
+                                  />
+                                  <span style={{ fontSize: '9px', color: '#EF4444', fontWeight: 700 }}>➜ To Payment</span>
+                                </div>
                               </td>
-                              <td style={{ padding: '12px', fontWeight: 700, color: commission >= 0 ? '#F5A623' : '#EF4444' }}>
-                                ${commission.toFixed(2)}
-                              </td>
-                              <td style={{ padding: '12px', fontWeight: 700, color: commission >= 0 ? '#10B981' : '#EF4444' }}>
-                                ${commission.toFixed(2)}
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ fontWeight: 800, color: commission >= 0 ? '#10B981' : '#EF4444' }}>
+                                  +${commission.toFixed(2)}
+                                </div>
+                                <span style={{ fontSize: '9px', color: '#10B981', fontWeight: 700 }}>➜ Admin Wallet</span>
                               </td>
                               <td style={{ padding: '12px' }}>
                                 <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: order.pay_method === 'wallet' ? 'rgba(59,130,246,0.15)' : 'rgba(245,166,35,0.12)', color: order.pay_method === 'wallet' ? '#3B82F6' : '#F5A623', fontWeight: 700 }}>
