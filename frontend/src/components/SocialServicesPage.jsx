@@ -511,27 +511,128 @@ const SocialServicesPage = () => {
 
   useEffect(() => { loadOrders(); }, [user?.id]);
 
+const DEFAULT_PROVIDER_COSTS = {
+  tg_premium_1m: 3.50,
+  tg_premium_3m: 10.20,
+  tg_members:    0.90, // per 1k
+  tg_views:      0.08, // per 1k
+  tt_views:      0.04, // per 1k
+  tt_followers:  1.20, // per 1k
+  tt_likes:      0.35, // per 1k
+  tt_comments:   0.60, // per 100
+  ig_views:      0.05, // per 1k
+  ig_followers:  1.10, // per 1k
+  ig_likes:      0.30, // per 1k
+  ig_comments:   0.70, // per 100
+};
+
   const handleOrderSubmit = async ({ service, qty, target, comment, payMethod, totalUSD, totalETB }) => {
     setOrderLoading(true);
     try {
+      // 1. Calculate provider wholesale cost and profit
+      const unitCost = DEFAULT_PROVIDER_COSTS[service.id] || (service.price_usd * 0.65);
+      const providerCostUSD = service.unit ? Number((unitCost * qty).toFixed(2)) : Number(unitCost.toFixed(2));
+      const profitUSD = Math.max(0, Number((totalUSD - providerCostUSD).toFixed(2)));
+
+      // 2. If paying via in-app wallet balance, verify and deduct from customer
+      if (payMethod === 'wallet') {
+        const { data: userData, error: userFetchErr } = await supabase
+          .from('users')
+          .select('balance_usd, eth_balance')
+          .eq('id', user.id)
+          .single();
+        if (userFetchErr) throw userFetchErr;
+
+        const currentBal = Number(userData?.eth_balance ?? userData?.balance_usd ?? 0);
+        if (currentBal < totalUSD) {
+          throw new Error(
+            `Insufficient wallet balance. You have $${currentBal.toFixed(2)} USD, but this order is $${totalUSD.toFixed(2)} USD. Please deposit funds or choose Telebirr.`
+          );
+        }
+
+        // Deduct from customer wallet
+        const newBal = Number((currentBal - totalUSD).toFixed(2));
+        const { error: balErr } = await supabase
+          .from('users')
+          .update({ eth_balance: newBal, balance_usd: newBal })
+          .eq('id', user.id);
+        if (balErr) throw balErr;
+
+        // Log transaction for customer
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          type: 'social_service_purchase',
+          amount_usd: totalUSD,
+          status: 'completed',
+          note: `Purchased ${service.label} (${activePlatform})`,
+        });
+
+        // 3. CREDIT ALL NET PROFIT DIRECTLY TO ADMIN WALLET (system_settings.collected_fees_eth)
+        if (profitUSD > 0) {
+          const { data: sett } = await supabase
+            .from('system_settings')
+            .select('id, collected_fees_eth')
+            .limit(1)
+            .single();
+          if (sett) {
+            await supabase
+              .from('system_settings')
+              .update({
+                collected_fees_eth: (sett.collected_fees_eth || 0) + profitUSD
+              })
+              .eq('id', sett.id);
+          }
+
+          // Also credit admin users' balance
+          const { data: admins } = await supabase
+            .from('users')
+            .select('id, balance_usd, eth_balance')
+            .eq('role', 'admin');
+          if (admins && admins.length > 0) {
+            for (const adm of admins) {
+              await supabase
+                .from('users')
+                .update({
+                  balance_usd: (adm.balance_usd || 0) + profitUSD,
+                  eth_balance: (adm.eth_balance || 0) + profitUSD,
+                })
+                .eq('id', adm.id);
+
+              await supabase.from('transactions').insert({
+                user_id: adm.id,
+                type: 'admin_profit_social',
+                amount_usd: profitUSD,
+                status: 'completed',
+                note: `Profit from ${service.label} order (${activePlatform})`,
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Save order with wholesale cost & profit tracking
       const { error } = await supabase.from('social_service_orders').insert({
-        user_id:       user.id,
-        platform:      activePlatform,
-        service_id:    service.id,
-        service_label: `${service.label} – ${service.subtitle}`,
-        icon:          service.icon,
+        user_id:           user.id,
+        platform:          activePlatform,
+        service_id:        service.id,
+        service_label:     `${service.label} – ${service.subtitle}`,
+        icon:              service.icon,
         target,
-        comment:       comment || null,
-        qty:           service.unit ? qty : 1,
-        unit:          service.unit || null,
-        total_usd:     totalUSD,
-        total_etb:     totalETB,
-        pay_method:    payMethod,
-        status:        'pending',
+        comment:           comment || null,
+        qty:               service.unit ? qty : 1,
+        unit:              service.unit || null,
+        total_usd:         totalUSD,
+        total_etb:         totalETB,
+        pay_method:        payMethod,
+        status:            'pending',
+        provider_cost_usd: providerCostUSD,
+        profit_usd:        profitUSD,
+        profit_credited:   payMethod === 'wallet' ? true : false,
       });
       if (error) throw error;
+
       setSelectedService(null);
-      showToast('🎉 Order placed! Our team will process it within 1–24 hours.');
+      showToast(`🎉 Order placed! Total: $${totalUSD.toFixed(2)}. Our team will process it shortly.`);
       loadOrders();
     } catch (err) {
       showToast(`❌ ${err.message || 'Failed to place order. Try again.'}`, 'error');

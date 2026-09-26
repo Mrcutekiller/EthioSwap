@@ -911,7 +911,9 @@ const AdminPanel = ({ user }) => {
   const totalDepositFees = approvedDeposits.reduce((s, r) => s + (r.amount_usd ?? 0) * (depositFeePercent / 100), 0);
   const approvedWithdrawals = allWithdrawalReqs?.filter(r => r.status === 'approved' || r.status === 'completed') ?? [];
   const totalWithdrawalFees = approvedWithdrawals.reduce((s, r) => s + (r.amount_usd ?? 0) * (withdrawalFeePercent / 100), 0);
-  const totalMyProfit = totalDepositFees + totalWithdrawalFees;
+  const completedSocialOrders = socialOrders?.filter(o => o.status === 'completed' || o.profit_credited) ?? [];
+  const totalSocialProfit = completedSocialOrders.reduce((s, o) => s + Math.max(0, (o.profit_usd != null ? Number(o.profit_usd) : (o.total_usd || 0) - (o.provider_cost_usd || 0))), 0);
+  const totalMyProfit = totalDepositFees + totalWithdrawalFees + totalSocialProfit;
 
   const approvedDepositsThisWeek = allDepositReqs?.filter(r => 
     r.status === 'approved' && 
@@ -923,7 +925,10 @@ const AdminPanel = ({ user }) => {
     new Date(r.created_at).getTime() >= oneWeekAgo
   ) ?? [];
   const withdrawalFeesThisWeek = approvedWithdrawalsThisWeek.reduce((s, r) => s + (r.amount_usd ?? 0) * (withdrawalFeePercent / 100), 0);
-  const feesThisWeek = depositFeesThisWeek + withdrawalFeesThisWeek;
+  const socialProfitThisWeek = completedSocialOrders
+    .filter(o => new Date(o.created_at).getTime() >= oneWeekAgo)
+    .reduce((s, o) => s + Math.max(0, (o.profit_usd != null ? Number(o.profit_usd) : (o.total_usd || 0) - (o.provider_cost_usd || 0))), 0);
+  const feesThisWeek = depositFeesThisWeek + withdrawalFeesThisWeek + socialProfitThisWeek;
 
   const m = {
     totalMyProfit,
@@ -3631,9 +3636,94 @@ const AdminPanel = ({ user }) => {
             const handleUpdateStatus = async (orderId, newStatus) => {
               setUpdatingSocialOrderId(orderId);
               try {
-                await supabase.from('social_service_orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', orderId);
-                setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-                showAlert(`Order marked as ${newStatus}`);
+                const targetOrder = socialOrders.find(o => o.id === orderId);
+                if (!targetOrder) throw new Error('Order not found');
+
+                // 1. If completing the order and profit has not been credited yet
+                if (newStatus === 'completed' && !targetOrder.profit_credited) {
+                  const netProfit = Math.max(0, Number(((targetOrder.total_usd || 0) - (targetOrder.provider_cost_usd || 0)).toFixed(2)));
+                  if (netProfit > 0) {
+                    // Credit to system_settings collected_fees_eth (Admin Wallet)
+                    const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+                    if (sett) {
+                      const newFees = (sett.collected_fees_eth || 0) + netProfit;
+                      await supabase.from('system_settings').update({ collected_fees_eth: newFees }).eq('id', sett.id);
+                      setAdminEarnings({ walletBalance: newFees });
+                    }
+
+                    // Credit admin user balances in users table
+                    const { data: admins } = await supabase.from('users').select('id, balance_usd, eth_balance').eq('role', 'admin');
+                    if (admins && admins.length > 0) {
+                      for (const adm of admins) {
+                        await supabase.from('users').update({
+                          balance_usd: (adm.balance_usd || 0) + netProfit,
+                          eth_balance: (adm.eth_balance || 0) + netProfit,
+                        }).eq('id', adm.id);
+
+                        await supabase.from('transactions').insert({
+                          user_id: adm.id,
+                          type: 'admin_profit_social',
+                          amount_usd: netProfit,
+                          status: 'completed',
+                          note: `Net profit from ${targetOrder.service_label} order`,
+                        });
+                      }
+                    }
+                  }
+
+                  await supabase.from('social_service_orders').update({
+                    status: 'completed',
+                    profit_credited: true,
+                    profit_usd: netProfit,
+                    updated_at: new Date().toISOString()
+                  }).eq('id', orderId);
+
+                  setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'completed', profit_credited: true, profit_usd: netProfit } : o));
+                  showAlert(`✓ Order completed! $${netProfit.toFixed(2)} USD profit credited to Admin Wallet.`);
+                } else if (newStatus === 'cancelled') {
+                  // If cancelling: refund customer if paid via wallet
+                  if (targetOrder.pay_method === 'wallet' && targetOrder.total_usd > 0) {
+                    const { data: custData } = await supabase.from('users').select('balance_usd, eth_balance').eq('id', targetOrder.user_id).single();
+                    if (custData) {
+                      const refundedBal = (custData.eth_balance || custData.balance_usd || 0) + targetOrder.total_usd;
+                      await supabase.from('users').update({
+                        eth_balance: refundedBal,
+                        balance_usd: refundedBal,
+                      }).eq('id', targetOrder.user_id);
+
+                      await supabase.from('transactions').insert({
+                        user_id: targetOrder.user_id,
+                        type: 'refund',
+                        amount_usd: targetOrder.total_usd,
+                        status: 'completed',
+                        note: `Refund for cancelled order #${orderId.slice(0, 8)}`,
+                      });
+                    }
+                  }
+
+                  // If profit was previously credited, debit it back from Admin Wallet
+                  if (targetOrder.profit_credited && targetOrder.profit_usd > 0) {
+                    const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+                    if (sett) {
+                      const newFees = Math.max(0, (sett.collected_fees_eth || 0) - targetOrder.profit_usd);
+                      await supabase.from('system_settings').update({ collected_fees_eth: newFees }).eq('id', sett.id);
+                      setAdminEarnings({ walletBalance: newFees });
+                    }
+                  }
+
+                  await supabase.from('social_service_orders').update({
+                    status: 'cancelled',
+                    profit_credited: false,
+                    updated_at: new Date().toISOString()
+                  }).eq('id', orderId);
+
+                  setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', profit_credited: false } : o));
+                  showAlert('Order cancelled. Refund processed to user wallet.');
+                } else {
+                  await supabase.from('social_service_orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', orderId);
+                  setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+                  showAlert(`Order marked as ${newStatus}`);
+                }
               } catch (err) { showAlert(err.message, 'error'); }
               setUpdatingSocialOrderId(null);
             };
@@ -3656,8 +3746,30 @@ const AdminPanel = ({ user }) => {
               const cost = parseFloat(costStr);
               if (isNaN(cost) || cost < 0) return;
               try {
-                await supabase.from('social_service_orders').update({ provider_cost_usd: cost }).eq('id', orderId);
-                setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, provider_cost_usd: cost } : o));
+                const targetOrder = socialOrders.find(o => o.id === orderId);
+                const oldProfit = targetOrder?.profit_usd || 0;
+                const newProfit = Math.max(0, Number(((targetOrder?.total_usd || 0) - cost).toFixed(2)));
+
+                // If already credited, sync difference with Admin Wallet
+                if (targetOrder?.profit_credited) {
+                  const diff = newProfit - oldProfit;
+                  if (diff !== 0) {
+                    const { data: sett } = await supabase.from('system_settings').select('id, collected_fees_eth').limit(1).single();
+                    if (sett) {
+                      const newFees = Math.max(0, (sett.collected_fees_eth || 0) + diff);
+                      await supabase.from('system_settings').update({ collected_fees_eth: newFees }).eq('id', sett.id);
+                      setAdminEarnings({ walletBalance: newFees });
+                    }
+                  }
+                }
+
+                await supabase.from('social_service_orders').update({
+                  provider_cost_usd: cost,
+                  profit_usd: newProfit,
+                }).eq('id', orderId);
+
+                setSocialOrders(prev => prev.map(o => o.id === orderId ? { ...o, provider_cost_usd: cost, profit_usd: newProfit } : o));
+                showAlert(`Cost updated to $${cost.toFixed(2)}. Profit ($${newProfit.toFixed(2)}) synced with Admin Wallet.`);
               } catch (err) { showAlert(err.message, 'error'); }
             };
 
